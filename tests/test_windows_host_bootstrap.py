@@ -8,6 +8,7 @@ import json
 import ntpath
 import struct
 import zipfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,6 +18,58 @@ from comsol_mcp import _windows_host_bootstrap as b
 SERVICE_SID = "S-1-5-80-1-2-3-4-5"  # SOFTWARE_ONLY synthetic SID, not an observed service
 PREFIX = r"C:\Protected\ComsolMCP_fixture"
 SOURCE = r"C:\Staging\approved"
+
+
+def test_token_elevation_leaf_uses_exact_dword_request_and_result():
+    """SOFTWARE_ONLY actual production leaf; oversized requests emulate Win32 24."""
+    calls, error = [], [0]
+
+    def token_info(handle, level, buffer, size, needed):
+        calls.append((handle.value, level, size, C.sizeof(buffer)))
+        C.cast(needed, C.POINTER(b.DWORD))[0] = C.sizeof(b.DWORD)
+        if size != C.sizeof(b.DWORD):
+            error[0] = 24
+            return 0
+        C.cast(buffer, C.POINTER(b.DWORD))[0] = 2
+        return 1
+
+    native = b._Windows._test({"GetTokenInformation": token_info}, lambda: error[0], seal=b._TEST_SEAL)
+    buffer, used = native._token_buffer(SimpleNamespace(arg=lambda: b.HANDLE(777)), 20)
+    assert used == C.sizeof(buffer) == C.sizeof(b.DWORD) == 4
+    assert b.DWORD.from_buffer(buffer).value == 2
+    assert calls == [(777, 20, 4, 4)]
+
+
+@pytest.mark.parametrize("returned_extent", [0, 3, 8])
+def test_token_elevation_leaf_rejects_non_dword_returned_extent(returned_extent):
+    calls = []
+
+    def token_info(handle, level, buffer, size, needed):
+        calls.append((level, size))
+        C.cast(needed, C.POINTER(b.DWORD))[0] = returned_extent
+        return 1
+
+    native = b._Windows._test({"GetTokenInformation": token_info}, lambda: 0, seal=b._TEST_SEAL)
+    with pytest.raises(b.BootstrapError) as exc:
+        native._token_buffer(SimpleNamespace(arg=lambda: b.HANDLE(777)), 20)
+    assert exc.value.code == "TOKEN_BOUNDS"
+    assert len(calls) == 1  # no SDK retry for a malformed returned extent
+
+
+@pytest.mark.parametrize("level", [1, 3])
+def test_variable_token_leaf_retains_original_bounded_buffer(level):
+    calls = []
+
+    def token_info(handle, information_class, buffer, size, needed):
+        calls.append((information_class, size))
+        C.cast(needed, C.POINTER(b.DWORD))[0] = 4
+        C.cast(buffer, C.POINTER(b.DWORD))[0] = 0
+        return 1
+
+    native = b._Windows._test({"GetTokenInformation": token_info}, lambda: 0, seal=b._TEST_SEAL)
+    buffer, used = native._token_buffer(SimpleNamespace(arg=lambda: b.HANDLE(777)), level)
+    assert used == 4 and C.sizeof(buffer) == 65536
+    assert calls == [(level, 65536)]
 
 
 def raw_sd(directory=False, *, service=False, service_sid=None, owner=b.SY, broad=False):
@@ -254,6 +307,7 @@ class FakeWindows:
 
     def _delete_node(self, arg):
         self.calls.append(("SetFileInformationByHandle", self.target(arg)))
+        assert self.file_opens[arg.value][1] & 0x10000  # no disposition through a runtime read pin
         self.handles[arg.value].append("delete_pending")
         return self.fault("SetFileInformationByHandle", 1)
 
@@ -281,6 +335,9 @@ class FakeWindows:
     _open = b._Windows._open
     open_node = b._Windows.open_node
     fresh_image = b._Windows.fresh_image
+    bridge_node = b._Windows.bridge_node
+    runtime_node = b._Windows.runtime_node
+    restore_node = b._Windows.restore_node
 
     def image(self, handle, path, directory):
         if self.target(handle.arg()) != path:
@@ -785,6 +842,449 @@ def test_full_restore_refuses_high_bits_only_identity_drift_before_any_delete(fi
     with pytest.raises(b.BootstrapError): original.restore()
     assert original.state == "UNKNOWN" and not node.handle.closed
     assert not any(c[0] in {"DeleteService", "SetFileInformationByHandle"} for c in backend.calls[len(before):])
+
+
+@pytest.mark.parametrize("directory", [False, True])
+def test_native_bridge_runtime_restore_acquisitions_obey_real_bidirectional_sharing(directory):
+    native, model, path, _ = native_file_fixture(directory=directory)
+    writer = native._open(path, directory, write=True)
+    expected = native.image(writer, path, directory)
+    bridge = native.bridge_node(path, directory)
+    with pytest.raises(b.KnownSdkFailure) as raised:
+        native.runtime_node(path, directory)
+    assert raised.value.winerror == 32  # runtime no-WRITE sharing must reject the still-open writer
+    writer.close()
+    assert native.image(bridge, path, directory) == expected
+    runtime = native.runtime_node(path, directory)
+    assert runtime.opened.args[1] == (0x20080 if directory else 0x80020000)
+    assert runtime.opened.args[2] == 5 and not runtime.opened.args[1] & 0x400D0006
+    bridge.close()
+    assert native.image(runtime, path, directory) == expected
+    with pytest.raises(b.KnownSdkFailure) as raised:
+        native._open(path, directory, write=True, share=7)
+    assert raised.value.winerror == 32
+    delete = native.restore_node(path, directory)
+    assert delete is not writer and delete.opened is not writer.opened
+    assert delete.opened.args[1] == runtime.opened.args[1] | 0x10000
+    assert not delete.opened.args[1] & 0x400C0006  # no write-data/DAC/owner on the new DELETE pin
+    assert native.image(delete, path, directory) == expected
+    runtime.close()
+    assert native.image(delete, path, directory) == expected
+    native.owner.close_all()
+    assert not model.file_opens
+
+
+def test_full_original_install_handoff_and_restore_preserves_each_original_handle_and_archives():
+    original, backend, _ = install()
+    writers = {name: node.handle for name, node in original.nodes.items()}
+    images = {name: node.image for name, node in original.nodes.items()}
+    before = len(backend.calls)
+    result = original.handoff_runtime()
+    assert result["static_runtime_read_pins"] and result["native_start"].startswith("BLOCKED_")
+    assert result["apply_ready_package_claim"] is False and result["authority"] == "LOCAL_INSTALLER_ONLY_NOT_T037"
+    assert original.state == "RUNTIME_READ_PINNED_START_BLOCKED"
+    for name, node in original.nodes.items():
+        assert node.handle is writers[name] and node.image == images[name]
+        assert node.handle.closed and node.bridge_handle.closed and not node.runtime_handle.closed
+        assert node.runtime_handle.opened is not node.handle.opened
+        assert node.runtime_handle.opened.args[2] == 5
+    for handle, (path, access, share) in backend.file_opens.items():
+        if path == PREFIX or path.startswith(PREFIX + "\\"):
+            assert not access & 0x400D0006 and share == 5
+    assert not any(c[0] in {"WriteFile", "SetSecurityInfo", "ChangeServiceConfig2W", "DeleteService"} for c in backend.calls[before:])
+    pins = [node.runtime_handle for node in original.nodes.values()]
+    assert original.restore()["state"] == "RESTORED"
+    assert backend.tree == backend.original and backend.service is None and not backend.file_opens
+    assert all(h.closed for h in pins)
+    for node in original.nodes.values():
+        assert node.handle is writers[node.relative]
+        assert node.delete_handle is not node.handle and node.delete_handle is not node.runtime_handle
+        assert node.delete_handle.closed and node.delete_handle.opened.args[1] & 0x10000
+        assert node.delete_handle.opened.args[4] == 3
+
+
+def test_handoff_is_once_original_state_only_and_children_cannot_be_reset_by_flag():
+    original, backend, _ = fixture_bootstrap()
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    original.apply(approved_plan_sha256=original.intent.sha256)
+    original.handoff_runtime()
+    before = list(backend.calls)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    original.children_state = "UNKNOWN"
+    with pytest.raises(b.BootstrapError) as raised:
+        original.children_state = "NEVER_STARTED"
+    assert raised.value.code == "CHILDREN_UNPROVEN" and original.children_state == "UNKNOWN"
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert backend.calls == before and original.state == "UNKNOWN"
+
+
+def test_child_state_diagnostic_rejects_caller_wrapper_without_quiescence_authority():
+    original, backend, _ = install()
+    class PretendStopped:
+        def __eq__(self, other): return True
+        def __ne__(self, other): return False
+    before = list(backend.calls)
+    with pytest.raises(b.BootstrapError): original.children_state = PretendStopped()
+    original.children_state = "LIVE"
+    with pytest.raises(b.BootstrapError): original.children_state = "NEVER_STARTED"
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    assert original.children_state == "LIVE" and original.state == "UNKNOWN" and backend.calls == before
+
+
+@pytest.mark.parametrize("drift", ["identity", "bytes", "sd", "extra", "live", "children"])
+@pytest.mark.parametrize("after_handoff", [False, True])
+def test_handoff_and_restore_refuse_current_static_namespace_or_quiescence_drift(drift, after_handoff):
+    original, backend, _ = install()
+    if after_handoff: original.handoff_runtime()
+    node = next(n for n in original.nodes.values() if not n.image.directory)
+    if drift == "identity":
+        volume, fid = backend.tree[node.path]["identity"]
+        backend.tree[node.path]["identity"] = (volume, fid ^ (1 << 120))
+    elif drift == "bytes": backend.tree[node.path]["data"] += b"changed"
+    elif drift == "sd": backend.tree[node.path]["sd"] = raw_sd(broad=True)
+    elif drift == "extra": backend.add(PREFIX + r"\unexpected-user-data", False, b"preserve")
+    elif drift == "live": backend.service.update(state=4, pid=12345)
+    else: original.children_state = "UNKNOWN"
+    before = list(backend.calls)
+    with pytest.raises(b.BootstrapError):
+        original.restore() if after_handoff else original.handoff_runtime()
+    assert original.state == "UNKNOWN" and original in b.retained_bootstrap_owners()
+    assert not any(c[0] in {"DeleteService", "SetFileInformationByHandle", "WriteFile"} for c in backend.calls[len(before):])
+    if not after_handoff: assert not any(n.handle.closed for n in original.nodes.values())
+
+
+def handoff_with_close_hook():
+    original, backend, _ = fixture_bootstrap(prepared=False)
+    hook, sdk_close = {}, backend.sdk["CloseHandle"]
+    def closing(arg):
+        result = sdk_close(arg)
+        if hook.get("close"):
+            hook["close"](arg)
+        return result
+    backend.sdk["CloseHandle"] = closing  # fixed before any original writer acquisition
+    original.prepare()
+    original.apply(approved_plan_sha256=original.intent.sha256)
+    return original, backend, hook
+
+
+@pytest.mark.parametrize("point", ["bridge_acquired", "writer_closed", "runtime_acquired", "bridge_closed"])
+def test_identity_drift_at_each_transition_boundary_retains_original_without_advancing(point, monkeypatch):
+    original, backend, hook = handoff_with_close_hook()
+    node = next(iter(original.nodes.values()))
+    def drift():
+        volume, fid = backend.tree[node.path]["identity"]
+        backend.tree[node.path]["identity"] = (volume ^ (1 << 55), fid)
+    if point in {"bridge_acquired", "runtime_acquired"}:
+        name = "bridge_node" if point == "bridge_acquired" else "runtime_node"
+        opening = getattr(backend, name)
+        def changed(path, directory):
+            handle = opening(path, directory)
+            if path == node.path: drift()
+            return handle
+        monkeypatch.setattr(backend, name, changed)
+    else:
+        def after_close(arg):
+            target = node.handle if point == "writer_closed" else node.bridge_handle
+            if target is not None and arg.value == target.original_value: drift()
+        hook["close"] = after_close
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    assert original.state == "UNKNOWN"
+    if point == "bridge_acquired": assert not node.handle.closed
+    before = list(backend.calls)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    with pytest.raises(b.BootstrapError): original.restore()
+    with pytest.raises(b.BootstrapError): original.owner.close_all()
+    assert backend.calls == before
+    if point in {"writer_closed", "bridge_acquired"}: assert node.runtime_handle is None
+
+
+@pytest.mark.parametrize("phase", ["bridge", "runtime"])
+@pytest.mark.parametrize("fault", ["known", "raise", "invalid"])
+def test_new_pin_native_output_failures_are_never_adopted_or_retried_and_known_can_restore(phase, fault, monkeypatch):
+    original, backend, _ = install()
+    node = next(iter(original.nodes.values()))
+    name = phase + "_node"
+    opening, sdk_open = getattr(backend, name), backend.sdk["CreateFileW"]
+    active = [False]
+    def sdk(*args):
+        if active[0]:
+            active[0] = False
+            if fault == "known":
+                backend.error = 5
+                return C.c_void_p(-1).value
+            value = sdk_open(*args)
+            if fault == "raise": raise OSError("SOFTWARE_ONLY native pin acquired then result lost")
+            return "invalid returned HANDLE"
+        return sdk_open(*args)
+    backend.sdk["CreateFileW"] = sdk
+    def chosen(path, directory):
+        if path == node.path: active[0] = True
+        return opening(path, directory)
+    monkeypatch.setattr(backend, name, chosen)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    before = list(backend.calls)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    assert backend.calls == before
+    if fault == "known":
+        assert original.state == "PARTIAL_KNOWN"
+        original.restore()
+        assert backend.tree == backend.original and backend.service is None
+    else:
+        assert original.state == "UNKNOWN"
+        pending = [h for h in original.owner.handles if h.state == "UNKNOWN"]
+        assert len(pending) == 1 and pending[0].value is None
+        with pytest.raises(b.BootstrapError): original.restore()
+        assert backend.calls == before
+
+
+@pytest.mark.parametrize("fault", ["raise", "invalid", "known", "confirmed_bookkeeping"])
+def test_original_writer_close_outcomes_cannot_reclose_or_advance_handoff(fault, monkeypatch):
+    original, backend, hook = handoff_with_close_hook()
+    node = next(iter(original.nodes.values()))
+    # Arm only after bridge comparison has closed its temporary fresh read HANDLE.
+    image, armed = backend.fresh_image, [False]
+    def compared(path, directory):
+        result = image(path, directory)
+        if path == node.path and node.bridge_handle is not None and not armed[0]:
+            armed[0] = True
+            if fault == "known": backend.faults["close_known_before_write"] = True
+            elif fault in {"raise", "invalid"}: backend.faults["close"] = fault
+        return result
+    monkeypatch.setattr(backend, "fresh_image", compared)
+    if fault == "confirmed_bookkeeping":
+        checkpoint = original.owner.checkpoint
+        def failed(event, handle):
+            if event == "close_confirmed" and handle is node.handle:
+                raise RuntimeError("SOFTWARE_ONLY bookkeeping after confirmed original close")
+            return checkpoint(event, handle)
+        monkeypatch.setattr(original.owner, "checkpoint", failed)
+        backend.close_values[node.handle.value] = Once(1)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    assert original.state == ("HANDOFF_CLOSE_ACK_PENDING" if fault == "confirmed_bookkeeping" else "UNKNOWN")
+    assert node.runtime_handle is None
+    assert len([c for c in backend.calls if c == ("close", node.handle.original_value)]) == 1
+    before = list(backend.calls)
+    with pytest.raises(RuntimeError if fault == "confirmed_bookkeeping" else b.BootstrapError):
+        node.handle.close(retry_known=True)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert backend.calls == before
+    if fault == "confirmed_bookkeeping":
+        assert node.handle.close_call.state == "SUCCEEDED" and node.handle.close_call.scalar == 1
+        assert backend.close_values[node.handle.value].reads == 1
+        assert original.owner.uncertain is False
+        monkeypatch.setattr(original.owner, "checkpoint", checkpoint)
+        node.handle.close(retry_known=True)
+        assert backend.calls == before
+        assert original.restore()["state"] == "RESTORED"
+        assert backend.tree == backend.original and backend.service is None
+
+
+@pytest.mark.parametrize("mutation", ["wrapper", "argument", "access"])
+def test_restore_cannot_promote_rewrapped_or_drifted_runtime_pin(mutation):
+    original, backend, _ = install()
+    original.handoff_runtime()
+    node = next(iter(original.nodes.values()))
+    runtime = node.runtime_handle
+    if mutation == "wrapper": node.runtime_handle = copy.copy(runtime)
+    elif mutation == "argument": runtime.argument.value += 999
+    else:
+        args = list(runtime.opened.args);args[1] |= 0x10000;runtime.opened.args = tuple(args)
+    before = len(backend.calls)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert original.state == "UNKNOWN" and not runtime.closed
+    assert not any(c[0] in {"DeleteService", "SetFileInformationByHandle"} for c in backend.calls[before:])
+
+
+@pytest.mark.parametrize("fault", ["raise", "invalid", "known", "drift"])
+def test_new_restore_delete_pin_failure_preserves_service_and_all_original_read_pins(fault, monkeypatch):
+    original, backend, _ = install()
+    original.handoff_runtime()
+    node = next(iter(original.nodes.values()))
+    opening = backend.restore_node
+    def changed(path, directory):
+        if path == node.path and fault in {"raise", "invalid"}:
+            backend.faults["CreateFileW"] = fault
+        if path == node.path and fault == "known":
+            backend.error = 5
+            # A definitive denied acquisition, no output or retry.
+            backend.sdk["CreateFileW"] = lambda *args: C.c_void_p(-1).value
+        handle = opening(path, directory)
+        if path == node.path and fault == "drift": backend.tree[path]["sd"] = raw_sd(directory, broad=True)
+        return handle
+    monkeypatch.setattr(backend, "restore_node", changed)
+    before = len(backend.calls)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert original.state == "UNKNOWN" and backend.service is not None
+    assert all(not n.runtime_handle.closed for n in original.nodes.values())
+    assert not any(c[0] in {"DeleteService", "SetFileInformationByHandle"} for c in backend.calls[before:])
+    count = len(backend.calls)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert len(backend.calls) == count
+
+
+def test_new_native_acquisition_may_reuse_known_closed_integer_but_never_old_owner():
+    native, model, path, _ = native_file_fixture()
+    writer = native._open(path, False, write=True)
+    bridge = native.bridge_node(path, False)
+    expected = native.image(writer, path, False)
+    writer.close()
+    model.next_handle = writer.original_value - 1  # simulate normal OS scalar reuse
+    runtime = native.runtime_node(path, False)
+    assert runtime.original_value == writer.original_value and runtime is not writer
+    assert runtime.opened is not writer.opened and runtime.opened.state == "SUCCEEDED"
+    assert writer.closed and native.image(runtime, path, False) == expected
+    native.owner.close_all()
+    assert runtime.closed and bridge.closed and not model.file_opens
+
+
+@pytest.mark.parametrize("fault", ["raise", "invalid", "known", "confirmed_bookkeeping"])
+def test_restore_read_pin_close_uncertainty_never_deletes_or_repeats_original_closer(fault, monkeypatch):
+    original, backend, hook = handoff_with_close_hook()
+    original.handoff_runtime()
+    node = list(original.nodes.values())[-1]
+    target = node.runtime_handle
+    if fault == "raise":
+        def failed(arg):
+            if arg.value == target.original_value:
+                raise OSError("SOFTWARE_ONLY original read pin closed but native return lost")
+        hook["close"] = failed
+    elif fault in {"invalid", "known"}:
+        backend.close_values[target.original_value] = "invalid BOOL" if fault == "invalid" else 0
+    else:
+        backend.close_values[target.original_value] = Once(1)
+        checkpoint = original.owner.checkpoint
+        def failed(event, handle):
+            if handle is target: raise RuntimeError("SOFTWARE_ONLY close result cached before bookkeeping loss")
+            return checkpoint(event, handle)
+        monkeypatch.setattr(original.owner, "checkpoint", failed)
+    before = len(backend.calls)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert original.state == ("RESTORE_CLOSE_ACK_PENDING" if fault == "confirmed_bookkeeping" else "UNKNOWN")
+    assert backend.service is not None and node.delete_handle is not None
+    assert not any(c[0] in {"DeleteService", "SetFileInformationByHandle"} for c in backend.calls[before:])
+    assert len([c for c in backend.calls if c == ("close", target.original_value)]) == 1
+    calls = list(backend.calls)
+    with pytest.raises(RuntimeError if fault == "confirmed_bookkeeping" else b.BootstrapError):
+        target.close(retry_known=True)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert backend.calls == calls
+    if fault == "confirmed_bookkeeping":
+        assert target.close_call.state == "SUCCEEDED" and backend.close_values[target.original_value].reads == 1
+        assert original.owner.uncertain is False
+        deletes = tuple(n.delete_handle for n in original.nodes.values())
+        monkeypatch.setattr(original.owner, "checkpoint", checkpoint)
+        target.close(retry_known=True)
+        assert backend.calls == calls
+        assert original.restore()["state"] == "RESTORED"
+        assert tuple(n.delete_handle for n in original.nodes.values()) == deletes
+        assert backend.tree == backend.original and backend.service is None
+
+
+def one_pin_close_metadata_fault(original, backend, target, monkeypatch):
+    checkpoint, fired = original.owner.checkpoint, []
+
+    def one_fault(event, handle):
+        if event == "close_confirmed" and handle is target and not fired:
+            fired.append(handle)
+            raise OSError("SOFTWARE_ONLY one acknowledgement fault after confirmed SDK close")
+        return checkpoint(event, handle)
+
+    result = backend.close_values[target.original_value] = Once(1)
+    monkeypatch.setattr(original.owner, "checkpoint", one_fault)
+    return fired, result
+
+
+@pytest.mark.parametrize("phase,role,index", [
+    ("handoff", "handle", 0), ("handoff", "bridge_handle", 0), ("handoff", "handle", -1),
+    ("restore", "runtime_handle", -1), ("restore", "runtime_handle", 0), ("restore", "runtime_handle", 2),
+])
+def test_known_pin_close_ack_is_metadata_only_and_same_original_restore_continues(phase, role, index, monkeypatch):
+    original, backend, _ = handoff_with_close_hook()
+    if phase == "restore": original.handoff_runtime()
+    node = tuple(original.nodes.values())[index]
+    if role == "bridge_handle":
+        opening = backend.bridge_node
+        def bridge(path, directory):
+            handle = opening(path, directory)
+            if path == node.path:
+                one_pin_close_metadata_fault(original, backend, handle, monkeypatch)
+            return handle
+        monkeypatch.setattr(backend, "bridge_node", bridge)
+    else:
+        one_pin_close_metadata_fault(original, backend, getattr(node, role), monkeypatch)
+    with pytest.raises(b.BootstrapError):
+        original.restore() if phase == "restore" else original.handoff_runtime()
+    target = getattr(node, role)
+    assert target.close_call.state == "SUCCEEDED" and target.close_call.scalar == 1
+    assert not target.closed and not original.owner.uncertain
+    calls, deletes = list(backend.calls), tuple(n.delete_handle for n in original.nodes.values())
+    # Refuse all advancement until explicit original cached acknowledgement, without a query.
+    with pytest.raises(b.BootstrapError): original.restore()
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    assert backend.calls == calls
+    target.close(retry_known=True)
+    assert target.closed and backend.calls == calls
+    assert backend.close_values[target.original_value].reads == 1
+    assert original.restore()["state"] == "RESTORED"
+    if phase == "restore":
+        assert all(n.delete_handle is h for n, h in zip(original.nodes.values(), deletes))
+        old_delete_opens = [c for c in calls if c[0] == "CreateFileW" and c[2] & 0x10000]
+        assert [c for c in backend.calls if c[0] == "CreateFileW" and c[2] & 0x10000] == old_delete_opens
+    assert backend.calls.count(("close", target.original_value)) == 1
+    assert backend.tree == backend.original and backend.service is None
+
+
+@pytest.mark.parametrize("drift", ["scalar", "call", "argument", "closer", "phase", "owner_uncertain",
+                                  "new_unknown_call", "new_pending_handle", "node_pin"])
+def test_known_pin_ack_never_upgrades_cache_phase_owner_or_original_pin_drift(drift, monkeypatch):
+    original, backend, _ = handoff_with_close_hook()
+    node = next(iter(original.nodes.values()))
+    target = node.handle
+    one_pin_close_metadata_fault(original, backend, target, monkeypatch)
+    with pytest.raises(b.BootstrapError): original.handoff_runtime()
+    target.close(retry_known=True)
+    if drift == "scalar": target.close_call.scalar = 2
+    elif drift == "call": target.close_call = copy.copy(target.close_call)
+    elif drift == "argument": target.argument.value += 1000
+    elif drift == "closer": backend.sdk["CloseHandle"] = lambda handle: 1
+    elif drift == "phase": original._restore_phase = "DESTRUCTIVE"
+    elif drift == "owner_uncertain": original.owner.uncertain = True
+    elif drift == "new_unknown_call":
+        call = b._Call(original.owner, "unreturned_fixture_call", lambda: 1, (), "BOOL")
+        call.state = "UNKNOWN"
+    elif drift == "new_pending_handle":
+        b._Handle(original.owner, target.opened, "CloseHandle", target.closer)
+    else: node.bridge_handle = copy.copy(node.bridge_handle)
+    calls = list(backend.calls)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert backend.calls == calls and backend.service is not None
+    if drift == "owner_uncertain": assert original.owner.uncertain is True
+
+
+@pytest.mark.parametrize("point", ["service", "file"])
+def test_confirmed_close_metadata_fault_after_destructive_start_keeps_unknown(point, monkeypatch):
+    original, backend, _ = handoff_with_close_hook()
+    original.handoff_runtime()
+    checkpoint, fired = original.owner.checkpoint, []
+
+    def one_fault(event, handle):
+        target = handle is original.service if point == "service" else any(
+            handle is node.delete_handle for node in original.nodes.values())
+        if event == "close_confirmed" and target and not fired:
+            fired.append(handle)
+            raise OSError("SOFTWARE_ONLY acknowledgement fault after destructive phase")
+        return checkpoint(event, handle)
+
+    monkeypatch.setattr(original.owner, "checkpoint", one_fault)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert original.state == "UNKNOWN" and original.owner.uncertain is True
+    assert len(fired) == 1 and fired[0].close_call.state == "SUCCEEDED"
+    assert original._restore_phase == "DESTRUCTIVE"
+    calls = list(backend.calls)
+    with pytest.raises(b.BootstrapError): fired[0].close(retry_known=True)
+    with pytest.raises(b.BootstrapError): original.restore()
+    assert backend.calls == calls
 
 
 def test_bounded_scm_pointer_decoder_requires_original_buffer_and_termination():

@@ -562,6 +562,26 @@ class _Node:
     relative: str
     handle: _Handle
     image: NodeImage | None = None
+    bridge_handle: _Handle | None = None
+    runtime_handle: _Handle | None = None
+    delete_handle: _Handle | None = None
+
+
+@dataclass(frozen=True)
+class _PinClose:
+    """In-process pre-dispatch references for one pre-destructive pin close."""
+    phase: str
+    node: _Node
+    role: str
+    handle: _Handle
+    opened: _Call
+    argument: object
+    value: int
+    closer: object
+    opened_args: tuple
+    calls_before: tuple
+    handles: tuple
+    nodes: tuple
 
 
 class Bootstrap:
@@ -577,8 +597,26 @@ class Bootstrap:
         self.state, self.sources, self.anchors, self.nodes = "NEW", {}, {}, {}
         self.manager = self.service = self.service_image = self.service_sid = None
         self.apply_started = self.restore_started = False
+        self.handoff_started = False
+        self._pin_close = None
+        self._pin_close_ack = None
+        self._restore_phase = None
         self.children_state = "NEVER_STARTED"
         self._retention_registered = False
+
+    @property
+    def children_state(self):
+        return self._children_state
+
+    @children_state.setter
+    def children_state(self, value):
+        # This installer has no child-start or child-drained API. Losing its
+        # original never-started state cannot be reversed by a caller flag.
+        if type(value) is not str or value not in {"NEVER_STARTED", "UNKNOWN", "LIVE"}:
+            fail("CHILDREN_UNPROVEN", "closed diagnostic child states only; no caller proof wrapper")
+        if hasattr(self, "_children_state") and self._children_state != "NEVER_STARTED" and value == "NEVER_STARTED":
+            fail("CHILDREN_UNPROVEN", "a caller cannot reclassify children as never started")
+        self._children_state = value
 
     def _retain(self):
         if not self._retention_registered:
@@ -669,7 +707,8 @@ class Bootstrap:
             pass  # hashed, bounded original retained; no pip/script is executed
 
     def preview(self):
-        self._guard({"PREPARED_READONLY", "INSTALLED_STOPPED_START_BLOCKED", "PARTIAL_KNOWN"})
+        self._guard({"PREPARED_READONLY", "INSTALLED_STOPPED_START_BLOCKED", "PARTIAL_KNOWN",
+                     "RUNTIME_READ_PINNED_START_BLOCKED"})
         return {"schema": SCHEMA, "plan_sha256": self.intent.sha256,
                 "state": self.state, "service_name": self.intent.service_name,
                 "prefix": self.intent.prefix, "argv": list(self.intent.argv),
@@ -679,6 +718,7 @@ class Bootstrap:
                 "native_start": "BLOCKED_TRUSTED_PROFILE_APPCONTAINER_PROJECT_NOT_MATERIALIZED",
                 "authority": "LOCAL_INSTALLER_ONLY_NOT_T037",
                 "runtime": "NORMAL_OFFLINE_MATERIALIZED_PREFIX; NO_VENV; NO_PIP_EXECUTION",
+                "static_runtime_read_pins": self.state == "RUNTIME_READ_PINNED_START_BLOCKED",
                 "service_state_write_acl": "NOT_GRANTED_REQUIRES_LATER_EXPLICIT_SCOPE",
                 "trusted_profile_materialization": "NOT_PERFORMED",
                 "token_precondition": self.backend.context(),
@@ -777,8 +817,171 @@ class Bootstrap:
                 self.owner.uncertain = True
             raise BootstrapError(getattr(exc, "code", "APPLY_UNKNOWN"), str(exc), owner=self) from exc
 
+    def _original_handle(self, handle):
+        if (type(handle) is not _Handle or handle.owner is not self.owner
+                or handle not in self.owner.handles or handle.opened not in self.owner.calls
+                or handle.opened.owner is not self.owner or handle.opened.state != "SUCCEEDED"
+                or handle.opened.scalar != handle.original_value):
+            fail("ORIGINAL_HANDLE", "only the actual original SDK acquisition is eligible")
+        if handle.closed:
+            if (handle.close_call is None or handle.close_call.state != "SUCCEEDED"
+                    or not handle.close_call.scalar):
+                fail("CLOSE_UNPROVEN", "original HANDLE close is not confirmed")
+        else:
+            handle.arg()
+            if handle.close_call is not None:
+                fail("CLOSE_UNPROVEN", "unfinished/failed close cannot be treated as an open resource")
+
+    def _pin(self, node, handle, role):
+        self._original_handle(handle)
+        read = 0x20080 if node.image.directory else 0x80020000
+        access, share = (read | 0x10000, 5) if role == "delete" else (read, 7 if role == "bridge" else 5)
+        args = handle.opened.args
+        if (handle.opened.name != "CreateFileW" or len(args) != 7 or args[0] != node.path
+                or args[1:5] != (access, share, None, 3)
+                or args[5:] != (0x00200000 | (0x02000000 if node.image.directory else 0x80), None)):
+            fail("PIN_ACCESS", "new pin must be its exact scoped readonly/DELETE SDK acquisition")
+
+    def _compare_node(self, node):
+        if node.image is None:
+            fail("TREE_DRIFT", "original created postimage is missing")
+        self._original_handle(node.handle)  # never replace or rewrap the original writer
+        if node.handle.closed and not self.handoff_started:
+            fail("WRITER_UNPROVEN", "original writer was closed outside an explicit handoff")
+        live = [] if node.handle.closed else [node.handle]
+        for role, handle in (("bridge", node.bridge_handle), ("runtime", node.runtime_handle),
+                             ("delete", node.delete_handle)):
+            if handle is not None:
+                self._pin(node, handle, role)
+                if not handle.closed:
+                    live.append(handle)
+        if not live:
+            fail("PIN_GAP", "no original owned HANDLE spans the known file object")
+        for handle in live:
+            if self.backend.image(handle, node.path, node.image.directory) != node.image:
+                fail("TREE_DRIFT", "original live HANDLE identity/bytes/raw SD differ")
+        if self.backend.fresh_image(node.path, node.image.directory) != node.image:
+            fail("TREE_DRIFT", "fresh fileID/bytes/raw SD differ from original created postimage")
+
+    def _close_pin(self, node, role, phase):
+        handle = getattr(node, role)
+        self._pin_close_ack = None
+        self._pin_close = _PinClose(phase, node, role, handle, handle.opened, handle.argument,
+            handle.original_value, handle.closer, handle.opened.args, tuple(self.owner.calls),
+            tuple(self.owner.handles), tuple((key, n, n.handle, n.bridge_handle, n.runtime_handle,
+                                             n.delete_handle) for key, n in self.nodes.items()))
+        handle.close()  # original _Handle/_Call cache and original native closer only
+        self._pin_close = None
+
+    def _known_pin_close(self):
+        """Pure metadata validation; never consume raw_result or query/close an OS object."""
+        f = self._pin_close
+        if type(f) is not _PinClose:
+            return False
+        self._guard({"HANDING_OFF_STATIC_PINS", "HANDOFF_CLOSE_ACK_PENDING",
+                     "RESTORING", "RESTORE_CLOSE_ACK_PENDING"})
+        if (self.handoff_started is not True
+                or (f.phase == "handoff" and (self.restore_started is not False or self._restore_phase is not None
+                    or f.role not in {"handle", "bridge_handle"}
+                    or self.state not in {"HANDING_OFF_STATIC_PINS", "HANDOFF_CLOSE_ACK_PENDING"}))
+                or (f.phase == "restore" and (self.restore_started is not True
+                    or self._restore_phase != "PRE_DESTRUCTIVE_CLOSE"
+                    or f.role not in {"runtime_handle", "bridge_handle"}
+                    or self.state not in {"RESTORING", "RESTORE_CLOSE_ACK_PENDING"}))
+                or f.phase not in {"handoff", "restore"}):
+            return False
+        h, c = f.handle, f.handle.close_call
+        if (type(h) is not _Handle or h.owner is not self.owner or h.state != "ACQUIRED"
+                or h.opened is not f.opened or h.argument is not f.argument
+                or type(h.original_value) is not int or h.original_value != f.value
+                or h.value != f.value or h.argument.value != f.value
+                or (h.slot is not None and h.slot.value != f.value)
+                or h.opened.owner is not self.owner or h.opened.state != "SUCCEEDED"
+                or h.opened.scalar != f.value or h.opened.args != f.opened_args
+                or h.closer is not f.closer or h.closer_name != "CloseHandle"
+                or _binding(f.closer) != h.original_binding
+                or _binding(self.backend.function(h.closer_name)) != h.original_binding
+                or type(c) is not _Call or c.owner is not self.owner or c.fn is not f.closer
+                or c.name != h.closer_name or c.mode != "BOOL" or c.state != "SUCCEEDED"
+                or type(c.scalar) is not int or not c.scalar
+                or len(c.args) != 1 or c.args[0] is not f.argument
+                or tuple(self.owner.calls) != (*f.calls_before, c)
+                or tuple(self.owner.handles) != f.handles):
+            return False
+        if self.state in {"HANDOFF_CLOSE_ACK_PENDING", "RESTORE_CLOSE_ACK_PENDING"}:
+            if (self._pin_close_ack is None or self._pin_close_ack[0] is not f
+                    or self._pin_close_ack[1] is not c or self._pin_close_ack[2] != c.scalar):
+                return False
+        current = tuple((key, n, n.handle, n.bridge_handle, n.runtime_handle, n.delete_handle)
+                        for key, n in self.nodes.items())
+        if (len(current) != len(f.nodes) or any(a[0] != z[0] or any(x is not y for x, y in zip(a[1:], z[1:]))
+                                             for a, z in zip(current, f.nodes))
+                or getattr(f.node, f.role) is not h):
+            return False
+        # No second unresolved release, even when a separate BOOL failure is known.
+        return all(other is h or other.close_call is None or other.closed for other in self.owner.handles)
+
+    def _acknowledged_pin_close(self):
+        if self.state not in {"HANDOFF_CLOSE_ACK_PENDING", "RESTORE_CLOSE_ACK_PENDING"}:
+            return None
+        if not self._known_pin_close() or not self._pin_close.handle.closed:
+            fail("CLOSE_ACK_REQUIRED", "exact original cached close must be acknowledged before restore")
+        phase = self._pin_close.phase
+        self._pin_close = None
+        self._pin_close_ack = None
+        self.state = "PARTIAL_KNOWN" if phase == "handoff" else "RESTORE_PRE_DESTRUCTIVE"
+        return phase
+
+    def handoff_runtime(self):
+        """Static read pins only. No start, issuer, profile or runtime child authority."""
+        self._guard({"INSTALLED_STOPPED_START_BLOCKED"})
+        if self.handoff_started or self.restore_started:
+            fail("HANDOFF_NO_REPEAT", "one original writer-to-read handoff only")
+        try:
+            self._compare()  # complete namespace/SCM/static inventory before any writer closes
+            self.handoff_started, self.state = True, "HANDING_OFF_STATIC_PINS"
+            for node in self.nodes.values():
+                node.bridge_handle = self.backend.bridge_node(node.path, node.image.directory)
+                self._compare_node(node)
+                self._close_pin(node, "handle", "handoff")
+                self._compare_node(node)  # bridge preserves identity across confirmed writer close
+                node.runtime_handle = self.backend.runtime_node(node.path, node.image.directory)
+                self._compare_node(node)
+                self._close_pin(node, "bridge_handle", "handoff")
+                self._compare_node(node)
+            self._compare()
+            if any(not n.handle.closed or not n.bridge_handle.closed or n.runtime_handle.closed
+                   for n in self.nodes.values()):
+                fail("HANDOFF_INCOMPLETE", "all original writers/bridges must close before static read readiness")
+            self.state = "RUNTIME_READ_PINNED_START_BLOCKED"
+            return self.preview()
+        except BaseException as exc:
+            try:
+                known_ack = self._known_pin_close()
+            except BaseException:
+                known_ack = False
+            if known_ack:
+                self._pin_close_ack = (self._pin_close, self._pin_close.handle.close_call,
+                                       self._pin_close.handle.close_call.scalar)
+                self.state = "HANDOFF_CLOSE_ACK_PENDING"
+                raise BootstrapError("CLOSE_ACK_REQUIRED", str(exc), owner=self) from exc
+            # A new read-open can fail definitively without an unknown effect.
+            # Exact original comparisons may allow explicit restore, never a
+            # second handoff attempt or automatic acquisition/close retry.
+            try:
+                if (not isinstance(exc, KnownSdkFailure)
+                        or exc.function in {"CloseHandle", "CloseServiceHandle", "FindClose", "LocalFree"}):
+                    raise exc
+                self._compare()
+                self.state = "PARTIAL_KNOWN"
+            except BaseException:
+                self.state, self.owner.uncertain = "UNKNOWN", True
+            raise BootstrapError(getattr(exc, "code", "HANDOFF_UNKNOWN"), str(exc), owner=self) from exc
+
     def _compare(self):
         self.owner.check()
+        if any(h.close_call is not None and not h.closed for h in self.owner.handles):
+            fail("CLOSE_UNPROVEN", "an unfinished/failed original close forbids new transition or deletion")
         if self.children_state != "NEVER_STARTED":
             fail("CHILDREN_UNKNOWN", "live/unknown owned children forbid restore")
         self._check_sources_anchors()
@@ -793,8 +996,7 @@ class Bootstrap:
         elif not self.backend.service_absent(self.manager, self.intent.service_name):
             fail("SERVICE_DRIFT", "unowned service exists; never adopt by name")
         for relative, node in self.nodes.items():
-            if node.image is None or self.backend.fresh_image(node.path, node.image.directory) != node.image:
-                fail("TREE_DRIFT", "fresh fileID/bytes/raw SD differ from original created postimage")
+            self._compare_node(node)
             if node.image.directory:
                 expected = {ntpath.basename(n.path) for n in self.nodes.values()
                             if ntpath.dirname(n.path) == node.path}
@@ -802,8 +1004,11 @@ class Bootstrap:
                     fail("EXTRA_CHILDREN", "new/unknown directory children are preserved")
 
     def restore(self):
-        self._guard({"INSTALLED_STOPPED_START_BLOCKED", "PARTIAL_KNOWN"})
-        if self.restore_started or not self.apply_started:
+        acknowledged_phase = self._acknowledged_pin_close()
+        resuming = acknowledged_phase == "restore"
+        self._guard({"INSTALLED_STOPPED_START_BLOCKED", "PARTIAL_KNOWN", "RUNTIME_READ_PINNED_START_BLOCKED",
+                     "RESTORE_PRE_DESTRUCTIVE"})
+        if (self.restore_started and not resuming) or not self.apply_started:
             fail("RESTORE_NO_REPEAT", "original one-shot restore only; no JSON/name adoption")
         try:
             self._compare()  # all comparisons precede the first destructive call
@@ -813,14 +1018,38 @@ class Bootstrap:
             raise BootstrapError(getattr(exc, "code", "RESTORE_COMPARE_UNKNOWN"), str(exc), owner=self) from exc
         self.restore_started, self.state = True, "RESTORING"
         try:
+            if self.handoff_started:
+                self._restore_phase = "ACQUIRE_DELETE" if not resuming else "PRE_DESTRUCTIVE_CLOSE"
+                for node in self.nodes.values():
+                    if node.handle.closed and not resuming:
+                        node.delete_handle = self.backend.restore_node(node.path, node.image.directory)
+                        self._compare_node(node)
+                self._compare()  # all new DELETE pins bound before any destructive call
+                self._restore_phase = "PRE_DESTRUCTIVE_CLOSE"
+                for node in reversed(tuple(self.nodes.values())):
+                    for role in ("runtime_handle", "bridge_handle"):
+                        handle = getattr(node, role)
+                        if handle is not None and not handle.closed:
+                            self._close_pin(node, role, "restore")
+                self._compare()  # every closed runtime pin has a known original DELETE successor
+            self._restore_phase = "DESTRUCTIVE"
             if self.service is not None:
                 self.backend.delete_service(self.service)
                 self.service.close()
                 if not self.backend.service_absent(self.manager, self.intent.service_name):
                     fail("SERVICE_DELETE_PENDING", "marked service is not confirmed absent; retain tree")
+            removed = set()
             for node in sorted(self.nodes.values(), key=lambda n: (len(n.path), n.path), reverse=True):
-                self.backend.delete_node(node.handle)
-                node.handle.close()
+                self._compare_node(node)
+                if node.image.directory:
+                    expected = {ntpath.basename(n.path) for n in self.nodes.values()
+                                if ntpath.dirname(n.path) == node.path and n.path not in removed}
+                    if self.backend.names(node.path) != expected:
+                        fail("EXTRA_CHILDREN", "unexpected children appeared during restore; preserve them")
+                handle = node.delete_handle if node.handle.closed else node.handle
+                self.backend.delete_node(handle)
+                handle.close()
+                removed.add(node.path)
             if not self.backend.absent(self.intent.prefix):
                 fail("PREFIX_DELETE_UNKNOWN", "original namespace is not confirmed absent")
             self.owner.close_all()
@@ -830,6 +1059,15 @@ class Bootstrap:
             return {"state": "RESTORED", "authority": "ORIGINAL_IN_PROCESS_INSTALLER",
                     "source_archives_preserved": True, "native_start": "NOT_RUN"}
         except BaseException as exc:
+            try:
+                known_ack = self._known_pin_close()
+            except BaseException:
+                known_ack = False
+            if known_ack:
+                self._pin_close_ack = (self._pin_close, self._pin_close.handle.close_call,
+                                       self._pin_close.handle.close_call.scalar)
+                self.state = "RESTORE_CLOSE_ACK_PENDING"
+                raise BootstrapError("CLOSE_ACK_REQUIRED", str(exc), owner=self) from exc
             self.state = "UNKNOWN"
             self.owner.uncertain = True
             raise BootstrapError("RESTORE_UNKNOWN", str(exc), owner=self) from exc
@@ -1237,10 +1475,12 @@ class _Windows:
                         HANDLE(base + owner), HANDLE(base + group), HANDLE(base + dacl), None),
                         "DWORD", outputs=(storage,))
 
-    def _open(self, path, directory, *, write=False, create=False, raw_sd=None, share=None):
+    def _open(self, path, directory, *, write=False, create=False, raw_sd=None, share=None, delete=False):
         storage = C.create_string_buffer(raw_sd, len(raw_sd)) if raw_sd is not None else None
         sa = _SecurityAttributes(C.sizeof(_SecurityAttributes), C.addressof(storage), 0) if storage is not None else None
         access = 0xC00F0000 if write else (0x20080 if directory else 0x80020000)
+        if delete:
+            access |= 0x10000
         if share is None:
             share = 1 if write or not directory else 3
         flags = 0x00200000 | (0x02000000 if directory else 0x80)
@@ -1250,6 +1490,19 @@ class _Windows:
 
     def open_node(self, path, directory):
         return self._open(path, directory)
+
+    def bridge_node(self, path, directory):
+        return self._open(path, directory, share=7)
+
+    def runtime_node(self, path, directory):
+        # READ|DELETE sharing permits a later *new* compared DELETE pin, while
+        # no WRITE sharing admits a lingering writer or a writable file mapping.
+        return self._open(path, directory, share=5)
+
+    def restore_node(self, path, directory):
+        # A new SDK acquisition with DELETE but no WRITE/WRITE_DAC/WRITE_OWNER;
+        # original Bootstrap comparison binds it before any deletion is allowed.
+        return self._open(path, directory, delete=True, share=5)
 
     def absent(self, path):
         try:
@@ -1412,7 +1665,9 @@ class _Windows:
                         (handle.arg(), 4, C.byref(deletion), C.sizeof(deletion)), outputs=(deletion,))
 
     def _token_buffer(self, token, level):
-        buffer, needed = C.create_string_buffer(65536), DWORD()
+        # TOKEN_ELEVATION is exactly one DWORD; other token classes are variable-sized.
+        size = C.sizeof(DWORD) if level == 20 else 65536
+        buffer, needed = C.create_string_buffer(size), DWORD()
         self.owner.call("GetTokenInformation", (token.arg(), level, buffer, len(buffer), C.byref(needed)),
                         outputs=(buffer, needed))
         if not 4 <= needed.value <= len(buffer):

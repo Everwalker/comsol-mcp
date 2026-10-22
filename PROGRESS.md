@@ -29,8 +29,10 @@
 
 - Windows安装器上下文源码/软件已Main限定验收：固定0fbd+两overlay的220项PASS（102上下文/118旧bootstrap），909原输入/911候选及7imports已核；与新handoff共享的5个base符号AST不变，未声称组合测试。一次新R2真实只读23 SDK调用、4实际source imports、TokenElevation请求/返回4字节、原token HANDLE一次BOOL1关闭/retained0。探针实际elevated Admin且SeRestore原本启用，零Adjust/restore；197引用/104目标/7 ZIP成员与原R1保留已核。R1失败及cleanup NOT_VERIFIED保留，SYSTEM/实际enable-restore/host apply/Start/T037仍未通过。见[上下文证据](docs/universal_mcp_execution/evidence/WINDOWS_INSTALLER_CONTEXT.json)。
 
+- Windows静态runtime HANDLE交接与ABI/记账整改经Main限定验收：固定0fbd+两overlay的284项PASS（278相关+含原Main6，不叠加），Main在冻结90a源码/6a01测试独立重跑原6项PASS。21,772基线文件/87实际imports/407引用已核，原Call/Handle/Owner AST不变。精确DWORD ABI；已确认原Close仅补记账，原restore复用DELETE pins，opaque结果仍拒绝。一次历史96b普通私有CPython R2仅证明两pin转换、child生前原身份/正常退出、18文件HANDLE BOOL1关闭及两副本比较后删除；最终90a/ABI/ack实际SDK未跑，完整Bootstrap SD仍拒绝。历史155项旧测试指针后被覆盖，原失败/JUnit保留、该源码复现UNVERIFIED；不影响当前284冻结绑定。Start/profile/host/T037仍未通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_BOOTSTRAP_RUNTIME_HANDOFF.json)。
+
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：Main完成交接284（含原6反例、Main独立6PASS）的增量验收，历史R2私有CPython pin/生前身份/正常退出及两私有副本删除仅绑定96b；最终90a、token ABI与ack实际SDK仍NOT_RUN。有限A三处实质问题由同Luna整改。r4公开metadata2条成功、0sessions，无memory profile/estimates，native保持HOLD。强技术审查AppC生命周期，Kier仅只读核正式stop授权生产路径；最终统一Reviewer仍未开始。
+下一动作：Main集中验收有限A三项整改后的clean1103（含原Main6+1及旧Job1，只计一次）。AppC强技术审查已收敛，Main选同存活原owner/runtime、有限TCB、generation UNAVAILABLE，Halley实施首个持久ProfileEffect强root源码单元；真实pause/allJobs/storage/非创建式缺席producer未齐仍拒绝restore。正式stop-ref内置签发未找到，旧实例不绕过；r4缺finite memory输入，native HOLD。最终统一Reviewer尚未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

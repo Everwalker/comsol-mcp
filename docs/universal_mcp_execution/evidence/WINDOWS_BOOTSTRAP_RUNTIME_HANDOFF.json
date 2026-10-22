@@ -1,0 +1,434 @@
+{
+  "actual_imports": {
+    "bytes": 38104,
+    "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/clean-software/runtime-imports.json",
+    "sha256": "334c2fc8735f463d57f35d13635e5ed068fdb73ab507aac229c0d55986879a45"
+  },
+  "authority": {
+    "Main_acceptance": "PENDING_MAIN_ONLY",
+    "T037_causal_isolation": "UNVERIFIED",
+    "TokenElevation_real_SDK": "NOT_RUN",
+    "close_ack_phase_native": "NOT_RUN",
+    "final_candidate_native": "NOT_RUN",
+    "full_native_bootstrap_restore": "NOT_RUN",
+    "host_apply": "NOT_RUN_NOT_AUTHORIZED",
+    "package_apply_ready": false,
+    "profile_config_AppContainer_issuer_materialized": false,
+    "service_start": "BLOCKED_UNMATERIALIZED_TRUSTED_PROFILE",
+    "static_read_pins_are_start_or_T037_authority": false
+  },
+  "baseline": "0fbd29b480f8672b72bc86f129b22a98e0f994de",
+  "changed_paths": [
+    "comsol_mcp/_windows_host_bootstrap.py",
+    "tests/test_windows_host_bootstrap.py",
+    "docs/universal_mcp_execution/evidence/WINDOWS_BOOTSTRAP_RUNTIME_HANDOFF.json",
+    "_state/universal-windows-bootstrap-runtime-handoff/**"
+  ],
+  "exact_diff": {
+    "bytes": 49267,
+    "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/full-0fbd.patch",
+    "sha256": "c6ab5bdf0133de7ad35c8464d3ce694f01cb1d6d7247f3a9483efb9287539d0a"
+  },
+  "implementation": {
+    "children_state": "no start/drained API; diagnostic values closed to exact strings; losing NEVER_STARTED cannot be reset by caller flag",
+    "documented_new_read_acquisition_failure": "PARTIAL_KNOWN permits original explicit restore after full comparison; close/result/transfer/drift uncertainty remains UNKNOWN",
+    "new_restore_desired_access": {
+      "directory": "0x30080",
+      "file": "0x80030000"
+    },
+    "no_old_opaque_owner_rewrap": true,
+    "preserved_close_cache_UNKNOWN_definitions": [
+      "_Call",
+      "_Handle",
+      "_Owner"
+    ],
+    "restore": "same original Bootstrap, known never-started and exact stopped SCM/static inventory; new real DELETE+READ acquisition for closed writers, full original/fresh comparisons before destructive calls; close original runtime pins then original/new delete handles only",
+    "runtime_desired_access": {
+      "directory": "0x20080 (attributes/READ_CONTROL)",
+      "file": "0x80020000 (READ/READ_CONTROL)"
+    },
+    "single_original_handoff_no_automatic_retry": true,
+    "token_and_pre_destructive_close_ack_rework": [
+      "TokenElevation20 requests sizeof(DWORD)==4; existing lower/upper output bounds enforce exactly4 returned bytes. Variable token classes keep65536.",
+      "Private _PinClose retains original pre-dispatch phase/node/pin/handle/argument/closer/call/handle-list references; _known_pin_close validates cached strict scalar without consuming raw_result or querying/closing native resources.",
+      "Only confirmed pre-destructive pin close metadata failure enters an ack-pending state. Explicit original handle.close acknowledges cached success with zero new SDK calls; same original restore continues its retained phase and reuses existing DELETE pins. Handoff never restarts.",
+      "_Call/_Handle/_Owner native definitions unchanged. No owner.uncertain clear; BOOL0/opaque/unreturned calls/acquisitions/config/deletion and post-destructive failures stay fenced."
+    ],
+    "transition": "original writer -> new read bridge share 7 -> confirmed original writer close -> full postimage equality -> new readonly runtime share 5 -> original bridge confirmed close; original node.handle retained"
+  },
+  "incremental_review_diff": {
+    "bytes": 23392,
+    "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/combined-34c.patch",
+    "sha256": "3bcfa84eea4cf8313f4d795895b6ae3ff8022a9fe8bb50f8cda5d6cdf13615a3"
+  },
+  "main_review": {
+    "path": "_state/universal-main-review/20261023-bootstrap-handoff/MAIN_REVIEW.json",
+    "bytes": 4666,
+    "sha256": "cbb101d4f5bf59c60f5e3743b7e3f0038284e24484e0ec43c8e8e98cdbc8a334"
+  },
+  "native_primitive": {
+    "SDK_dispatches": 513,
+    "SDK_names": {
+      "CloseHandle": 6,
+      "CreateFileW": 6,
+      "GetFileInformationByHandle": 16,
+      "GetFileInformationByHandleEx": 16,
+      "GetFinalPathNameByHandleW": 8,
+      "GetKernelObjectSecurity": 8,
+      "GetProcessId": 2,
+      "GetProcessTimes": 1,
+      "QueryFullProcessImageNameW": 2,
+      "ReadFile": 440,
+      "SetFilePointerEx": 8
+    },
+    "T037": "UNVERIFIED",
+    "child": {
+      "argv": [
+        "C:\\Users\\Everwalker\\universal-bootstrap-handoff-primitive-20261023-98cc643a84c0\\copied-normal-cpython\\python.exe",
+        "-I",
+        "-B",
+        "-c",
+        "print(('BOOTSTRAP_RUNTIME_HANDOFF_PRIMITIVE_ONLY', __import__('sys').executable, __import__('sys').argv, __import__('sys').flags.isolated, __import__('sys').flags.dont_write_bytecode))"
+      ],
+      "cleanup_original_close_completed_without_exception": true,
+      "cleanup_original_close_invoked": true,
+      "close_proof_scope": "original CPython exception-return API, NOT a recorded raw Win32 BOOL; pinned subprocess.py origin/hash in raw",
+      "creation_attempts": 1,
+      "exact_exit_code": "NOT_SAVED_UNVERIFIED",
+      "first_GetProcessId_raw": 30976,
+      "first_image_query_and_birth_query": "BOOL 1 observed; exact output fields NOT_SAVED before later exception; not promoted to complete identity proof",
+      "normal_close_phase_reached": false,
+      "original_process_handle": 864,
+      "owner": "original CPython Popen and its original Handle.Close; no detach, process handle rewrap/reopen or signal",
+      "pid": 30976,
+      "print_readback": "UNVERIFIED_NOT_CAPTURED",
+      "quoted_command_line": "C:\\Users\\Everwalker\\universal-bootstrap-handoff-primitive-20261023-98cc643a84c0\\copied-normal-cpython\\python.exe -I -B -c \"print(('BOOTSTRAP_RUNTIME_HANDOFF_PRIMITIVE_ONLY', __import__('sys').executable, __import__('sys').argv, __import__('sys').flags.isolated, __import__('sys').flags.dont_write_bytecode))\"",
+      "shell": false,
+      "thread_handle": "closed internally by CPython; not independently observed",
+      "wait_returned_and_exit_observed": true
+    },
+    "copied_runtime_inventory": {
+      "bytes": 8937747,
+      "files": 137,
+      "scope": "new ordinary private copy; existing shared images never opened WRITE/DELETE; original/copied SHA equality recorded in raw"
+    },
+    "file_close_confirmation": "6 original HANDLE resources, each confirmed BOOL 1; repeated numeric values are actual new SDK scalar reuse, not old-owner retry",
+    "file_original_handles": 6,
+    "file_original_handles_closed": 6,
+    "file_pin_scope": "copied python.exe + python312.dll; actual full IDs/hash/rawSD compared across confirmed writer close and new read-only share=5 runtime acquisition; not native installed Bootstrap or all DLL proof",
+    "file_pin_transitions_observed": 2,
+    "full_Bootstrap_file_SD_check": [
+      {
+        "code": "SD_POLICY",
+        "message": "SYSTEM-owned protected code/config security required",
+        "state": "REFUSED_FULL_BOOTSTRAP_FILE_PRECONDITION"
+      },
+      {
+        "code": "SD_POLICY",
+        "message": "SYSTEM-owned protected code/config security required",
+        "state": "REFUSED_FULL_BOOTSTRAP_FILE_PRECONDITION"
+      }
+    ],
+    "host_policy_write_dispatches": 0,
+    "native_command_invocations": 1,
+    "native_disposition_or_file_delete": "NOT_RUN",
+    "native_install_service_start_restore": "NOT_RUN_NOT_AUTHORIZED",
+    "native_new_DELETE_acquisition": "NOT_RUN_AFTER_QUERY_FAILURE",
+    "no_remote_retry": true,
+    "original_Call_states": {
+      "KNOWN_FAILURE": 1,
+      "SUCCEEDED": 512
+    },
+    "pins": {
+      "bytes": 1476,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/source-binding.json",
+      "sha256": "2f5164f939fe1e6ff0842c27165eba5d0f835731eac522af00a4263afdc6184c"
+    },
+    "post_exit_failure": {
+      "Win32": 31,
+      "function": "QueryFullProcessImageNameW",
+      "no_fallback_or_reexecution": true,
+      "original_Error": {
+        "code": "SDK_KNOWN_FAILURE",
+        "message": "QueryFullProcessImageNameW failed: Win32 31",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\Everwalker\\universal-bootstrap-handoff-primitive-20261023-98cc643a84c0\\observe_once.py\", line 183, in <module>\n    after = child_metadata()\n            ^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Everwalker\\universal-bootstrap-handoff-primitive-20261023-98cc643a84c0\\observe_once.py\", line 117, in child_metadata\n    native.owner.call(\"QueryFullProcessImageNameW\", (argument, 0, buffer, C.byref(length)), outputs=(*keep, buffer, length))\n  File \"C:\\Users\\Everwalker\\universal-bootstrap-handoff-primitive-20261023-98cc643a84c0\\_windows_host_bootstrap.py\", line 523, in call\n    return _Call(self, name, self.api.function(name), args, mode, outputs).run()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Everwalker\\universal-bootstrap-handoff-primitive-20261023-98cc643a84c0\\_windows_host_bootstrap.py\", line 441, in run\n    raise KnownSdkFailure(self.name, self.error)\n_pinned_bootstrap_primitive.KnownSdkFailure: QueryFullProcessImageNameW failed: Win32 31\n",
+        "type": "KnownSdkFailure",
+        "winerror": 31
+      },
+      "phase": "second process metadata read after original Popen.wait returned",
+      "raw_return": 0
+    },
+    "probe_source": {
+      "bytes": 15577,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/observe_once.py",
+      "sha256": "cff43c9f064f5a43aa4a30adecdbe8fda7955c734e97b8b0625cffcc2cbd1f2a"
+    },
+    "probe_stderr": {
+      "bytes": 0,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/probe.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "probe_stdout": {
+      "bytes": 307,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/probe.stdout",
+      "sha256": "14b8138c60511e8ba06bb7ebd4ab5bf965230251014e6d1adb5735764f17edcc"
+    },
+    "profile_AppContainer_COMSOL_JVM": "NOT_RUN",
+    "raw": {
+      "bytes": 227835,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/probe-result.json",
+      "sha256": "ea2c1207e044828c691033f1941784999827ab985f66124fdc86015a104dcc67"
+    },
+    "runner_source": {
+      "bytes": 5327,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/run_once.py",
+      "sha256": "924a04b46988ccddb021064d731c6ecd9ae9bf732169b09b15e0a6b70a94a7ad"
+    },
+    "source_sha256": "34cfdbe4aadfd3211c1e146e5dc87f9b43390d376913d747f5c6bfca57b6a527",
+    "state": "PARTIAL_OBSERVATIONS_WITH_REAL_POST_EXIT_QUERY_FAILURE_NO_RETRY",
+    "transport": {
+      "bytes": 1033,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive/transport-receipt.json",
+      "sha256": "e23b5363307262a7208b56490e416b32c3e722a012529ca325232810a3543233"
+    }
+  },
+  "native_primitive_R2": {
+    "T037": "UNVERIFIED",
+    "does_not_test_token_or_latest_ack_patch": true,
+    "final_candidate_native": "NOT_RUN",
+    "full_Bootstrap_SD": "REFUSED",
+    "receipt": {
+      "bytes": 10822,
+      "path": "_state/universal-windows-bootstrap-runtime-handoff/native-primitive-r2/RECEIPT.json",
+      "sha256": "c9b7ef3edc53f6e82f3231e0de81f92dd04f7589993ab80113c5292194abbe42"
+    },
+    "source_sha256": "96b22a2befc5e86c9cb4fce569e34ba2d8b41fccc653c98a9d404527bc65db8d",
+    "state": "OBSERVED_PRIVATE_COPY_PRIMITIVE_ONLY"
+  },
+  "official_sources": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_disposition_info",
+    "https://docs.python.org/3.12/library/subprocess.html",
+    "https://raw.githubusercontent.com/python/cpython/3.12/Lib/subprocess.py",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew",
+    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes",
+    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocessid",
+    "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-gettokeninformation",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_elevation"
+  ],
+  "old_compact_preserved": {
+    "bytes": 19194,
+    "path": "docs/universal_mcp_execution/evidence/WINDOWS_HOST_BOOTSTRAP.json",
+    "sha256": "4a98a793273d40bb6f78d4bc8bee6a934cf93c97c58c404c9d13229973aa7851"
+  },
+  "receipt": {
+    "bytes": 15198,
+    "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/UNIT_RECEIPT.json",
+    "sha256": "3bb5c8c73663bfe21adb3006a365bc20f5b3173753853b88480afda67cfb8fa2"
+  },
+  "schema": "comsol-mcp.windows-bootstrap-runtime-handoff-evidence/1",
+  "software": {
+    "current_rework": {
+      "ack_initial": {
+        "by_module": {
+          "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.negative-96b.test_new_close_controls": 6,
+          "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.original-inputs._state.universal-main-review.20261023-bootstrap-handoff.test_handoff_known_close_review": 3
+        },
+        "errors": 0,
+        "failures": 8,
+        "junit": {
+          "bytes": 10824,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/negative-96b/junit.xml",
+          "sha256": "9f6f514b0980769e817e7258baa75d68f14b6ba7ddd980cab4b4799e90c56f87"
+        },
+        "run": {
+          "bytes": 1833,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/negative-96b/run.json",
+          "sha256": "70ec00557921c3288ad678a87919b1ee864d4d7e458bf17b53205ac9c09d1c36"
+        },
+        "skipped": 0,
+        "stderr": {
+          "bytes": 0,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/negative-96b/stderr.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 7650,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/negative-96b/stdout.log",
+          "sha256": "8dcb0a131b06ef0d64905b084f96a4fb42aab2914ab702c19c612969f5a6de9e"
+        },
+        "tests": 9
+      },
+      "historical_expected_permanent_UNKNOWN_for_two_confirmed_bookkeeping_branches_corrected": true,
+      "intermediate_token_264": {
+        "bytes": 65167,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/token-elevation-repair/clean-software/junit.xml",
+        "sha256": "3ba7a1f75bcce3ba7c15fd9cd3271a20dac66d5d2d45ef25d047200480f53628"
+      },
+      "token_initial": {
+        "by_module": {
+          "_state.universal-windows-bootstrap-runtime-handoff.token-elevation-repair.negative-old34c.test_windows_host_bootstrap": 6
+        },
+        "errors": 0,
+        "failures": 2,
+        "junit": {
+          "bytes": 2946,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/token-elevation-repair/negative-old34c/junit.xml",
+          "sha256": "9ec824215f60ed2ede67a48ef41fe50e9cfda43209598fd118163b363ada96f9"
+        },
+        "run": {
+          "bytes": 1599,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/token-elevation-repair/negative-old34c/run.json",
+          "sha256": "e880547ef50a37ea0d01057520f2ac50ed4baf2f6d3630d43ff90c9cb83ad37f"
+        },
+        "skipped": 0,
+        "stderr": {
+          "bytes": 0,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/token-elevation-repair/negative-old34c/stderr.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 1893,
+          "path": "_state/universal-windows-bootstrap-runtime-handoff/token-elevation-repair/negative-old34c/stdout.log",
+          "sha256": "78371a5c5595089a6defe61fb3f8c3133920a28ae7a3e071062478d0d67cdd6f"
+        },
+        "tests": 6
+      }
+    },
+    "final_affected": {
+      "Main_counter_cases": 6,
+      "affected_cases": 278,
+      "by_module": {
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.clean-mirror.tests.test_build_windows_host_package": 44,
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.clean-mirror.tests.test_windows_host_bootstrap": 184,
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.clean-mirror.tests.test_windows_scm_birth_concurrency": 8,
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.clean-mirror.tests.test_windows_scm_prebirth": 31,
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.clean-mirror.tests.test_windows_t037_broker": 11,
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.original-inputs._state.universal-main-review.20261023-bootstrap-handoff.test_handoff_known_close_review": 3,
+        "_state.universal-windows-bootstrap-runtime-handoff.known-close-ack-repair.original-inputs._state.universal-main-review.20261023-host-bootstrap.test_bootstrap_token_elevation_review": 3
+      },
+      "errors": 0,
+      "failures": 0,
+      "junit": {
+        "bytes": 70408,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/clean-software/junit.xml",
+        "sha256": "a508a43685bad9625d8a33f83190bb5a0afe7e2b87fd42853727b6fa5bb51be5"
+      },
+      "run": {
+        "bytes": 5130,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/clean-software/run.json",
+        "sha256": "dc0b9e67bc3ac3e363a5dc15de119ce8945ac2508337c86af2124dda0f3ddbf2"
+      },
+      "scope": "SOFTWARE_ONLY; fixed0fbd + ONLY two leased overlays; two exact copied Main counters; no native acceptance",
+      "skipped": 0,
+      "stderr": {
+        "bytes": 0,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/clean-software/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 340,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/clean-software/stdout.log",
+        "sha256": "cf194bf1a4bc9bdd097e0d627e19edad46474fd39d935079bb30d9b3c0247cf7"
+      },
+      "tests": 284
+    },
+    "historical_255_final_affected": {
+      "baseline_affected_cases": 212,
+      "bootstrap_unit_cases": 161,
+      "by_module": {
+        "tests.test_build_windows_host_package": 44,
+        "tests.test_windows_host_bootstrap": 161,
+        "tests.test_windows_scm_birth_concurrency": 8,
+        "tests.test_windows_scm_prebirth": 31,
+        "tests.test_windows_t037_broker": 11
+      },
+      "errors": 0,
+      "failures": 0,
+      "junit": {
+        "bytes": 40757,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/clean-software-apfs/junit.xml",
+        "sha256": "2fe785c7ac11e74481db4e56757d344fa533d13d89199a5e17d21de4e050f4b2"
+      },
+      "new_handoff_controls": 43,
+      "run": {
+        "bytes": 4134,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/clean-software-apfs/run.json",
+        "sha256": "ea6d7113235744308dfffcd9c096ed16f17ee8dbecfa7827f5e58c546aec74a4"
+      },
+      "scope": "SOFTWARE_ONLY; 0fbd published source + ONLY 2 leased overlays; no native service/bootstrap/T037 acceptance",
+      "skipped": 0,
+      "stderr": {
+        "bytes": 0,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/clean-software-apfs/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 340,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/clean-software-apfs/stdout.log",
+        "sha256": "0084eee02e8bce63d35243a126dd0014b278d4a9f1de786efcb46ab11fd4287f"
+      },
+      "tests": 255
+    },
+    "initial_mask_failure": {
+      "by_module": {
+        "tests.test_windows_host_bootstrap": 155
+      },
+      "errors": 0,
+      "failures": 3,
+      "junit": {
+        "bytes": 25704,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/attempt-02-new-controls/junit.xml",
+        "sha256": "bf23f552abd0a4274f47a49f76e8a6b12d2774d5aba102521655b07b7ae9f43c"
+      },
+      "reason": "Three SOFTWARE_ONLY assertions incorrectly included READ_CONTROL 0x20000 in write-rights mask. Corrected mask to 0x400D0006; production desired rights unchanged by this test correction. Original failures retained.",
+      "run": {
+        "bytes": 762,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/attempt-02-new-controls/run.json",
+        "sha256": "78d59789f2dd39de16abea9fdf29c7ba54d58e5c4f0048f198759650dd508784"
+      },
+      "skipped": 0,
+      "stderr": {
+        "bytes": 0,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/attempt-02-new-controls/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 1852,
+        "path": "_state/universal-windows-bootstrap-runtime-handoff/attempt-02-new-controls/stdout.log",
+        "sha256": "81edcce438cffe717082a9a4a65704454fae13f5f8eb1afec73bfecf361c08af"
+      },
+      "tests": 155
+    },
+    "new_controls": 43,
+    "previous_accepted_212_cases_preserved": true,
+    "state": "SOFTWARE_ONLY_PASS"
+  },
+  "source_closure": {
+    "bytes": 3691662,
+    "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/source-binding.json",
+    "sha256": "8e0fa2b8ca536c01251f6675a45dec1a9a3f72c8e8b9145f0362397901d12059"
+  },
+  "source_sha256": {
+    "comsol_mcp/_windows_host_bootstrap.py": "90a1f4d2e8cd46f3be4d17ed65ab5d9f4890562090edea0ea039b13dd4533f79",
+    "tests/test_windows_host_bootstrap.py": "6a01b725fada22c4644af51605e02bb86806872894d6c746361b1e4dd8888e7b"
+  },
+  "state": "MAIN_ACCEPTED_SOURCE_SOFTWARE284_WITH_HISTORICAL_R2_PRIMITIVE_ONLY",
+  "verification": {
+    "bytes": 1179,
+    "path": "_state/universal-windows-bootstrap-runtime-handoff/known-close-ack-repair/final-guards.json",
+    "sha256": "cdc49ae573b271dbb8e1a00dc15489f14eb48004823a00aa942c2dfde477f618"
+  },
+  "historical_source_pointer_limit": {
+    "difference": {
+      "document": "_state/universal-windows-bootstrap-runtime-handoff/clean-software-before-child-type-check/run.json",
+      "field": "test_source_sha256",
+      "target": "_state/universal-windows-bootstrap-runtime-handoff/clean-mirror/tests/test_windows_host_bootstrap.py",
+      "expected": "786364e934e6c033e5a8d3a432eb8c4597f806f28d0c9513de56d110ebb74147",
+      "actual": "6ca3f22be63b5fbe48e478a52c500f501084bfcc766af98d9df7cac713219d6e",
+      "scope": "HISTORICAL then-run pointer to later test bytes; current284 uses separate exact clean tree; left unchanged."
+    },
+    "disposition": "Preserve original then-run JSON/JUnit and later mirror bytes. Historical pre-child-type155-case run test pointer is stale; old exact test source reproduction UNVERIFIED. No assertion of all historical source bytes reproducible. Current284 closure/255 original and Main failure originals are independently bound and unaffected."
+  }
+}
