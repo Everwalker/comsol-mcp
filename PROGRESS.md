@@ -27,8 +27,10 @@
 - Windows固定子进程创建限制属性经Main限定接收：92软件PASS，真实普通悬挂探针读回flags1、原HANDLE退出/释放核验；从未Resume，实际阻止行为/三属性T037原生创建/vendor兼容仍NOT_RUN。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_PROCESS_POLICY.json)。
 - 两项只读producer经Main有限验收：MIC当前160项PASS/旧源码10项负控失败，新源码实际两次LABEL读与两次原LocalFree确认、原owner关闭文件；无标签ACE，Medium仅文档默认。WFP当前62项PASS/旧a889源码6项负控失败，单次DWORD规范化与成功后记账异常不再重关。实际空事件SDK快照仍只绑定历史a889、NOT_OBSERVED；未重跑或重标。MIC阻止行为/非空事件/因果/T037均未通过。
 
+- Windows安装器上下文源码/软件已Main限定验收：固定0fbd+两overlay的220项PASS（102上下文/118旧bootstrap），909原输入/911候选及7imports已核；与新handoff共享的5个base符号AST不变，未声称组合测试。一次新R2真实只读23 SDK调用、4实际source imports、TokenElevation请求/返回4字节、原token HANDLE一次BOOL1关闭/retained0。探针实际elevated Admin且SeRestore原本启用，零Adjust/restore；197引用/104目标/7 ZIP成员与原R1保留已核。R1失败及cleanup NOT_VERIFIED保留，SYSTEM/实际enable-restore/host apply/Start/T037仍未通过。见[上下文证据](docs/universal_mcp_execution/evidence/WINDOWS_INSTALLER_CONTEXT.json)。
+
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：Main审查新installer上下文220与静态runtime HANDLE交接255软件单位；两者实际探针分别为Win3224 ABI失败（修后SDK未跑）和退出后image query Win3231部分失败，均未计native PASS。有限A初始1062软件经Main反例发现错误释放partial SD、合法service SID叶写拒绝及隐含foreign SD读取前提，由同Luna集中整改。r4新项目已核2条公开metadata成功、0sessions；记录free-only约1GiB、无memory profile/estimates，Main暂缓新COMSOL，未声称容量不足或license denied。独立强技术审查AppC生命周期最小方案，最终统一Reviewer仍未开始。
+下一动作：Main完成交接284（含原6反例、Main独立6PASS）的增量验收，历史R2私有CPython pin/生前身份/正常退出及两私有副本删除仅绑定96b；最终90a、token ABI与ack实际SDK仍NOT_RUN。有限A三处实质问题由同Luna整改。r4公开metadata2条成功、0sessions，无memory profile/estimates，native保持HOLD。强技术审查AppC生命周期，Kier仅只读核正式stop授权生产路径；最终统一Reviewer仍未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

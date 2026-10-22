@@ -1,0 +1,376 @@
+{
+  "kind": "WINDOWS_INSTALLER_CONTEXT",
+  "recorded_utc": "2026-10-22T22:56:37.423706+00:00",
+  "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE220_AND_READONLY_SDK_R2_ONLY",
+  "review_status": "MAIN_ACCEPTED_WITH_EXPLICIT_SOURCE_SOFTWARE_AND_READONLY_LIMITS",
+  "baseline_commit": "0fbd29b480f8672b72bc86f129b22a98e0f994de",
+  "source_binding": {
+    "path": "_state/universal-windows-installer-context/SOURCE_BINDING.json",
+    "bytes": 1712,
+    "sha256": "4f8921201671bd90f93d2455e2be6c5336adb8d6a59c95669e093553092914bc"
+  },
+  "files": [
+    {
+      "path": "comsol_mcp/_windows_installer_context.py",
+      "bytes": 33369,
+      "sha256": "eae6187050e661853900c5e9eaf88a6e03b5b3a6fa106f8c197a67b926af28da",
+      "frozen_path": "_state/universal-windows-installer-context/source-final-r2/comsol_mcp/_windows_installer_context.py"
+    },
+    {
+      "path": "tests/test_windows_installer_context.py",
+      "bytes": 26560,
+      "sha256": "c95cffbe1244bcc424d317c9bf2fc2b282d24269bb668b3c59ddeeedb0328af4",
+      "frozen_path": "_state/universal-windows-installer-context/source-final-r2/tests/test_windows_installer_context.py"
+    }
+  ],
+  "interfaces": {
+    "path": "_state/universal-windows-installer-context/INTERFACE.md",
+    "bytes": 3760,
+    "sha256": "dd9e63971cc0c9f17e6d2492f7b6e7bb86894d8e79417a9b0f76314d06301262"
+  },
+  "contract": {
+    "path": "_state/universal-windows-installer-context/INSTALLER_CONTEXT_CONTRACT.clarified.input.json",
+    "bytes": 4215,
+    "sha256": "c5248de28f585a5c0098a1a0ff38682034072b86afcdc6656af60910f37ccb8d"
+  },
+  "diff": [
+    {
+      "path": "_state/universal-windows-installer-context/comsol_mcp___windows_installer_context.py.final-r2.patch",
+      "bytes": 34121,
+      "sha256": "f115a98baec9924c6c1931ce4f25c719adf35c605f227355f57da7c2b3403324"
+    },
+    {
+      "path": "_state/universal-windows-installer-context/tests__test_windows_installer_context.py.final-r2.patch",
+      "bytes": 27202,
+      "sha256": "9f549717226432d9707e1ad16c9357ad69fe1e3f2862ab762efe22c65b896e07"
+    }
+  ],
+  "implementation": {
+    "scope": "Local installer TCB only; exact existing parsed intent + original bytes + explicit same intent SHA on source enable; JSON/snapshots never original owners or T037 authority.",
+    "readonly_origin": "Actual PID/birth, no impersonation, original token HANDLE/storage, user/elevation/enabled-admin/full privilege map, current-primary TokenId comparison. Independent software/native construction paths.",
+    "source_setter": "Only SeRestore, only already assigned eligible elevated-admin current primary token; SYSTEM/already enabled require no setter. Actual PreviousState captured before effect, exact original postimage compare-and-restore.",
+    "UNKNOWN": "Original SDK normalization/output/owner retained; same original PID/birth is fenced before new OpenProcessToken across new API/owner. No fresh observation/replay of uncertain mutation; independent process unaffected.",
+    "cleanup": "HANDLE close uncertainty remains separate from privilege-state uncertainty. Cached SDK successes/postimages permit original metadata ack only. No destructor/foreign closer/token/slot reconstruction.",
+    "host_side_effects": "No actual privilege adjust/restore/LSA/service/ACL/AppContainer/WFP/BFE/network/license/COMSOL executed."
+  },
+  "software": {
+    "JUnit": {
+      "path": "_state/universal-windows-installer-context/frozen-final-r2.xml",
+      "bytes": 35204,
+      "sha256": "1bcd79931a2e7ecae9cb6998b03a1e1f32420c6c22ed83a214b623ea6d698da4"
+    },
+    "command": {
+      "path": "_state/universal-windows-installer-context/frozen-final-r2.command.json",
+      "bytes": 744,
+      "sha256": "e395344aa7e2303612c794801ad03488035b660dfa834992d0bf9758231fc519"
+    },
+    "stdout": {
+      "path": "_state/universal-windows-installer-context/frozen-final-r2.stdout",
+      "bytes": 340,
+      "sha256": "c26e140f611859df29a6fa5289223829e34e4677edabb0e22e7c104d24df5035"
+    },
+    "stderr": {
+      "path": "_state/universal-windows-installer-context/frozen-final-r2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "imports": {
+      "path": "_state/universal-windows-installer-context/ACTUAL_IMPORTS_FINAL_R2.json",
+      "bytes": 2064,
+      "sha256": "341dc33c158e98e4379e0c0bc94cc18985059cfe794338fa06fae5a685891c6f"
+    },
+    "summary": {
+      "path": "_state/universal-windows-installer-context/RESULT_SUMMARY.json",
+      "bytes": 2032,
+      "sha256": "2dc2a1aa74256a0072ef42f33a87ff7f335dedac740bdb46dd6f6c69ed16ce08"
+    },
+    "counts": {
+      "tests": 220,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 220,
+      "by_file": {
+        "tests.test_windows_installer_context": 102,
+        "tests.test_windows_host_bootstrap": 118
+      }
+    },
+    "source_inputs": 911,
+    "baseline_inputs": 909,
+    "overlays": 2,
+    "actual_imports": 7,
+    "private_materials_copied": 0,
+    "controls": [
+      "SYSTEM/assigned enabled/assigned disabled/unassigned/removed/elevation/admin/impersonation and strict original approval; one exact full-width LUID only.",
+      "Full pre/post token identity/map/group/elevation/modified-ID/process/current-primary drift preserves foreign state without setter.",
+      "Adjust/restore effect-then-raise/before-call raise/malformed/opaque/normalization failure/NOT_ALL_ASSIGNED/PreviousState mismatch: no replay or query-for-proof, original holders retained.",
+      "Fresh API/owner same PID/birth blocked before token opening; independently observed other process works; close UNKNOWN does not become privilege UNKNOWN.",
+      "Actual ctypes SID/array/count/pointer/extent parsing; high-bit/signed-high LUID, original previous-state bytes, typed fixed DWORD output and nonzero elevation semantics.",
+      "Success ack faults after actual software postimage, normalized success before missing postimage, close/root pop before/after effect; metadata-only reconcile does not repeat native calls.",
+      "Original SDK/intent/HANDLE/wrapper/slot/argument/request/previous/postimage/function/output/closed metadata controls; no incoming provider or serialized diagnostic result as authority.",
+      "Native-constructor readonly whitelist tested through explicit software OS leaves; no native promotion;118 bootstrap regression remains unchanged."
+    ]
+  },
+  "native_readonly": {
+    "state": "R1_ACTUAL_READ_REFUSED_NOT_CURRENT_REPAIR_NATIVE_PROOF",
+    "invocations": 1,
+    "source_pins": {
+      "path": "_state/universal-windows-installer-context/SDK_PINS.json",
+      "bytes": 1001,
+      "sha256": "57974a97b820caa33e2f7ffbf8e0f16ea2188ce21588f7e475e1a5675e194007"
+    },
+    "archive": {
+      "path": "_state/universal-windows-installer-context/SDK_PAYLOAD.zip",
+      "bytes": 33351,
+      "sha256": "75061887e1e1470828b352542f4bf721f3b1261b31f7e29578b84503f23ad490"
+    },
+    "program": {
+      "path": "_state/universal-windows-installer-context/windows_readonly_probe.py",
+      "bytes": 4937,
+      "sha256": "e8c5ac01e16eb33f0500848140e96ab35000e1e65cdc4c01a3ee092f8c4a0f32"
+    },
+    "transport": {
+      "path": "_state/universal-windows-installer-context/WINDOWS_TRANSPORT_RESULT.json",
+      "bytes": 562,
+      "sha256": "22b1c8f336003a270f3fc5a52205a87a4174026a038b40e570766397540a20d8"
+    },
+    "run_binding": {
+      "path": "_state/universal-windows-installer-context/WINDOWS_RUN_BINDING.json",
+      "bytes": 501,
+      "sha256": "bc077d7b605d283f5010c27857ab1e8ef9c5c0f88fc9fcb54680e001500c428e"
+    },
+    "raw": {
+      "path": "_state/universal-windows-installer-context/SDK_READONLY_RESULT.json",
+      "bytes": 7759,
+      "sha256": "d159328892d4b6350b5ae473eeb0ce0a31892ea7b3927a9ce15197bc13c8ca0c"
+    },
+    "scope": "Official existing Windows Python3.12 source tree, 4 pinned modules; synthetic diagnostic intent only, not approved/installable material. Actual current-token reads stopped at TokenElevation Win3224.",
+    "actual_error": "GetTokenInformation TokenElevation ERROR_BAD_LENGTH24",
+    "native_API_privilege_enable": "NOT_RUN",
+    "native_API_restore": "NOT_RUN",
+    "setter_dispatches": 0,
+    "blocked_dispatches": 0,
+    "current_repaired_source_SDK": "NOT_RUN_SINGLE_OPTIONAL_PROBE_NOT_REPLAYED",
+    "original_cleanup": "NOT_VERIFIED_R1_HARNESS_NO_SOURCE_CLOSE_AFTER_READ_REFUSAL",
+    "old_handle_adoption_or_reclose": false
+  },
+  "repair": {
+    "ABI_notes": {
+      "path": "_state/universal-windows-installer-context/SDK_ABI_NOTES.json",
+      "bytes": 1552,
+      "sha256": "6321df4c5d78544db700c3442b37355cd892d0f053b3a134bee5c36f9ef65a80"
+    },
+    "old_source_new_control": {
+      "path": "_state/universal-windows-installer-context/OLD_NEW_ELEVATION_CONTROL.json",
+      "bytes": 367,
+      "sha256": "1f59f8bdba3095e925f149d2d1a8aad95d5468ea8db8e2c79be1b041ba5e63ef"
+    },
+    "before_JUnit": {
+      "path": "_state/universal-windows-installer-context/old-source-elevation-counter.xml",
+      "bytes": 12737,
+      "sha256": "d3049d5f6ac30ebedb182faeccfff813752dd8a52b3493eca66a91d709fe1a76"
+    },
+    "current220": "Separate current frozen source result, not added to old217. Fixed typed DWORD size; keep raw initial technical failure distinct from capability refusal."
+  },
+  "history": {
+    "first77": {
+      "path": "_state/universal-windows-installer-context/development-r1.xml",
+      "bytes": 12930,
+      "sha256": "6856a118b2737c49df85b411df64636c57da93b85b2426ff8cc664bd6e44b3b8"
+    },
+    "second92": {
+      "path": "_state/universal-windows-installer-context/development-r2.xml",
+      "bytes": 15351,
+      "sha256": "5ba885db6bd7f0380fe5a2031aae19c0934c6fefdf7c6ed9e76c95a4638ea197"
+    },
+    "regression216": {
+      "path": "_state/universal-windows-installer-context/development-r3.xml",
+      "bytes": 34595,
+      "sha256": "dd42576bc7abd96254a55406eccc06ce78119cd7d50e8ffaf377d3c1636e6c87"
+    },
+    "regression217": {
+      "path": "_state/universal-windows-installer-context/development-r4.xml",
+      "bytes": 34730,
+      "sha256": "f36b8769d367fbcf85a567fcfe6931fbe687eeaa06883ab970cbeab2aa794825"
+    },
+    "frozen217": {
+      "path": "_state/universal-windows-installer-context/frozen-final.xml",
+      "bytes": 34730,
+      "sha256": "8295aecb38f996f03a419efb22e104edbc70b1b94eea749a6b7452457615e2bf"
+    },
+    "old_source_new_elevation_controls": {
+      "path": "_state/universal-windows-installer-context/old-source-elevation-counter.xml",
+      "bytes": 12737,
+      "sha256": "d3049d5f6ac30ebedb182faeccfff813752dd8a52b3493eca66a91d709fe1a76"
+    },
+    "old_source_count": {
+      "tests": 3,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0,
+      "by_file": {
+        "tests.test_windows_installer_context": 3
+      }
+    },
+    "counts_not_added": true,
+    "pre_R2_compact": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/before/WINDOWS_INSTALLER_CONTEXT.json",
+      "bytes": 12057,
+      "sha256": "3342221e2ba69272a66b355f4be80bddb1d18177568f51fd2ddf453a8a17eeca"
+    },
+    "pre_R2_artifacts": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/before/ARTIFACTS.json",
+      "bytes": 12742,
+      "sha256": "0cfe9c82ea1d55bf70bccbaa593db832a2be4e4be41400a3ca064662da4247f4"
+    },
+    "pre_R2_validation": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/before/VALIDATION.json",
+      "bytes": 671,
+      "sha256": "1e5db6d5512dbc8537120589f713f6e9dad8e28a44191db77312722cb0a7f928"
+    },
+    "historical_artifact_manifest": {
+      "path": "_state/universal-windows-installer-context/ARTIFACTS.json",
+      "bytes": 12742,
+      "sha256": "0cfe9c82ea1d55bf70bccbaa593db832a2be4e4be41400a3ca064662da4247f4"
+    }
+  },
+  "existing_modules_edited": [],
+  "old_compacts_edited": [],
+  "Git_mutations": 0,
+  "Main_state_changes": 0,
+  "actual_privilege_token_service_account_AppContainer_ACL_WFP_BFE_network_license_changes": 0,
+  "COMSOL_JVM_GUI_starts": 0,
+  "apply_ready": false,
+  "host_apply": "NOT_AUTHORIZED",
+  "T037": "NOT_RUN",
+  "ISOLATION": "UNVERIFIED",
+  "current_native_installer_enable_restore": "NOT_RUN",
+  "remaining": [
+    "R2 observes an already-enabled assigned SeRestore token without setter. Real SYSTEM and approved assigned-disabled enable/compare/restore paths remain NOT_RUN.",
+    "No native install capability admission or bootstrap/runtime handoff integration in this lease. Synthetic diagnostic intent is not approved installation material.",
+    "R1 original cleanup remains NOT_VERIFIED; no historical numeric HANDLE is adopted or reclosed."
+  ],
+  "next_for_Main": "Concentrated review of new R2 exact source/import/readonly/cleanup binding. Production, tests and prior220 JUnit unchanged. Main decides acceptance/publication; no host apply or new authorization framework.",
+  "artifact_manifest": {
+    "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/ARTIFACTS_R2.json",
+    "bytes": 22962,
+    "sha256": "f2d4fdd192540a86e67b3a868b0977a49a55b94a8822a9bbc22c27994b16a220"
+  },
+  "record_version": 2,
+  "native_readonly_versions": {
+    "R1": {
+      "field": "native_readonly",
+      "immutable_historical_record": true,
+      "scope": "Original pre-repair source and failed read; current_repaired_source_SDK inside that historical block records pre-R2 NOT_RUN only."
+    },
+    "R2": {
+      "field": "native_readonly_R2",
+      "current_frozen_source_sha256": "eae6187050e661853900c5e9eaf88a6e03b5b3a6fa106f8c197a67b926af28da",
+      "scope": "New original process/token context; one explicitly authorized readonly verification; no R1 HANDLE adoption."
+    }
+  },
+  "native_readonly_R2": {
+    "state": "ACTUAL_READONLY_TOKEN_FACTS_AND_ORIGINAL_CLEANUP_OBSERVED",
+    "invocations": 1,
+    "source_pins": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/SDK_PINS.json",
+      "bytes": 1096,
+      "sha256": "51fc695d959e3b1cb0be38b7a956798b1a41644d0e00f8bbdb07bfb59d392f16"
+    },
+    "archive": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/SDK_PAYLOAD.zip",
+      "bytes": 35093,
+      "sha256": "36913da21914e1f1b273f66ea1dac74aaedde398d5f921224dc80ef93c7efaef"
+    },
+    "program": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/windows_readonly_probe.py",
+      "bytes": 10801,
+      "sha256": "c53cf11431fb7fa7755a9c36d6a823dadbb703469be011cf7549bc970a7d9051"
+    },
+    "transport_program": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/run_windows_readonly.py",
+      "bytes": 6172,
+      "sha256": "45a1650063f56ad8a815f6690437857dd1001a7413bb6ef1117da5db3a29dab2"
+    },
+    "transport": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/WINDOWS_TRANSPORT_RESULT.json",
+      "bytes": 895,
+      "sha256": "eed60cbf70282beb0dd617f3e8e229659732da47dc9366aca02c8e0b529746ba"
+    },
+    "run_binding": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/WINDOWS_RUN_BINDING.json",
+      "bytes": 571,
+      "sha256": "1c3dd2d5af5c6f811f18d7dd8a9cd782206d987e4b941cf360d8c73c901ef667"
+    },
+    "raw": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/SDK_READONLY_RESULT.json",
+      "bytes": 17779,
+      "sha256": "6497a53694c25061a6251b20ca48ea43b62a3e0e46d5a744e54d0b1408de13c4"
+    },
+    "summary": {
+      "path": "_state/universal-windows-installer-context/sdk-readonly-r2-20261022T225224Z-1f7e5760/SDK_R2_SUMMARY.json",
+      "bytes": 3529,
+      "sha256": "e647b006078eff5cc9c887ee6df4a40f4399197f30bf089915f8adb5d2ce180d"
+    },
+    "scope": "Existing official Windows Python3.12, four exact frozen modules and four matching actual imports. Source tree probe, no installed product wheel or approved install material. Facts apply to this probe process only.",
+    "current_source_sha256": "eae6187050e661853900c5e9eaf88a6e03b5b3a6fa106f8c197a67b926af28da",
+    "TokenElevation": {
+      "requested_length": 4,
+      "actual_output_length": 4,
+      "SDK_BOOL_return": 1
+    },
+    "actual_context": {
+      "source": "ORIGINAL_NATIVE_SNAPSHOT_NOT_SERIALIZED_AUTHORITY",
+      "elevated": true,
+      "enabled_admin": true,
+      "system": false,
+      "SeRestore_assigned": true,
+      "SeRestore_enabled": true,
+      "SeRestore_attributes": 3,
+      "eligibility": "ALREADY_ENABLED_NO_ADJUST",
+      "group_count": 13,
+      "privilege_count": 24
+    },
+    "original_cleanup": {
+      "state": "ORIGINAL_SOURCE_CLEANUP_CONFIRMED",
+      "acquired_original_handles": 1,
+      "CloseHandle_dispatches": 1,
+      "original_BOOL_return": 1,
+      "retained_contexts": 0,
+      "original_method_invocations": 1,
+      "requery_or_reclose": 0
+    },
+    "cleanup_error_branch": "Guarded same ContextError.owner path is present in the new probe; not exercised by successful R2. Opaque SDK or mutation prevents close and retains owner; no recovery bypass.",
+    "SDK_calls": 23,
+    "readonly_whitelist": [
+      "CloseHandle",
+      "GetCurrentProcess",
+      "GetCurrentProcessId",
+      "GetCurrentThread",
+      "GetProcessTimes",
+      "GetTokenInformation",
+      "LookupPrivilegeValueW",
+      "OpenProcessToken",
+      "OpenThreadToken"
+    ],
+    "actual_source_modules": 4,
+    "actual_imports": 4,
+    "source_unchanged": true,
+    "setter_loaded": false,
+    "setter_dispatches": 0,
+    "blocked_dispatches": 0,
+    "opaque_SDK_calls": 0,
+    "native_API_privilege_enable": "NOT_RUN",
+    "native_API_restore": "NOT_RUN",
+    "host_policy_changes": 0,
+    "approved_installation": false,
+    "apply_ready": false,
+    "R1_raw_or_source_relabelled": false
+  },
+  "main_review": {
+    "path": "_state/universal-main-review/20261023-installer-context/MAIN_REVIEW.json",
+    "bytes": 4109,
+    "sha256": "f3f329a4c63ce5487990376f7ed6ee31b834b54366ed675597eed9354f37f925"
+  }
+}
