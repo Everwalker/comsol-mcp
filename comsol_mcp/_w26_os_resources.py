@@ -239,9 +239,11 @@ class WindowsWfpGrant:
     remote_addresses: tuple[str, ...]
     local_ports: tuple[int, ...]
     remote_ports: tuple[int, ...]
+    local_port_range: tuple[int, int] | None = None
+    remote_port_range: tuple[int, int] | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {"role": self.role, "direction": self.direction, "layer": self.layer,
+        row = {"role": self.role, "direction": self.direction, "layer": self.layer,
                 "layer_key": self.layer_key,
                 "address_family": self.address_family, "protocol": self.protocol,
                 "application_path": self.application_path, "principal_sid": self.principal_sid,
@@ -249,6 +251,11 @@ class WindowsWfpGrant:
                 "remote_addresses": list(self.remote_addresses),
                 "local_ports": list(self.local_ports),
                 "remote_ports": list(self.remote_ports)}
+        for side in ("local", "remote"):
+            value = getattr(self, side + "_port_range")
+            if value is not None:
+                row[side + "_port_range"] = list(value)
+        return row
 
 
 @dataclass(frozen=True)
@@ -582,7 +589,8 @@ def _validate_windows_isolation(profile: HostResourceProfile,
             raise ValueError("Windows WFP network grant must bind an exact remote address selector")
         if not grant.local_ports and grant.direction in {"LISTEN", "BIND"}:
             raise ValueError("Windows listener/bind grant must name an exact local port")
-        if grant.protocol in {6, 17} and not grant.remote_ports and grant.direction in {"OUTBOUND", "INBOUND"}:
+        if (grant.protocol in {6, 17} and not grant.remote_ports
+                and grant.remote_port_range is None and grant.direction in {"OUTBOUND", "INBOUND"}):
             raise ValueError("Windows TCP/UDP connection grant must name an exact remote port")
         if grant.protocol not in {6, 17} and (grant.local_ports or grant.remote_ports):
             raise ValueError("Windows ICMP grants cannot contain port selectors")
@@ -592,6 +600,8 @@ def _validate_windows_isolation(profile: HostResourceProfile,
             if (any(type(port) is not int or not 1 <= port <= 65535 for port in ports)
                     or len(set(ports)) != len(ports)):
                 raise ValueError("Windows WFP port selectors are malformed or duplicated")
+        from ._windows_t037_network import validate_source_port_ranges
+        validate_source_port_ranges(grant)
         if grant.direction in {"LISTEN", "BIND"} and grant.remote_addresses:
             raise ValueError("Windows listener/bind grants cannot have remote addresses")
         key = _sha256(grant.as_dict())
@@ -685,8 +695,15 @@ def parse_host_resource_profile(document: Any) -> HostResourceProfile:
             fields = {"role", "direction", "layer", "layer_key", "address_family", "protocol",
                       "application_path", "principal_sid",
                       "local_addresses", "remote_addresses", "local_ports", "remote_ports"}
-            if not isinstance(row, Mapping) or set(row) != fields:
+            optional_ranges = {"local_port_range", "remote_port_range"}
+            if not isinstance(row, Mapping) or not fields <= set(row) or set(row) - fields - optional_ranges:
                 raise ValueError("Windows WFP grant row is malformed")
+            ranges = {}
+            for key in optional_ranges:
+                if key in row:
+                    if not isinstance(row[key], list) or len(row[key]) != 2:
+                        raise ValueError(f"Windows WFP {key} must be an explicit two-item array")
+                    ranges[key] = tuple(row[key])
             for key in ("local_addresses", "remote_addresses", "local_ports", "remote_ports"):
                 if not isinstance(row[key], list):
                     raise ValueError(f"Windows WFP {key} must be an array")
@@ -695,6 +712,7 @@ def parse_host_resource_profile(document: Any) -> HostResourceProfile:
                 row["address_family"], row["protocol"], row["application_path"], row["principal_sid"],
                 tuple(row["local_addresses"]), tuple(row["remote_addresses"]),
                 tuple(row["local_ports"]), tuple(row["remote_ports"]),
+                **ranges,
             ))
         windows_policy = WindowsIsolationPolicy(
             service_name=policy_data["service_name"],

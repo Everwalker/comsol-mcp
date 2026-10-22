@@ -1,0 +1,409 @@
+{
+  "kind": "WINDOWS_NETWORK_INTENT",
+  "recorded_utc": "2026-10-22T15:52:57.814308+00:00",
+  "status": "PASS_SCOPED_MAIN_REVIEWED_SOFTWARE_AND_INSTALLED_READONLY_GETTER_ONLY",
+  "scope": "Network expression/readback plus repaired original-owner getter and one current normal-installed end-to-end read-only query. No Primary launch glue, final release, native admission or host apply.",
+  "apply_ready": false,
+  "host_apply_authorized": false,
+  "binding": {
+    "implementation_base_commit": "d56c05b2b98d10f8f7ed9777c8b39a10e29455c7",
+    "workspace_head_at_freeze": "5bda66915fcd8e0180bdf5a34173b8f4abac0e8e",
+    "scope": "Four selected network modules plus new test, frozen after focused tests and actual normal-installed exact getter; not the whole current working tree/release.",
+    "design": {
+      "path": "_state/universal-windows-network-design/NETWORK_DESIGN.json",
+      "sha256": "b3f6828a8ecd8d868f976c98fa2ab75cb80af91b3219ac4b1eff55c8130ed091",
+      "bytes": 16896
+    },
+    "manifest": {
+      "path": "_state/universal-windows-network-intent/SOURCE_MANIFEST.json",
+      "sha256": "5b1d56a181354c0b5108362953e465ac5ee78a37681b4d7bc586e436c8a093bc",
+      "bytes": 26146
+    },
+    "files": [
+      {
+        "path": "comsol_mcp/_w26_os_resources.py",
+        "sha256": "024d6bfd21903b6fb2070c989d1095dad8d8fc04f70e5f4c6190744ba48ee3ce",
+        "bytes": 185759
+      },
+      {
+        "path": "comsol_mcp/_windows_filter_group.py",
+        "sha256": "b7120b8037b7a34cf094c8dc9e17ad16bfc8da8dffe1db99c68303d60cdd7cef",
+        "bytes": 24014
+      },
+      {
+        "path": "comsol_mcp/_windows_t037_effective.py",
+        "sha256": "6cfc463782abff0f6ce48e95f62f59f29d6443b4180b094319a079244b060274",
+        "bytes": 14930
+      },
+      {
+        "path": "comsol_mcp/_windows_t037_network.py",
+        "sha256": "279ca7a44dfe07363f38043190d03a915bfffd1b4bfd06f29b3b2341f2e7018c",
+        "bytes": 20443
+      },
+      {
+        "path": "tests/test_windows_network_intent.py",
+        "sha256": "32f56f2547c1b7f325c85005e6e5476aeeffb8549d364af38f7de478775177ff",
+        "bytes": 34113
+      }
+    ]
+  },
+  "contract": {
+    "grant_type": "Existing WindowsWfpGrant; two optional tuple fields appended after old positional fields.",
+    "optional_fields": [
+      "local_port_range",
+      "remote_port_range"
+    ],
+    "range": "Explicit inclusive [low,high], integer non-bool 1..65535, ordered; full 1..65535 refused. Absent keys omitted; discrete port lists retain discrete meaning and conflict with a range on the same side.",
+    "scope": "New range only for IPv4 TCP exact 127.0.0.1/32 peers, exact local role image/AppContainer and one fixed destination. OUTBOUND.local or INBOUND.remote source side only. No IPv6 PERMIT added.",
+    "session": "Typed existing v2/v3 profile yields unique Worker-out, Server-in and Worker-in source-range flows, agreeing on source bounds and Worker-out.remote == Server-in.local; distinct fixed Server/Worker listeners, bind_address 127.0.0.1, NOT_VERIFIED. No case/version/port constants or port0/next-free fallback in derivation.",
+    "existing_exact_grants": "Retained, including separately approved exact license rows. Conflicting duplicate session flows refused.",
+    "ctypes": "Existing original owner path; FWP_MATCH_RANGE=5, FWP_RANGE_TYPE=258, FWP_RANGE0 low/high UINT16 type2. Original backing retained and checked before SDK filter construction; exact operator/type/bounds/field readback comparison.",
+    "complete_group_example": {
+      "default_BLOCK": 4,
+      "IPv4_PERMIT": 3,
+      "IPv6_PERMIT": 0,
+      "filters": 7,
+      "provider_sublayer": 2,
+      "resources_per_target": 9,
+      "scope": "Software fixture, not host policy."
+    },
+    "readback_state": "Always UNVERIFIED; row matches do not prove policy arbitration or native isolation.",
+    "retained_native_reasons": [
+      "WFP_ENUMERATION_ACCESS_VISIBILITY_NOT_PROVEN",
+      "WFP_DEFAULT_BLOCK_NOT_PROVEN",
+      "WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN"
+    ]
+  },
+  "interfaces": {
+    "document": {
+      "path": "_state/universal-windows-network-intent/PRIMARY_INTERFACE.md",
+      "sha256": "1e871d6523dddf1c2aafaecf49d85e9341e4aec1122e5a05e87f52f5b4add565",
+      "bytes": 7665
+    },
+    "derive_session_network_intent": "(WindowsT037ProfileV2) -> SessionNetworkIntent; pure data, accepts v2/v3 typed wrapper; ordinary dictionaries refused, no trust promotion.",
+    "read_windows_ipv4_tcp_dynamic_range": "Zero-argument signature and observation dataclass unchanged. Original CreateFile returns -> retained NativeOwnedRegistry -> one confirmed PyHANDLE.Detach -> original integer and fixed kernel32.CloseHandle. UNKNOWN retains original owner and blocks reacquisition.",
+    "revalidate_source_port_range": "(SessionNetworkIntent) -> DynamicTcpRangeObservation; fresh read and exact pinned bounds comparison, no admission. Actual-host call NOT_RUN in this stage.",
+    "original_owner_recovery": "Private in-process original_owner.recover_owned(original_owner) only; same retained registry entries and closer. No wire/dict/copy/stale owner, new wrapper/int reconstruction, automatic retry or redetach. Unconfirmed transfer remains retained/refused."
+  },
+  "baseline": {
+    "record": {
+      "path": "_state/universal-windows-network-intent/before.json",
+      "sha256": "534f68858684ac67f5e85dc0408376ffc59a8df3d4f5a3c499fbc469c38dd8e5",
+      "bytes": 1676
+    },
+    "range_unsupported": "Old closed row refused optional range keys.",
+    "fixed_port_interface_insufficient": "inspect.signature.bind(port=...) rejected existing Server/Worker interfaces; no launch executed; later glue remains Primary-owned.",
+    "new_tests_on_old_code": {
+      "junit": {
+        "path": "_state/universal-windows-network-intent/before-tests.xml",
+        "sha256": "07c1472ea7c73d03d6b6d7b66bfa543862f10928cddb5f35ac9b87391698325e",
+        "bytes": 7731
+      },
+      "tests": 3,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "software_tests": {
+    "scope": "Current focused software controls on macOS, including real ctypes memory tests; SDK doubles explicitly software-only, not native isolation proof.",
+    "current_run": {
+      "junit": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/focused-owner-final.xml",
+        "sha256": "c4f47cfe8b7241777a27183bbd24a4a342a540dfa5d93df272f3fa663876cafc",
+        "bytes": 27637
+      },
+      "command_record": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/focused-owner-final-command.json",
+        "sha256": "7143ddc11ac7bf341e624bf3286437620647b869d572ed91e24be96527a117ba",
+        "bytes": 426
+      },
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "tests/test_windows_network_intent.py",
+        "tests/test_windows_host_identity_owner.py",
+        "tests/test_windows_host_preflight_owner.py",
+        "tests/test_windows_wfp_mutation_owner.py",
+        "--junitxml=_state/universal-windows-network-intent/getter-owner-r2/focused-owner-final.xml"
+      ],
+      "result": {
+        "tests": 164,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "unique_test_ids": 164
+    },
+    "reproduced_before_fix": {
+      "source": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/network-before.py",
+        "sha256": "35d6df6f6f8642ba9d08c3c1c1bb6e03dca627c4c2f957295dd993949497d2de",
+        "bytes": 14949
+      },
+      "binding": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/before-binding.json",
+        "sha256": "ab957004d80036c8c463c2fcf6ce533145a1deb5c03c9c0a8d89094a077678ab",
+        "bytes": 249
+      },
+      "junit": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/before-owner.xml",
+        "sha256": "50aeaf28b528227cf2df986151b764b2b1831480a7917e01d61cbdb02f1164af",
+        "bytes": 2625
+      },
+      "command_record": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/before-owner-command.json",
+        "sha256": "241d28fe8db4e00419eaef2a248413140b76fbc6d53ffe2a164c5988466f4b33",
+        "bytes": 350
+      },
+      "tests": 1,
+      "failures": 1,
+      "meaning": "Old getter calls PyHANDLE.Close; original-owner negative control fails on that path. This is a software reproduction, not a native close fault."
+    },
+    "owner_controls": [
+      "Original integer, wrapper, holder, fixed closer/library and registry survive close failure and gc; no automatic second close or new acquisition/query.",
+      "int failure and Detach before/after/mismatched/bool return retain original owner and returned resource; no redetach, replacement wrapper or closer fallback.",
+      "CreateFile returns no resource vs malformed None/integer returns; malformed SDK return refused without invented close authority.",
+      "CloseHandle false/invalid SDK returns remain UNKNOWN; wrong owner, copied entry, stale owner and substituted SDK closer refused; failed explicit recovery stays UNKNOWN; successful original-owner recovery uses the original integer/closer only.",
+      "Protected path/owner/ACL/reparse, command error, ambiguous output, identity drift and exact range drift controls retain cleanup and no arbitrary caller PATH/shell."
+    ],
+    "prior_revision_runs_retained": {
+      "evidence_archive": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/previous-snapshot/WINDOWS_NETWORK_INTENT.json",
+        "sha256": "0b7eb2d68a76052e79cbc02abe847cc6c6e59a27eb1bc0f4042879f0ba3238aa",
+        "bytes": 15357
+      },
+      "source_manifest_archive": {
+        "path": "_state/universal-windows-network-intent/getter-owner-r2/previous-snapshot/SOURCE_MANIFEST.json",
+        "sha256": "a8c11cc67a111fe5d7c620a10e9ab972e46911d3ba7ce85e4817ae1c8cbb6530",
+        "bytes": 15892
+      },
+      "results": [
+        {
+          "tests": 177,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "tests": 89,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "scope": "Prior 177+89 run results remain source-bound historical evidence; not rerun or added to the current 164 count.",
+      "unchanged_network_modules": [
+        "comsol_mcp/_w26_os_resources.py",
+        "comsol_mcp/_windows_filter_group.py",
+        "comsol_mcp/_windows_t037_effective.py"
+      ]
+    },
+    "old_exact_profile_sha256": "ce3b4ab1d20d1089549b3eb1bf13961f2450789ff2563e9a6677a3a939a840f8",
+    "Hume_resource_tests": "tests/test_w26_os_resources.py not edited or run by this network stage; separately owned failures not included."
+  },
+  "actual_windows_readonly": {
+    "current_scope": "CURRENT_NORMAL_INSTALLED_GETTER_END_TO_END_READONLY",
+    "normal_install_candidate": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/candidate-binding.json",
+      "sha256": "90c9424f62350355fa5691cc1dcaa3b9a7b311b71cabcce2dfa7277d0905ffae",
+      "bytes": 2285
+    },
+    "wheel": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/comsol_mcp-0.1.10-py3-none-any.whl",
+      "sha256": "94b97381da908426a85855a514e27988a101a6cccdb19d630e6d1ad435f0c15a",
+      "bytes": 2882937
+    },
+    "offline": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/offline-owner-r2.zip",
+      "sha256": "965a7af638601088a3d827c452508fb094570916129fdeaeb6facc64ce3c16ff",
+      "bytes": 31254471
+    },
+    "requirements_lock_sha256": "454cdc4558a48bd1ff6de895ee9b74d129a842039740af3bc666d43e795df2f6",
+    "candidate_limit": "Private normal-installed getter validation candidate, accepted shared-SID wheel plus four authorized network modules and RECORD; not a whole current tree/release freeze.",
+    "source4": {
+      "comsol_mcp/_w26_os_resources.py": "024d6bfd21903b6fb2070c989d1095dad8d8fc04f70e5f4c6190744ba48ee3ce",
+      "comsol_mcp/_windows_filter_group.py": "b7120b8037b7a34cf094c8dc9e17ad16bfc8da8dffe1db99c68303d60cdd7cef",
+      "comsol_mcp/_windows_t037_effective.py": "6cfc463782abff0f6ce48e95f62f59f29d6443b4180b094319a079244b060274",
+      "comsol_mcp/_windows_t037_network.py": "279ca7a44dfe07363f38043190d03a915bfffd1b4bfd06f29b3b2341f2e7018c"
+    },
+    "installed_source4_sha256": {
+      "comsol_mcp/_w26_os_resources.py": "024d6bfd21903b6fb2070c989d1095dad8d8fc04f70e5f4c6190744ba48ee3ce",
+      "comsol_mcp/_windows_filter_group.py": "b7120b8037b7a34cf094c8dc9e17ad16bfc8da8dffe1db99c68303d60cdd7cef",
+      "comsol_mcp/_windows_t037_effective.py": "6cfc463782abff0f6ce48e95f62f59f29d6443b4180b094319a079244b060274",
+      "comsol_mcp/_windows_t037_network.py": "279ca7a44dfe07363f38043190d03a915bfffd1b4bfd06f29b3b2341f2e7018c"
+    },
+    "new_remote_directory": "C:/Users/Everwalker/universal-windows-network-owner-r2-20261022-c8e710",
+    "install_command_record": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/install-command.json",
+      "sha256": "9b9c6912c7ece1f1cccd268d113383ca484edbde456a9e400d6045c59d1935a2",
+      "bytes": 6054
+    },
+    "install_binding": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/actual/install-binding.json",
+      "sha256": "17dd6377168a2d7077b970ebef2dbfb95be51eaad772d0a46d20c40f702d59e3",
+      "bytes": 473
+    },
+    "pip_check": "No broken requirements found.",
+    "execution_command_record": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/end-to-end-command.json",
+      "sha256": "471188c0186b7308fd88f4efc050126a17fb11c049544514f30ad6f3e3afeb65",
+      "bytes": 509
+    },
+    "raw_result": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/actual/readonly-result.json",
+      "sha256": "644fc90c65e46a5d4d5c70637ae22488430bb74b337920cdfc511829595816fe",
+      "bytes": 8335
+    },
+    "stdout": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/actual/netsh.stdout",
+      "sha256": "da0aa1628a4496fbefef8240586b6dc6ab40fc47bbc6fbd62547ea7712d4dede",
+      "bytes": 126
+    },
+    "stderr": {
+      "path": "_state/universal-windows-network-intent/getter-owner-r2/actual/netsh.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "state": "OBSERVED_READONLY_NOT_NATIVE_PROOF",
+    "current_E": [
+      1024,
+      60000
+    ],
+    "actual_kernel32_GetOEMCP": 936,
+    "executable_path": "C:\\WINDOWS\\system32\\netsh.exe",
+    "executable_sha256": "b4fe2ea236ed6d360614a1502dc024adc9400d8ad2d1507e2b874e95629e73eb",
+    "netsh_query_count_this_revision": 1,
+    "netsh_returncode": 0,
+    "before_after_pinning_equal": true,
+    "cleanup": {
+      "original_owner_count": 1,
+      "original_handles": 4,
+      "Detach_values_match_original_integers": true,
+      "original_wrappers_detached": true,
+      "fixed_CloseHandle_returns": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "reverse_order": true,
+      "owner_state": "RELEASED",
+      "unresolved_entries": 0,
+      "pending_return": false,
+      "global_owner_retained": false
+    },
+    "instrumentation": "sys.setprofile observes original Python frames/returns; no function, SDK, closer or subprocess replacement",
+    "observation_verification_state": "NOT_VERIFIED",
+    "host_settings_changes": 0,
+    "COMSOL_JVM_starts": 0,
+    "native_admission": "NOT_RUN",
+    "historical_observations_retained": [
+      {
+        "record": {
+          "path": "_state/universal-windows-network-intent/readonly/readonly-result.json",
+          "sha256": "2e09e06b269da7a17e5f8c0266a20fc3aec670189de3f4ea3c263373c9510859",
+          "bytes": 416
+        },
+        "source_sha256": "d48ea4fadaf240860622bc4d61c7eae182747528ba4dd542d07fe0fc33215280",
+        "state": "UNVERIFIED",
+        "limit": "First protected query exited 0, then old GetOEMCP postprocessing failed. No relabelling."
+      },
+      {
+        "record": {
+          "path": "_state/universal-windows-network-intent/readonly/corrected-decode-result.json",
+          "sha256": "4d12a2ae2ef02b6545c87146c8206dc97fba1a6955ae3a69ea1d88213dade480",
+          "bytes": 515
+        },
+        "source_sha256": "35d6df6f6f8642ba9d08c3c1c1bb6e03dca627c4c2f957295dd993949497d2de",
+        "scope": "Actual GetOEMCP plus retained old output parsing only. Its full-getter NOT_RUN_SINGLE_QUERY_LIMIT remains historical; this new authorization/run is separately source-bound."
+      }
+    ],
+    "netsh_query_count_including_history": 2,
+    "limit": "Current full getter passed for read-only OS metadata and original resource cleanup. It does not authorize launches/apply, establish WFP visibility/arbitration/default deny, or bind a future trusted profile."
+  },
+  "historical_records": {
+    "preserved": [
+      {
+        "path": "docs/universal_mcp_execution/evidence/WINDOWS_SID_FIX.json",
+        "sha256": "21d705988756803ecf5f2029fd61820f6a1c6f98e21eaa2e1297360b01fb3926",
+        "bytes": 17999,
+        "matches_current_committed_record": true,
+        "relabelled": false
+      },
+      {
+        "path": "docs/universal_mcp_execution/evidence/WINDOWS_SHARED_SID.json",
+        "sha256": "adeafc12614518e4c8a7277d060e40c2e9197e91c426d30a47b6f8411e3ed24e",
+        "bytes": 14674,
+        "matches_current_committed_record": true,
+        "relabelled": false
+      },
+      {
+        "path": "_state/universal-windows-prep/SID_FIX/hostplan-v2/HOST_PLAN_V2.json",
+        "sha256": "8c1aef4bb94071e5a5f251e2e46fd82c3f90b7cd3e86e97ebdf228424739676f",
+        "bytes": 49317,
+        "apply_ready": false,
+        "relabelled": false,
+        "matches_design_historical_hash": true
+      }
+    ],
+    "old_raw": "R3, shared-SID raw and old HOST_PLAN_V2 were retained without relabelling or new source bindings.",
+    "changed_contract_requires_future_binding": "Old HOST_PLAN_V2 pins a different exact-source/filter set. New reviewed profile/grants/GUIDs/argv/source/observations are needed; no old hash or approval reused."
+  },
+  "not_run": [
+    "Primary fixed-port/bind-address launch glue and actual flows",
+    "Final whole-project release freeze/acceptance",
+    "Native admission/issuer or COMSOL/JVM/engine startup",
+    "Actual group WFP enumeration/arbitration/native deny-allow proof",
+    "SCM/service/account/AppContainer/WFP/ACL/firewall/dynamic-range apply",
+    "Actual-host close failure/recovery fault injection (software controls only)"
+  ],
+  "activity_counts": {
+    "COMSOL_JVM_starts": 0,
+    "host_policy_changes": 0,
+    "live_installation_changes": 0,
+    "new_private_normal_venv": 1,
+    "Main_state_writes": 0,
+    "Git_mutations": 0,
+    "netsh_show_queries_this_revision": 1,
+    "netsh_show_queries_including_history": 2
+  },
+  "remaining_for_Main_Primary": [
+    "Main concentrated review of owner fix, focused controls and current normal-installed source-bound getter result.",
+    "Primary trusted-profile glue for fixed listeners, literal IPv4 bind and strict argv/readiness/owned listener agreement; retain automatic public COMSOL/Python source selection.",
+    "Fresh OS range equality against a newly pinned profile before a later native stage; all original issuer, visibility/default-block/arbitration, ownership and authorization gates remain."
+  ],
+  "SDK_references": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/fwptypes/ns-fwptypes-fwp_range0",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fwptypes/ne-fwptypes-fwp_match_type",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fwptypes/ne-fwptypes-fwp_data_type",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getoemcp",
+    "https://raw.githubusercontent.com/mhammond/pywin32/main/win32/src/PyHANDLE.cpp",
+    "https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle"
+  ],
+  "revision": "GETTER_OWNER_R2",
+  "main_review": {
+    "reviewed_utc": "2026-10-22T16:04:49.633284+00:00",
+    "status": "ACCEPTED_SCOPED_NOT_NATIVE_ISOLATION",
+    "source4": {
+      "comsol_mcp/_w26_os_resources.py": "024d6bfd21903b6fb2070c989d1095dad8d8fc04f70e5f4c6190744ba48ee3ce",
+      "comsol_mcp/_windows_filter_group.py": "b7120b8037b7a34cf094c8dc9e17ad16bfc8da8dffe1db99c68303d60cdd7cef",
+      "comsol_mcp/_windows_t037_effective.py": "6cfc463782abff0f6ce48e95f62f59f29d6443b4180b094319a079244b060274",
+      "comsol_mcp/_windows_t037_network.py": "279ca7a44dfe07363f38043190d03a915bfffd1b4bfd06f29b3b2341f2e7018c"
+    },
+    "checks": [
+      "Four production changes and new test reviewed, including legacy serialization/hash, bounded source-side TCP IPv4 loopback ranges, original ctypes backing and strict group/effective readback.",
+      "32 named receipt/source/raw hash references and five current source/test snapshots verified. Current source4 equals wheel and actual installed source4.",
+      "164 current owner/getter regression cases pass with zero failures/errors/skips. Prior177+89=266 cases remain their original historical runs, not added to164.",
+      "Three range/group modules byte-identical to prior266 run; eight pure intent/parser/result definitions AST-identical across owner repair.",
+      "Actual new normal hash-offline installed getter queried once; passive profiler observed original functions, no SDK/subprocess/closer replacement. Four original integer/Detach/CloseHandle=1 lifetimes, reverse cleanup, path pinning and zero retained resources verified."
+    ],
+    "review_script_notes": "Main initially used a nonexistent manifest key and assumed BOM-free PowerShell JSON; corrected to the explicit manifest path and UTF-8-sig. No product/source/raw data changed.",
+    "limits": "Scoped repacked shared-SID wheel plus four reviewed network files only, not final source/release freeze. No fixed-listener integration, actual launch, policy arbitration/default-deny/visibility, T037 issuer, host apply or COMSOL native acceptance."
+  }
+}

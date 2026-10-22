@@ -36,24 +36,33 @@ def normalize_grant(grant,profile):
     row=grant.as_dict();key=next((k for k in LAYERS if guid_key(k)==guid_key(row['layer_key'])),None)
     if key is None:fail('grant layer outside finite CONNECT/RECV_ACCEPT v4/v6 catalog')
     direction,family,layer=LAYERS[key]
-    if (set(row)!={'role','direction','layer','layer_key','address_family','protocol','application_path',
+    fields={'role','direction','layer','layer_key','address_family','protocol','application_path',
         'principal_sid','local_addresses','remote_addresses','local_ports','remote_ports'}
+    if (not fields<=set(row) or set(row)-fields-{'local_port_range','remote_port_range'}
         or row['role'] not in {'server','worker'} or row['direction']!=direction or row['layer']!=layer
         or row['address_family']!=family or type(row['protocol']) is not int or row['protocol'] not in {6,17}
         or row['principal_sid'].casefold()!=profile.windows_isolation.appcontainer_sid.casefold()
-        or any(len(row[name])!=1 for name in ['local_addresses','remote_addresses','local_ports','remote_ports'])):
+        or any(len(row[name])!=1 for name in ['local_addresses','remote_addresses'])):
         fail('group allows require every exact approved TCP/UDP address/port selector; no dropped fields')
     image=[i for i in profile.launch_images if i.role==row['role']]
     if len(image)!=1 or image[0].path!=row['application_path']:fail('allow image differs from exact role binding')
+    from ._windows_t037_network import validate_source_port_ranges
+    try:validate_source_port_ranges(grant)
+    except (TypeError,ValueError) as exc:fail(str(exc))
     networks={}
     for name in ['local','remote']:
         raw=row[name+'_addresses'][0]
         try:net=ipaddress.ip_network(raw,strict=True)
         except ValueError:fail('CIDR malformed')
         if net.with_prefixlen!=raw or net.version!=(4 if family=='IPV4' else 6):fail('canonical address family/CIDR required')
-        port=row[name+'_ports'][0]
-        if type(port) is not int or not 1<=port<=65535:fail('explicit supported port required')
-        networks[name+'_address']=raw;networks[name+'_port']=port
+        networks[name+'_address']=raw
+        if name+'_port_range' in row:
+            networks[name+'_port_range']=tuple(row[name+'_port_range'])
+        else:
+            if len(row[name+'_ports'])!=1:fail('one exact port or an explicit source range required')
+            port=row[name+'_ports'][0]
+            if type(port) is not int or not 1<=port<=65535:fail('explicit supported port required')
+            networks[name+'_port']=port
     return {'role':row['role'],'direction':direction,'layer':layer,'layer_key':key,'address_family':family,
         'protocol':row['protocol'],'application_path':row['application_path'],'principal_sid':row['principal_sid'],**networks}
 
@@ -172,36 +181,80 @@ def conditions(api,desired,grant,app_blob=None,package_pointer=None):
             rows.append(condition)
         for field,name,kind in [(w.FWPM_CONDITION_IP_PROTOCOL,'protocol',1),
             (w.FWPM_CONDITION_IP_LOCAL_PORT,'local_port',2),(w.FWPM_CONDITION_IP_REMOTE_PORT,'remote_port',2)]:
-            condition=api._condition(field,kind)
-            if kind==1:condition.conditionValue.uint8=grant[name]
-            else:condition.conditionValue.uint16=grant[name]
+            bounds=grant.get(name+'_range')
+            if bounds is not None:
+                from ._windows_t037_network import validate_port_range
+                validate_port_range(bounds)
+                if kind!=2 or name in grant:fail('range and exact scalar cannot share a native condition')
+                value=native.FWPM_RANGE0()
+                value.valueLow.type=value.valueHigh.type=2
+                value.valueLow.uint16,value.valueHigh.uint16=bounds
+                backing.append(value)
+                condition=api._condition(field,258);condition.matchType=5
+                condition.conditionValue.rangeValue=C.cast(C.pointer(value),C.c_void_p)
+            else:
+                condition=api._condition(field,kind)
+                if kind==1:condition.conditionValue.uint8=grant[name]
+                else:condition.conditionValue.uint16=grant[name]
             rows.append(condition)
-    return (native.FWPM_FILTER_CONDITION0*len(rows))(*rows),backing
+    array=(native.FWPM_FILTER_CONDITION0*len(rows))(*rows)
+    array._group_backing=tuple(backing)
+    return array,backing
 
 
-def expected_conditions(desired,grant,app_bytes=None):
+def expected_conditions(desired,grant,app_bytes=None,*,app_identity=None):
     from . import _windows_t037_wfp as w
     rows=[(w.FWPM_CONDITION_ALE_PACKAGE_ID,{'type':13,'value':desired['principal_sid']})]
     if desired['action']=='PERMIT':
-        if type(app_bytes) is not bytes or not app_bytes:fail('actual native App-ID bytes required')
-        rows.append((w.FWPM_CONDITION_ALE_APP_ID,{'type':12,'size':len(app_bytes),'sha256':hashlib.sha256(app_bytes).hexdigest()}))
+        if app_identity is None:
+            if type(app_bytes) is not bytes or not app_bytes:fail('actual native App-ID bytes required')
+            app_identity={'type':12,'size':len(app_bytes),'sha256':hashlib.sha256(app_bytes).hexdigest()}
+        elif (app_bytes is not None or not isinstance(app_identity,dict) or set(app_identity)!={'type','size','sha256'}
+              or type(app_identity['type']) is not int or app_identity['type']!=12
+              or type(app_identity['size']) is not int or not 1<=app_identity['size']<=256*1024
+              or not isinstance(app_identity['sha256'],str) or not native._SHA_RE.fullmatch(app_identity['sha256'])):
+            fail('closed observed App-ID identity required')
+        rows.append((w.FWPM_CONDITION_ALE_APP_ID,app_identity))
         for field,name in [(w.FWPM_CONDITION_IP_LOCAL_ADDRESS,'local_address'),(w.FWPM_CONDITION_IP_REMOTE_ADDRESS,'remote_address')]:
             net=ipaddress.ip_network(grant[name],strict=True)
             value={'type':256,'address_u32':int(net.network_address),'mask_u32':int(net.netmask)} if net.version==4 else {'type':257,'address':net.network_address.packed.hex(),'prefix_length':net.prefixlen}
             rows.append((field,value))
         for field,name,kind in [(w.FWPM_CONDITION_IP_PROTOCOL,'protocol',1),
-            (w.FWPM_CONDITION_IP_LOCAL_PORT,'local_port',2),(w.FWPM_CONDITION_IP_REMOTE_PORT,'remote_port',2)]:rows.append((field,{'type':kind,'value':grant[name]}))
-    return [{'field_key':field.upper(),'match_type':0,'condition_value':value} for field,value in rows]
+            (w.FWPM_CONDITION_IP_LOCAL_PORT,'local_port',2),(w.FWPM_CONDITION_IP_REMOTE_PORT,'remote_port',2)]:
+            if name+'_range' in grant:
+                from ._windows_t037_network import validate_port_range
+                low,high=validate_port_range(grant[name+'_range'])
+                if kind!=2 or name in grant:fail('range/exact expected condition conflict')
+                value={'type':258,'low':{'type':2,'value':low},'high':{'type':2,'value':high}}
+            else:value={'type':kind,'value':grant[name]}
+            rows.append((field,value))
+    return [{'field_key':field.upper(),'match_type':5 if value['type']==258 else 0,'condition_value':value} for field,value in rows]
 
 
 def make_filter(api,policy,action,marker,condition_rows):
     from . import _windows_t037_wfp as w
+    backing=getattr(condition_rows,'_group_backing',())
+    expected_ranges={w.guid_key(field):tuple(action['grant'][side+'_port_range'])
+        for field,side in ((w.FWPM_CONDITION_IP_LOCAL_PORT,'local'),(w.FWPM_CONDITION_IP_REMOTE_PORT,'remote'))
+        if side+'_port_range' in action['grant']}
+    seen_ranges=set()
+    for row in condition_rows:
+        if row.conditionValue.type==258:
+            field=str(uuid.UUID(bytes_le=bytes(row.fieldKey)))
+            original=next((v for v in backing if type(v) is native.FWPM_RANGE0 and
+                           C.addressof(v)==row.conditionValue.rangeValue),None)
+            if (row.matchType!=5 or original is None or field not in expected_ranges
+                    or field in seen_ranges or original.valueLow.type!=2 or original.valueHigh.type!=2
+                    or (original.valueLow.uint16,original.valueHigh.uint16)!=expected_ranges[field]):
+                fail('range pointer is not held by the original condition backing')
+            seen_ranges.add(field)
+    if seen_ranges!=set(expected_ranges):fail('original source range condition was dropped or changed')
     desired=action['desired'];obj=api._make_filter(policy,action,marker,condition_rows)
     value=C.c_uint64(desired['weight']);obj.weight.type=4;obj.weight.uint64=C.pointer(value)
     obj.action.type=0x1001 if desired['action']=='BLOCK' else 0x1002
     display_name=C.create_string_buffer(('COMSOL MCP T037 '+action['action_id']).encode('utf-16-le')+b'\0\0')
     obj.displayData.name=C.cast(display_name,C.c_void_p)
-    obj._keepalive=(*obj._keepalive,value,display_name)
+    obj._keepalive=(*obj._keepalive,value,display_name,backing)
     return obj
 
 
@@ -216,7 +269,8 @@ def validate_readback(api,row,profile,action,marker,app_bytes):
         or type(row.get('action_type')) is not int
         or row.get('action_type')!=(0x1001 if desired['action']=='BLOCK' else 0x1002)
         or row.get('action_callout_key') is not None or row.get('has_provider_context') is not False
-        or row.get('context')!={'raw_context':0}
+        or not isinstance(row.get('context'),dict) or set(row['context'])!={'raw_context'}
+        or type(row['context']['raw_context']) is not int or row['context']['raw_context']!=0
         or not isinstance(row.get('weight'),dict) or any(type(row['weight'].get(k)) is not int for k in ('type','value'))
         or row.get('weight')!={'type':4,'value':desired['weight']}
         or not isinstance(row.get('effective_weight'),dict) or any(type(row['effective_weight'].get(k)) is not int for k in ('type','value'))

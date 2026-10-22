@@ -18,7 +18,9 @@ model_inspect(refresh=true)项目写权限映射已补，Main对精确冻结模�
 
 Mac ARM6.4.0.293及Windows6.3.0.290/6.4.0.293与JDK11可达；Windows已有standalone Desktop保持原样。Windows SID与两条SCM lookup已由Main限定接收：R3受影响133软件PASS，173包文件与wheel/冻结源码一致，三种标准身份的实际SCM只读查回、缺profile拒绝及资源释放观察通过。evidence/WINDOWS_SID_FIX.json完整保留两轮失败与绑定。共享host-profile SID同根修补随后完成：161聚焦PASS，真实Windows6正向/16反向intent解析仍NOT_VERIFIED，见evidence/WINDOWS_SHARED_SID.json。原59项共享资源回归48PASS/11FAIL与旧SID checker对照相同；后续已定位外层内存观测EPERM及测试Worker缺身份RPC/严格信封，在真实只读权限及正确文件系统上，原断言完整保留、新增2身份反例后61PASS。Main核对38收据、50原测试函数AST及149生产文件前后相同；见evidence/RESOURCE_DISPATCH_REGRESSION.json，仅软件范围，原失败不改写。网络设计已选固定监听端口及显式有界源端口范围，保持四层默认BLOCK；待实现、验证并重绑定新计划。另源码明确原生admission/one-use issuer尚无真实producer，当前始终拒绝；须按冻结T037补真实OS证据，不能删门禁。host plan v2仍非apply-ready，尚不向用户请求执行批准。新服务、AppContainer、ACL/WFP尚未授权或应用；不得用elevated SSH token冒充主机变更授权。10GiB只是早期提案，不是新增门槛；内存已做独立API交叉观察，实际启动按有限任务预算判定。
 
-Windows新子进程只读证据已由Main限定接收，见evidence/WINDOWS_CHILD_EVIDENCE.json：87软件测试、12真实负控、7类SDK观测，80条命名hash覆盖73独立文件核验；上传/当前/原生自报源码一致。普通高完整性、非AppContainer探针从未Resume，原CreateProcess HANDLE确认退出并各释放一次，无未决资源。现有prebirth/Resume门禁不变，尚未集成T037原owner/issuer。网络范围/原始句柄getter仍在返工验收；新WFP事件枚举只读模块并行实现，二者均不等同有效隔离。
+Windows新子进程只读证据已由Main限定接收并同步f68b3c7a，见evidence/WINDOWS_CHILD_EVIDENCE.json：87软件测试、12真实负控、7类SDK观测，80条命名hash覆盖73独立文件核验；上传/当前/原生自报源码一致。普通高完整性、非AppContainer探针从未Resume，原CreateProcess HANDLE确认退出并各释放一次，无未决资源。现有prebirth/Resume门禁不变，尚未集成T037原owner/issuer。
+
+网络范围/完整WFP组及原始句柄getter已由Main限定接收，见evidence/WINDOWS_NETWORK_INTENT.json：32份命名引用/5源测试快照及4源/wheel/实际安装一致；本轮164软件PASS，旧177+89保留且不累加；修正后新正常离线安装端到端一次只读query，实际1024..60000/OEMCP936、前后pinning一致、4个原始CloseHandle返回1且无遗留。不是最终release或有效隔离。固定监听/IPv4接线待当前Core单元完成后集成。Leibniz接有限子进程创建限制属性；Lorentz接只读WFP事件枚举（上游429一次同Agent恢复，非SDK失败）。无服务/AppContainer/ACL/WFP/BFE设置变更授权或执行。
 
 续跑先读RESUME与最新原始pending-refs/job，核实实际进程和所有权；新独立资源可继续，禁止重放旧UNKNOWN、伪造Popen或修改活daemon代码。当前原生目标/跳过范围仍严格按config/TARGETS.json。完成所有required、真实跨平台适用验证及最终独立Reviewer批准前，不写整体完成。
 
