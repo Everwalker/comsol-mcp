@@ -1,0 +1,411 @@
+{
+  "kind": "WINDOWS_DISK_RESOURCES",
+  "recorded_utc": "2026-10-22T21:27:15.067021+00:00",
+  "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_ONLY",
+  "review_status": "MAIN_CONCENTRATED_REVIEW_ACCEPTED_LIMITED_SCOPE",
+  "baseline_commit": "96c6c9f8bcfd19fabb85104f70dcdd1a88cb6498",
+  "baseline_w26_sha256": "024d6bfd21903b6fb2070c989d1095dad8d8fc04f70e5f4c6190744ba48ee3ce",
+  "source_binding": {
+    "path": "_state/universal-windows-disk-resources/rework-r3/SOURCE_BINDING_R4.json",
+    "bytes": 2273,
+    "sha256": "28c8b58dd52a26bea0db83ae1444049a6cf8f2916c64ad5ef9c5e8ed0e8032c8"
+  },
+  "files": [
+    {
+      "path": "comsol_mcp/_windows_disk_resources.py",
+      "bytes": 38986,
+      "sha256": "2d52fa150d8a94b8bb73a430983ea2d62d222b083c3dc6f68dd4c9774bd9143f",
+      "frozen_path": "_state/universal-windows-disk-resources/rework-r3/source-r4/comsol_mcp/_windows_disk_resources.py"
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "bytes": 186969,
+      "sha256": "f9b9ed87d41a3b84c7cd50aa9106046574b24b703bff7e1eaadc32555104289b",
+      "frozen_path": "_state/universal-windows-disk-resources/rework-r3/source-r4/comsol_mcp/_w26_os_resources.py"
+    },
+    {
+      "path": "tests/test_windows_disk_resources.py",
+      "bytes": 42903,
+      "sha256": "00bba7eb7058ef128bcacf1d2a996e0e0246b4a8451a593b19bbb8c1c78221b1",
+      "frozen_path": "_state/universal-windows-disk-resources/rework-r3/source-r4/tests/test_windows_disk_resources.py"
+    }
+  ],
+  "artifact_manifest": {
+    "path": "_state/universal-windows-disk-resources/rework-r3/ARTIFACTS_R4.json",
+    "bytes": 10934,
+    "sha256": "1110c48740b7660d714383916bd5708aa164a03de17e28548f06a2e80f4b7a7d"
+  },
+  "interfaces": {
+    "path": "_state/universal-windows-disk-resources/rework-r3/INTERFACE_R4.md",
+    "bytes": 2639,
+    "sha256": "c3bfab8ffc4a1292c542faa911fda9baa8b0149ed5f849bf8660cd141fed46fa"
+  },
+  "diff": [
+    {
+      "path": "_state/universal-windows-disk-resources/rework-r3/comsol_mcp___windows_disk_resources.py.r4.delta.patch",
+      "bytes": 21753,
+      "sha256": "733e6a334fcab23b5a24ede9da41d1310b7e755aebc4b01b4a348930ae53e377"
+    },
+    {
+      "path": "_state/universal-windows-disk-resources/rework-r3/tests__test_windows_disk_resources.py.r4.delta.patch",
+      "bytes": 22271,
+      "sha256": "8bbf62bb1dffaa1a5e4448f53b8d79c71ce0a99f122d7cc994683e6706832575"
+    }
+  ],
+  "production_boundary": {
+    "AST": {
+      "path": "_state/universal-windows-disk-resources/PRODUCTION_DELTA.json",
+      "bytes": 656,
+      "sha256": "d565f16d97f16c1ffe98e0569422088cffa32515b805434190f2bad7943704ed"
+    },
+    "w26_changed_definitions": 9,
+    "w26_added_helpers": 1,
+    "w26_unchanged_definitions": 91,
+    "PosixStorageObservationProvider_AST_unchanged": true,
+    "DiskResourceCoordinator_reservation_method_AST_unchanged": true,
+    "reservation_release_and_UNKNOWN_policy_unchanged": true,
+    "unrelated_production_files_edited": 0,
+    "ControlDaemon_factory_Job_issuer_changes": 0,
+    "SCM_history_or_receipt_changes": 0,
+    "Main_state_changes": 0,
+    "Git_mutations": 0,
+    "release_rework_AST": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/PRODUCTION_DELTA_R4.json",
+      "bytes": 872,
+      "sha256": "5b3b078547f1448ab24045929e0737e9fa7f1dab35f94588ab8bbb5df8586532"
+    },
+    "w26_bytes_unchanged_from_R2": true,
+    "shared_registry_and_owner_bytes_unchanged": true,
+    "changed_in_this_rework": [
+      "comsol_mcp/_windows_disk_resources.py",
+      "tests/test_windows_disk_resources.py"
+    ]
+  },
+  "implementation": {
+    "Windows_root": "Original typed owner/registry and native path+SD primitives; two live HANDLE chains; full volume serial/fileID/extent/creation/change/write/link/SD stability; no LastAccessTime false drift.",
+    "root_owner": "Existing trusted-owner SD policy plus exact configured owner SID. Root data does not become an authorization or full filesystem proof.",
+    "private_config": "Existing daemon-owned private-leaf gate; bounded single-link ReadFile, full identity/SD/name stability and exact raw-byte SHA256; closed existing schema/estimates/ADMISSION_ONLY budget.",
+    "independent_Windows_origin": "Separate Windows config/profile/observation tokens; no POSIX masquerading, JSON attestation or injected provider. Built-in provider type is exact.",
+    "capacity": "GetDiskFreeSpaceExW caller-available uint64 values bounded to existing SQLite integers; ADMISSION_ONLY advisory, not physical-volume/hard-quota enforcement.",
+    "ownership": "Original normalized SDK release success is cached with exact owner/entry/closer/keepalive; explicit coordination completes Python ack only. CloseHandle0/SDKraise/opaque/malformed/foreign or partial allocation stay UNKNOWN. Exception: strict original LocalFree HLOCAL failure for a confirmed SDK allocation permits explicit original-entry retry; never automatic/general cleanup.",
+    "pending": "Finite canonical original root/config path/kind + host-bound full original identity fences conflicts; distinct root/config works. Known path/expected-ID alias rejects before SDK; previously unknown actual-ID alias rejects before capacity/content; original unknown owner untouched."
+  },
+  "software": {
+    "JUnit": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/frozen-r4.xml",
+      "bytes": 315852,
+      "sha256": "90c987ecb5afcf0b379d647d7c38f8fad296216692369dec22b6e68a65db4d16"
+    },
+    "command": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/frozen-r4.command.json",
+      "bytes": 907,
+      "sha256": "c4f812431ffed134b490aa8c5d4845cd7df15b63577b7a547288eff61c00e8b0"
+    },
+    "stdout": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/frozen-r4.stdout",
+      "bytes": 340,
+      "sha256": "a5673da18341dae32a586c1465b9a400faf6c2ea28fbd21909762b63c51b04d5"
+    },
+    "stderr": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/frozen-r4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "imports": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/TEST_IMPORTS_R4.json",
+      "bytes": 22768,
+      "sha256": "1ccb813836c4f30f2df3ee2137ce53b716147425ad3dd49c96236499291ec7fb"
+    },
+    "summary": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/RESULT_SUMMARY_R4.json",
+      "bytes": 2041,
+      "sha256": "0c358edc44bf986608b36694c8b35eeb563a64e11696fe2596917dc0fd7fed7f"
+    },
+    "counts": {
+      "tests": 247,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 247,
+      "by_file": {
+        "_state.universal-windows-disk-resources.rework-r3.source-r4.tests.test_windows_disk_resources": 127,
+        "_state.universal-windows-disk-resources.rework-r3.source-r4.tests.test_w26_os_resources": 61,
+        "_state.universal-windows-disk-resources.rework-r3.source-r4.tests.test_host_scoped_provider": 27,
+        "_state.universal-windows-disk-resources.rework-r3.source-r4.tests.test_windows_host_preflight_owner": 29,
+        "_state.universal-windows-disk-resources.rework-r3.before._state.universal-main-review.20261023-windows-disk.test_disk_ownership_review": 3
+      },
+      "actual_imports": 102
+    },
+    "source_inputs": 904,
+    "baseline_inputs": 902,
+    "source_overlays": 3,
+    "no_private_materials_copied": true,
+    "scope": "127 dedicated Windows software cases +117 unchanged resource/provider/original-owner regressions +3 unchanged Main counters. Readonly POSIX/macOS regression; no remote Windows or COMSOL.",
+    "controls": [
+      "Original full identity/SID/config/raw-byte/provenance/ADMISSION_ONLY and unchanged POSIX/resource/UNKNOWN regressions retained.",
+      "CloseHandle and LocalFree confirmed success followed by state/pop/keepalive faults before or after effect; same original native result/entry/closer/storage survives and ack makes no native calls.",
+      "Owner root pop/retired write faults before or after effect, repeated ack fault, replacement entry/HANDLE/registry/keepalive/closer/owner callbacks reject without native reentry.",
+      "CloseHandle integer0 stays UNKNOWN even after changing fake SDK to success; effect-then-raise/before-call raise/return normalization exception/bool/opaque/foreign HLOCAL/partial output cannot retry or query old resource.",
+      "Only successful original GetSecurityInfo/ConvertStringSidToSidW allocation plus strict original HLOCAL failure permits explicit original LocalFree coordination; no general retry, changed producer/holder/binding or unconfirmed allocation.",
+      "Opaque failure during qualified LocalFree coordination becomes sticky UNKNOWN. If retry succeeds then ack faults, no third LocalFree of that allocation.",
+      "Same canonical case/kind and known expected-ID aliases reject before SDK; newly discovered full-ID alias rejects before capacity/content; independently observed distinct root/config works while original pending owner remains rooted.",
+      "Unchanged Main3 included: confirmed release bookkeeping continuation, BOOLzero cannot reclose, distinct full-ID root remains usable."
+    ]
+  },
+  "Windows_readonly_SDK": {
+    "state": "HISTORICAL_R2_SOURCE_ONLY_NOT_CURRENT_REWORK_NATIVE_PROOF",
+    "source_archive": {
+      "path": "_state/universal-windows-disk-resources/SDK_SOURCE_R2.zip",
+      "bytes": 2930845,
+      "sha256": "caa2dcff745888edf6314898f5ab5e46eff13eb9b312fdd49b452f80c3fd2f57"
+    },
+    "preparation": {
+      "path": "_state/universal-windows-disk-resources/SDK_PREP_R2.json",
+      "bytes": 510,
+      "sha256": "6e7ae36d14439eef76b3a6ad373c6342f75bed7a93112e735eb7ebc0a31307fc"
+    },
+    "program": {
+      "path": "_state/universal-windows-disk-resources/windows_readonly_probe_r2.py",
+      "bytes": 6275,
+      "sha256": "d293c3acc6c1e72886fcfb8fe34a7515a0934e7a8ac5053d334fa8264072734b"
+    },
+    "command": {
+      "path": "_state/universal-windows-disk-resources/windows-r2.command.json",
+      "bytes": 815,
+      "sha256": "756be7c47d6bfc2f6fe3d56302c48abdf678e5926672bb0f0a11080ca85a951a"
+    },
+    "raw": {
+      "path": "_state/universal-windows-disk-resources/windows-r2.stdout",
+      "bytes": 8878,
+      "sha256": "fe0d8f94901c80137ecd70f6a28cc8031edccc7fda05ef2e9edcf9ea1fdf9721"
+    },
+    "result": {
+      "path": "_state/universal-windows-disk-resources/SDK_READONLY_RESULT_R2.json",
+      "bytes": 11687,
+      "sha256": "8974e65867c7e415cf36581cac6e57407021be9b8a96208749832d0f0085ad05"
+    },
+    "execution": "Official existing CPython3.12 -I -B, fresh exclusive ordinary directory + exact source tree. Not a product-wheel install or native-engine test.",
+    "package_source_members": 179,
+    "actual_imports": 10,
+    "root_owner_observed": "S-1-5-32-544",
+    "original_scopes": 4,
+    "original_CloseHandle_confirmed": 40,
+    "original_LocalFree_confirmed": 133,
+    "unresolved_resources": 0,
+    "fixed_closers": true,
+    "before_after_full_identity_and_SD_stable": true,
+    "private_config_state": "REFUSED_DAEMON_OWNER_PRECONDITION",
+    "actual_trusted_config_success": "UNVERIFIED_PRIVATE_OWNER_MATERIAL_NOT_ESTABLISHED",
+    "ordinary_typed_profile_has_trusted_config_origin": false,
+    "real_Windows_observation_token_is_distinct_from_POSIX": true,
+    "advisory_capacity_evaluation_only": true,
+    "persisted_reservations": 0,
+    "ProjectAuthority_or_daemon_admission": "NOT_RUN",
+    "source_revision": "Immutable R2 source archive caa2dcff745888edf6314898f5ab5e46eff13eb9b312fdd49b452f80c3fd2f57; not the current R4 source.",
+    "current_rework_SDK": "NOT_RUN; failure/bookkeeping/API exception software validation only, no repeated remote probe."
+  },
+  "historical": {
+    "before_hard_refusal": {
+      "path": "_state/universal-windows-disk-resources/BEFORE_REFUSAL.json",
+      "bytes": 269,
+      "sha256": "6f5b7a9a6941c6acfc5a35c927d5eb3afdba93f940732d45ee497495284bc31b"
+    },
+    "r1_source": {
+      "path": "_state/universal-windows-disk-resources/SOURCE_R1.json",
+      "bytes": 315096,
+      "sha256": "db440472805565c1839a81a9cd35f41509cae5cc3e56adfc4c6f8fa0915d8ee4"
+    },
+    "r1_actual_full": {
+      "path": "_state/universal-windows-disk-resources/SDK_READONLY_RESULT_R1.json",
+      "bytes": 6224,
+      "sha256": "4100094e228ef52dd32cdc274a461020932e844e3f52555ba2f8e27284bb3e4e"
+    },
+    "r1_leaf_actual": {
+      "path": "_state/universal-windows-disk-resources/SDK_LEAF_RESULT.json",
+      "bytes": 5606,
+      "sha256": "a7d173e23c7864f2fc2c9cf94189df564ba82353aeef6a1a21dea7e91968d81d"
+    },
+    "r1_leaf_raw": {
+      "path": "_state/universal-windows-disk-resources/windows-leaf.stdout",
+      "bytes": 4335,
+      "sha256": "0e72d99ff1b8fca1a1da9ee5c8df53dc26ed9c6c84db6ec5078090df992ac0c1"
+    },
+    "r1_r2_leaf_AST": {
+      "path": "_state/universal-windows-disk-resources/R1_R2_LEAF_AST.json",
+      "bytes": 365,
+      "sha256": "2ac5ed6be0bfe3ba6c8b3056b117a0a62eaef2038388a0d168c528375cae6968"
+    },
+    "root_repair": "R1 reused daemon-private verifier for project root and refused trusted-admin owner. R2 root uses existing trusted-owner SD primitives plus exact profile owner. Daemon-private config requirement remains unchanged. Old runs are not relabelled.",
+    "development_JUnits": [
+      {
+        "path": "_state/universal-windows-disk-resources/focused-r1.xml",
+        "bytes": 279034,
+        "sha256": "80781eb19faa7ec5f033ff26c16bf2ebb9093ab8846c972ee354b6f0e350d442"
+      },
+      {
+        "path": "_state/universal-windows-disk-resources/focused-r2.xml",
+        "bytes": 303748,
+        "sha256": "8b1a0f9568e913c9f3adea79057169a6244127058b3aff970e12f81dec1bf863"
+      },
+      {
+        "path": "_state/universal-windows-disk-resources/focused-r3.xml",
+        "bytes": 272626,
+        "sha256": "6668a2acc6ecb192d147b5a01f96d6580ed9f92f37ae742c6fbf8773e1f2f0b5"
+      },
+      {
+        "path": "_state/universal-windows-disk-resources/focused-r4.xml",
+        "bytes": 272942,
+        "sha256": "f8f879fd73498e8acd6ce1262571b7e86408c307733693d64f9c520535d04d07"
+      }
+    ],
+    "development_failures": "R1 synthetic SDK incorrectly reused a still-live token HANDLE; R2 corrected token but missed ProjectAuthority fixture arguments and hit ten existing macOS sysctl sandbox refusals. All original failures retained; current frozen suite succeeds outside that sandbox.",
+    "prior_frozen_JUnit": {
+      "path": "_state/universal-windows-disk-resources/frozen-r1.xml",
+      "bytes": 293821,
+      "sha256": "3faa5f605438b1e688d0f3227f30db573234b9473e21b508ce6c1c36548f5fd9"
+    },
+    "prior_one_case_repair": {
+      "path": "_state/universal-windows-disk-resources/frozen-repair.xml",
+      "bytes": 397,
+      "sha256": "a1983d6c5ca867a660f437979cdb580b43a3391445f3d6836e7ed1fe96f7063f"
+    },
+    "prior_fixture_repair": "Existing Darwin test required an empty local-preservation parent. Supplied empty scratch only, no private data. Current R2 runs all188 with prerequisite explicit.",
+    "counts_not_added": true,
+    "old_SCM_SID_MIC_network_b90_history_unchanged": true,
+    "R2_compact": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/before/docs/universal_mcp_execution/evidence/WINDOWS_DISK_RESOURCES.json",
+      "bytes": 14645,
+      "sha256": "23f20db27782e09ce4c9e4914b71064fb07eac268d04304a864118ba45f724a2"
+    },
+    "R2_source_software": {
+      "JUnit": {
+        "path": "_state/universal-windows-disk-resources/frozen-r2.xml",
+        "bytes": 291309,
+        "sha256": "a2485a8768570978ac48fe5c392acea6eb45bdcdaea5e948cd7865622394e24b"
+      },
+      "command": {
+        "path": "_state/universal-windows-disk-resources/frozen-r2.command.json",
+        "bytes": 467,
+        "sha256": "0a22f4095e4b8c12b5da7119e22ac2a86cb5791cbecc403c117b640bfb325916"
+      },
+      "stdout": {
+        "path": "_state/universal-windows-disk-resources/frozen-r2.stdout",
+        "bytes": 260,
+        "sha256": "cfef870cabda80457e8bcbac1b48c6c6e7ccd6b569a958c58dea60140c159b6c"
+      },
+      "imports": {
+        "path": "_state/universal-windows-disk-resources/TEST_IMPORTS_R2.json",
+        "bytes": 22223,
+        "sha256": "07a3a93208dc3bebf402e54df499add0f7413064f37a762533c9a6fa73d7e15a"
+      },
+      "summary": {
+        "path": "_state/universal-windows-disk-resources/RESULT_SUMMARY_R2.json",
+        "bytes": 1709,
+        "sha256": "5e4f8bec5cb0ac291e06f88f78d299144c65ca622b3f187542e1c83e5a910fbe"
+      },
+      "counts": {
+        "tests": 188,
+        "passed": 188,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "by_file": {
+          "tests.test_windows_disk_resources": 71,
+          "tests.test_w26_os_resources": 61,
+          "tests.test_host_scoped_provider": 27,
+          "tests.test_windows_host_preflight_owner": 29
+        },
+        "actual_imports": 102
+      },
+      "source_inputs": 904,
+      "baseline_inputs": 902,
+      "source_overlays": 3,
+      "no_private_materials_copied": true,
+      "scope": "Clean 96c6 projection + three leased files. 71 Windows SDK software controls +61 original resource +27 original host-provider +29 original preflight-owner cases. Actual POSIX/macOS readonly regression is not Windows native or COMSOL acceptance.",
+      "controls": [
+        "full 64/128-bit identity; host/project/workspace/owner mismatch; reparse, SD/extent/write drift; private config size/link/raw-byte hash and strict JSON",
+        "plain constructors/dicts/POSIX tokens/provider subclasses/cross-platform provider cannot acquire Windows provenance",
+        "quota assertions, malformed or boolean budgets/estimates, unbounded/invalid uint64 capacity and duplicate project/profile identities refuse",
+        "original pointer/entry/holder/closer retained on effect-then-raise, before-call raise, malformed return and partial allocation; no second SDK close or new query",
+        "only strict known CloseHandle no-close or original-HLOCAL LocalFree failure can recover through original owner; replacement SDK/owner rejected",
+        "coherent trusted-admin root vs daemon-private config SID/SD controls; ProjectAuthority root consumer rechecks exact binding"
+      ]
+    },
+    "R2_artifact_manifest": {
+      "path": "_state/universal-windows-disk-resources/ARTIFACTS.json",
+      "bytes": 21020,
+      "sha256": "9b97de850d9fdaa3e6b98270169f9bb27686c81fa60a883780a03f25e291bba5"
+    },
+    "R2_validation": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/before/_state/universal-windows-disk-resources/VALIDATION.json",
+      "bytes": 809,
+      "sha256": "f513105551d68d709451f488e71e228303766db21c6535d04af805d64baf0114"
+    },
+    "R2_safety_closure": "Withdrawn for Main3 material findings; original188PASS and four R2 normal SDK scopes preserved as historical facts, not patched native proof.",
+    "Main_rework": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/before/_state/universal-main-review/20261023-windows-disk/REWORK.json",
+      "bytes": 2377,
+      "sha256": "864fd688960a571af520f4cb83edf1438b42b231dbf4260346eba32bbd0acd91"
+    },
+    "Main_before_reproduction": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/main-before.xml",
+      "bytes": 6816,
+      "sha256": "b3b08071a795c4d68f2e407cc1c51a82e40536a03549053813c44d36a30f796b"
+    },
+    "interim_R3_JUnit": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/frozen-r3.xml",
+      "bytes": 311294,
+      "sha256": "493c3d4ad176dcc7199750567063dbac0b71050fd818253a7b34228d878a8741"
+    },
+    "interim_R3_source": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/SOURCE_R3.json",
+      "bytes": 314849,
+      "sha256": "0a64ac99aa45ae8211c61064c355665c3ddc7e9758912306211ca89bed60a266"
+    },
+    "interim_R3_imports": {
+      "path": "_state/universal-windows-disk-resources/rework-r3/TEST_IMPORTS_R3.json",
+      "bytes": 22768,
+      "sha256": "7c2adfad6e8ba9f72e8551e04ce137d4c01daa7fc257967ee33bb8530894a364"
+    },
+    "interim_R3_scope": "230PASS before Main LocalFree boundary correction; current247 are a separate final run, not cumulative."
+  },
+  "exact_remaining_materials": [
+    {
+      "id": "WINDOWS-PRIVATE-CONFIG-OWNER",
+      "state": "NOT_ESTABLISHED",
+      "source": "_host_scoped_provider._validate_windows_acl_policy / require_daemon_owner",
+      "detail": "Fresh ordinary config is correctly rejected for owner != actual daemon TokenUser. Native trusted-config positive read requires a legitimate daemon-owned private config in the intended runtime context and exact approved root identity. No owner/ACL/service/token changes authorized or attempted here."
+    },
+    {
+      "id": "NATIVE-ADMISSION-AND-INSTALLATION",
+      "state": "NOT_RUN",
+      "detail": "SCM/bootstrap/operator authorization, final normal product candidate, reservations/daemon startup/T037 issuer/COMSOL remain subsequent Main-owned work. ADMISSION_ONLY does not establish a hard quota or isolation."
+    }
+  ],
+  "host_policy_changes": 0,
+  "service_account_AppContainer_ACL_WFP_BFE_privilege_license_network_changes": 0,
+  "COMSOL_JVM_GUI_starts": 0,
+  "original_jobs_touched": 0,
+  "actual_b90_package_rebuilt": false,
+  "host_apply": "NOT_AUTHORIZED",
+  "Native": "NOT_RUN",
+  "ISOLATION": "UNVERIFIED",
+  "official_SDK_references": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdiskfreespaceexw",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info",
+    "https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-getsecurityinfo",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree"
+  ],
+  "next_for_Main": "Publish exact disk unit; native R4/private daemon-owned config positive and actual admission remain pending. Continue finiteA/bootstrap/r4 candidate work.",
+  "rework": {
+    "path": "_state/universal-windows-disk-resources/rework-r3/REWORK_RESULT_R4.json",
+    "bytes": 2851,
+    "sha256": "4bbee2cfa4e132095607dd3d7e0ca7dac39d0f97f780256e0b033e8c1342d83b"
+  },
+  "current_native_SDK": "NOT_RUN",
+  "Main_review": {
+    "path": "_state/universal-main-review/20261023-windows-disk/MAIN_REVIEW.json",
+    "bytes": 1775,
+    "sha256": "b483753f58ced67da3e963f7ccc49abc420657a04dede2e05ea00d8c26e8256d"
+  }
+}

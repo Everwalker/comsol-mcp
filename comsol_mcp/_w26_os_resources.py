@@ -1,8 +1,7 @@
 """Fail-closed host isolation and disk-resource primitives for W26/T037.
 
-The POSIX disk provider observes free capacity through a pinned directory fd
-and supports advisory admission only. Windows has no connected root/storage
-adapter. The disk coordinator is installed only when the daemon is explicitly
+The built-in POSIX and Windows disk providers observe advisory free capacity
+through identity-pinned roots. The disk coordinator is installed only when the daemon is explicitly
 started with a trusted disk-resource config; absent that config, legacy
 dispatch remains unchanged. The module also defines the stricter full-host
 isolation contract and reviewable plan-only host changes. No hard-quota,
@@ -798,6 +797,9 @@ class DiskResourceProfile:
 
     @property
     def trusted_startup_config(self) -> bool:
+        if self.platform == "windows":
+            from ._windows_disk_resources import is_windows_disk_profile
+            return is_windows_disk_profile(self)
         return self._trusted_attestation is _TRUSTED_DISK_PROFILE_ATTESTATION
 
     def estimate_for(self, operation_id: str) -> int:
@@ -1155,6 +1157,14 @@ def _assess_network_grants(profile: HostResourceProfile, grants: Any, reasons: l
         reasons.append("NETWORK_POLICY_SCOPE_MISMATCH")
 
 
+def _trusted_storage_observation(profile, storage) -> bool:
+    if profile.platform == "windows":
+        from ._windows_disk_resources import is_windows_storage_observation
+        return is_windows_storage_observation(profile, storage)
+    return (profile.platform in {"macos", "linux"}
+            and storage._observation_attestation is _POSIX_STORAGE_OBSERVATION_ATTESTATION)
+
+
 def _assess_storage(profile: HostResourceProfile | DiskResourceProfile, storage: Any, now_ns: int,
                     max_age_ns: int, reasons: list[str]) -> None:
     if not isinstance(storage, StorageObservation):
@@ -1177,9 +1187,10 @@ def _assess_storage(profile: HostResourceProfile | DiskResourceProfile, storage:
                 or storage.filesystem_id != profile.storage_id):
             reasons.append("STORAGE_HOST_OR_IDENTITY_CHANGED")
         if (storage.quota_state != QuotaState.ADMISSION_ONLY.value
-                or storage._observation_attestation is not _POSIX_STORAGE_OBSERVATION_ATTESTATION
+                or not _trusted_storage_observation(profile, storage)
                 or storage.evidence_classification != "HOST_OBSERVED_ADMISSION_ONLY"):
-            reasons.append("POSIX_STORAGE_OBSERVATION_UNVERIFIED")
+            reasons.append("WINDOWS_STORAGE_OBSERVATION_UNVERIFIED" if profile.platform == "windows"
+                           else "POSIX_STORAGE_OBSERVATION_UNVERIFIED")
         if any(value is not None for value in (storage.quota_id, storage.quota_scope_id,
                                                 storage.quota_limit_bytes, storage.quota_used_bytes)):
             reasons.append("ADMISSION_ONLY_QUOTA_FIELDS_FORBIDDEN")
@@ -1416,9 +1427,8 @@ class TrustedDiskResourceConfig:
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> "TrustedDiskResourceConfig":
         if os.name == "nt":
-            _fail("DISK_RESOURCE_CONFIG_PROVIDER_UNSUPPORTED",
-                  "Windows disk profile loading is unavailable without its native root identity adapter",
-                  capability_state=CapabilityState.UNSUPPORTED.value)
+            from ._windows_disk_resources import load_windows_disk_config
+            return load_windows_disk_config(path)
         candidate = Path(path)
         if not candidate.is_absolute() or ".." in candidate.parts or candidate.name in {"", ".", ".."}:
             _fail("DISK_RESOURCE_CONFIG_INVALID", "startup config path must be absolute and canonical")
@@ -1537,6 +1547,9 @@ class TrustedDiskResourceConfig:
 
     @property
     def trusted_startup_source(self) -> bool:
+        if self.platform == "windows":
+            from ._windows_disk_resources import is_windows_disk_config
+            return is_windows_disk_config(self)
         return self._attestation is _TRUSTED_DISK_CONFIG_ATTESTATION
 
     def resolve(self, project_id: str) -> DiskResourceProfile:
@@ -1554,6 +1567,9 @@ class TrustedDiskResourceConfig:
 
 
 def _parse_disk_profile(raw: Any, *, host_id: str, platform_name: str) -> DiskResourceProfile:
+    if platform_name == "windows":
+        from ._windows_disk_resources import parse_windows_disk_profile
+        return parse_windows_disk_profile(raw, host_id=host_id, platform_name=platform_name)
     fields = {"profile_id", "project_id", "root", "storage_id", "disk_budget",
               "allowed_operations", "trusted_estimates"}
     if not isinstance(raw, dict) or set(raw) != fields:
@@ -1751,8 +1767,9 @@ def _authorize_profile_project(authority: Any, profile: HostResourceProfile | Di
         _fail(f"{code_prefix}_ROOT_AUTHORITY_MISMATCH",
               "trusted profile root differs from ProjectAuthority workspace")
     if os.name == "nt":
-        _fail(f"{code_prefix}_ROOT_IDENTITY_PROVIDER_NOT_CONFIGURED",
-              "Windows project root identity verification is not connected")
+        from ._windows_disk_resources import verify_windows_profile_project
+        verify_windows_profile_project(profile, project_id, project, code_prefix=code_prefix)
+        return project
     descriptors: list[int] = []
     try:
         from ._state_backup import _open_posix_directory_chain, _verify_posix_directory_links
@@ -2636,7 +2653,7 @@ def evaluate_disk_admission(profile: HostResourceProfile | DiskResourceProfile,
               requested_bytes=requested_bytes, available_bytes=available,
               enforcement=enforcement)
     evidence = ("HOST_OBSERVED_ADMISSION_ONLY"
-                if observation._observation_attestation is _POSIX_STORAGE_OBSERVATION_ATTESTATION
+                if _trusted_storage_observation(profile, observation)
                 else "SOFTWARE_ONLY")
     return DiskAdmission(True, requested_bytes, available, enforcement,
                          disk_scope_id(profile, observation), _sha256(observation.as_dict()), evidence)
@@ -2939,9 +2956,10 @@ def _reserve_disk_for_job_in_transaction(*, store: Any, authority: Any,
             _fail("DISK_ESTIMATE_MISMATCH",
                   "reservation size must equal the trusted estimate for the durable canonical operation",
                   operation_id=job["operation"])
-        if observation._observation_attestation is not _POSIX_STORAGE_OBSERVATION_ATTESTATION:
-            _fail("POSIX_STORAGE_OBSERVATION_UNVERIFIED",
-                  "disk profiles require a fresh pinned POSIX storage observation")
+        if not _trusted_storage_observation(profile, observation):
+            _fail("WINDOWS_STORAGE_OBSERVATION_UNVERIFIED" if profile.platform == "windows"
+                  else "POSIX_STORAGE_OBSERVATION_UNVERIFIED",
+                  "disk profiles require their platform's fresh built-in pinned storage observation")
     if job["job_status"] != "QUEUED" or job["operation_status"] != "QUEUED":
         _fail("RESOURCE_RESERVATION_NOT_PREDISPATCH", "reservation must precede durable job dispatch",
               job_status=job["job_status"], operation_status=job["operation_status"])
@@ -3196,7 +3214,7 @@ class DiskResourceCoordinator:
 
     def __init__(self, *, config: TrustedDiskResourceConfig, store: Any,
                  authority: Any,
-                 storage_provider: PosixStorageObservationProvider | None = None,
+                 storage_provider: Any | None = None,
                  max_observation_age_ns: int = 30_000_000_000):
         from ._operation_store import OperationStore
         from ._project_authority import ProjectAuthority
@@ -3206,11 +3224,17 @@ class DiskResourceCoordinator:
         if not isinstance(store, OperationStore) or not isinstance(authority, ProjectAuthority) or authority.store is not store:
             _fail("RESOURCE_RESERVATION_AUTHORITY_REQUIRED",
                   "disk coordinator requires the existing bound ProjectAuthority and OperationStore")
-        if storage_provider is None and _current_platform_name() in {"macos", "linux"}:
-            storage_provider = PosixStorageObservationProvider()
-        if storage_provider is not None and type(storage_provider) is not PosixStorageObservationProvider:
+        provider_type = PosixStorageObservationProvider
+        if config.platform == "windows":
+            from ._windows_disk_resources import WindowsStorageObservationProvider
+            provider_type = WindowsStorageObservationProvider
+            if storage_provider is None:
+                storage_provider = provider_type()
+        elif storage_provider is None and _current_platform_name() in {"macos", "linux"}:
+            storage_provider = provider_type()
+        if storage_provider is not None and type(storage_provider) is not provider_type:
             _fail("DISK_STORAGE_PROVIDER_UNTRUSTED",
-                  "storage observations require the built-in pinned POSIX provider")
+                  "storage observations require the exact built-in provider for the configured platform")
         if type(max_observation_age_ns) is not int or max_observation_age_ns <= 0:
             raise ValueError("max_observation_age_ns must be positive")
         self.config = config
