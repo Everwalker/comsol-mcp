@@ -9,14 +9,16 @@
 - M4构件阶段 PASS：三架构离线包、哈希锁、SBOM/许可及正常启动已限定审查；Intel使用明确披露的同版本cryptography派生wheel，未声称Intel COMSOL硬件通过。131项发布软件测试通过。Windows实际离线安装/112工具启动通过，两版doctor汇总仍UNKNOWN。
 - M4交付生命周期软件阶段 PASS：真实0.1.10构件同版本代码切换/回退、生产全状态备份恢复和非空隔离venv卸载通过；Main核验118份原始记录及36个保留文件。子进程禁网范围已验证；Windows/Intel生命周期、完整原生T056及科学验收未据此转PASS。Homebrew Framework卸载仍保留fail-closed UNKNOWN，成功路径为私有standalone CPython。见 [交付证据](docs/universal_mcp_execution/evidence/M4_DELIVERY_LIFECYCLE.json)。
 - M2a：普通新修补包已干净离线安装，Main核对172包文件与源码/wheel一致，112工具协议启动通过。`model_inspect(refresh=true)`项目写权限修补经精确冻结运行时代码17项软件测试通过；真实6.4.0.293求解已成功；result.evaluate因SOLUTION_AXES_UNVERIFIED在getData前拒绝，随后managed reconciliation公开wire缺口阻塞继续。结果/图像/保存/sentinel最终核对未通过，原失败保留。
+- 后续Core批次本地检查点：426软件PASS/1显式监听夹具SKIP，新app `1f752ce0`全新离线安装并列出112工具；Main随后发现计数证据只接at_points、未接原失败的result.evaluate，已要求同Agent补实际路径/完整函数反例并重冻新构件。该候选尚未验收/同步，按RESUME.m2_core_checkpoint续跑；原软件/安装记录不能转原生或整体PASS。
 - 原M2a失败run的Worker已通过公开入口退役，原UNKNOWN未重放或改成成功；stop因历史UNKNOWN拒绝，原自有Server保留隔离。源码已定位stop门禁遗漏现有强静止证明判断，纳入M2b。旧ModelRefs为历史引用，不能继续使用。
 - Windows SID/两条SCM lookup修补已由Main限定接收：受影响133项软件PASS，173个包文件与R3 wheel/源码一致，实际已安装只读SCM/token探测和缺profile拒绝通过。共享host-profile SID随后完成161项聚焦PASS与真实Windows6个正向/16个反向intent解析，仍为NOT_VERIFIED；另59项资源回归原11FAIL已定位为外层观测权限与Worker替身协议缺失；原断言保留，新增2身份反例后61PASS，原失败报告保留，不推广为OS隔离验收。端口接口及真实原生启动授权尚需实现，host plan非apply-ready。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
 - 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
 - Windows子进程只读证据阶段经Main接收：87软件测试、真实Windows12项负控、7类SDK观测及原始HANDLE退出/释放核验通过。探针为普通高完整性、非AppContainer token，从未Resume；不是T037隔离/issuer/COMSOL通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_EVIDENCE.json)。
 - Windows网络意图/范围/完整WFP组软件与getter阶段经Main接收：本轮164项PASS，旧177+89记录单列；新正常离线安装的getter真实只读查询一次，1024..60000、4个原始句柄关闭确认、无遗留。尚未接固定监听启动，也未证明WFP有效隔离或启用准入。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_NETWORK_INTENT.json)。
+- Windows固定子进程创建限制属性经Main限定接收：92软件PASS，真实普通悬挂探针读回flags1、原HANDLE退出/释放核验；从未Resume，实际阻止行为/三属性T037原生创建/vendor兼容仍NOT_RUN。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_PROCESS_POLICY.json)。
 
-已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，均普通推送并独立回读。交付生命周期/权限软件阶段已同步并独立回读 `c10c066af2a6e43fa0910c4a20b99019f43fe846`；后续核心变化须重新捕获源码构件，不能重标旧wheel。
+已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`，均普通推送并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：同一Luna完成managed reconciliation公开wire、通用稳态解预算计数、Java边界/注解处理、UNKNOWN冲突资源与停止门禁，再以新正常安装重跑M2闭环。Windows接着补固定监听/IPv4启动接线与真实A/B/C证据；当前子进程创建限制属性和只读WFP事件模块并行实现，不启用未证准入。最终独立Reviewer只在候选就绪后启动。
+下一动作：同一Luna补Core原result.evaluate漏接并重冻/重装后完成M2闭环。Windows接着补固定监听/IPv4启动接线与真实A/B/C证据；只读对象MIC和WFP事件模块并行实现，不启用未证准入。最终独立Reviewer只在候选就绪后启动。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

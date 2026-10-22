@@ -1,0 +1,251 @@
+{
+  "schema": "comsol-mcp.windows-child-process-policy/1",
+  "created_utc": "2026-10-22T16:14:49.589625+00:00",
+  "review_status": "PASS_MAIN_SCOPED_SOURCE_SOFTWARE_AND_ORDINARY_SDK_FLAG_OBSERVATION",
+  "admission_authority": false,
+  "user_reported_base_commit": "f68b3c7acfff34fd6d1846fb7b4031371e223b3e",
+  "Git_commands_or_mutations": "NOT_RUN",
+  "IMPLEMENTED": {
+    "status": "IMPLEMENTED",
+    "source": {
+      "path": "comsol_mcp/_windows_t037.py",
+      "sha256": "9e38b9c483981cdc0071ed730f2bcf13be670a60bcabaa88380a451d318915f4",
+      "bytes": 113516
+    },
+    "test": {
+      "path": "tests/test_windows_child_process_policy.py",
+      "sha256": "f397afd129ce26ea42181dd9c34e582f3b1034e64cf12a36953de8e5c9a0cc7c",
+      "bytes": 11691
+    },
+    "review_diff": {
+      "path": "_state/universal-child-process-policy/implementation.diff",
+      "sha256": "2cfb2f6187e7aa62c4d6be17d0c96e7d79273192af3027f1a2eb9d1438bc60fd",
+      "bytes": 3334
+    },
+    "before_source_sha256": "6849f7c13f532753057c59f993fb7cc2ec6813da1f55e9986fc51d54c7d9758b",
+    "only_production_changes": "_Win32LaunchApi.PROC_THREAD_ATTRIBUTE_CHILD_PROCESS_POLICY plus finite _attribute_list body; all other module AST unchanged",
+    "contract": {
+      "roles": [
+        "server",
+        "worker"
+      ],
+      "attribute_count": 3,
+      "updates_in_order": [
+        "SECURITY_CAPABILITIES 0x20009",
+        "HANDLE_LIST 0x20002",
+        "CHILD_PROCESS_POLICY 0x2000E"
+      ],
+      "child_policy": "fixed PROCESS_CREATION_CHILD_PROCESS_RESTRICTED=1, 4-byte ctypes DWORD; no caller option",
+      "owner": "child-policy DWORD appended to original attribute_list entry keepalive with storage/security capabilities/handle array; original DeleteProcThreadAttributeList closer",
+      "lifetime": "same original registry owner through confirmed VOID Delete return; unchanged launcher's repeated own() retains the same four-storage entry",
+      "fail_closed": "bad attribute key, DWORD ABI/value, size-probe/init result or any Update failure refuses; third Update never falls back to two attributes; failed Delete stays UNKNOWN with original storage, no native release retry"
+    },
+    "unchanged": "SID/service/SCM/token duplication and verification, Job, exact stdio list, AppContainer gates, launch roles, return interface, preflight and issuer/resume semantics",
+    "existing_test_modifications": []
+  },
+  "SOFTWARE": {
+    "status": "PASS_SOFTWARE_ONLY",
+    "tests": 92,
+    "new_tests": 32,
+    "existing_regressions": 60,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "counts_by_module": {
+      "tests.test_windows_child_process_policy": 32,
+      "tests.test_windows_owned_registry": 22,
+      "tests.test_windows_suspended_ownership": 10,
+      "tests.test_windows_t037": 24,
+      "tests.test_windows_child_binding": 4
+    },
+    "exact_command": {
+      "path": "_state/universal-child-process-policy/unit-final.command.json",
+      "sha256": "1281245b4fc56e6d0019f4688456b97bb978e663689df80b8fd29e9e4f87f894",
+      "bytes": 685
+    },
+    "JUnit": {
+      "path": "_state/universal-child-process-policy/unit-final.xml",
+      "sha256": "13285053448998a93ae73f91627103ed88ddf4148e8a7a23e5e2b547a98413b9",
+      "bytes": 14853
+    },
+    "log": {
+      "path": "_state/universal-child-process-policy/unit-final.log",
+      "sha256": "c19dfef1bd3ae444c605d7349d6fbc5803036a7f7c7fff6f2071a4df4a4a7303",
+      "bytes": 179
+    },
+    "frozen_source_test_and_fixture_hashes": {
+      "path": "_state/universal-child-process-policy/snapshot-manifest.json",
+      "sha256": "ecdd9f5df50602d46bd006e15f10ee01630999a641c9e94c77efc1f86debe939",
+      "bytes": 2660
+    },
+    "controls": [
+      "two Initialize calls each count=3; exactly three Update calls with exact key/value/pointer/size/flags/NULL arguments",
+      "real ctypes DWORD(1) bytes 01000000; original capabilities and exact handle-array pointers",
+      "GC lifetime through original owner; duplicate launcher registration preserves fourth storage",
+      "first/second/third Update refusal and Delete exactly once; third-Update + Delete exception/invalid VOID result retains UNKNOWN; drain/release do not call Delete again",
+      "size/error/probe/init/old-two-only SDK refusal; malformed or redirected key; wrong DWORD size or nonrestricted value",
+      "no caller policy parameter; unchanged launcher options reject injected child policy/attribute list/startupinfo",
+      "both production launcher roles exercise three attributes and retain existing original-HANDLE cleanup and issuer refusal",
+      "existing factory constructors, server/worker preflight, owner retention and issuer negative guards"
+    ],
+    "retained_initial_failure": {
+      "result": "29 passed, 3 fixture-definition failures; no native attempt",
+      "cause": "ctypes subclass with zero-argument super() caused __class__ TypeError; changed only new fixture to explicit C.c_uint32.__init__; production source unchanged by fix",
+      "JUnit": {
+        "path": "_state/universal-child-process-policy/unit-a1.xml",
+        "sha256": "d8767be3ce496d90a7a232c6c89ff3fde6d65402487bda9a629085c4a9580c08",
+        "bytes": 9130
+      },
+      "log": {
+        "path": "_state/universal-child-process-policy/unit-a1.log",
+        "sha256": "e90c041b2b99cf80cc13589fcaadb5987003ddedb9c594b12e1561eb326f50e9",
+        "bytes": 3253
+      }
+    }
+  },
+  "SDK_OBSERVATION": {
+    "status": "PASS_SCOPED_NO_CHILD_PROCESS_CREATION_FLAG_OBSERVED",
+    "explicit_new_child_CreateProcess_calls": 1,
+    "ordinary_private_CPython": "same existing R2 official CPython 3.12.10 executable path and SHA256; no runtime install or token change",
+    "python_sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a",
+    "R2_reference": "_state/universal-windows-prep/SID_FIX/R2/standalone-install-result.json",
+    "scope_difference": "ordinary probe uses one identical child-policy attribute, no AppContainer/stdio/Job attributes; actual production three-attribute list is software-tested, not claimed native-qualified",
+    "attribute": {
+      "key": 131086,
+      "DWORD_value_from_frozen_production_method": 1,
+      "cbSize": 4,
+      "bytes": "01000000"
+    },
+    "abi": {
+      "DWORD": 4,
+      "pointer": 8,
+      "STARTUPINFO": 104,
+      "STARTUPINFOEX": 112,
+      "PROCESS_INFORMATION": 24
+    },
+    "creation_flags": 134742020,
+    "creation_flags_meaning": "EXTENDED_STARTUPINFO_PRESENT | CREATE_SUSPENDED | CREATE_NO_WINDOW = 0x08080004",
+    "fixed_child_argv": [
+      "official existing Python",
+      "-I",
+      "-B",
+      "-c",
+      "pass"
+    ],
+    "identity_before": {
+      "pid": 22812,
+      "thread_id": 26876,
+      "thread_process_id": 22812,
+      "birth_filetime": 134371590682434763,
+      "thread_birth_filetime": 134371590682434801,
+      "process_live": true,
+      "thread_live": true
+    },
+    "identity_after": {
+      "pid": 22812,
+      "thread_id": 26876,
+      "thread_process_id": 22812,
+      "birth_filetime": 134371590682434763,
+      "thread_birth_filetime": 134371590682434801,
+      "process_live": true,
+      "thread_live": true
+    },
+    "actual_GetProcessMitigationPolicy_original_HANDLE": {
+      "flags": 1,
+      "no_child_process_creation": true,
+      "audit_no_child_process_creation": false,
+      "allow_secure_process_creation": false
+    },
+    "policy_storage_alive_after_gc": true,
+    "never_ResumeThread": true,
+    "cleanup": {
+      "terminate_original_handle": true,
+      "wait_result": 0,
+      "exit_code": 2616,
+      "exit_confirmed": true,
+      "thread_released_once": true,
+      "process_released_once": true,
+      "attribute_list_released_once": true,
+      "policy_storage_released_after_delete": true,
+      "unresolved": []
+    },
+    "raw": {
+      "path": "_state/universal-child-process-policy/readbacks/probe-result.json",
+      "sha256": "c7623f419e2de9b34a42a1bc384ff39bcdf844881024ecedd3bf15b2df729093",
+      "bytes": 3601
+    },
+    "SDK_probe_source": {
+      "path": "_state/universal-child-process-policy/native_policy_probe.py",
+      "sha256": "b4069f99b2fec166c96dfe75856e26f8f83bb65955dbf9db5274529cc8f94049",
+      "bytes": 11275
+    },
+    "transport_input_and_payload_hashes": {
+      "path": "_state/universal-child-process-policy/run-input.json",
+      "sha256": "e2c9c82fe5cba032ba202697e624fb2edde047269a218aef6853cd4facac44ed",
+      "bytes": 1262
+    },
+    "current_source_snapshot_and_remote_hashes_match": true,
+    "OS_or_API_failures": 0,
+    "fallbacks_or_second_child": 0
+  },
+  "ENFORCEMENT_NOT_RUN": {
+    "status": "NOT_RUN",
+    "child_spawn_behavior": "NOT_RUN; target never resumed",
+    "full_T037_AppContainer_three_attribute_native_create": "NOT_RUN",
+    "COMSOL_Server_Worker_JVM_GUI_service_vendor_compatibility": "NOT_RUN",
+    "host_policy_ACL_WFP_AppContainer_account_setting_changes": "NOT_RUN",
+    "qualification_or_native_isolation_admission": "NOT_RUN",
+    "future_vendor_helpers": "Main decision under frozen T037 design; no override/weakening added here",
+    "token_identity_architecture": "Main decision; original duplication and SID verification text/semantics unchanged"
+  },
+  "ISSUER_UNCHANGED": {
+    "status": "UNCHANGED_REFUSALS_PRESERVED_NOT_ENABLED",
+    "protected_source_and_old_tests_hashes_unchanged": true,
+    "baseline_hashes": {
+      "path": "_state/universal-child-process-policy/baseline.json",
+      "sha256": "c7202d97299d9a1454efb165287eff92ddd3a17ff9b6dd2e02541777282b0c11",
+      "bytes": 1635
+    },
+    "preflight_resume_issuer": "existing unconditional refusals preserved; four direct issuer negative regressions passed",
+    "child_evidence_module_unchanged_sha256": "5577ff0b0c46c9ce6f1a5e30b2e41930d5692b24e282c23a74d4bc2e0dd4c5e1",
+    "no_new_authority_or_caller_switch": true
+  },
+  "write_scope": {
+    "production": "comsol_mcp/_windows_t037.py",
+    "new_test": "tests/test_windows_child_process_policy.py",
+    "private": "_state/universal-child-process-policy",
+    "compact": "docs/universal_mcp_execution/evidence/WINDOWS_CHILD_PROCESS_POLICY.json",
+    "Main_progress_RESUME_handoff_Git_written": false
+  },
+  "official_SDK_provenance": {
+    "checked_facts": {
+      "path": "_state/universal-child-process-policy/official-sdk-facts.json",
+      "sha256": "b6bced29118e0f227dda2ea9c3dc4d0541f4a8ba8fead1afb5cff1495c9dea07",
+      "bytes": 1036
+    },
+    "header": "https://raw.githubusercontent.com/microsoft/win32metadata/main/generation/WinSDK/RecompiledIdlHeaders/um/WinBase.h",
+    "derivation": "ProcThreadAttributeChildProcessPolicy=14, INPUT=0x20000, Thread=FALSE/Additive=FALSE -> 0x2000E; PROCESS_CREATION_CHILD_PROCESS_RESTRICTED=0x01",
+    "api_docs": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute",
+    "flags_docs": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags",
+    "storage_contract": "lpValue persists until DeleteProcThreadAttributeList; new DWORD has the same owner/lifetime"
+  },
+  "raw_manifest": {
+    "path": "_state/universal-child-process-policy/raw-manifest.json",
+    "sha256": "5c42a3fb1321f2c7770ff3e91f5f3ae4a341fe114cb36d98fd2639041edc3dca",
+    "bytes": 9883
+  },
+  "reproduction": "frozen snapshot + exact pytest command/JUnit; native_policy_probe.py and run_probe.py with fixed input/source hashes and recorded stage commands. A future authorized probe requires a fresh root/output; existing raw is never overwritten. No enforcement/admission claim.",
+  "Main_review": {
+    "reviewed_utc": "2026-10-22T16:19:13.931893+00:00",
+    "source_sha256": "9e38b9c483981cdc0071ed730f2bcf13be670a60bcabaa88380a451d318915f4",
+    "test_sha256": "f397afd129ce26ea42181dd9c34e582f3b1034e64cf12a36953de8e5c9a0cc7c",
+    "checks": [
+      "Finite constant/attribute-list diff reviewed; all other module AST matches accepted HEAD. No token, SID, creation-owner, factory/preflight/issuer logic changed.",
+      "92 JUnit cases zero failures/errors/skips; new32 controls and existing60 regressions reviewed. All64 named hash references covering52 unique files verified.",
+      "Actual one ordinary probe used the same policy key/DWORD derived from frozen source; native Update/GetProcessMitigationPolicy original HANDLE returned flags1; identity stable, never resumed, original exit/cleanup confirmed, unresolved empty.",
+      "Three-attribute production native creation and spawn-denial behavior remain NOT_RUN; no host settings or vendor compatibility claim."
+    ],
+    "review_script_note": "Main initially compared the native source-hash map to a scalar hash; selected the exact production source key and verified the bytes. No product/source/raw mutation.",
+    "limits": "A configuration/SDK-observation stage only, not actual child-spawn enforcement, lowbox/Job/three-attribute native admission, COMSOL vendor or T037 acceptance."
+  }
+}

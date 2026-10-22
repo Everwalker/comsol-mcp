@@ -24,4 +24,8 @@ Windows新子进程只读证据已由Main限定接收并同步f68b3c7a，见evid
 
 续跑先读RESUME与最新原始pending-refs/job，核实实际进程和所有权；新独立资源可继续，禁止重放旧UNKNOWN、伪造Popen或修改活daemon代码。当前原生目标/跳过范围仍严格按config/TARGETS.json。完成所有required、真实跨平台适用验证及最终独立Reviewer批准前，不写整体完成。
 
+固定ChildProcessPolicy属性单元由Main限定接收：_windows_t037只改常量/attribute-list，其余AST一致；92软件PASS/64命名hash覆盖52文件核验；唯一普通新悬挂探针实际读回flags1/NoChildProcessCreation=true，原HANDLE确认退出，无遗留。此probe只用同一policy属性，不包含实际AppContainer/Job/stdio三属性生产创建；从未Resume，行为阻止/vendor兼容/T037仍NOT_RUN，issuer不变。见evidence/WINDOWS_CHILD_PROCESS_POLICY.json。后续将这些有限SDK事实接入A/B/C真实producer，不能从观察值直接造准入。
+
 最新主线状态：修补候选1706的真实6.4.0.293 study.run已成功（job b332f63b-9359-4502-b1ac-a2c452827810）；result.evaluate因预算SolutionAxes未证在getData前拒绝，Eval临时节点已清理、target rev3 dirty。managed inspect缺refresh wire，legacy refresh未携带ModelRef调用空默认连接，产生未绑定UNKNOWN1f87ec01-5469-452d-8bfa-ead562faf2e5；job.reconcile拒绝，最终sentinel读被全局围栏拒绝。所有失败/原请求不改写。Primary现连续修上述两项及既有Core边界批次，软件通过后冻新源码/离线安装/新拥有资源重跑；不修活daemon、不重标1706。原Owner可在零活动并满足既有门禁时正常断开/退役/stop一次，否则保留隔离；不凭PID清理。详细现态以RESUME和原始pending-refs为准。
+
+本Core批次已有未验收检查点evidence/M2_CORE_REPAIR.json：d56基底加7生产/5测试overlay，执行端426软件PASS/1可选显式监听夹具SKIP；新app1f752ce0、42-wheel锁、全新源外安装及112工具元数据已记录。Main核对12个overlay当前/冻结一致，集中审查发现result_evaluate在5443的预算guard未接count witness；该witness调用仍仅位于at_points，因此本P0尚未关闭。Primary收到返工：在安全检查点保存已接受作业/原owner清理状态，补真实evaluate全路径/前后drift及完整函数反例，再重冻/重装新candidate。1f7/426+1skip保留原范围，不重标成功，不改活daemon。精确SHA/路径见RESUME.m2_core_checkpoint及原receipt；旧1706证据和原UNKNOWN保持原态。

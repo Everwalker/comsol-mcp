@@ -1397,6 +1397,7 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
     CREATE_UNICODE_ENVIRONMENT = 0x00000400
     PROC_THREAD_ATTRIBUTE_HANDLE_LIST = 0x00020002
     PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES = 0x00020009
+    PROC_THREAD_ATTRIBUTE_CHILD_PROCESS_POLICY = 0x0002000E
     STARTF_USESTDHANDLES = 0x00000100
     DUPLICATE_SAME_ACCESS = 0x00000002
     GENERIC_READ = 0x80000000
@@ -1572,24 +1573,36 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
 
     def _attribute_list(self, security_capabilities: Any, handles: Any):
         C = self.C
+        child_policy_attribute = self.PROC_THREAD_ATTRIBUTE_CHILD_PROCESS_POLICY
+        if (type(child_policy_attribute) is not int or child_policy_attribute != 0x0002000E
+                or C.sizeof(self.W.DWORD) != 4):
+            _refuse(ERROR_UNSUPPORTED, "T037 child process policy attribute/DWORD ABI is unsupported")
+        child_policy = self.W.DWORD(0x01)  # PROCESS_CREATION_CHILD_PROCESS_RESTRICTED; never caller-configurable.
+        if child_policy.value != 0x01:
+            _refuse(ERROR_UNSUPPORTED, "T037 child process policy must restrict child creation")
         size = C.c_size_t(0)
-        self.k.InitializeProcThreadAttributeList(None, 2, 0, C.byref(size))
-        if C.get_last_error() != 122 or not 0 < size.value <= 64 * 1024:
+        probed = self.k.InitializeProcThreadAttributeList(None, 3, 0, C.byref(size))
+        if probed or C.get_last_error() != 122 or not 0 < size.value <= 64 * 1024:
             _refuse(ERROR_UNSUPPORTED, "InitializeProcThreadAttributeList size probe has an unexpected ABI result")
         storage = C.create_string_buffer(size.value)
         pointer = C.cast(storage, C.c_void_p)
-        self._check(self.k.InitializeProcThreadAttributeList(pointer, 2, 0, C.byref(size)),
+        self._check(self.k.InitializeProcThreadAttributeList(pointer, 3, 0, C.byref(size)),
                     "InitializeProcThreadAttributeList")
         from ._windows_owned_resources import own
         resource=own(self,pointer,self.k.DeleteProcThreadAttributeList,mode="VOID",label="attribute_list",
-                     keepalive=(storage,security_capabilities,handles))
+                     keepalive=(storage,security_capabilities,handles,child_policy))
         try:
+            if not 0 < size.value <= C.sizeof(storage):
+                _refuse(ERROR_UNSUPPORTED, "InitializeProcThreadAttributeList returned an invalid initialized size")
             self._check(self.k.UpdateProcThreadAttribute(pointer, 0,
                 self.PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, C.byref(security_capabilities),
                 C.sizeof(security_capabilities), None, None), "UpdateProcThreadAttribute(SecurityCapabilities)")
             self._check(self.k.UpdateProcThreadAttribute(pointer, 0,
                 self.PROC_THREAD_ATTRIBUTE_HANDLE_LIST, self.C.cast(handles, C.c_void_p),
                 C.sizeof(handles), None, None), "UpdateProcThreadAttribute(HandleList)")
+            self._check(self.k.UpdateProcThreadAttribute(pointer, 0,
+                child_policy_attribute, C.byref(child_policy), C.sizeof(child_policy),
+                None, None), "UpdateProcThreadAttribute(ChildProcessPolicy)")
         except BaseException:
             resource.release_owned(resource.registry.owner)
             raise
