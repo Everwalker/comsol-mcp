@@ -29,6 +29,6 @@
 
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：磁盘/root247及初始bootstrap212已限定验收并分别普通同步8f96f15a/0fbd29b4、独立fetch一致。现在同步r4准备验收；Primary仅新项目/metadata与现行资源preflight，不提前启动COMSOL。Leibniz继续有限A V4目标/profile/policy producer；Kier接仅当前primary token已分配SeRestore的有限installer上下文源码（不执行setter/不改全局权限），Lorentz接静态writer→运行时只读HANDLE交接，均连续实现测试。旧UNKNOWN保持、host未应用；最终候选就绪后独立Reviewer自行选题。
+下一动作：Main审查新installer上下文220与静态runtime HANDLE交接255软件单位；两者实际探针分别为Win3224 ABI失败（修后SDK未跑）和退出后image query Win3231部分失败，均未计native PASS。有限A初始1062软件经Main反例发现错误释放partial SD、合法service SID叶写拒绝及隐含foreign SD读取前提，由同Luna集中整改。r4新项目已核2条公开metadata成功、0sessions；记录free-only约1GiB、无memory profile/estimates，Main暂缓新COMSOL，未声称容量不足或license denied。独立强技术审查AppC生命周期最小方案，最终统一Reviewer仍未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。
