@@ -2,7 +2,7 @@
 
 目标 **IN_PROGRESS**。唯一续跑指针 [state/RESUME.json](state/RESUME.json)，冻结范围 [MASTER_GOAL](MASTER_GOAL.md)/[RELEASE_DOD](RELEASE_DOD.md)。通用MCP是主线，三案例科学终点与历史证据保留；最终独立Reviewer和两类未预设任务尚未启动。不得因普通阶段完成或sync而停止主目标，也不得把真实阻塞写成完成。
 
-规范生产树为本repository。恢复固定commit `cd47281777eae6f4ea0d40c5c754dca9982eda86`、tree `94e6523bfffe21ace621045710335bea5512c3c1`，21,682原跟踪文件与候选3,978映射/1,105对象已核验；M0有36项工具测试。分支universal-core，AGENTS.md148–152已授权逐阶段普通origin/main发布，禁止force。最近已验收发布为 `fe4e4c728c9c9729f1950c64b2c065dc9afeb803`，独立fetch回读一致；当前Core与固定监听WIP仍本地。
+规范生产树为本repository。恢复固定commit `cd47281777eae6f4ea0d40c5c754dca9982eda86`、tree `94e6523bfffe21ace621045710335bea5512c3c1`，21,682原跟踪文件与候选3,978映射/1,105对象已核验；M0有36项工具测试。分支universal-core，AGENTS.md148–152已授权逐阶段普通origin/main发布，禁止force。最近已验收发布为Core源软件与W17兼容 `5aed6a04338a3d754f5fc19fe2d63e4542bcc4fe`，独立fetch回读一致；此前MIC/network/events修补为fe4e4c72。当前r3 native及固定监听/原child归属WIP仍未验收。
 
 M1有限软件阶段：303项测试、24个公共签名、112工具源外协议smoke通过。GENERAL_COVERAGE冻结273动作/427原子断言（414核心/13案例），结构检查通过，U01–U12尚无全组完成声明。M3通用单位原347PASS/1FAIL/1明确排除原件保留；排除的旧源码同SHA副本已恢复并单项通过，历史W23 delta编译凭据仍缺失，不把全suite写PASS。
 
@@ -31,3 +31,7 @@ Windows下一源单位按Main私有INTEGRATION_NEXT/FIXED_LISTENER_TASK/CHILD_OW
 续跑先读RESUME、最新原始pending-refs/job及实际进程状态，不重放UNKNOWN、不凭PID接管、不重建原owner，不改写失败。后续核心变化须重新捕获构件并绑定新证据；最终冻结候选后，由fresh强独立Reviewer自行选两类未预设任务，Windows双版本与Mac适用链执行并循环整改，完成所有required且Reviewer批准前不得标整体完成。
 
 当前固定监听单位219PASS/1既有skip已返回，Main要求补Worker ready/current PID元数据与原native HANDLE/G2 owner出生/factory/profile/Job三方绑定，未验收；Kier同单位整改。原child归属已执行完整函数软件反例4FAIL/5对照PASS；校正根因为新wrapper在post-Resume bookkeeping异常后的GC关闭原活句柄，原retained析构已是no-op，见WINDOWS_CHILD_OWNER_INTEGRATION.json，生产修补尚未完成。
+
+最新租约：Core已发布，Java81af IPv4 worktree保留。_windows_t037.py accessor-only c45已由Main暂存，为固定监听后续提交保留，严禁该阶段再次git add当前同文件；Leibniz现拥有该文件后续child-owner生产delta及窄G2/observer消费者。Kier仅补_java_worker原G2 owner/HANDLE出生校验，保持原getter字段契约；_java_worker/_session_server的state-aware退休consumer等Kier结束后交Leibniz统一闭环。精确staging handoff见RESUME，不能混stage未验收单位。
+
+固定监听最新有限验收：232PASS/11明确deselect与变更后的完整ordinary-Popen拒绝路径1PASS，Main审查54命名哈希、895输入与118import来源，Core Java反向两行还原精确ca7。ready与当前PID元数据不能替代原HANDLE，现已按原G2 owner/factory/profile/Job/argv/精确FILETIME绑定。原219+1及Java实际探针仅历史scope，不叠加、不升格native。发布仍必须用index c45 factory，保留Leibniz后续producer worktree。

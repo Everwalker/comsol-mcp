@@ -262,7 +262,7 @@ public final class PersistentComsolWorker {
     this.serverLockRoot = serverLockRoot;
     this.codeRoot = Files.createTempDirectory("comsol-mcp-java-code-");
     this.server = new ServerSocket();
-    this.server.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), port));
+    this.server.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port));
   }
 
   public static void main(String[] args) throws Exception {
@@ -294,7 +294,7 @@ public final class PersistentComsolWorker {
     Path temporary = endpoint.resolveSibling(endpoint.getFileName().toString() + ".tmp");
     long processStartEpochMs = ProcessHandle.current().info().startInstant()
         .map(instant -> instant.toEpochMilli()).orElse(-1L);
-    String data = Json.write(map("type", "ready", "host", "127.0.0.1", "port", server.getLocalPort(),
+    String data = Json.write(map("type", "ready", "host", server.getInetAddress().getHostAddress(), "port", server.getLocalPort(),
         "pid", ProcessHandle.current().pid(), "process_start_epoch_ms", processStartEpochMs,
         "generation", generation.get(), "instance_id", instanceId, "token", token));
     Files.write(temporary, (data + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);

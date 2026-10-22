@@ -1039,6 +1039,37 @@ class T037SessionProcessFactory:
         self._closed = False
         self._prebirth_observers = []
         self._job_key = hashlib.sha256((profile.source_sha256 + "\0" + session_id).encode()).hexdigest()
+        # Read-only network intent stays bound to this constructor's exact
+        # profile. This captures configuration only, never native admission.
+        self._network_profile_binding = (
+            profile, profile.host_resource_profile, profile.host_resource_profile.sha256,
+            profile.source_sha256, session_id, profile.job_limits, profile.wrapper_schema,
+        ) if type(profile) is WindowsT037ProfileV2 else None
+
+    @property
+    def network_intent(self):
+        """Derive fixed listeners from the original typed profile, not a receipt."""
+        from ._windows_t037_network import derive_session_network_intent
+        binding = getattr(self, "_network_profile_binding", None)
+        if (type(self) is not T037SessionProcessFactory or type(binding) is not tuple
+                or len(binding) != 7 or type(self.profile) is not WindowsT037ProfileV2):
+            _refuse(ERROR_PROFILE_INVALID, "fixed listeners require the exact original T037 v2/v3 factory/profile")
+        profile, host, digest, source, session_id, limits, schema = binding
+        if (self.profile is not profile or profile.host_resource_profile is not host
+                or host.sha256 != digest or profile.source_sha256 != source
+                or self.session_id != session_id or profile.job_limits is not limits
+                or profile.wrapper_schema != schema):
+            _refuse(ERROR_PROFILE_INVALID, "original T037 network profile/session binding changed")
+        return derive_session_network_intent(profile)
+
+    def network_endpoint(self, role: str):
+        """Return a bound IPv4 endpoint; this does not preflight or admit a child."""
+        from ._session_context import CanonicalSocket
+        intent = T037SessionProcessFactory.network_intent.fget(self)
+        if type(role) is not str or role not in {"server", "worker"}:
+            _refuse(ERROR_PROFILE_INVALID, "fixed listener role must be server or worker")
+        port = intent.server_listen_port if role == "server" else intent.worker_listen_port
+        return CanonicalSocket(intent.bind_address, port)
 
     def __call__(self, command: Sequence[str], **options: Any):
         self.preflight()

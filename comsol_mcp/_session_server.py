@@ -109,6 +109,9 @@ class ManagedServerHandle:
     log_handle: Any = None
     retired: bool = False
     suspended_launch_recovery: Any = None
+    network_intent: Any = None
+    expected_endpoint: CanonicalSocket | None = None
+    launch_argv: tuple[str, ...] = ()
 
 
 ListenerRow = tuple[int, CanonicalSocket]
@@ -312,8 +315,20 @@ def _validate_server_np(server_np: int | None) -> int | None:
     return server_np
 
 
+def _t037_network_intent(process_factory):
+    """Only the exact in-process T037 factory can supply fixed listener data."""
+    from ._windows_t037 import T037SessionProcessFactory
+    if type(process_factory) is T037SessionProcessFactory:
+        return T037SessionProcessFactory.network_intent.fget(process_factory)
+    if isinstance(process_factory, T037SessionProcessFactory):
+        raise OwnedServerError("fixed listener factory subclasses/proxies are not accepted")
+    return None
+
+
 def build_server_command(directories: ServerDirectories, *, platform_name: str | None = None,
-                         validate_launcher: bool = True, server_np: int | None = None) -> list[str]:
+                         validate_launcher: bool = True, server_np: int | None = None,
+                         process_factory: Any = None) -> list[str]:
+    intent = _t037_network_intent(process_factory)
     selected = platform_name or sys.platform
     root = directories.private_installation
     if selected in {"darwin", "mac", "macos"}:
@@ -330,7 +345,7 @@ def build_server_command(directories: ServerDirectories, *, platform_name: str |
     np_arguments = ["-np", str(selected_np)] if selected_np is not None else []
     return [
         *prefix, *np_arguments,
-        "-port", "0", "-portfile", str(directories.port_file),
+        "-port", str(intent.server_listen_port if intent is not None else 0), "-portfile", str(directories.port_file),
         "-prefsdir", str(directories.preferences), "-tmpdir", str(directories.temporary),
         "-recoverydir", str(directories.recovery), "-login", "auto", "-silent", "-multi", "on",
     ]
@@ -345,7 +360,8 @@ def _utf16_units_with_nul(value: str) -> int:
 
 
 def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
-                                     session_id: str, *, server_np: int | None = None) -> dict[str, Any]:
+                                     session_id: str, *, server_np: int | None = None,
+                                     process_factory: Any = None) -> dict[str, Any]:
     """Preflight every Windows-owned Server path before any child can start.
 
     The 260-unit path bound is a conservative compatibility guard for COMSOL's
@@ -358,6 +374,7 @@ def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
     directories = _server_directories(root)
     command = build_server_command(
         directories, platform_name="windows", validate_launcher=False, server_np=server_np,
+        process_factory=process_factory,
     )
     state_root = Path(session_state_root)
     server_home = state_root.parent.parent
@@ -558,13 +575,22 @@ class OwnedServerLauncher:
             # Policy refusal must happen before private directory/log creation
             # and before any process API or fallback can run.
             preflight()
+        network_intent = _t037_network_intent(selected_process_factory)
+        expected_endpoint = None
+        if network_intent is not None:
+            from ._windows_t037 import T037SessionProcessFactory
+            if selected_process_factory.session_id != session_id:
+                raise OwnedServerError("T037 fixed listener factory belongs to a different session")
+            expected_endpoint = T037SessionProcessFactory.network_endpoint(selected_process_factory, "server")
         if self.platform_name in {"win32", "nt", "windows"}:
             windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id,
-                                             server_np=self.server_np)
+                                             server_np=self.server_np, process_factory=selected_process_factory)
         directories = create_server_directories(runtime, project_id, session_id)
         prepare_private_loopback_installation(runtime.installation_root, directories.private_installation)
         command = build_server_command(directories, platform_name=self.platform_name,
-                                       server_np=self.server_np)
+                                       server_np=self.server_np, process_factory=selected_process_factory)
+        if _t037_network_intent(selected_process_factory) != network_intent:
+            raise OwnedServerError("T037 fixed listener profile changed before Server creation")
         # Resolve the executable before CreateProcess so no fallible path
         # lookup can occur in the interval between a child birth and retaining
         # its exact Popen handle.
@@ -621,7 +647,9 @@ class OwnedServerLauncher:
             from ._windows_t037 import NativeSuspendedChildLaunchError
             if type(exc) is NativeSuspendedChildLaunchError:
                 retained = ManagedServerHandle(process=None, runtime_id=runtime.runtime_id,
-                                               executable=executable, directories=directories, log_handle=log_handle)
+                                               executable=executable, directories=directories, log_handle=log_handle,
+                                               network_intent=network_intent, expected_endpoint=expected_endpoint,
+                                               launch_argv=tuple(command))
                 retained.process = exc.transfer_to(retained)
                 retained.suspended_launch_recovery = retained.process
                 persistence_failed = False
@@ -660,7 +688,8 @@ class OwnedServerLauncher:
         process_pid = getattr(process, "pid", None)
         handle = ManagedServerHandle(
             process=process, runtime_id=runtime.runtime_id, executable=executable,
-            directories=directories, log_handle=log_handle,
+            directories=directories, log_handle=log_handle, network_intent=network_intent,
+            expected_endpoint=expected_endpoint, launch_argv=tuple(command),
         )
         phase_category = "BIRTH_OBSERVATION_FAILED"
         terminal_observation_recorded = False
@@ -695,7 +724,13 @@ class OwnedServerLauncher:
                         handle=handle, uncertain=True,
                     )
                 try:
-                    value = int(directories.port_file.read_text(encoding="utf-8").strip())
+                    published = directories.port_file.read_text(encoding="utf-8").strip()
+                    if expected_endpoint is not None and (
+                            not published.isascii() or not published.isdecimal()
+                            or int(published) != expected_endpoint.port):
+                        raise OwnedServerError("Server port file differs from its fixed T037 listener",
+                                               handle=handle, uncertain=True)
+                    value = int(published)
                     if 1 <= value <= 65535:
                         port = value
                         break

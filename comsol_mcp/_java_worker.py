@@ -348,9 +348,19 @@ class PersistentJavaWorker:
     def __init__(self, paths: JavaWorkerPaths, *, state_dir: Path | None = None,
                  on_request_event: Callable[[dict[str, Any]], None] | None = None,
                  process_factory: Callable[..., Any] | None = None) -> None:
+        from ._windows_t037 import T037SessionProcessFactory
+        if process_factory is not None and not callable(process_factory):
+            raise JavaWorkerError("Worker process factory must be callable")
+        is_t037 = isinstance(process_factory, T037SessionProcessFactory)
+        if is_t037 and type(process_factory) is not T037SessionProcessFactory:
+            raise JavaWorkerError("T037 Worker requires the exact original factory type")
         self.paths = paths
         self._process_factory = process_factory
-        self.state_dir = state_dir or Path(tempfile.mkdtemp(prefix="comsol-mcp-worker-state-"))
+        self._original_process_factory = process_factory
+        # T037 validates/preflights before creating even a temporary directory.
+        self.state_dir = state_dir if state_dir is not None else (
+            Path(tempfile.gettempdir()) / f"comsol-mcp-worker-state-{uuid.uuid4().hex}"
+            if is_t037 else Path(tempfile.mkdtemp(prefix="comsol-mcp-worker-state-")))
         self._token = secrets.token_urlsafe(32)
         self._process: subprocess.Popen[str] | None = None
         self._port: int | None = None
@@ -361,6 +371,13 @@ class PersistentJavaWorker:
         self._next_generation = 1
         self._on_request_event = on_request_event
         self._operation_context = threading.local()
+        self._network_intent = None
+        self._expected_endpoint = None
+        self._launch_argv: tuple[str, ...] = ()
+        self._listener_identity = None
+        self._startup_unknown: JavaWorkerError | None = None
+        self._fixed_process = None
+        self._fixed_launch_owner = None
 
     @property
     def generation(self) -> int:
@@ -370,12 +387,38 @@ class PersistentJavaWorker:
 
     @property
     def endpoint(self) -> tuple[str, int]:
+        if getattr(self, "_startup_unknown", None) is not None:
+            raise self._startup_unknown
         if self._port is None:
             raise JavaWorkerError("worker is not started")
+        try:
+            expected = self._fixed_worker_endpoint()
+            if expected is not None and (type(self._port) is not int or ("127.0.0.1", self._port) != expected):
+                raise JavaWorkerError("Worker port differs from its original factory/profile")
+        except Exception as exc:
+            raise self._retain_startup_unknown() from exc
         return "127.0.0.1", self._port
+
+    def _fixed_worker_endpoint(self) -> tuple[str, int] | None:
+        from ._windows_t037 import T037SessionProcessFactory
+        factory = getattr(self, "_original_process_factory", None)
+        if type(factory) is not T037SessionProcessFactory:
+            return None
+        if self._process_factory is not factory:
+            raise JavaWorkerError("original T037 Worker factory binding changed")
+        endpoint = T037SessionProcessFactory.network_endpoint(factory, "worker")
+        return endpoint.address, endpoint.port
 
     def start(self, *, startup_timeout_s: float = 20.0, admission_owner: Any = None) -> dict[str, Any]:
         with self._lock:
+            if self._startup_unknown is not None:
+                raise self._startup_unknown
+            from ._windows_t037 import T037SessionProcessFactory
+            from ._session_server import _t037_network_intent
+            if (self._process_factory is not self._original_process_factory and
+                    (isinstance(self._process_factory, T037SessionProcessFactory)
+                     or isinstance(self._original_process_factory, T037SessionProcessFactory))):
+                raise JavaWorkerError("original T037 Worker factory binding changed")
             if admission_owner is not None:
                 from tools.w24_coupled_admission import require_admission_owner
                 require_admission_owner(admission_owner)
@@ -387,8 +430,18 @@ class PersistentJavaWorker:
                 # Do not run javac or touch the endpoint cache until the
                 # injected execution boundary admits this exact session.
                 preflight()
+            intent = _t037_network_intent(self._process_factory)
+            if intent is not None:
+                expected = T037SessionProcessFactory.network_endpoint(self._process_factory, "worker")
+                self._network_intent = intent
+                self._expected_endpoint = (expected.address, expected.port)
             if self._process is not None and self._process.poll() is None:
+                if intent is not None and (self._port is None or self._generation is None):
+                    raise self._retain_startup_unknown()
                 return self.health(timeout_s=1.0)
+            endpoint = self.state_dir / "worker_endpoint.json"
+            if intent is not None and (endpoint.exists() or endpoint.is_symlink()):
+                raise JavaWorkerError("T037 startup cannot adopt or overwrite an existing Worker endpoint")
             self.paths.validate()
             classpath, classpath_hash, jar_count, jar_content_hash = self.paths.classpath()
             self.state_dir.mkdir(parents=True, exist_ok=True)
@@ -420,24 +473,35 @@ class PersistentJavaWorker:
             endpoint = self.state_dir / "worker_endpoint.json"
             if admission_owner is not None and (endpoint.exists() or endpoint.is_symlink()):
                 raise JavaWorkerError("coupled startup cannot adopt an existing Worker endpoint")
-            existing = self._attach_existing(endpoint)
+            existing = self._attach_existing(endpoint) if intent is None else None
             if existing is not None:
                 return existing
             command = [str(self.paths.executable("java"))]
             if self.paths.private_prefs is not None:
                 command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
             command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
-                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port", "0", "--endpoint-file", str(endpoint),
+                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port",
+                        str(intent.worker_listen_port if intent is not None else 0), "--endpoint-file", str(endpoint),
                         "--server-lock-root", str(self.paths.resolved_global_lock_root)]
             command += ["--generation", str(self._next_generation)]
             environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
             log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
-            factory = self._process_factory or subprocess.Popen
+            if _t037_network_intent(self._process_factory) != intent:
+                log.close()
+                raise JavaWorkerError("T037 fixed listener profile changed before Worker creation")
+            self._launch_argv = tuple(command)
+            factory = self._process_factory if self._process_factory is not None else subprocess.Popen
             try:
                 if admission_owner is not None:
                     admission_owner.before_effect("Worker_Popen_birth", startup_timeout_s)
                 self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
                                         env=environment, start_new_session=True)
+                if intent is not None:
+                    # Retain the factory's exact return and private successful
+                    # HANDLE owner before ready files or PID observations.
+                    self._fixed_process = self._process
+                    from ._windows_t037 import _native_g2_session_launch_owner
+                    self._fixed_launch_owner = _native_g2_session_launch_owner(self._fixed_process)
                 if admission_owner is not None:
                     # Retain the actual factory/Popen object before any diagnostic.
                     admission_owner.bind_child(self._process, "worker")
@@ -449,6 +513,8 @@ class PersistentJavaWorker:
                     unknown = JavaWorkerError("native Worker child cleanup is uncertain; actual owner retained")
                     unknown.execution_state_unknown = True
                     raise unknown from exc
+                if intent is not None and self._fixed_process is not None:
+                    raise self._retain_startup_unknown() from exc
                 raise
             finally:
                 pending_failure = sys.exc_info()[1]
@@ -462,25 +528,91 @@ class PersistentJavaWorker:
                             admission_owner.fail("worker_log_close_failed_original_handle_retained", exc)
                     if admission_owner is None or pending_failure is None:
                         raise
-            deadline = time.monotonic() + startup_timeout_s
-            ready: dict[str, Any] | None = None
-            while time.monotonic() < deadline:
-                if admission_owner is not None:
-                    admission_owner.before_effect("Worker_ready_probe", 0.02)
-                if endpoint.is_file():
-                    try:
-                        candidate = json.loads(endpoint.read_text(encoding="utf-8"))
-                        if candidate.get("type") == "ready": ready = candidate; break
-                    except (OSError, json.JSONDecodeError): pass
-                if self._process.poll() is not None:
-                    detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
-                    raise JavaWorkerError(f"worker exited during startup: {detail}")
-                time.sleep(0.02 if admission_owner is None else admission_owner.before_effect("Worker_ready_wait", 0.02))
-            if ready is None:
-                raise JavaWorkerTimeout("worker did not publish a ready endpoint; do not assume it stopped")
-            self._port, self._generation, self._token = int(ready["port"]), int(ready["generation"]), str(ready["token"])
-            self._write_endpoint({**ready, "classpath_sha256": classpath_hash, "jar_count": jar_count, "state": "STARTED"})
-            return self.health(timeout_s=(1.0 if admission_owner is None else admission_owner.before_effect("Worker_ready_health", 1.0)))
+            try:
+                deadline = time.monotonic() + startup_timeout_s
+                ready: dict[str, Any] | None = None
+                while time.monotonic() < deadline:
+                    if admission_owner is not None:
+                        admission_owner.before_effect("Worker_ready_probe", 0.02)
+                    if endpoint.is_file():
+                        try:
+                            candidate = json.loads(endpoint.read_text(encoding="utf-8"))
+                            if candidate.get("type") == "ready": ready = candidate; break
+                        except (OSError, json.JSONDecodeError): pass
+                    if self._process.poll() is not None:
+                        detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
+                        raise JavaWorkerError(f"worker exited during startup: {detail}")
+                    time.sleep(0.02 if admission_owner is None else admission_owner.before_effect("Worker_ready_wait", 0.02))
+                if ready is None:
+                    raise JavaWorkerTimeout("worker did not publish a ready endpoint; do not assume it stopped")
+                if intent is not None:
+                    self._validate_fixed_ready(ready)
+                self._port, self._generation, self._token = int(ready["port"]), int(ready["generation"]), str(ready["token"])
+                self._write_endpoint({**ready, "classpath_sha256": classpath_hash, "jar_count": jar_count, "state": "STARTED"})
+                return self.health(timeout_s=(1.0 if admission_owner is None else admission_owner.before_effect("Worker_ready_health", 1.0)))
+            except Exception as exc:
+                if intent is not None:
+                    raise self._retain_startup_unknown() from exc
+                raise
+
+    def _retain_startup_unknown(self) -> JavaWorkerError:
+        """Keep the original child; no port adoption, retry or automatic kill."""
+        if self._startup_unknown is None:
+            self._startup_unknown = JavaWorkerError(
+                "T037 Worker endpoint/identity is UNKNOWN; original child retained",
+                reply={"status": "UNKNOWN", "execution_state_unknown": True,
+                       "reason": "fixed_listener_startup_unverified"})
+        self._port = self._generation = None
+        return self._startup_unknown
+
+    def _fixed_owner_birth(self) -> int:
+        """Reobserve the original HANDLE; PID metadata cannot supply ownership."""
+        from ._windows_t037 import _native_g2_session_launch_owner
+        process, owner = self._fixed_process, self._fixed_launch_owner
+        factory = self._original_process_factory
+        if (process is None or self._process is not process or owner is None
+                or _native_g2_session_launch_owner(process) is not owner
+                or owner.session_factory is not factory or self._process_factory is not factory
+                or owner.profile is not factory.profile or owner.api is not factory._api
+                or owner.job_handle is None or owner.job_handle is not factory._job
+                or owner.role != "worker" or owner.argv != self._launch_argv
+                or tuple(process.args) != owner.argv):
+            raise JavaWorkerError("Worker lacks its original T037 HANDLE/factory/profile/Job launch owner")
+        times = owner.api.process_times(owner.process_handle)
+        if (type(times) is not tuple or len(times) != 2
+                or type(times[0]) is not int or times[0] <= 0
+                or times[0] != owner.birth_filetime_100ns or times[1] is not None
+                or _native_g2_session_launch_owner(process) is not owner
+                or self._process is not process):
+            raise JavaWorkerError("Worker original HANDLE birth changed or is unavailable/terminal")
+        started = times[0] // 10000 - 11644473600000
+        if started <= 0:
+            raise JavaWorkerError("Worker original HANDLE has no valid epoch birth")
+        return started
+
+    def _validate_fixed_ready(self, ready: Mapping[str, Any]) -> None:
+        from ._session_server import _birth_identity, _verified_loopback_listener, listener_rows
+        expected = self._fixed_worker_endpoint()
+        pid = getattr(self._process, "pid", None)
+        if (type(ready) is not dict or expected is None or expected != self._expected_endpoint
+                or ready.get("host") != expected[0]
+                or type(ready.get("port")) is not int or ready["port"] != expected[1]
+                or type(pid) is not int or pid <= 0 or type(ready.get("pid")) is not int or ready["pid"] != pid
+                or type(ready.get("generation")) is not int or ready["generation"] != self._next_generation
+                or type(ready.get("token")) is not str or not secrets.compare_digest(ready["token"], self._token)
+                or type(ready.get("process_start_epoch_ms")) is not int
+                or type(ready.get("instance_id")) is not str or not ready["instance_id"]):
+            raise JavaWorkerError("Worker ready record differs from the fixed T037 launch binding")
+        original_started = self._fixed_owner_birth()
+        birth, started = _birth_identity(pid, process_identity)
+        if ready["process_start_epoch_ms"] != started or started != original_started:
+            raise JavaWorkerError("Worker ready process birth differs from the original child")
+        listeners = _verified_loopback_listener(pid, expected[1],
+            lambda port: listener_rows(port, platform_name="windows" if self.paths.is_windows else sys.platform))
+        if (self._fixed_owner_birth() != original_started
+                or _birth_identity(pid, process_identity) != (birth, started)):
+            raise JavaWorkerError("Worker process identity changed during listener observation")
+        self._listener_identity = (pid, birth, started, listeners)
 
     def _write_endpoint(self, state: Mapping[str, Any]) -> None:
         if self.state_dir is None:
@@ -526,6 +658,9 @@ class PersistentJavaWorker:
         return result
 
     def _request(self, data: dict[str, Any], *, timeout_s: float | None) -> dict[str, Any]:
+        if getattr(self, "_startup_unknown", None) is not None:
+            raise self._startup_unknown
+        self.endpoint  # Re-derive a T037 port from its original factory before any RPC.
         if self._port is None:
             raise JavaWorkerError("worker is not started")
         request_id = data.get("request_id")
@@ -946,6 +1081,8 @@ class PersistentJavaWorker:
     def close(self) -> None:
         # Only the child started by this instance is eligible for termination. No COMSOL server is touched.
         with self._lock:
+            if getattr(self, "_startup_unknown", None) is not None:
+                raise self._startup_unknown
             from ._windows_t037 import _RetainedSuspendedChild
             if type(self._process) is _RetainedSuspendedChild:
                 self._process.cleanup_owned(self, timeout=3)
