@@ -3725,6 +3725,297 @@ def _selected_inner_expression_cells(
     return selected
 
 
+_UNIT_READBACK_OBSERVATION_SCHEMA = "comsol-mcp.expression-unit-readback-observation/1"
+_UNIT_READBACK_OBSERVATION_MAX_ITEMS = 64
+_UNIT_READBACK_OBSERVATION_MAX_TEXT = 192
+_UNIT_READBACK_OBSERVATION_SAFE_ERROR_CODES = frozenset({"API_UNSUPPORTED", "ENGINE_CALL_FAILED"})
+
+
+def _unit_observation_type(value: Any) -> str:
+    """Return a bounded type label without formatting an arbitrary value."""
+    try:
+        cls = type(value)
+        module = type.__getattribute__(cls, "__module__")
+        name = type.__getattribute__(cls, "__name__")
+    except Exception:
+        return "unknown"
+    if type(module) is not str or type(name) is not str:
+        return "unknown"
+    label = f"{module}.{name}"
+    return label[:96]
+
+
+def _unit_observation_text(value: Any) -> dict[str, Any]:
+    """Keep only short, printable native/request strings; never call repr/str."""
+    if type(value) is not str:
+        return {"kind": "unexpected_type", "type": _unit_observation_type(value)}
+    if len(value) > _UNIT_READBACK_OBSERVATION_MAX_TEXT:
+        return {"kind": "string", "value_status": "omitted_too_long", "length": len(value)}
+    if any(not character.isprintable() for character in value):
+        return {"kind": "string", "value_status": "omitted_non_printable", "length": len(value)}
+    return {"kind": "string", "value": value}
+
+
+def _unit_observation_value(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {"kind": "null"}
+    if type(value) is str:
+        return _unit_observation_text(value)
+    return {"kind": "unexpected_type", "type": _unit_observation_type(value)}
+
+
+def _unit_observation_failure(exc: BaseException) -> dict[str, Any]:
+    """Record exception class and a constrained code only; omit message/trace."""
+    result: dict[str, Any] = {"type": _unit_observation_type(exc), "code": None}
+    try:
+        details = BaseException.__getattribute__(exc, "__dict__")
+    except Exception:
+        details = None
+    if type(details) is dict:
+        code = details.get("code")
+        if type(code) is str and code in _UNIT_READBACK_OBSERVATION_SAFE_ERROR_CODES:
+            result["code"] = code
+    return result
+
+
+def _unit_observation_request(
+    value: Any, *, present: bool
+) -> tuple[dict[str, Any], Sequence[Any] | None]:
+    if not present:
+        return {"kind": "absent"}, None
+    if value is None:
+        return {"kind": "null"}, None
+    if type(value) is str:
+        text = _unit_observation_text(value)
+        return {"kind": "scalar_string", **{key: item for key, item in text.items() if key != "kind"}}, None
+    if type(value) not in (list, tuple):
+        return {"kind": "unexpected_type", "type": _unit_observation_type(value)}, None
+    count = len(value)
+    bounded = list(value[:_UNIT_READBACK_OBSERVATION_MAX_ITEMS])
+    return ({
+        "kind": "sequence",
+        "count": count,
+        "items": [_unit_observation_value(item) for item in bounded],
+        "items_truncated": count > len(bounded),
+    }, value)
+
+
+def _build_unit_readback_observation(
+    *,
+    getter_attempts: list[dict[str, Any]],
+    chosen_method: str | None,
+    raw: Any,
+    raw_returned: bool,
+    raw_values: list[Any] | None,
+    raw_shape: str,
+    expressions: Sequence[str],
+    feature_expressions: Sequence[str],
+    requested_units: Any,
+    requested_units_present: bool,
+    setter_called: bool,
+) -> dict[str, Any]:
+    request_info, request_values = _unit_observation_request(
+        requested_units, present=requested_units_present
+    )
+    raw_count = len(raw_values) if raw_values is not None else None
+    sampled_raw = raw_values[:_UNIT_READBACK_OBSERVATION_MAX_ITEMS] if raw_values is not None else []
+    request_count = len(request_values) if request_values is not None else 0
+    row_count = max(len(expressions), len(feature_expressions), request_count)
+    row_limit = min(row_count, _UNIT_READBACK_OBSERVATION_MAX_ITEMS)
+    duplicate_counts: dict[str, int] = {}
+    rows: list[dict[str, Any]] = []
+    for index in range(row_limit):
+        requested_expression = expressions[index] if index < len(expressions) else None
+        feature_expression = feature_expressions[index] if index < len(feature_expressions) else None
+        occurrence = None
+        duplicate_name = False
+        if type(requested_expression) is str:
+            occurrence = duplicate_counts.get(requested_expression, 0) + 1
+            duplicate_counts[requested_expression] = occurrence
+            duplicate_name = occurrence > 1
+        if raw_values is None:
+            raw_index = None
+        elif raw_count == 1 and len(feature_expressions) > 1:
+            raw_index = 0
+        elif raw_count == len(feature_expressions) and index < raw_count:
+            raw_index = index
+        else:
+            raw_index = None
+        row: dict[str, Any] = {
+            "index": index,
+            "requested_expression": _unit_observation_text(requested_expression)
+                if requested_expression is not None else {"kind": "not_present"},
+            "feature_expression": _unit_observation_text(feature_expression)
+                if feature_expression is not None else {"kind": "not_present"},
+            "requested_expression_occurrence": occurrence,
+            "duplicate_requested_expression_name": duplicate_name,
+            "requested_unit": (
+                _unit_observation_value(request_values[index])
+                if request_values is not None and index < len(request_values)
+                else {"kind": "not_present"}
+            ),
+            "native_property_value_index": raw_index,
+        }
+        if raw_index is not None and raw_index < len(sampled_raw):
+            row["native_property_value"] = _unit_observation_value(sampled_raw[raw_index])
+        elif raw_index is not None:
+            row["native_property_value"] = {"kind": "omitted_by_observation_bound"}
+        else:
+            row["native_property_value"] = {"kind": "unmapped"}
+        rows.append(row)
+
+    getter_return_status = (
+        "RETURNED" if raw_returned else "FAILED_OR_UNAVAILABLE"
+    )
+    if not raw_returned:
+        property_status = "UNVERIFIED_GETTER_FAILED"
+    elif raw is None:
+        property_status = "OBSERVED_NATIVE_PROPERTY_NULL"
+    elif raw_shape == "unexpected_type":
+        property_status = "UNVERIFIED_UNEXPECTED_RETURN_TYPE"
+    else:
+        property_status = "OBSERVED_NATIVE_PROPERTY_VALUE"
+    raw_items = [_unit_observation_value(item) for item in sampled_raw]
+    unknown_raw_items = any(item.get("kind") in {"null", "unexpected_type"}
+                            or (item.get("kind") == "string" and item.get("value") == "")
+                            for item in raw_items)
+    if not raw_returned:
+        mapping_status = "UNVERIFIED_GETTER_FAILED"
+    elif row_count > _UNIT_READBACK_OBSERVATION_MAX_ITEMS or len(sampled_raw) < len(raw_values or []):
+        mapping_status = "UNVERIFIED_OBSERVATION_TRUNCATED"
+    elif len(expressions) != len(feature_expressions):
+        mapping_status = "UNVERIFIED_REQUEST_FEATURE_EXPRESSION_SHAPE"
+    elif raw_shape == "null":
+        mapping_status = "UNVERIFIED_RAW_NULL"
+    elif raw_shape == "unexpected_type":
+        mapping_status = "UNVERIFIED_RAW_TYPE"
+    elif raw_count == len(feature_expressions):
+        mapping_status = (
+            "UNVERIFIED_POSITIONAL_SHAPE_HAS_NULL_EMPTY_OR_UNEXPECTED_ITEMS"
+            if unknown_raw_items else "OBSERVED_POSITIONAL_SHAPE_MATCH"
+        )
+    elif raw_count == 1 and len(feature_expressions) > 1:
+        mapping_status = (
+            "UNVERIFIED_LEGACY_SINGLETON_BROADCAST_ITEM"
+            if unknown_raw_items else "OBSERVED_LEGACY_SINGLETON_BROADCAST"
+        )
+    else:
+        mapping_status = "UNVERIFIED_LENGTH_MISMATCH"
+
+    raw_record: dict[str, Any] = {"shape": raw_shape, "count": raw_count, "items": raw_items}
+    if raw_shape == "unexpected_type" and raw_returned:
+        raw_record["type"] = _unit_observation_type(raw)
+    if raw_shape == "string" and raw_returned:
+        raw_record["scalar"] = _unit_observation_value(raw)
+    return {
+        "schema": _UNIT_READBACK_OBSERVATION_SCHEMA,
+        "property_observation_status": property_status,
+        "getter_return_status": getter_return_status,
+        "scope": "actual native numerical-feature unit property read after native numeric readback and before Python complex transformation/statistics",
+        "effective_expression_scope": "rows describe the original request and the effective expressions set on this feature at the same positions; positional shape is descriptive, not a claim of COMSOL unit semantics",
+        "requested_spec_units": request_info,
+        "python_setter_call_shape": (
+            "_call(feature, 'set', 'unit', spec['units']) with the original supplied Python value; result_evaluate does not validate or normalize spec.units"
+            if setter_called else "not_called_by_existing_result_evaluate_path"
+        ),
+        "multi_expression_eval_setter_semantics": (
+            "UNVERIFIED" if len(expressions) > 1 and setter_called else "NOT_ESTABLISHED"
+        ),
+        "getter_attempts": getter_attempts,
+        "chosen_getter": chosen_method,
+        "raw_property": raw_record,
+        "mapping_status": mapping_status,
+        "expression_rows": rows,
+        "rows_truncated": row_count > row_limit,
+        "native_unit_conversion": "UNVERIFIED",
+        "physical_dimensionality": "UNVERIFIED",
+        "phase_output_unit_semantics": "UNVERIFIED; this read is not a claim that phase is calculated in radians",
+    }
+
+
+def _feature_units_and_observation(
+    feature: Any,
+    expressions: Sequence[str],
+    *,
+    feature_expressions: Sequence[str] | None = None,
+    requested_units: Any = None,
+    requested_units_present: bool = False,
+    setter_called: bool = False,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Read the existing unit property once and retain bounded raw evidence."""
+    getter_attempts: list[dict[str, Any]] = []
+    raw: Any = None
+    raw_returned = False
+    chosen_method: str | None = None
+    try:
+        raw = _call(feature, "getStringArray", "unit")
+        raw_returned = True
+        chosen_method = "getStringArray"
+        getter_attempts.append({"method": chosen_method, "outcome": "returned"})
+    except Exception as exc:
+        getter_attempts.append({"method": "getStringArray", "outcome": "failed",
+                                "failure": _unit_observation_failure(exc)})
+        try:
+            raw = _call(feature, "getString", "unit")
+            raw_returned = True
+            chosen_method = "getString"
+            getter_attempts.append({"method": chosen_method, "outcome": "returned"})
+        except Exception as fallback_exc:
+            getter_attempts.append({"method": "getString", "outcome": "failed",
+                                    "failure": _unit_observation_failure(fallback_exc)})
+            observation = _build_unit_readback_observation(
+                getter_attempts=getter_attempts, chosen_method=None, raw=None,
+                raw_returned=False, raw_values=None, raw_shape="unavailable",
+                expressions=expressions,
+                feature_expressions=feature_expressions if feature_expressions is not None else expressions,
+                requested_units=requested_units,
+                requested_units_present=requested_units_present,
+                setter_called=setter_called,
+            )
+            return {}, observation
+
+    if isinstance(raw, str):
+        raw_shape = "string"
+        raw_values = [raw]
+    elif isinstance(raw, Sequence) and not isinstance(raw, (bytes, str)):
+        raw_shape = "sequence"
+        raw_values = list(raw)
+    else:
+        raw_shape = "null" if raw is None else "unexpected_type"
+        observation = _build_unit_readback_observation(
+            getter_attempts=getter_attempts, chosen_method=chosen_method, raw=raw,
+            raw_returned=raw_returned, raw_values=None, raw_shape=raw_shape,
+            expressions=expressions,
+            feature_expressions=feature_expressions if feature_expressions is not None else expressions,
+            requested_units=requested_units,
+            requested_units_present=requested_units_present,
+            setter_called=setter_called,
+        )
+        return {}, observation
+
+    if len(raw_values) == 1 and len(expressions) > 1:
+        values = raw_values * len(expressions)
+    else:
+        values = raw_values
+    if len(values) != len(expressions):
+        legacy_map = {str(expression): None for expression in expressions}
+    else:
+        legacy_map = {
+            str(expression): (None if value is None or value == "" else str(value))
+            for expression, value in zip(expressions, values)
+        }
+    feature_expression_list = feature_expressions if feature_expressions is not None else expressions
+    observation = _build_unit_readback_observation(
+        getter_attempts=getter_attempts, chosen_method=chosen_method, raw=raw,
+        raw_returned=raw_returned, raw_values=raw_values, raw_shape=raw_shape,
+        expressions=expressions, feature_expressions=feature_expression_list,
+        requested_units=requested_units,
+        requested_units_present=requested_units_present,
+        setter_called=setter_called,
+    )
+    return legacy_map, observation
+
+
 def _feature_units(feature: Any, expressions: Sequence[str]) -> dict[str, Any]:
     """Read expression units when the numerical feature publishes them."""
     raw: Any = None
@@ -5507,6 +5798,8 @@ def result_evaluate(
     strict_worker_payload_info: dict[str, Any] | None = None
     raw_layout = "expression,solnum,point"
     expression_units: dict[str, Any] = {}
+    expression_unit_observation: dict[str, Any] | None = None
+    unit_setter_called = False
     result_budget_records: list[dict[str, Any]] = []
     result_budget_guard = None
     field_array_is_complex = False
@@ -5550,6 +5843,7 @@ def result_evaluate(
         _call(feature, "set", "expr", effective_expressions)
         if spec.get("units"):
             _call(feature, "set", "unit", spec["units"])
+            unit_setter_called = True
         _apply_feature_selection(feature, "primary")
         if strict_field_readback:
             assert strict_pair is not None
@@ -5676,7 +5970,14 @@ def result_evaluate(
         )
         if aggregate == "none" and feat_type == "Eval":
             verify_stationary_count_binding("after_native_read")
-        expression_units = _feature_units(feature, expressions)
+        expression_units, expression_unit_observation = _feature_units_and_observation(
+            feature,
+            expressions,
+            feature_expressions=effective_expressions,
+            requested_units=spec.get("units"),
+            requested_units_present="units" in spec,
+            setter_called=unit_setter_called,
+        )
 
         if strict_metric_evidence and weight_expression is not None:
             minimum_types = {
@@ -5906,6 +6207,8 @@ def result_evaluate(
                 "evaluated_expressions": list(effective_expressions),
                 "complex_transform_order": requested_transform_order,
             })
+            if expression_unit_observation is not None:
+                field_metadata["expression_unit_observation"] = expression_unit_observation
             field_array_is_complex = _field_array_is_complex(
                 is_complex, complex_mode, aggregate
             )
@@ -6629,6 +6932,8 @@ def result_evaluate(
             "complex_mode": complex_mode,
             "is_complex": is_complex,
         }
+        if expression_unit_observation is not None:
+            artifact_eval_context["expression_unit_observation"] = expression_unit_observation
         if field_array_payload is not None:
             artifact_eval_context["field_array"] = field_array_payload.to_dict()
 
@@ -6899,6 +7204,8 @@ def result_evaluate(
             "execution_state_unknown": cleanup["cleanup_failed"],
         },
     }
+    if expression_unit_observation is not None:
+        response["expression_unit_observation"] = expression_unit_observation
     if strict_field_readback:
         if (field_array_payload is None or strict_pair is None
                 or strict_selector_readback is None or strict_native_coordinates is None
