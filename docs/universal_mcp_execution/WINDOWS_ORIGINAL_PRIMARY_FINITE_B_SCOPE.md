@@ -2,7 +2,7 @@ Current Main disposition: scoped source/software accepted after the lookup guard
 
 # Repaired lookup guard: current private source/software handoff
 
-Status: pending Main concentrated acceptance; **NOT_INTEGRATED**. Current fixed base is `454360f2ad7a0173bcd28e0b9fa7b6c133d57489` plus the exact pending eight B overlay files. The accepted G3 source/test and fixed fixture are copied baseline inputs, not authored B changes. Old delivery-r3/attempt-12 and all failure/raw records remain unchanged.
+Status: **MAIN ACCEPTED — SOURCE/SOFTWARE ONLY**, integrated and published in `4b00cb4775ca14ee83b8740ca977f8819ae2f95f` after exact source/test verification and fresh remote blob readback. The tested fixed base was `454360f2ad7a0173bcd28e0b9fa7b6c133d57489` plus the eight B source/test overlay files. The accepted G3 source/test and fixed fixture were unchanged baseline inputs. Old delivery-r3/attempt-12 and all failure/raw records remain unchanged. B remains `UNQUALIFIED`; C/Resume/native acceptance is incomplete.
 
 ## Narrow rework and actual results
 
@@ -14,7 +14,7 @@ Attempt-14 is3PASS. Attempt-15 is301PASS0FES on the original611 projection (193.
 
 Old broader338=289PASS49FAIL and same44FAIL on baseline611 stay FAIL. The separate prepared-lifecycle follow-up has initial67=22PASS45FAIL (44 original plus one stale related SDK-export fixture); it is not included in the passing B union and needs an explicit new-source rebase/retest. No full affected/repository PASS is claimed.
 
-This private delivery proposes four production and four test files plus doc/compact. Main owns integration/publication. Shared source/Main3/Git and old native runtimes are not written. B remainsUNQUALIFIED and issuer refuses; Windows/SDK/native/process/network/JDK/COMSOL, C/Resume, full restore/matrix, finalReviewer and Goal areNOT_RUN/unresolved.
+The executor authored four production and four test files plus scope/compact documentation in a private delivery. Main subsequently accepted, integrated and published that stage. The executor did not write shared source/Main3/Git or old native runtimes. B remains `UNQUALIFIED` and the issuer refuses; this stage did not run Windows SDK/native/process/network/JDK/COMSOL qualification. C/Resume, full restore/matrix, final Reviewer and Goal remain incomplete.
 
 ## Original-primary and selected-policy scope retained from r3
 

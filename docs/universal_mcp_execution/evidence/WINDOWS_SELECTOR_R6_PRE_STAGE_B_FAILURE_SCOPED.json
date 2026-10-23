@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "status": "ACTUAL_DIAGNOSTIC_COMPILE_READY_SUCCESS_GO_READ_FAILURE_BEFORE_STAGE_B",
+  "scope": "One specifically approved temporary Windows diagnostic capsule, not installed public MCP qualification",
+  "source_binding": {
+    "diagnostic_base": "3d92 diagnostic capsule plus frozen R6 delta; not current product4b",
+    "materials": 13,
+    "material_bytes": 152374,
+    "manifest_sha256": "775e62a12657a4f11bfcd1bc0d55a49d56b0459c1a74e66c8b58c9a03d0c9a16",
+    "CSharp_source_sha256": "8811456c9db47f81be5630995fe9d21ce8e3081afec9b29ed730c378076f3d78",
+    "native_sdk_sha256": "962ac597040451100e319bbd3d38c80a7ccff4c4a8eb3e091fc550323c324d86"
+  },
+  "Main_actual_readback": {
+    "path": "_state/universal-main-review/20261024-selector-r6-native/MAIN_ACTUAL_PRE_STAGE_B_FAILURE_READBACK.json",
+    "bytes": 2942,
+    "sha256": "d302d4ef3396aa90f3791a643a2b6b4a5df5cfea1eb312f435da0b8ec8183d9c"
+  },
+  "actual_stage_A": {
+    "single_original_parent": true,
+    "ordinary_user_no_thread_token_no_Job_context": true,
+    "compiler_original_wait_exit_code": 0,
+    "existing_framework_references": 5,
+    "System_Xml_reference": "present, exact existing file hash independently matched",
+    "own_compiled_PE": {
+      "bytes": 11776,
+      "sha256": "3a5a2d9f44e8b7c808da9704e00f3ae872c9ab4a8cac88d227b9821ae4f6838e",
+      "machine": "x64 independently read PE header"
+    },
+    "READY": {
+      "bytes": 5704,
+      "sha256": "161a27ed08a45be137a136a3eb446e75fdcc38acb27410bcd1cbab8f6b46a031"
+    },
+    "Main_READY_readback": {
+      "bytes": 5027,
+      "sha256": "f1e9930b5f6193241b95dc930918b9f13bf9692834fdd8c9c319e13781a68f73"
+    }
+  },
+  "actual_GO_failure": {
+    "GO_writer_invocations": 1,
+    "writer_transport_exit": 0,
+    "GO_file": {
+      "bytes": 141,
+      "sha256": "2f256cf6280ff6b7b0cdd145036456f24b6be7c98b6eb15632ec62110c4a3cba"
+    },
+    "failure": {
+      "bytes": 297,
+      "sha256": "05b0c273431e749d56a3ae64ac5489fe47049bf9ff9138465f9faf3e20889683",
+      "status": "READY",
+      "error_type": "PermissionError",
+      "errno": 13,
+      "original_owner_retained_report": false,
+      "safe_retry": false
+    },
+    "GO_consumed": "ABSENT",
+    "RESULT": "ABSENT",
+    "journal": {
+      "bytes": 803,
+      "sha256": "280bf4ab988195532b2ec7d096501936da5b76287ecb9a21c02b5a928039f2fb",
+      "events": "original context; compile ENTERING; original wait0/output present; compile RETURNED; same original context"
+    },
+    "Stage_B_profile_task_ACL_Job_AppC_helpers": "NOT_ENTERED, supported by frozen call order and actual journal"
+  },
+  "cause_assessment": {
+    "classification": "SOURCE_SUPPORTED_INFERENCE",
+    "description": "GO target becomes visible while its writer holds FileShare.None; the reader can observe it before that writer closes. Actual lock-overlap timestamps were not instrumented.",
+    "official_reference": "https://learn.microsoft.com/en-us/dotnet/api/system.io.fileshare?view=netframework-4.8.1"
+  },
+  "retention": {
+    "R5_and_R6": "preserved, no restart/overwrite/PID query/adoption/signals",
+    "R6_source_own_compiled_helper_GO_raw": "retained; no deletion claim",
+    "parent_exit_and_original_raw_HANDLE_close": "NOT_INDEPENDENTLY_OBSERVED"
+  },
+  "next_source_work": "Private R7 PREP closes temporary GO stream before non-overwriting destination publication; R7 effects need separately applicable permission. No R7 native result is claimed.",
+  "not_acceptance": [
+    "AppContainer A/B/A selector",
+    "B/C/Resume qualification",
+    "restricted SYSTEM/vendor JVM/MCP",
+    "generic restore",
+    "platform matrix",
+    "full427",
+    "U01-U12",
+    "final independent Reviewer",
+    "MASTER_GOAL"
+  ],
+  "raw_runtime_materials_in_publication": false,
+  "recorded_utc": "2026-10-23T23:26:17.880654+00:00"
+}

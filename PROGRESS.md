@@ -1,5 +1,23 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r201：Main已修正B范围说明遗留的“待接受/未合入”字句，明确source/software阶段已在4b发布；对应compact补上已核验publication引用，八份受测源码/测试字节未改。新增公开限定摘要 `docs/universal_mcp_execution/evidence/WINDOWS_SELECTOR_R6_PRE_STAGE_B_FAILURE_SCOPED.json`（3811B / SHA256 `3cd91c429fbaf4c99716682b425e682ec696361b5051963684feffc83d45e950`）：R6实际compiler0/READY后一次GO读PermissionError、StageB未进入、现场保留，竞态仅源码支持推断，原parentexit/rawclose未独立观察；不发布原始运行材料，不作native/C/Resume/restore/Goal通过。三份doc/compact加Main3精确6files已Main接受待普通nonforce同步。四条private源码软件线及r200拒绝output R1/保留86PASS的状态不变；completed_groups=[]、Goal IN_PROGRESS。
+
+以下r200及更早内容为历史快照；当前状态以本段与RESUME r201为准。
+
+当前续跑 r200：Main确认strong源码复审的P2：旧output-unit候选对`atan2(...)`后仍除以未认证测度M的average结果一概标rad，属于实质错标。R1/86软件PASS原件保留但明确不接受、不合入；Parfit同Luna已转新R2，按真实post-phase division分支输出null/UNVERIFIED并传播到各consumer，scalar atan2约定与最终aggregate分开，保留数值/nativegetter/原断言。Main决定 `_state/universal-main-review/20261024-output-unit-review/MAIN_R1_DECISION.json`（1358B / SHA256 `08cfbdf0af67c16dc4fac0fe23226926c5ce10174eec6853d5864aacb8a441bc`）。Kuhn只读顾问已完成并关闭，不是最终Reviewer，未选heldout。
+
+通用Windows主线新增Schrodinger LunaMAX私有Resume source/software租约：原始effect root、child dispatch reservation、child→issuer短消费锁、SDK锁外单次Resume/rawreturn与UNKNOWN整套原owner保留；当前issuer仍须总拒绝，不激活C。Primary继续原67 prepared-launch夹具；Lorentz继续新R7私有GO关闭后发布PREP，R6失败现场保留且不重启，R7尚无native许可。4b公开阶段与r199实际R6失败读回边界不变。MASTER_GOAL/DoD/GENERAL_COVERAGE冻结hash已核对不变；completed_groups=[]、Goal IN_PROGRESS，平台/full427/restore/最终fresh独立统一验收未通过。
+
+以下r199为实际同步/原生失败快照及更早历史；当前状态以本段与RESUME r200为准。
+
+当前续跑 r199：B original-primary/finite-policy 已接受源码软件阶段已普通非强制发布 `4b00cb4775ca14ee83b8740ca977f8819ae2f95f`（parent454），fresh fetch逐13blob一致；公开Mainstate198，回执 `_state/universal-main-review/20261024-b-primary-publication/REMOTE_READBACK.json`（3146B / SHA256 `1f6c97d7bdc8c157e8d0f07ef69c82599270c472b9cc62de692f314f5241cca1`）。316软件PASS的范围不扩大，B仍UNQUALIFIED、C/Resume未实现。本r199只为本地同步后续跑，不追逐再次发布自己的回执。
+
+R6 source/software PREP231已Main限定接受，随后human明确允许完整新R6实验。Main严格核验新root十三文件152374B，实际编译exit0、11776B x64 helper与原父16624/birth134372703833635048普通user/noThreadToken/noJob READY均独立读回；仅发送一次GO。原父在读取GO.json时实际PermissionError13，statusREADY、GO-consumed/RESULT不存在，journal仅context/compile；由冻结调用顺序与实际日志限定为StageB未进入（0 profile/taskACL/Job/AppC helper）。Main原件纪要 `_state/universal-main-review/20261024-selector-r6-native/MAIN_ACTUAL_PRE_STAGE_B_FAILURE_READBACK.json`（2942B / SHA256 `d302d4ef3396aa90f3791a643a2b6b4a5df5cfea1eb312f435da0b8ec8183d9c`）。GO写入器先创建可见目标并持FileShare.None，形成源码支持的竞态推断；未捕获锁重叠时间，不夸大根因已实测。R5/R6现场、自己的compiled helper及原件保留；parentexit/rawHANDLEclose未独立观测，不查PID/接管/重启。Lorentz同Luna现仅本地新R7 PREP：唯一临时文件写/Flush/Dispose后再不覆盖地发布GO；R6许可不覆盖R7，尚无R7 native许可。
+
+Primary同Luna继续原67 prepared-launch生命周期夹具整改，Main已明确允许沿用既有SOFTWARE_ONLY issuer/resume接线及两个缺失惰性导出，全部原断言和旧44FAIL/22P45F保留，不改生产/skip。Parfit private结果单位候选已交86软件PASS（40new+46existing），旧四路径K!=rad实际FAIL保留，Main与strong只读顾问正在集中复审；尚未合入或接受，native before-phase尺度继续UNVERIFIED。Kuhn顾问不是最终Reviewer、未选择heldout；Hume旧R3任务关闭前实际interrupted，无完成报告/PASS，先前空timeout不能当活跃证明。旧wheel0671/0860原source不重标，273/427、平台矩阵、restore、heldout、最终freshReviewer与Goal仍未完成，completed_groups=[]、Goal IN_PROGRESS。
+
+以下r198为已发布快照及更早历史；当前状态以本段与RESUME r199为准。
+
 当前续跑 r198：Main已集中复审并限定接受original-primary/finite-B源码软件阶段，精确8份源测已按attempt17受测字节合入，另两份必要scope/compact注记Main接受。原r3的lookupguard缺口经原2反例实际FAIL→最小修补/3控制PASS→独立strong源码复审闭合；最终固定454组合316PASS/0FES/0deselect，包含原298各一次+3lookup+15已接受unit夹具，不累计旧301。Main独核217输入（209与Git454不变）、113 origins/returnedbytes/moduleframes、92SourceLoader+21rewriter对；audit-forbidden0另有1 fakePID456查询在OS读取前被守卫拒绝，实际OS进程查询0，CodeType NOT_CAPTURED。Main接受 _state/universal-main-review/20261024-b-primary-finite/MAIN_R4_SOURCE_SOFTWARE_ACCEPTANCE.json（4821B / SHA256 1b4cb2f5fc65d9936d8a60370df6ebf01fd1082dda86741478ea5a762d74b18b）；compact docs/universal_mcp_execution/evidence/WINDOWS_ORIGINAL_PRIMARY_FINITE_B_SOURCE_SCOPED.json（9788B / SHA256 9e505029750fbb116e5bbe3a4b662734d6be7ed6c8e672a95f30af5bc65eb685）。当前精确13files待普通非强制同步，已发布基线仍454360f2。B仍UNQUALIFIED、issuer仍拒绝；不等于WindowsSDK/native/C/Resume/完整回归通过。
 
 原44FAIL及另一个fixture初始67=22P45F保留，Primary同一Luna继续只修正常prepared-launch测试夹具接线，原断言全部保留，在新B基线上重测，不降级skip或暗改生产。Parfit只读事实已确认Python after-phase弧度值可能沿用K输出标签；Main已授权同一Luna在新private candidate修最终值单位封装，保留原native读回，先原反例再适用回归，不改setter/getter/数值/原T014标准；native before-phase尺度继续UNVERIFIED。Lorentz已交本地R6 source-only冻结（原222+新9=231软件PASS、旧源码9FAIL保留），Main尚未整包审查/接受，未获R6 native权限，actor已关闭。R5实际前置编译CS0012现场保留无GO/重启，parentexit/rawclose未独立观察。Strong B源码复审已闭合并关闭，非最终Reviewer；Hume旧r3机械核对仍只属历史证据。旧wheel0671/0860原source不重标。全273/427/平台/restore/heldout/finalReviewer/Goal仍未完成，completed_groups=[]、Goal IN_PROGRESS。
