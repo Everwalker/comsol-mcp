@@ -1,6 +1,6 @@
 # 当前进度 — 2026-10-23
 
-当前主线快照（续跑 r151）：typed R6限定source/software验收（827 PASS/1原生排除）已本地提交fa624c00；HEAD/origin/main上次共同基线570e87e5，公开推送经两次自动审批仍被拒绝，待直接用户授权。publisher1788经Main功能及机械审查限定通过，Main已接入完全相同的两处Controller hook，准备本地提交；不声称与后续typed/config全树联合测试。R5、旧7FAIL保留。AppC340候选因runtime锁内SDK及未覆盖fresh normal-loader路径退回同Primary；Mac PREP V2改内部/private/tmp私有状态目录，无产品放行。R3四文件传输仍待用户精确授权，无SDK/GO。完整恢复、required原生矩阵及最终独立Reviewer未通过，整体IN_PROGRESS。
+当前主线快照（续跑 r156）：用户精确授权后，fa624c00（typed827软件）与d7e77550（publisher1788软件）已普通push，独立freshfetch HEAD=origin/main d7e77550。Mac历史R4实际1Server公共start→原child回收/监听消失→STOPPED获Main限定原生验收，Worker/model/solver0，不能升格当前全MCP。Windows四文件85707B已传输并Main核真实远程pins；原launcher/独立collect均exit0，Main核READY同child28536/birth134372205668143557/noJob0/Enum0-root0；PhaseB sender只PREP，GO未放行。AppC343候选两项整改Main功能审查无剩余实质问题，同Primary正在currentd7私有联合软件验证。B等待连贯Gate/A-hold设计，不另造未接线helper。完整恢复、required原生矩阵与最终独立Reviewer未通过，整体IN_PROGRESS。 R9历史getter原证据经6步定点查找仍缺，旧FAIL/NOT_RUN保留。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。

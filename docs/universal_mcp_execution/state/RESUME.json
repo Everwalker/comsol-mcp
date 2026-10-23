@@ -2,10 +2,10 @@
   "schema_version": 1,
   "baseline_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
   "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
-  "state_revision": 151,
+  "state_revision": 156,
   "phase": "M2_GENERIC_CORE_REPAIR_BATCH_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Finish publisher local allowlisted commit and request direct human approval for the two concrete public commits. Continue same Primary AppC lock/normal-loader rework and Lorentz Mac PREP V2. R3 transport approval separately pending. No native/fullrestore/finalReviewer PASS.",
+  "next_action": "SamePrimary completes currentd7 private AppC+publisher+typed coherent source union; sameLorentz performs released Windows R3 original launcher+separate bounded collect only, noGO before Main actual READY readback. Mac next Worker/Core regression PREP only. Native fullrestore/required matrix/final independent Reviewer remain open.",
   "active_job_refs": [
     {
       "scope": "M2A_ORIGINAL_SYNTHETIC_SERVER_FENCED_HISTORICAL_REFS",
@@ -471,7 +471,7 @@
   ],
   "completed_groups": [],
   "scope_decision": "SCOPE_RESET.md",
-  "updated_utc": "2026-10-23T07:41:58.449760+00:00",
+  "updated_utc": "2026-10-23T09:35:47.248862+00:00",
   "native_execution_claimed": true,
   "recovery_checkpoint": {
     "scope": "workpack recovery repair, synthetic workpack tests, pinned source and candidate restoration, new-state initialization only",
@@ -840,11 +840,12 @@
       }
     },
     "publication_approval_current": {
-      "status": "AUTO_REVIEW_REJECTED_REQUIRES_DIRECT_HUMAN_APPROVAL",
+      "status": "EXPLICIT_USER_APPROVED_TWO_COMMITS_PUBLISHED_FETCH_VERIFIED",
       "typed_commit": "fa624c00fb42508d0d6749dde9f4774fbd90bfe7",
-      "remote_last_verified": "570e87e5c996c67e2132d0721635d65e760ddeb2",
-      "rejections": 2,
-      "reason": "Public source/evidence disclosure rejected despite current AGENTS148 readback and ADMIN/public repo check. Preserve commits, no alternate egress."
+      "publisher_commit": "d7e77550e824b730c47a11a31611a6369d8391c5",
+      "remote_last_verified": "d7e77550e824b730c47a11a31611a6369d8391c5",
+      "two_initial_auto_rejections": "Preserved at typed-stop-publication; resolved by current direct human answer.",
+      "scope": "This answer approves exact two commits only, no new WIP pushed."
     }
   },
   "remaining_core_findings": [
@@ -973,17 +974,39 @@
     },
     {
       "id": "GENERIC_STATIONARY_RESULT_BUDGET_COUNT",
-      "status": "OPEN_REPRODUCED_NATIVE_CORE_GAP",
+      "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_NATIVE_INCOMPLETE",
       "evidence": "evidence/M2A_NATIVE.json; repaired runtime/result-native-default.response.json",
       "observed": "Native6.4.0.293 stationary solve succeeded; public result.evaluate refuses SOLUTION_AXES_UNVERIFIED before getData. Temporary Eval removed, target dirtyrev3. Existing count witness does not admit ordinary stationary data.",
-      "next": "Generic actual dataset/solution/study and SolverSequence getSize/getSizeMulti/getNU semantics for bounded count-only witness; preserve budget guard, axes_unknown/units limitations, before/after identity/count and malformed/drift/oversize negatives. No u/temp/tag/case branches or guessed1."
+      "next": "Continue controlled generic native verification with current candidate; historical r3 partial reopen/at_points UNKNOWN and old raw failures remain. No old-runtime replay or relaxation.",
+      "historical_source_gap_observation": {
+        "status": "OPEN_REPRODUCED_NATIVE_CORE_GAP",
+        "observed": "Native6.4.0.293 stationary solve succeeded; public result.evaluate refuses SOLUTION_AXES_UNVERIFIED before getData. Temporary Eval removed, target dirtyrev3. Existing count witness does not admit ordinary stationary data.",
+        "next": "Generic actual dataset/solution/study and SolverSequence getSize/getSizeMulti/getNU semantics for bounded count-only witness; preserve budget guard, axes_unknown/units limitations, before/after identity/count and malformed/drift/oversize negatives. No u/temp/tag/case branches or guessed1."
+      },
+      "source_acceptance": {
+        "review": "_state/universal-main-review/20261023-core-r3/MAIN_CORE_SOFTWARE_REVIEW.json",
+        "sha256": "e5951f6ae92bd11fae6c2de01a9c827ae6d63c11f879617fc4bbe576e81ea591",
+        "published_commit": "5aed6a04338a3d754f5fc19fe2d63e4542bcc4fe",
+        "scope": "Managed refresh full wire and count-only stationary raw Eval with fresh binding; no synthesized axes/FieldArray. Existing overlapping14/261 software results, not a current whole-candidate/native acceptance."
+      }
     },
     {
       "id": "MANAGED_RECONCILIATION_PUBLIC_WIRE",
-      "status": "OPEN_REPRODUCED_NATIVE_INTERFACE_GAP",
+      "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_NATIVE_INCOMPLETE",
       "evidence": "evidence/M2A_NATIVE.json; repaired pending-refs.reconcile_after_failed_eval",
       "observed": "Managed model.inspect wire only detail; legacy model_inspect refresh lacks bound execution, invokes missing default Server and emits unattributed UNKNOWN1f87..., public job.reconcile rejects WORKER_BINDING_UNKNOWN, global gate blocks sentinel/mean.",
-      "next": "Existing managed model.inspect optional refresh=false with exactbool/dynamic inspect-vs-project_write, original session backend/ModelRef/expectedrev and no active conflicting work. Reuse service.reconcile snapshot limitations/CAS_NONE; known no-engine predispatch failures cannot mint unboundUNKNOWN. Historical failures unchanged."
+      "next": "Continue controlled generic native verification with current candidate; historical r3 partial reopen/at_points UNKNOWN and old raw failures remain. No old-runtime replay or relaxation.",
+      "historical_source_gap_observation": {
+        "status": "OPEN_REPRODUCED_NATIVE_INTERFACE_GAP",
+        "observed": "Managed model.inspect wire only detail; legacy model_inspect refresh lacks bound execution, invokes missing default Server and emits unattributed UNKNOWN1f87..., public job.reconcile rejects WORKER_BINDING_UNKNOWN, global gate blocks sentinel/mean.",
+        "next": "Existing managed model.inspect optional refresh=false with exactbool/dynamic inspect-vs-project_write, original session backend/ModelRef/expectedrev and no active conflicting work. Reuse service.reconcile snapshot limitations/CAS_NONE; known no-engine predispatch failures cannot mint unboundUNKNOWN. Historical failures unchanged."
+      },
+      "source_acceptance": {
+        "review": "_state/universal-main-review/20261023-core-r3/MAIN_CORE_SOFTWARE_REVIEW.json",
+        "sha256": "e5951f6ae92bd11fae6c2de01a9c827ae6d63c11f879617fc4bbe576e81ea591",
+        "published_commit": "5aed6a04338a3d754f5fc19fe2d63e4542bcc4fe",
+        "scope": "Managed refresh full wire and count-only stationary raw Eval with fresh binding; no synthesized axes/FieldArray. Existing overlapping14/261 software results, not a current whole-candidate/native acceptance."
+      }
     }
   ],
   "windows_preparation": {
@@ -2125,10 +2148,11 @@
       },
       "lease": "ACTIVE samePrimary source-only, exactpublished e1bba; noactualDelete. API_CONFIRMED milestone only, genericrestorepostimage stillUNVERIFIED.",
       "delete_api_current": {
-        "status": "MAIN_REWORK_REQUIRED",
-        "candidate": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source",
-        "attempt19_passed": 340,
-        "finding": "Delete SDK called under runtime lock; same Primary must move SDK outside lock while preserving one-entry irreversible pause. No native execution."
+        "status": "FUNCTIONAL_REVIEW_DONE_PRIVATE_CURRENT_D7_COHERENT_INTEGRATION_RUNNING",
+        "attempt21_passed": 343,
+        "review": "_state/universal-main-review/20261023-appcontainer-delete-api/MAIN_ATTEMPT21_FUNCTIONAL_REVIEW.json",
+        "findings": "runtime lock SDK moved outside; real normal-loader positive exposed/fixed CREATE API vs fresh RESTORE API identity bug. Historical19 and failures retained.",
+        "next": "Deduplicated publisher1788/typed827/AppC343 currentd7+exactAppCoverlays union; Main/Hume mechanical then actual merge. Native/fullpostimage NOT_RUN."
       }
     },
     "catalog_scan_source_contract": {
@@ -2174,12 +2198,13 @@
       },
       "historical_failed_current_union": "Original1780PASS7FAIL remainsunchanged; new1788run is separatewithtestmigration+new1preconstructorcontrol; no retrospectivepass.",
       "main_1788_acceptance": {
-        "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_LOCAL_COMMIT_PENDING",
+        "status": "PUBLISHED_AND_FRESH_FETCH_VERIFIED",
         "review": "_state/universal-main-review/20261023-publisher-publication/MAIN_REVIEW.json",
         "mechanical": "_state/universal-windows-scm-publisher-integration/legacy-migration/union-r1/INPUT_MECHANICAL_CHECK.json",
         "Controller_sha256": "c0e6c679294c0255ecf0e21f7a9587adb90b14358329ee450c54b6336281cc5d",
         "passed": 1788,
-        "native": "NOT_RUN_UNQUALIFIED"
+        "native": "NOT_RUN_UNQUALIFIED",
+        "commit": "d7e77550e824b730c47a11a31611a6369d8391c5"
       }
     },
     "scm_config_materialization_current": {
@@ -2247,6 +2272,11 @@
         "path": "_state/universal-windows-network-design/FUTURE_BC_RESUME_SOURCE_PLAN_REVIEW_ADDENDUM.json",
         "bytes": 6132,
         "sha256": "e190cfd0212b86a48bb4866a21fef2d9f71a4c51ae45e012f4f0bd9e1870257b"
+      },
+      "interface_advice": {
+        "path": "_state/universal-windows-network-design/FUTURE_B_SOURCE_LEASE_INTERFACE_ADVICE.json",
+        "state": "READ_NO_IMPLEMENTATION_LEASE",
+        "Main_choice": "Wait for coherent A-hold/Gate integration after Primary lease handoff, avoid disconnected NOT_WIRED helper. Token security predicates not invented; finite Main design needed before authority."
       }
     },
     "catalog_readonly_R3": {
@@ -2282,6 +2312,25 @@
         "diagnostic_limits": "journal/status32MiB; unchanged core Bounds/SDK counts; all oldR3 preserved",
         "actual": "No transfer/directory/diagnostic/self/SDK/GO; only Main strict-key readonly hostname succeeded",
         "automatic_rejection_2": "_state/universal-main-review/20261023-catalog-r3/AUTOMATIC_APPROVAL_REJECTION.2.json"
+      },
+      "capacity_v2_current": {
+        "status": "PHASE_A_ACTUAL_READY_MAIN_VERIFIED_PHASE_B_SENDER_PREP_ONLY",
+        "prepare_receipt": "_state/universal-windows-appcontainer-catalog/native-readonly-r3-capacity-v2/phase-a/transfer-prepare-approved/PREPARE_TRANSFER_RECEIPT.json",
+        "Main_readback": "_state/universal-main-review/20261023-catalog-r3/MAIN_TRANSFER_PREPARE_READBACK.json",
+        "launcher_release": "_state/universal-main-review/20261023-catalog-r3/MAIN_R3_PHASE_A_LAUNCH_RELEASE.json",
+        "GO": "NOT_RELEASED",
+        "service_security_changes": 0,
+        "actual_READY": {
+          "Main_readback": "_state/universal-main-review/20261023-catalog-r3/MAIN_PHASE_A_ACTUAL_READY_READBACK.json",
+          "sha256": "3a007fd04c29abc702b5d9f3493d959bb2ee9ce7c8b86a46dbd37aab61eb3a27",
+          "PID_self_only": 28536,
+          "birth_filetime_100ns": 134372205668143557,
+          "in_job_Result_BOOL": 0,
+          "Enum_Free_VQ_counts": 0,
+          "roots": 0,
+          "parent_and_separate_collect": "Both actualnormalexit0",
+          "GO": "NOT_RELEASED_NOT_WRITTEN"
+        }
       }
     },
     "scm_stop_grant_authoring_direction": {
@@ -2340,12 +2389,13 @@
         "production_and_newtest": "unchangedf8ffe54a/ca61c33c"
       },
       "main_R6_acceptance": {
-        "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_PENDING_PUBLICATION",
+        "status": "PUBLISHED_AND_FRESH_FETCH_VERIFIED",
         "review": "_state/universal-main-review/20261023-typed-stop-publication/MAIN_REVIEW.json",
         "mechanical": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/LEGACY_NEGATIVE_R6_MECHANICAL_CHECK.json",
         "passed": 827,
         "deselected": 1,
-        "native": "NOT_RUN_NOT_QUALIFIED"
+        "native": "NOT_RUN_NOT_QUALIFIED",
+        "commit": "fa624c00fb42508d0d6749dde9f4774fbd90bfe7"
       }
     }
   },
@@ -2720,10 +2770,46 @@
       "scope": "OptionalRAMledger/hardcap/estimator isnotnewprerequisite. Needlegitimate newisolated host/projecthost_control+publicStop/ref actualnormaldeployment andfiniteargv/ini/limits packet. Noconfiguredverifierbypass; oldruntime/Worker/solver remainHOLD.",
       "executor": "sameLorentz LunaMAX",
       "revision2_rework": {
-        "status": "PREP_ONLY_NO_RELEASE",
+        "status": "MAIN_PREP_ACCEPTED_METADATA_SETUP_RELEASED_ONCE",
         "decision": "_state/universal-main-review/20261023-core-r4-resource-decision/MAIN_SERVER_ONLY_PREP_REWORK_V2.json",
-        "reason": "SSD mount verified noowners; future private runtime HOME/TMP/project/stdio state must use exclusive short internal /private/tmp directory, durable nonsecret evidence remains on SSD."
+        "reason": "SSD mount verified noowners; future private runtime HOME/TMP/project/stdio state must use exclusive short internal /private/tmp directory, durable nonsecret evidence remains on SSD.",
+        "review": "_state/universal-main-review/20261023-core-r4-resource-decision/MAIN_V2_PREP_REVIEW.json",
+        "setup_release": {
+          "path": "_state/universal-main-review/20261023-core-r4-resource-decision/MAIN_R4_V2_SETUP_RELEASE.json",
+          "sha256": "a324ccc58f34c8a44ba72c7f163bbdd436fce3849c7812ccb4ee5cb9c57770f5",
+          "Server_count_allowed": 0,
+          "cycle": "NOT_RELEASED"
+        }
+      },
+      "state": "ONE_SERVER_NATIVE_LIFECYCLE_MAIN_ACCEPTED_ONLY",
+      "actual_cycle": {
+        "Main_review": "_state/universal-main-review/20261023-core-r4-resource-decision/MAIN_R4_V2_ONE_SERVER_NATIVE_READBACK.json",
+        "sha256": "e7b0301f32f869f6bcf4547ad91ec61f8ce442f1a3f23c07bf6de17f17cee17d",
+        "compact": "docs/universal_mcp_execution/evidence/MAC_R4_ONE_SERVER_LIFECYCLE.json",
+        "project_id": "806957ee-7d52-4dce-b9c6-decbceaacf32",
+        "session_id": "session-d99bc0a40266406dab76cc58f5165deb",
+        "pid": 47641,
+        "birth": "start_epoch_ms:1792742420866",
+        "port": 57033,
+        "state": "STOPPED",
+        "original_reap": true,
+        "listener_absent": true,
+        "start_count": 1,
+        "stop_count": 1,
+        "Worker_model_solver_connect_JavaAPI": 0,
+        "candidate": "Historical035b/R4 only; current whole candidate not qualified",
+        "rss_once_bytes": 371654656,
+        "daemon_retirement": "NOT_CLAIMED"
       }
+    },
+    "historical_r9_fixture_location": {
+      "status": "MISSING_ORIGINAL_REMAINS_NOT_RUN",
+      "owner": "Hume sameLunaMedium",
+      "target": "_state/t044-r9-actual-partial-ff2952bf2c3c/MAIN_ACTUAL_TERMINAL_EVIDENCE_R1.json",
+      "report": "_state/universal-main-review/20261023-historical-r9-fixture-location/LOCATION_REPORT.json",
+      "limits": "4-6 targeted existing-pointer searches; no mock/replay/native/scientificcase/skip. Missing staysNOT_RUN if no authentic source.",
+      "report_sha256": "80ff26b43f9476ce33735020148cd23276f6873d68bee5ee579483f8e3a08bf7",
+      "result": "Six targeted pointer/index/archive-name searches found no authentic original or same-run raw. No fixture/mock/replay/skip created; oldFAIL/NOT_RUN retained. Stop bounded location work."
     }
   },
   "windows_child_process_policy": {
@@ -2777,5 +2863,10 @@
     "current_software_tests": 160,
     "main_review_path": "_state/universal-main-review/20261023-windows-observers/MAIN_REVIEW_FINAL.json",
     "main_review_sha256": "f3560355e8765ddcb5850cccd0b1020afa61c9ce15e762dcea3a8ea0c073e1ff"
+  },
+  "goal_turn_classification": {
+    "previous": "PROGRESS",
+    "evidence": "Actual two source/software phases committed, actual Mac one-Server lifecycle with same-original Stop confirmed; current human approvals fulfilled by two-commit push and exact-four-file transfer.",
+    "goal_status": "ACTIVE_IN_PROGRESS"
   }
 }
