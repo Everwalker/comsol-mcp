@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "status": "MAIN_ACCEPTED_REPAIRED_SOURCE_SOFTWARE_ONLY",
+  "scope": "Generic Python result.evaluate returned phase-value unit semantics across ordinary response/FieldArray/JSON/CSV; no native qualification",
+  "tested_base": "4b00cb4775ca14ee83b8740ca977f8819ae2f95f",
+  "integration_parent": "9492da2336e4d1761632546e5965f8d2369bc7a2",
+  "members": [
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "bytes": 463465,
+      "sha256": "b072ef8db54ab329ec6d221495facb1b7ab922aa8fbedb17e582124b2ed945fb",
+      "published_base_sha256": "5b347bb782e3730eeb10cbed1b24da9eb6bfd099f36292d61a6f819fc12a10aa",
+      "frozen_r1": {
+        "bytes": 461888,
+        "sha256": "a07009c32fa5c36c1652b397d2b6db77abee17295fee802b823fc80b776bb5a4"
+      }
+    },
+    {
+      "path": "tests/test_g3_output_unit_semantics.py",
+      "bytes": 29332,
+      "sha256": "223719ed7b8c76be7e28dd5bccb76bc70983eb356e63645af1ee70ecfd57fd92",
+      "published_base_sha256": null,
+      "frozen_r1": {
+        "bytes": 17976,
+        "sha256": "ee8c4979bc909152a3e1d44c2634d8d47edba37e29504a7d18e84b166e6eb34b"
+      }
+    }
+  ],
+  "change": {
+    "after_phase_no_postdivide": "Actual scalar atan2 transform and optional existing point sum: returned unitrad; scalar convention only, no final principal-range guarantee",
+    "actual_post_phase_measure_division": "Final per-expression null with UNVERIFIED_POST_PHASE_MEASURE_DIVISION; positive M or M=1 cannot prove denominator dimensionlessness",
+    "native_evidence": "Original native map retained as native_expression_units; raw property observation, native unit_readback_status and strict evidence unchanged",
+    "exports": "Response/FieldArray/autoJSON/field_exportJSON use same output map; existing CSV blank encodes unknown; no nativeK fallback",
+    "unchanged": "Native getter/setter order/count, numerics and aggregate order, result budgets, cleanup/UNKNOWN and ArtifactStore; no expression-specific gate"
+  },
+  "software": {
+    "actual_run": "attempt-r2-04",
+    "tests": 137,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "deselected": 0,
+    "candidate": 91,
+    "existing": 46,
+    "old46_same_once": true,
+    "source_inputs": 214,
+    "unchanged212_equal_Git4b_and9492": true,
+    "origins": 73,
+    "returned_source_reads": 75,
+    "SourceLoader_enter_exit_returned_pairs": 69,
+    "test_code_filenames": 137,
+    "exact_fixture_reads": 2,
+    "forbidden_effect_attempts": [],
+    "CodeType": "NOT_CAPTURED"
+  },
+  "Main_verification": {
+    "path": "_state/universal-main-review/20261024-output-unit-review/MAIN_R2_PIN_AND_SOFTWARE_VERIFICATION.json",
+    "bytes": 2559,
+    "sha256": "cef02fb8ea5e5a9348bd1bc947a9f4ab42d07f0dee0ed6846d91967ff3ec073f"
+  },
+  "Main_acceptance": {
+    "path": "_state/universal-main-review/20261024-output-unit-review/MAIN_R2_SOURCE_SOFTWARE_ACCEPTANCE.json",
+    "bytes": 4864,
+    "sha256": "481b0e000f4956ae8eef1fbed5ef73a83c1800db170f806a78d3497655af39aa"
+  },
+  "independent_strong_source_re_review": {
+    "path": "_state/universal-main-review/20261024-output-unit-review/INDEPENDENT_SOURCE_REVIEW_R2.json",
+    "bytes": 22763,
+    "sha256": "7538177e2e435d69320fb5c60dd3a3cbea8f8f9dbf2bf7c3c40c6bcd8efcfdab",
+    "F1": "CLOSED_FOR_EXACT_R2_SOURCE_ONLY",
+    "newP1P2": 0,
+    "final_Reviewer": false,
+    "native_or_tests_by_adviser": "NOT_RUN"
+  },
+  "retained_failures": [
+    "Original four K!=rad counter failures on published source",
+    "R1/86PASS explicitly NOT_ACCEPTED dueP2; exact frozen source/delivery remain",
+    "R2 originalR1 counter2 actualFAIL then same2PASS",
+    "R2attempt03 115PASS16FAIL due newfakeleaf incomplete binding; original measureguard refused; final fixed supported absentgetSolnum leaf, no production guard relaxation"
+  ],
+  "native_conversion_physical_dimension_before_phase_scale": "UNVERIFIED",
+  "native_Windows_JDK_Java_COMSOL_network_oldRoot": "NOT_RUN_THIS_STAGE",
+  "U06_T014_full427_platform_restore_finalReviewer_Goal": "NOT_PASSED",
+  "package_binding": "Existing0671/0860wheels retain oldsourcebindings; this stage creates no newwheel",
+  "raw_runtime_secrets_or_commercial_materials_in_publication": false
+}

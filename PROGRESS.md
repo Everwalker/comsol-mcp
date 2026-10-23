@@ -1,5 +1,19 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r203：Main已集中接受output-unit R2源码/软件并精确合入两文件。实际137PASS0FES0deselect=91候选+原46各一次；214输入前后当前一致，212与Git4b/9492不变，73origins/75returned-source/69loader对/137testcodefilenames/2fixture实读，零effect拒绝与来源漂移，CodeType NOT_CAPTURED。最终封装前611个源码顺序call AST完全相同、唯一变化top-level定义为result_evaluate；数值/gettersetter/cleanup/预算未改。强模型限定复审闭合原P2且无新P1/P2，非最终Reviewer。Main接受 `_state/universal-main-review/20261024-output-unit-review/MAIN_R2_SOURCE_SOFTWARE_ACCEPTANCE.json`（4864B / SHA256 `481b0e000f4956ae8eef1fbed5ef73a83c1800db170f806a78d3497655af39aa`）；compact `docs/universal_mcp_execution/evidence/RESULT_OUTPUT_UNIT_SOURCE_SCOPED.json`（4183B / SHA256 `19eaeb3343f3c5740b785b12e5f6141e0d04a6521612267042d9ef9eb790f7c0`）。实际post-phase测度除法后输出null/UNVERIFIED，其余Python afterphase为rad；scalar约定仅中间态，native map/rawobservation/strict证据保留、ArtifactStore未改。R1/86PASS不接受及所有反例/中间失败原件保留。精确6files待普通nonforce同步，lastsynced仍9492；native转换/物理维度/U06/T014未通过、旧wheel不重标。
+
+生命周期原67实际65PASS2FAIL0ES，未接受。Main确认原Worker迟退出并关完原process/thread后缺少held-A退休交接，已给同一Primary Luna新private最小生产lease：只有同一原never-resumed child完整已知终态、同一reader从未finish且零真实entry/SDK/ancillary/Resume未知，才可完成原158ACQUIRED pins一次退休；禁止泛化UNKNOWNreset/PID查询/close重试。另一Controller失败仍须正常prepared夹具接线，全部原断言保留。Schrodinger的Resume ownership/reservation另线继续，同_t037文件未来由Main合并和组合受测。R7完整实验human答案仍PENDING，零R7远端执行；Parfit/Kuhn此阶段完成关闭。completed_groups=[]、Goal IN_PROGRESS；C/full427/平台/restore/heldout/最终fresh独立统一验收未通过。
+
+以下r202及更早内容为历史快照；当前状态以本段与RESUME r203为准。
+
+当前续跑 r202：文档状态纠正和R6限定失败摘要已普通非强制发布 `9492da2336e4d1761632546e5965f8d2369bc7a2`（parent4b）。Mainstate201精确6files/461876B经fresh fetch逐blob读回一致；回执 `_state/universal-main-review/20261024-doc-status-r6-failure-publication/REMOTE_READBACK.json`（2199B / SHA256 `523b51cc8204d70d8915c25a4477b56a2d99a0033c3f8cbbbfd704c09678c961`）。生产/测试八文件仍是4b受测字节；本r202为本地同步后连续状态，不追逐重新发布自己的回执。
+
+Main已集中接受R7 source/software PREP：257PASS0FES=原231各一次+新26，19inputs前后当前一致、13实际模块source/loader/frame来源核验，9Python+C#与R6字节不变；新PS先临时文件Write/Flush/Dispose正常返回后一次twoarg File.Move，碰撞/异常不覆盖/删除/重发。PS仅闭合源码识别与Python事件模型，无原生/原子性/持久性认证。Main接受 `_state/universal-main-review/20261024-selector-r7/MAIN_R7_PREP_ACCEPTANCE.json`（4613B / SHA256 `d0448b065da9169e90b2882a6ab69dd23cff8c2c3d4809baa393fd8383f28fb8`）。13份新材料152876B、manifest `a37052727f558166b3a33b29755ab242cf23f8f80f90c012ab60e2cf11dd42c7` 已冻结；完整R7临时效果问题已提交human，答案PENDING；R6精确授权不覆盖新root/materials，未答前无R7传输/Windows效果。Lorentz已完成关闭，Main是未来唯一原生operator。
+
+Primary原67fixture、Parfit新R2单位修复、Schrodinger原Resume ownership/reservation三条通用private源码软件线继续。output R1/86PASS明确不接受，旧失败/UNKNOWN保留；BUNQUALIFIED、C/Resume未接通，平台/full427/restore/heldout/最终freshReviewer与Goal未通过，completed_groups=[]、Goal IN_PROGRESS。
+
+以下r201及更早内容为历史快照；当前状态以本段与RESUME r202为准。
+
 当前续跑 r201：Main已修正B范围说明遗留的“待接受/未合入”字句，明确source/software阶段已在4b发布；对应compact补上已核验publication引用，八份受测源码/测试字节未改。新增公开限定摘要 `docs/universal_mcp_execution/evidence/WINDOWS_SELECTOR_R6_PRE_STAGE_B_FAILURE_SCOPED.json`（3811B / SHA256 `3cd91c429fbaf4c99716682b425e682ec696361b5051963684feffc83d45e950`）：R6实际compiler0/READY后一次GO读PermissionError、StageB未进入、现场保留，竞态仅源码支持推断，原parentexit/rawclose未独立观察；不发布原始运行材料，不作native/C/Resume/restore/Goal通过。三份doc/compact加Main3精确6files已Main接受待普通nonforce同步。四条private源码软件线及r200拒绝output R1/保留86PASS的状态不变；completed_groups=[]、Goal IN_PROGRESS。
 
 以下r200及更早内容为历史快照；当前状态以本段与RESUME r201为准。

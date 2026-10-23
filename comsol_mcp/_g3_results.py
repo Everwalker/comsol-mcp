@@ -5799,6 +5799,9 @@ def result_evaluate(
     raw_layout = "expression,solnum,point"
     expression_units: dict[str, Any] = {}
     expression_unit_observation: dict[str, Any] | None = None
+    phase_after_transform_applied = False
+    phase_after_point_sum_applied = False
+    phase_after_measure_division_applied = False
     unit_setter_called = False
     result_budget_records: list[dict[str, Any]] = []
     result_budget_guard = None
@@ -6182,6 +6185,7 @@ def result_evaluate(
             transformed = raw_real
         else:
             transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
+            phase_after_transform_applied = complex_mode == "phase" and requested_transform_order == "after"
         if ms.entity_dim == 0:
             point_operation = None
             if aggregate in ("integral", "average", "std", "rms") or weight_expression:
@@ -6190,6 +6194,8 @@ def result_evaluate(
                 point_operation = aggregate
             if point_operation is not None:
                 transformed = _point_reduce(transformed, point_operation)
+                if phase_after_transform_applied and point_operation == "sum":
+                    phase_after_point_sum_applied = True
         if solution_binding and solution_binding.get("pair_mapping_complete") is True:
             from ._solution_binding import FieldArray
             point_axis_count = _feature_point_count(transformed, raw_layout)
@@ -6588,6 +6594,8 @@ def result_evaluate(
                         )
                     if ms.entity_dim == 0:
                         num_transformed = _point_reduce(num_transformed, "sum")
+                        if phase_after_transform_applied:
+                            phase_after_point_sum_applied = True
                     if solution_binding:
                         from ._solution_binding import SolutionBinding
                         transformed = SolutionBinding.field_array_from_engine(
@@ -6641,7 +6649,11 @@ def result_evaluate(
                     }
 
             def _divide_by_measure(value: Any) -> Any:
-                return _nested_divide(value, denominator_measure)
+                nonlocal phase_after_measure_division_applied
+                divided = _nested_divide(value, denominator_measure)
+                if phase_after_transform_applied:
+                    phase_after_measure_division_applied = True
+                return divided
 
             # The aggregation feature used for the variance/square integrals: the
             # weighted numerator when a weight is given, the measure feature
@@ -6911,12 +6923,52 @@ def result_evaluate(
             failed = next((record for record in cleanup_records if record.get("cleanup_failed")), None)
             cleanup["error"] = failed.get("error") if failed else {"code": "EXECUTION_STATE_UNKNOWN", "message": "ephemeral cleanup failed"}
 
+    # The feature property describes the native expression/configuration.  It
+    # must remain available to native readback evidence even when Python has
+    # replaced those values with a phase angle.
+    output_expression_units = dict(expression_units)
+    value_unit_derivation: dict[str, Any] | None = None
+    if transformed is not None and phase_after_transform_applied:
+        # The native denominator's unit is not established. A positive value,
+        # including 1, cannot prove that division preserved radians.
+        output_unit = None if phase_after_measure_division_applied else "rad"
+        output_expression_units = {str(expression): output_unit for expression in expressions}
+        value_unit_derivation = {
+            "source": "PYTHON_MATH_ATAN2",
+            "scope": "final_values; phase convention describes only the scalar intermediate",
+            "output_unit": output_unit,
+            "status": ("UNVERIFIED_POST_PHASE_MEASURE_DIVISION"
+                       if phase_after_measure_division_applied else "DERIVED_PYTHON_PHASE_RADIANS"),
+            "complex_transform_order": "after",
+            "scalar_intermediate": {
+                "source": "PYTHON_MATH_ATAN2",
+                "output_unit": "rad",
+                "phase_convention": {"interval": "[-pi, pi]", "zero_magnitude_value": 0.0},
+            },
+            "postprocessing": {
+                "point_sum_applied": phase_after_point_sum_applied,
+                "measure_division_applied": phase_after_measure_division_applied,
+                "denominator_source": denominator_source if phase_after_measure_division_applied else None,
+            },
+            "final_range_guarantee": None,
+            "native_unit_conversion": "UNVERIFIED",
+            "physical_dimensionality": "UNVERIFIED",
+        }
+
     if field_array_payload is not None and transformed is not None:
         field_array_payload = _field_array_with_values(
             field_array_payload,
             transformed,
             is_complex=field_array_is_complex,
         )
+        field_array_payload.units["expression"] = dict(output_expression_units)
+        field_array_payload.metadata.update({
+            "expression_units": dict(output_expression_units),
+            "native_expression_units": dict(expression_units),
+            "unit_readback_scope": "native_numerical_feature_property",
+        })
+        if value_unit_derivation is not None:
+            field_array_payload.metadata["value_unit_derivation"] = dict(value_unit_derivation)
 
     total_elements = _count_elements(transformed)
     artifact_meta = None
@@ -6931,7 +6983,14 @@ def result_evaluate(
             "solution": solution_tag,
             "complex_mode": complex_mode,
             "is_complex": is_complex,
+            "complex_transform_order": requested_transform_order,
+            "aggregate": aggregate,
+            "evaluated_expressions": list(effective_expressions),
+            "expression_units": dict(output_expression_units),
+            "native_expression_units": dict(expression_units),
         }
+        if value_unit_derivation is not None:
+            artifact_eval_context["value_unit_derivation"] = dict(value_unit_derivation)
         if expression_unit_observation is not None:
             artifact_eval_context["expression_unit_observation"] = expression_unit_observation
         if field_array_payload is not None:
@@ -7120,7 +7179,8 @@ def result_evaluate(
         "complex_mode": complex_mode,
         "complex_transform_order": requested_transform_order,
         "evaluated_expressions": list(effective_expressions),
-        "expression_units": dict(expression_units),
+        "expression_units": dict(output_expression_units),
+        "native_expression_units": dict(expression_units),
         "is_complex": is_complex,
         "field_array": (
             _field_array_summary(field_array_payload)
@@ -7206,6 +7266,8 @@ def result_evaluate(
     }
     if expression_unit_observation is not None:
         response["expression_unit_observation"] = expression_unit_observation
+    if value_unit_derivation is not None:
+        response["value_unit_derivation"] = dict(value_unit_derivation)
     if strict_field_readback:
         if (field_array_payload is None or strict_pair is None
                 or strict_selector_readback is None or strict_native_coordinates is None
