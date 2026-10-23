@@ -1,6 +1,6 @@
 # 当前交接 — 2026-10-23
 
-当前主线快照（续跑 r170）：新connected B已Main限定源码/软件验收，999冻结源码实际2577PASS、197绑定/51回收，Hume无不符，5文件已精确合入。历史R4/新Core_c47同原Worker续跑实际17公开请求成功，4点约350K/136值重开完全一致、6预算/cleanup证据完整；Main与Hume核原Worker退役2→3、原Server71290同birth/reap/listenerabsence/exit143及finalSTOPPED，daemon/state保留。原失败/key/STATE及旧UNKNOWN不改。Native紧凑摘要及Java/inputs两份可重建fixture已合入，准备精确11文件普通发布。随后推进原冻结T044七项/current-source新Worker与原AppC目标选择器资格PREP；未放行新Windows效果。整体IN_PROGRESS，fullrestore/required矩阵/最终fresh Reviewer未通过。
+当前主线快照（续跑 r173）：connected B源码/软件2577及历史R4有限native/fixture已发布3d92并核11远端blob。当前3d92的新Mac离线包/安装/源外112工具软件阶段已Main限定验收，Hume核208源文件/192包成员/42锁轮与47组loader执行，原失败/首个NOT_YET快照保留，准备compact+Main3精确4文件发布。本阶段native0，旧UNKNOWN不改。同Primary原AppC selector资格PREP、同Lorentz新Worker/T044原七项PREP、同Parfit原启动输入/保护bootstrap源码在独立私有副本连续进行；issuer仍拒绝，Windows新效果及未来Mac native尚未放行。整体IN_PROGRESS，fullrestore/required矩阵/最终fresh Reviewer未通过。
 
 本页是当前状态。详细历史与失败原件由 `PROGRESS.md`、`state/RESUME.json`、各 evidence 和私有 raw 保留；旧交接全文也已原样存档。主线继续通用 MCP，案例科学终点不替代通用核心验收。
 
@@ -12,7 +12,9 @@
 
 ## 已发布的最新阶段
 
-分支 `universal-core`；本次最新发布及独立 fresh FETCH_HEAD 均为 `cff1a58abf46dfce3d32cedc116667bb235d1822`。17 份白名单远端 blob 的字节/SHA 全部一致，提交后 index/worktree 均洁净。当前 Main3 为后续本地检查点，不能把私有 Agent WIP 加入该已发布候选。
+分支 `universal-core`；最新发布及独立 fresh FETCH_HEAD 均为 `3d92b3c736f31e6e3ace99418629c78ab1969169`。11 份白名单远端 blob 字节/SHA全部一致，提交后 index/worktree 洁净。当前Main3为其后本地r173续跑记录；Agent私有PREP不进入该已发布候选。最新范围为connected B源码/软件2577和历史035b/e28a Mac有限native及两份项目fixture。Main回读 `_state/universal-main-review/20261023-connected-b-native-publication/REMOTE_READBACK.json`，SHA `25795f41839c9c2f8383a52d90cee61daa59b6377b0a1820689ee09749c1831b`。
+
+以下Gate2534为上一阶段 `cff1a58abf46dfce3d32cedc116667bb235d1822` 的已发布历史，原证据不改。
 
 - Gate reservation/held finite A：4 生产文件、6 测试文件；原线程和原参与者保留 reservation，长 SDK/WMI 工作不占 runtime/全局锁。原有限 reader 从 CREATE 前持续到 child 观测及已知清理后；UNKNOWN 保留原资源、不重获。
 - `NativeTargetReader.finish` 入口先核原 reader/线程。原 Main counter 在基线 1 PASS、初始候选 1 FAIL（37 次额外 fixture Close），修复后 Main 原样独立 1 PASS。canonical 测试自包含，完整函数及七条断言保持。
@@ -23,11 +25,17 @@
 
 前序 scoped units 的 source/software 与 native 范围继续以各自 compact 为准，包括 typed grant827、publisher1788、AppC Delete2520、四配置753、scoped stop1676 等；不能相加为全 suite 或整机验收。
 
-## 当前两条执行线
+## 当前三条执行线
 
-Primary Halley `01a1632c-2788-73b2-a3d5-5023b2335cb6` 已闭合 connected original-child B：normal V4/held A/原SDK observer接线、2577唯一PASS、Hume机械闭合，Main完整生产增量及43新测试审查后限定接收。共享2生产/1测试/文档/compact共5文件已复制核对；Issuer/Resume仍拒绝、诊断始终UNQUALIFIED、Windows native0。Main review SHA `6605877dce94b844ee10af879ec1c6e112ade18907034c2d8f088f9dfc84e62a`，Hume SHA `ad64df606bf8f1d4d86edf489271a2a504a960dba09e3befaa7fd86267b6939c`。当前准备阶段发布，下一租约为私有原AppC target-selector SDK资格PREP，尚未启动Windows效果。
+Primary Halley `01a1632c-2788-73b2-a3d5-5023b2335cb6` 已闭合 connected original-child B：normal V4/held A/原SDK observer接线、2577唯一PASS、Hume机械闭合，Main完整生产增量及43新测试审查后限定接收。共享2生产/1测试/文档/compact共5文件已复制核对；Issuer/Resume仍拒绝、诊断始终UNQUALIFIED、Windows native0。Main review SHA `6605877dce94b844ee10af879ec1c6e112ade18907034c2d8f088f9dfc84e62a`，Hume SHA `ad64df606bf8f1d4d86edf489271a2a504a960dba09e3befaa7fd86267b6939c`。已发布3d92；同一Primary现连续完成私有原AppC target-selector SDK资格PREP，尚未启动Windows效果。
 
-Lorentz `01a1644c-17c5-7af0-a0e9-29e64bf8f45a` 已完成下面的历史R4有限原生闭环与紧凑摘要/两份fixture共享复制。下一计划是基于这次发布后的精确current源码，正常离线构件/安装/112工具软件发现与新Worker/T044原七项PREP。可自主完成已授权本地可逆artifact/software闭环；未来EngineHost/project/Server/Worker/solver及资源检查仍需Main审精确程序后单独放行。T044属于原冻结CORE_REQUIRED，不是给最终Reviewer预设题目。
+Lorentz `01a1644c-17c5-7af0-a0e9-29e64bf8f45a` 已完成下面的历史R4有限原生闭环与紧凑摘要/两份fixture共享复制。同一Lorentz现基于已发布3d92连续完成正常离线构件/安装/112工具软件发现与新Worker/T044原七项PREP。可自主完成已授权本地可逆artifact/software闭环；未来EngineHost/project/Server/Worker/solver及资源检查仍需Main审精确程序后单独放行。T044属于原冻结CORE_REQUIRED，不是给最终Reviewer预设题目。
+
+Parfit `01a16922-ddc1-7823-9b8c-36818109816b`（GPT-6 Luna max）新独立私有3d92源码线：normal Server/Worker显式env/cwd/argv/classpath/source经原factory/child/native storage绑定，固定generic bootstrap和vendor view由安装材料提供。Main已核五sourcepins并决定两项有限policy；精确租约 `_state/universal-windows-network-design/NEXT_C_ORIGINAL_LAUNCH_BINDING_SOURCE_LEASE.json`，SHA `8aee1618e68a051225409e264141ead244cbb68de21a6ba5b352fdd9af2f40f6`。仅private source/Pythonfixtures；不做C enforcement coordinator/Resume激活、Windows/JDK/COMSOL/host效果，不改共享或项目Java白名单。Main把先前自身串行建议调整为不相交私有副本并行，未扩大任何人类授权。
+
+## 当前3d92正常构件的软件限定验收
+
+Mac ARM64的新own wheel `0860fc6ad5c85543369d4aa115d9fa40f679e7e2b0fbdd29fef71662da5b0680`、offline bundle `62d61df57738b2da37bf29964643faf5d95ae8f4161160076d11d00bd5a01e27`，208源文件/192包成员/42锁轮，7实际命令exit0与源外normalstdio112通过。47 enter/get_code/exit组、runpy入口额外1 get_code分列，非returnedbytes/frame/CodeType证明。Main读完整实际builder/resume/schema源码，Hume两份机械无不符。首次generic lock选择失败/首份stdio未记录snapshot均保留；后续收据分列，不改判原件。详见 `evidence/MAC_CURRENT_SOURCE_OFFLINE_PACKAGE.json`。此为软件阶段，不是新Worker/T044/Windows/当前全native或最终Reviewer验收；正在准备精确4文件普通发布。
 
 ## R4/新Core_c47：已核有限原生闭环
 
@@ -55,6 +63,6 @@ Main实际回读：repository `_state/universal-main-review/20261023-core-r4-cor
 
 ## 继续顺序与发布
 
-同原Worker有限native与connectedB source/software都已Main/Hume闭合，先完成这次精确11文件发布与freshfetch；随后按两份具体新PREP推进原T044/current-source/freshWorker和原AppCtarget-selector缺口。新的Windows资格实验只准备代码/完整效果清单，具体包Main审查完成后再处理必要的人类授权，不把既有readonly或publication许可扩为profile/ACL/子进程效果。只对实质源码问题返工，保留失败并复测。之后继续原 required 矩阵与真正 restore/native 缺口；T044 原七项仍必需，本次一网格/null/unit/readback smoke 不覆盖 heatflux/mesh-sensitivity/error table，也不以遗失的某份历史 JSON 新增第八项要求。
+同原Worker有限native与connectedB source/software都已Main/Hume闭合，精确11文件已发布3d92并freshfetch回读一致；现按两份具体新PREP推进原T044/current-source/freshWorker和原AppCtarget-selector缺口。新的Windows资格实验只准备代码/完整效果清单，具体包Main审查完成后再处理必要的人类授权，不把既有readonly或publication许可扩为profile/ACL/子进程效果。只对实质源码问题返工，保留失败并复测。之后继续原 required 矩阵与真正 restore/native 缺口；T044 原七项仍必需，本次一网格/null/unit/readback smoke 不覆盖 heatflux/mesh-sensitivity/error table，也不以遗失的某份历史 JSON 新增第八项要求。
 
 用户在当前会话直接答复“允许本次，并持续同步本目标的验收阶段”。经 Main 验收后按精确白名单普通非 force push 至公开 `https://github.com/Everwalker/comsol-mcp.git` main，并独立 fresh fetch 回读。仅必要源码/测试/可重建 fixture/进度/紧凑证据；排除凭据、raw、runtime 和商业二进制。此授权不含真实 Windows host/security apply。阶段发布继续目标，不是完成或暂停条件。
