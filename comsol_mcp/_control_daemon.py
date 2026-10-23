@@ -784,6 +784,23 @@ class ControlDaemon:
             )
 
         executor._on_original_appcontainer_profile_effect = retain_appcontainer_effect
+        if request.phase == "RESTORE":
+            def select_original_appcontainer_effect(actual_executor, plan, receipt, action):
+                if actual_executor is not executor or record["executor"] is not executor:
+                    raise ExecutionContractError(
+                        "HOST_CHANGE_APPCONTAINER_OWNER_BINDING_MISMATCH",
+                        "RESTORE must use the exact fresh executor retained by this SCM request",
+                        safe_retry=False,
+                    )
+                from . import _windows_appcontainer_lifecycle as appcontainer_lifecycle
+                return appcontainer_lifecycle.select_original_profile_effect(
+                    daemon=self, request=request, record=record,
+                    executor=executor, plan=plan, receipt=receipt, action=action,
+                )
+
+            executor._on_select_original_appcontainer_profile_effect = (
+                select_original_appcontainer_effect
+            )
         if (executor.profile.sha256 != request.profile_sha256
                 or executor.provider is not request.provider
                 or executor.authority is not request.authority):

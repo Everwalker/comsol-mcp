@@ -1101,7 +1101,7 @@ class OperationStore:
                     sequence = baseline.get("mutation_sequence")
                     if (not isinstance(sequence, dict)
                             or set(sequence) != {"schema", "phase", "plan_sha256", "steps"}
-                            or sequence.get("schema") not in {"comsol-mcp.host-control-mutation-sequence/2", "comsol-mcp.host-control-mutation-sequence/3", "comsol-mcp.host-control-mutation-sequence/4", "comsol-mcp.host-control-mutation-sequence/5"}
+                            or sequence.get("schema") not in {"comsol-mcp.host-control-mutation-sequence/2", "comsol-mcp.host-control-mutation-sequence/3", "comsol-mcp.host-control-mutation-sequence/4", "comsol-mcp.host-control-mutation-sequence/5", "comsol-mcp.host-control-mutation-sequence/6"}
                             or sequence.get("phase") != row["phase"]
                             or sequence.get("plan_sha256") != row["plan_sha256"]
                             or not isinstance(sequence.get("steps"), list)
@@ -1117,6 +1117,9 @@ class OperationStore:
                     if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/5":
                         from ._windows_appcontainer import validate_journal_leaf as validate_appcontainer_leaf
                         validate_appcontainer_leaf(baseline, dict(row))
+                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/6":
+                        from ._windows_appcontainer import validate_restore_journal_leaf
+                        validate_restore_journal_leaf(baseline, dict(row))
                     step_fields = {"step_index", "action_id", "resource_kind", "resource_key",
                                    "identity_sha256", "dependency_sha256", "expected_resource_sha256"}
                     expected_phase = str(row["phase"])
@@ -1128,7 +1131,7 @@ class OperationStore:
                         if (not isinstance(step, dict) or set(step) != step_fields
                                 or step.get("step_index") != index or type(step.get("step_index")) is not int
                                 or not isinstance(step.get("action_id"), str) or not step["action_id"]
-                                or step.get("resource_kind") not in ({"appcontainer_profile"} if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/5" else {"windows_service"} if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/4" else {"wfp_provider", "wfp_sublayer", "wfp_filter"})
+                                or step.get("resource_kind") not in ({"appcontainer_profile"} if sequence["schema"] in {"comsol-mcp.host-control-mutation-sequence/5", "comsol-mcp.host-control-mutation-sequence/6"} else {"windows_service"} if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/4" else {"wfp_provider", "wfp_sublayer", "wfp_filter"})
                                 or not isinstance(step.get("resource_key"), str) or not step["resource_key"]
                                 or any(not isinstance(step.get(key), str)
                                        or re.fullmatch(r"[0-9a-f]{64}", step[key]) is None
@@ -1166,6 +1169,8 @@ class OperationStore:
                         allowed_orders = [["windows_service"]]
                     if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/5":
                         allowed_orders = [["appcontainer_profile"]] if expected_phase == "APPLY" else []
+                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/6":
+                        allowed_orders = [["appcontainer_profile"]] if expected_phase == "RESTORE" else []
                     if step_kinds not in allowed_orders:
                         raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
                                                   "V2 plan must use the exact provider/sublayer/filter dependency order")
@@ -1380,6 +1385,352 @@ class OperationStore:
             raise ResourcePolicyError("HOST_CONTROL_JOURNAL_UNKNOWN",
                                       "V2 mutation journal transaction failed closed",
                                       details={"cause_type": type(exc).__name__}) from exc
+
+    def record_appcontainer_delete_api_return(self, attempt: Any) -> dict[str, Any]:
+        """Idempotently journal one exact original AppContainer Delete S_OK.
+
+        This is a diagnostic acknowledgment only. It never advances the
+        mutation journal to RESTORED or claims a postimage observation.
+        """
+        from ._w26_os_resources import ResourcePolicyError
+        from ._windows_appcontainer_lifecycle import (
+            ProfileRestoreAttempt, _RESTORE_ATTEMPT_SEAL,
+        )
+        from ._windows_appcontainer_native import _NativeDeleteAttempt
+
+        if (type(attempt) is not ProfileRestoreAttempt
+                or attempt._seal is not _RESTORE_ATTEMPT_SEAL
+                or type(attempt.native_attempt) is not _NativeDeleteAttempt
+                or attempt.native_attempt.state != "API_CONFIRMED"
+                or attempt.native_attempt.hresult != 0
+                or not attempt.native_attempt.entered or not attempt.native_attempt.finished):
+            raise ResourcePolicyError(
+                "HOST_CONTROL_APPCONTAINER_DELETE_RETURN_UNKNOWN",
+                "only the exact captured original signed HRESULT S_OK can be acknowledged",
+            )
+        selection = attempt.selection
+        effect = selection.effect
+        admission = attempt.admission
+        native_attempt = attempt.native_attempt
+        if (effect._restore_attempt is not attempt
+                or native_attempt.effect is not effect
+                or native_attempt.api is not effect.api
+                or admission is None
+                or selection.executor.store is not self
+                or not effect._is_rooted()
+                or selection.action.get("resource_kind") != "appcontainer_profile"
+                or selection.action.get("resource_key") != selection.restore_body.get("resource_key")):
+            raise ResourcePolicyError(
+                "HOST_CONTROL_APPCONTAINER_DELETE_OWNER_UNKNOWN",
+                "Delete acknowledgment does not match its original effect/admission root",
+            )
+
+        def canonical(value: Any) -> str:
+            return json.dumps(value, sort_keys=True, ensure_ascii=False,
+                              separators=(",", ":"), allow_nan=False)
+
+        def digest(value: Any) -> str:
+            return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
+
+        event_name = "AppContainerProfileDeleteApiReturnCaptured"
+        try:
+            with self.lock:
+                self.db.execute("BEGIN IMMEDIATE")
+                try:
+                    row = self.db.execute(
+                        "SELECT a.*,j.status AS job_status,j.metadata AS job_metadata,"
+                        "o.status AS operation_status,o.operation,o.metadata AS operation_metadata "
+                        "FROM host_control_admissions a "
+                        "JOIN jobs j ON j.job_id=a.job_id AND j.operation_id=a.operation_id "
+                        "JOIN operations o ON o.operation_id=a.operation_id "
+                        "WHERE a.admission_id=?",
+                        (admission.admission_id,),
+                    ).fetchone()
+                    if row is None:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_ADMISSION_UNKNOWN",
+                            "the original AppContainer restore admission is absent",
+                        )
+                    try:
+                        baseline = json.loads(row["baseline_json"])
+                        root_identity = json.loads(row["root_identity_json"])
+                        job_metadata = json.loads(row["job_metadata"] or "{}")
+                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                    except (TypeError, json.JSONDecodeError) as exc:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_JOURNAL_CORRUPT",
+                            "AppContainer restore admission metadata is malformed",
+                        ) from exc
+                    expected_rows = {
+                        "admission_id": admission.admission_id,
+                        "operation_id": admission.operation_id,
+                        "job_id": admission.job_id,
+                        "phase": "RESTORE",
+                        "project_id": selection.request.project_id,
+                        "host_id": effect.profile.host_id,
+                        "profile_sha256": effect.profile.sha256,
+                        "plan_sha256": selection.restore_sha256,
+                        "source_plan_sha256": selection.plan_sha256,
+                        "source_receipt_sha256": selection.receipt_sha256,
+                        "authorization_ref_sha256": attempt.authorization_ref_sha256,
+                    }
+                    if (any(row[key] != value for key, value in expected_rows.items())
+                            or row["operation"] != "host.change.restore"
+                            or row["job_status"] not in {"RUNNING", "UNKNOWN"}
+                            or row["operation_status"] not in {"RUNNING", "UNKNOWN"}
+                            or row["state"] not in {"RESTORE_STEP_INTENT:0", "RECOVERY_REQUIRED"}
+                            or digest(baseline) != row["baseline_sha256"]):
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_ADMISSION_MISMATCH",
+                            "the exact original AppContainer RESTORE scope/status is not current",
+                        )
+                    from ._windows_appcontainer import validate_restore_journal_leaf
+                    validate_restore_journal_leaf(baseline, dict(row))
+                    binding = {
+                        "schema": "comsol-mcp.internal-host-control-operation/1",
+                        "admission_id": row["admission_id"],
+                        "phase": row["phase"],
+                        "project_id": row["project_id"],
+                        "host_id": row["host_id"],
+                        "root_identity": root_identity,
+                        "profile_sha256": row["profile_sha256"],
+                        "plan_sha256": row["plan_sha256"],
+                        "source_plan_sha256": row["source_plan_sha256"],
+                        "source_receipt_sha256": row["source_receipt_sha256"],
+                    }
+                    for metadata in (job_metadata, operation_metadata):
+                        if (metadata.get("host_control") != binding
+                                or metadata.get("project_id") != row["project_id"]
+                                or metadata.get("host_id") != row["host_id"]
+                                or metadata.get("project_root_identity") != root_identity.get("file_id")
+                                or metadata.get("project_root_volume_id") != root_identity.get("volume_id")
+                                or metadata.get("project_root_owner_id") != root_identity.get("owner_id")):
+                            raise ResourcePolicyError(
+                                "HOST_CONTROL_BINDING_MISMATCH",
+                                "restore operation/job no longer match the admitted project/root",
+                            )
+
+                    restore_source = baseline["appcontainer_restore"]
+                    source = self.db.execute(
+                        "SELECT a.*,j.status AS job_status,o.status AS operation_status,o.result "
+                        "FROM host_control_admissions a "
+                        "JOIN jobs j ON j.job_id=a.job_id AND j.operation_id=a.operation_id "
+                        "JOIN operations o ON o.operation_id=a.operation_id "
+                        "WHERE a.admission_id=?",
+                        (restore_source["source_admission_id"],),
+                    ).fetchone()
+                    if source is None:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_APPCONTAINER_APPLY_RESULT_UNKNOWN",
+                            "the original successful CREATE admission is absent",
+                        )
+                    try:
+                        source_result = json.loads(source["result"])
+                    except (TypeError, json.JSONDecodeError) as exc:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_APPCONTAINER_APPLY_RESULT_UNKNOWN",
+                            "the original successful CREATE result is malformed",
+                        ) from exc
+                    if (source["phase"] != "APPLY" or source["state"] != "APPLIED"
+                            or source["operation_id"] != restore_source["source_operation_id"]
+                            or source["job_id"] != restore_source["source_job_id"]
+                            or source["operation_status"] != "SUCCEEDED"
+                            or source["job_status"] != "SUCCEEDED"
+                            or source["plan_sha256"] != row["source_plan_sha256"]
+                            or source["profile_sha256"] != row["profile_sha256"]
+                            or source["project_id"] != row["project_id"]
+                            or source["host_id"] != row["host_id"]
+                            or source["root_identity_json"] != row["root_identity_json"]
+                            or source["source_plan_sha256"] is not None
+                            or source["source_receipt_sha256"] is not None
+                            or digest(source_result) != restore_source["source_result_sha256"]
+                            or source_result.get("receipt_sha256") != row["source_receipt_sha256"]
+                            or source_result.get("applied_receipt", {}).get("receipt_sha256")
+                                != row["source_receipt_sha256"]):
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_APPCONTAINER_APPLY_RESULT_UNKNOWN",
+                            "the original durable CREATE result/journal does not match this restore",
+                        )
+
+                    journal_rows = self.db.execute(
+                        "SELECT metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id",
+                        (row["job_id"], "HostControlMutationJournalV2"),
+                    ).fetchall()
+                    previous = "0" * 64
+                    expected_fields = {
+                        "schema", "admission_id", "job_id", "operation_id", "project_id",
+                        "host_id", "root_identity", "profile_sha256", "plan_sha256",
+                        "source_plan_sha256", "source_receipt_sha256", "phase", "sequence",
+                        "previous_sha256", "event", "payload", "record_sha256",
+                    }
+                    state = "ADMITTED"
+                    pending = None
+                    if len(journal_rows) not in {1, 2}:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_JOURNAL_CORRUPT",
+                            "AppContainer Delete requires exactly one restore intent and optional recovery marker",
+                        )
+                    for index, journal_row in enumerate(journal_rows):
+                        record = json.loads(journal_row["metadata"])
+                        if (not isinstance(record, dict) or set(record) != expected_fields
+                                or record.get("schema") != "comsol-mcp.host-control-mutation-journal/2"
+                                or record.get("sequence") != index
+                                or type(record.get("sequence")) is not int
+                                or record.get("previous_sha256") != previous
+                                or record.get("admission_id") != row["admission_id"]
+                                or record.get("job_id") != row["job_id"]
+                                or record.get("operation_id") != row["operation_id"]
+                                or record.get("project_id") != row["project_id"]
+                                or record.get("host_id") != row["host_id"]
+                                or record.get("root_identity") != root_identity
+                                or record.get("profile_sha256") != row["profile_sha256"]
+                                or record.get("plan_sha256") != row["plan_sha256"]
+                                or record.get("source_plan_sha256") != row["source_plan_sha256"]
+                                or record.get("source_receipt_sha256") != row["source_receipt_sha256"]
+                                or record.get("phase") != "RESTORE"
+                                or digest({key: value for key, value in record.items()
+                                          if key != "record_sha256"}) != record.get("record_sha256")):
+                            raise ResourcePolicyError(
+                                "HOST_CONTROL_JOURNAL_CORRUPT",
+                                "AppContainer restore journal hash-chain binding is invalid",
+                            )
+                        payload = record.get("payload")
+                        if record.get("event") == "RESTORE_STEP_INTENT" and index == 0:
+                            step = baseline["mutation_sequence"]["steps"][0]
+                            if (set(payload or {}) != {
+                                    "step_index", "action_id", "resource_kind", "resource_key",
+                                    "expected_resource_sha256", "dependency_sha256"}
+                                    or payload.get("step_index") != 0
+                                    or payload.get("action_id") != step["action_id"]
+                                    or payload.get("resource_kind") != "appcontainer_profile"
+                                    or payload.get("resource_key") != step["resource_key"]
+                                    or payload.get("expected_resource_sha256")
+                                        != step["expected_resource_sha256"]
+                                    or payload.get("dependency_sha256") != step["dependency_sha256"]):
+                                raise ResourcePolicyError(
+                                    "HOST_CONTROL_JOURNAL_CORRUPT",
+                                    "AppContainer restore intent differs from its exact leaf binding",
+                                )
+                            pending = dict(payload)
+                            state = "RESTORE_STEP_INTENT:0"
+                        elif record.get("event") == "RECOVERY_REQUIRED" and index == 1:
+                            if (pending is None or set(payload or {}) != {
+                                    "reason_code", "failed_event", "step_index", "action_id",
+                                    "resource_kind", "resource_key"}
+                                    or payload.get("failed_event") != "RESTORE_STEP_INTENT"
+                                    or payload.get("step_index") != 0
+                                    or payload.get("action_id") != pending["action_id"]
+                                    or payload.get("resource_kind") != pending["resource_kind"]
+                                    or payload.get("resource_key") != pending["resource_key"]):
+                                raise ResourcePolicyError(
+                                    "HOST_CONTROL_JOURNAL_CORRUPT",
+                                    "AppContainer recovery marker does not bind its pending Delete intent",
+                                )
+                            state = "RECOVERY_REQUIRED"
+                        else:
+                            raise ResourcePolicyError(
+                                "HOST_CONTROL_JOURNAL_CORRUPT",
+                                "API-confirmed Delete cannot be recorded after a restore readback event",
+                            )
+                        previous = record["record_sha256"]
+                    if state != row["state"]:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_JOURNAL_CORRUPT",
+                            "AppContainer restore journal and admission state differ",
+                        )
+
+                    action = selection.action
+                    payload = {
+                        "schema": "comsol-mcp.appcontainer-profile-delete-api-return/1",
+                        "attempt_id": attempt.attempt_id,
+                        "operation_id": row["operation_id"],
+                        "job_id": row["job_id"],
+                        "admission_id": row["admission_id"],
+                        "source_operation_id": source["operation_id"],
+                        "source_job_id": source["job_id"],
+                        "source_admission_id": source["admission_id"],
+                        "plan_sha256": row["plan_sha256"],
+                        "source_plan_sha256": row["source_plan_sha256"],
+                        "source_receipt_sha256": row["source_receipt_sha256"],
+                        "profile_sha256": row["profile_sha256"],
+                        "resource_kind": "appcontainer_profile",
+                        "resource_key": action["resource_key"],
+                        "expected_created_resource_sha256":
+                            selection.expected_resource_sha256,
+                        "authorization_ref_sha256": row["authorization_ref_sha256"],
+                        "api_name": "DeleteAppContainerProfile",
+                        "return_type": "HRESULT_S32",
+                        "hresult": 0,
+                        "native_delete_state": "API_CONFIRMED",
+                        "postimage_state": "UNVERIFIED",
+                        "restore_state": "POSTIMAGE_UNVERIFIED",
+                        "safe_retry": False,
+                        "evidence_scope": "NATIVE_API_RETURN_ONLY",
+                    }
+                    existing_rows = self.db.execute(
+                        "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id",
+                        (row["job_id"], event_name),
+                    ).fetchall()
+                    if len(existing_rows) > 1:
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_APPCONTAINER_DELETE_ACK_CONFLICT",
+                            "duplicate Delete API-return acknowledgments are not permitted",
+                        )
+                    if existing_rows:
+                        existing = json.loads(existing_rows[0]["metadata"])
+                        body = {key: value for key, value in existing.items()
+                                if key != "record_sha256"}
+                        if (not isinstance(existing, dict)
+                                or existing.get("schema")
+                                    != "comsol-mcp.appcontainer-delete-api-return-event/1"
+                                or existing.get("attempt_id") != attempt.attempt_id
+                                or existing.get("sequence") != 0
+                                or existing.get("previous_sha256") != "0" * 64
+                                or existing.get("payload") != payload
+                                or digest(body) != existing.get("record_sha256")):
+                            raise ResourcePolicyError(
+                                "HOST_CONTROL_APPCONTAINER_DELETE_ACK_CONFLICT",
+                                "cached Delete API-return acknowledgment differs from the original attempt",
+                            )
+                        self.db.execute("COMMIT")
+                        return {"state": "CACHED", "event_id": int(existing_rows[0]["id"]),
+                                "attempt_id": attempt.attempt_id, "payload": payload}
+                    body = {
+                        "schema": "comsol-mcp.appcontainer-delete-api-return-event/1",
+                        "attempt_id": attempt.attempt_id,
+                        "sequence": 0,
+                        "previous_sha256": "0" * 64,
+                        "payload": payload,
+                    }
+                    record = {**body, "record_sha256": digest(body)}
+                    self.db.execute(
+                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                        (row["job_id"], event_name, canonical(record)),
+                    )
+                    event_row = self.db.execute(
+                        "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id DESC LIMIT 1",
+                        (row["job_id"], event_name),
+                    ).fetchone()
+                    if (event_row is None or json.loads(event_row["metadata"]) != record):
+                        raise ResourcePolicyError(
+                            "HOST_CONTROL_APPCONTAINER_DELETE_ACK_UNKNOWN",
+                            "Delete API-return acknowledgment failed exact durable readback",
+                        )
+                    self.db.execute("COMMIT")
+                    return {"state": "RECORDED", "event_id": int(event_row["id"]),
+                            "attempt_id": attempt.attempt_id, "payload": payload}
+                except BaseException:
+                    if self.db.in_transaction:
+                        self.db.execute("ROLLBACK")
+                    raise
+        except ResourcePolicyError:
+            raise
+        except Exception as exc:
+            raise ResourcePolicyError(
+                "HOST_CONTROL_APPCONTAINER_DELETE_ACK_UNKNOWN",
+                "Delete API-return acknowledgment failed closed",
+                details={"cause_type": type(exc).__name__},
+            ) from exc
 
     def host_control_admission_state(self, admission_id: str) -> str:
         """Read the exact durable state of one internal host admission."""

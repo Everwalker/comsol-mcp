@@ -1,0 +1,194 @@
+{
+  "schema": "comsol-mcp.windows-appcontainer-delete-functional-publication/2",
+  "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_NOT_NATIVE_OR_FULL_RESTORE",
+  "scope_document": {
+    "path": "docs/universal_mcp_execution/APPCONTAINER_DELETE_API.md",
+    "sha256": "bdcdb2269298ebfc127f2ee02387d1e0cde664be029313caf243c711c755f091"
+  },
+  "raw_path_base": "repository root; private local files are not embedded/publicly hosted",
+  "source_base_commit": "e1bba51006d010c8416802cb9a6aca7de2c5d6f5",
+  "source_projection": {
+    "archive_sha256": "e7d0a9ad7d602e76619f4a856fdcf7e3533d71d99b552e8239991f8ef9f2f722",
+    "files": 930,
+    "manifest_sha256": "40021e9eb1505bfe9deb7cc972e281b70ee09353f37c013bb9f2ce5ce3420df3"
+  },
+  "contract_sha256": "3af47abd1e16aa54ae579afc395668da83cff24fe40976c047d1502b49e6be36",
+  "changed_python_files": [
+    {
+      "base_sha256": "909451fc92c71fac4cdcb6a8be084e403f82c24398d44cf524f49893b1e4e6fe",
+      "candidate_sha256": "a869d45e7353a0f7a8a4f85616faa9ccd53e30fcd167545e40dcdda1c78e91e3",
+      "change": "modified",
+      "path": "comsol_mcp/_control_daemon.py"
+    },
+    {
+      "base_sha256": "135dd6d809f160ccccf200a03c83b77399b2621619f8b9bde674f5e557f1370d",
+      "candidate_sha256": "e5113c45da1ebbfbe9a52d77b8bf0635c4347bea76ca43b865a969c4146e486a",
+      "change": "modified",
+      "path": "comsol_mcp/_operation_store.py"
+    },
+    {
+      "base_sha256": "cb19de67a5373853ecef42a9bd97d59ea1e5a7b73d7cd858b809e203fd172d1b",
+      "candidate_sha256": "361a673ea9ed151c339d2c62d411d15b5926255d5df474db057260efc0d1d088",
+      "change": "modified",
+      "path": "comsol_mcp/_windows_appcontainer.py"
+    },
+    {
+      "base_sha256": "800a60221179c51ea1670809be3c08191940823ef02d25b18ad1178e2ca656fd",
+      "candidate_sha256": "b75a8f13a51144e627f90e6273a9569bf9f8c4d24f784a115371c8c5d12254b8",
+      "change": "modified",
+      "path": "comsol_mcp/_windows_appcontainer_lifecycle.py"
+    },
+    {
+      "base_sha256": "3d72b0149a3df9db852ecff78ad084201d35b979efd8d8edf0b9d82177354119",
+      "candidate_sha256": "a8c7cbfd4e876c826e0b7008e37b6d0863aac76694e84c06e4944c148c5071aa",
+      "change": "modified",
+      "path": "comsol_mcp/_windows_appcontainer_native.py"
+    },
+    {
+      "base_sha256": "df1e9dad41987d7e2ac9092022fb19310fd604d16ffe088de4042c5334ab5be0",
+      "candidate_sha256": "e8709d6afeea43d8286a741681b0ad39ba52a9c92b26c1eea1af2f6ae7e9c5b7",
+      "change": "modified",
+      "path": "comsol_mcp/_windows_host_change.py"
+    },
+    {
+      "base_sha256": "a9fc3cc5cd8877fc23df189e053296c21fdcb618c141d4c827434c8c38a11afe",
+      "candidate_sha256": "e0f4129a657bac7cdb37a01de667dc5100984e161f3c3e484500e9a9033caed3",
+      "change": "modified",
+      "path": "tests/test_windows_appcontainer.py"
+    },
+    {
+      "base_sha256": null,
+      "candidate_sha256": "d669191cf679e870ca80e393855a2e52ef4d2aadb0cf001cdefc306a1f4adfb5",
+      "change": "added",
+      "path": "tests/test_windows_appcontainer_delete.py"
+    },
+    {
+      "base_sha256": null,
+      "candidate_sha256": "f83fb88d722db7356e234c454c1fcff259ba5070552ba0b4f51b0376832470a9",
+      "change": "added",
+      "path": "tests/test_windows_appcontainer_fresh_loader_delete.py"
+    }
+  ],
+  "implementation_scope": [
+    "original retained CREATE effect/API owner, exact scoped RESTORE admission and deterministic journal digest",
+    "single SDK entry outside runtime/global locks after terminal Gate pause; no pending/UNKNOWN reentry",
+    "real fresh normal-loader/source binding; original CREATE API vs fresh RESTORE adapter kept distinct",
+    "cached exact same-attempt S_OK diagnostic only; Store fact is not generic postimage READBACK"
+  ],
+  "result_contract": {
+    "signed_hresult_S_OK_0": "API_CONFIRMED only; API return fact, not a postimage or OS proof",
+    "cached_success_ack": "same retained attempt + exact scoped authorization + original event readback; no second SDK entry",
+    "success": false,
+    "execution_state": "UNKNOWN",
+    "host_change_state": "RECOVERY_REQUIRED",
+    "restore_state": "POSTIMAGE_UNVERIFIED",
+    "postimage_state": "UNVERIFIED",
+    "generation_state": "UNAVAILABLE",
+    "safe_retry": false,
+    "nonzero_malformed_exception_or_pending": "UNKNOWN; no reentry or automatic retry"
+  },
+  "attempt19": {
+    "result": {
+      "tests": 340,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "scope": "historical software only; lock placement and missing real normal-loader coverage required rework",
+    "junit": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-19/current-appcontainer-delete-integration.xml",
+      "bytes": 55173,
+      "sha256": "9cdff660cfd0f22442c45b0eff4ccc723718efb4b11a67b582a3be8e3477ae87"
+    },
+    "trace": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-19/execution-source-trace.json",
+      "bytes": 195564,
+      "sha256": "b53bc79aef3f9d8e2ecd57008079423bb34e56edff41b83622630b146d7873dd"
+    }
+  },
+  "attempt21": {
+    "result": {
+      "tests": 343,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "pytest_exit_code": 0,
+    "scope": "corrected functional software suite; counts are not accumulated into current union",
+    "junit": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-21/current-appcontainer-delete-integration.xml",
+      "bytes": 55677,
+      "sha256": "026f87daf3b9aa21078e4dfb2399b07915a2f7c6dc7e943804c5b69d8116ca96"
+    },
+    "trace": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-21/execution-source-trace.json",
+      "bytes": 211095,
+      "sha256": "6a5029733bd2185833aa960a01e2b81ade62d1b2388849441c14c31fdeb47d0a"
+    },
+    "source_AST_binding": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-21/source-overlay-binding.json",
+      "bytes": 24628,
+      "sha256": "3979e2e67ffb9a909a483c3422c40ad2735d47039268295296e7bdbb078bacc3"
+    },
+    "full_diff": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-21/source-overlay.patch",
+      "bytes": 151410,
+      "sha256": "4f22e0f0cea0132c8eaecbed35dc97e6d88b90489594bb838b221370d8bc612b"
+    },
+    "loader_pairs": 92,
+    "CodeType_chain": "NOT_CAPTURED",
+    "Main_review": "functional source review completed; separate current-integration/final/native decisions remain open"
+  },
+  "historical_raw": {
+    "handoff19_to21": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-21/HANDOFF19_TO21.json",
+      "bytes": 15924,
+      "sha256": "b79515f50ca1c2dd9a5d5b1bacd69b3cbee2a2d043650d7285bccf70a2f455a3"
+    },
+    "history": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/ATTEMPT_HISTORY.json",
+      "bytes": 8189,
+      "sha256": "23d591ec8849d734aa783b2f223e8bd23b75e26d40748538a2b21c11fe3c4a2c"
+    },
+    "original19_history": {
+      "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/receipts/attempt-21/original19-history-recovered.json",
+      "bytes": 5224,
+      "sha256": "6f6f48b8bce64a6535b1c162b05b2ca10c2ae7602c2f78e121ebb24d45275e12"
+    },
+    "intermediate24_XMLs": "retained in old packet; named hashes are in handoff; no historical result relabeled"
+  },
+  "original_functional_compact": {
+    "path": "_state/universal-windows-appcontainer-delete-api/run-20261023T055302Z/candidate-r1/source/docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_DELETE_API.json",
+    "bytes": 9227,
+    "sha256": "6ec138cb4f4a7a90ff34bf60638e0699aa162ffc6ebfda6dd108902e99947826"
+  },
+  "current_union": {
+    "published_receipt_path": "docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_DELETE_INTEGRATION.json",
+    "result": {
+      "tests": 2520,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "accumulate_with_343_or_340": false
+  },
+  "limitations": {
+    "Windows_Userenv_Delete_SDK": "NOT_RUN",
+    "Windows_SCM_service_AppContainer_changes": "NOT_RUN",
+    "COMSOL_JVM_solver": "NOT_RUN",
+    "generic_restore_postimage": "UNVERIFIED/RECOVERY_REQUIRED",
+    "OS_profile_storage_absence_or_generation_proof": "NOT_CLAIMED",
+    "full_CodeType_chain": "NOT_CAPTURED",
+    "final_independent_acceptance": "NOT_PASSED"
+  },
+  "Main_acceptance": {
+    "path": "_state/universal-main-review/20261023-appcontainer-delete-publication/MAIN_REVIEW.json",
+    "bytes": 5083,
+    "sha256": "23acf639692131ebec215924808d57e166bcb6ceea26068d6f478a272ba10af5"
+  },
+  "mechanical_review": {
+    "path": "_state/universal-windows-appcontainer-delete-integration/run-20261023T091657Z/MECHANICAL_REVIEW.json",
+    "bytes": 17477,
+    "sha256": "e7bf31b3d948f4a839ec976ee9f0a13a195fcb44ad39bfaba285fe75108cdb17"
+  }
+}

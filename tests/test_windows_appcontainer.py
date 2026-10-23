@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from dataclasses import replace
 import pytest
 from comsol_mcp import _windows_appcontainer as leaf, _windows_appcontainer_native as native
+from comsol_mcp import _windows_appcontainer_lifecycle as appcontainer_lifecycle
 from comsol_mcp import _windows_host_change as changes, _w26_os_resources as resources
 from comsol_mcp._project_authority import ProjectAuthority
 from comsol_mcp._windows_owned_resources import registry_for
@@ -54,7 +55,7 @@ class UserenvSDK:
         return pointer.value if self.fault == 'free_pointer' else False if self.fault == 'free_bool' else None
 
 
-def environment(tmp_path, monkeypatch, capabilities=True):
+def environment(tmp_path, monkeypatch, capabilities=True, with_restore=False):
     env = list(service_environment(tmp_path, monkeypatch, baseline=3))
     p, _, scm, files, api, store, _, _, _, daemon, wrapper = env
     if not capabilities:
@@ -66,7 +67,37 @@ def environment(tmp_path, monkeypatch, capabilities=True):
         'desired': {'profile_id': p.applied_policy_id, 'policy_sha256': resources._sha256(policy.as_dict())},
         'baseline_identity': None, 'baseline_sha256': None, 'backup_path': None, 'backup_sha256': None}
     plan = resources.build_host_change_plan(p, change_manifest=[manifest], operator_inputs={})
-    provider = _write_provider(tmp_path/'provider-app', p, [_grant(p, 'host.change.apply', 'apply-once', plan.sha256, phase='APPLY')])
+    grants = [_grant(p, 'host.change.apply', 'apply-once', plan.sha256, phase='APPLY')]
+    if with_restore:
+        action = changes._normalize_supported_actions(plan, p)[1][0]
+        expected = {
+            'profile_name': policy.appcontainer_profile_name,
+            'appcontainer_sid': policy.appcontainer_sid,
+            'service_user_sid': policy.service_logon_sid,
+            'creation_result': 'S_OK',
+            'capabilities_state': 'NOT_READ_BACK',
+            'generation_state': 'UNAVAILABLE',
+        }
+        expected_sha = resources._sha256(expected)
+        predicted_rows = ({
+            'action_id': action['action_id'],
+            'resource_kind': 'appcontainer_profile',
+            'resource_key': action['resource_key'],
+            'created_resource_sha256': expected_sha,
+            'prior_resource_sha256': None,
+            'prior_backup_path': None,
+        },)
+        receipt_body = changes._receipt_payload_v2(plan, p, predicted_rows)
+        receipt_sha = resources._sha256(receipt_body)
+        predicted = resources.AppliedHostChangeReceipt(
+            plan.sha256, p.host_id, 'windows', predicted_rows, receipt_sha)
+        restore_body, restore_sha, _ = appcontainer_lifecycle._restore_selection_digest(
+            plan, p, predicted, action)
+        grants.append(_grant(
+            p, 'host.change.restore', 'restore-once', restore_sha, phase='RESTORE',
+            source_plan=plan.sha256, source_receipt=receipt_sha,
+        ))
+    provider = _write_provider(tmp_path/'provider-app', p, grants)
     authority = ProjectAuthority(store, workspace_root=tmp_path, permission_provider=lambda: {'host_control','inspect'},
         grant_ceiling={'host_control','inspect'}, authorization_verifier=provider)
     monkeypatch.setattr(authority, 'authorize_operation', lambda project_id, permission: {'project_id':project_id,'workspace':p.root.path,'policy':{'permissions':[permission]}})
@@ -95,13 +126,14 @@ def test_original_scm_controller_intent_create_configured_only(tmp_path, monkeyp
         receipt = result['result']; changes._verify_sequence_receipt(env[1], env[0], receipt)
         row = json.loads(env[5].db.execute('SELECT result FROM operations').fetchone()[0])
         assert row['host_change_state'] == 'CONFIGURED_UNVERIFIED'
-        assert row['restore_state'] == 'RESTORE_NOT_IMPLEMENTED' and row['capabilities_state'] == 'NOT_READ_BACK'
+        assert row['restore_state'] == 'API_ONLY_DELETE_AVAILABLE_POSTIMAGE_UNVERIFIED'
+        assert row['capabilities_state'] == 'NOT_READ_BACK'
         assert row['generation_state'] == 'UNAVAILABLE' and row['t037_state'] == 'NOT_VERIFIED'
         assert sdk.calls.count('create') == 1 and len([c for c in sdk.calls if isinstance(c,tuple) and c[0]=='FreeSid']) == 1
         assert not registry_for(env[4]).unresolved() and not env[9]._retained_host_control_executors
-        with pytest.raises(Exception,match='generation') as error:
+        with pytest.raises(Exception,match='selector') as error:
             env[8].restore(env[1],receipt,authorization_ref='restore-once')
-        assert error.value.code == 'RESTORE_NOT_IMPLEMENTED'
+        assert error.value.code == 'HOST_CHANGE_APPCONTAINER_OWNER_REQUIRED'
         assert not hasattr(sdk.userenv, 'DeleteAppContainerProfile')
     finally: env[5].close()
 
@@ -174,7 +206,7 @@ def test_original_bootstrap_restore_and_factory_still_refuse(tmp_path,monkeypatc
         assert parsed.receipt.receipt_sha256==receipt.receipt_sha256
         before=env[5].db.execute('SELECT count(*) FROM operations').fetchone()[0]
         rejected=dispatch(env,phase='RESTORE',receipt=receipt,ref='restore-once')
-        assert rejected['error'].code=='RESTORE_NOT_IMPLEMENTED'
+        assert rejected['error'].code=='HOST_CHANGE_APPCONTAINER_ORIGINAL_EFFECT_UNKNOWN'
         assert env[5].db.execute('SELECT count(*) FROM operations').fetchone()[0]==before
         from comsol_mcp._windows_t037 import T037SessionProcessFactory
         from comsol_mcp import _windows_t037_resume as resume

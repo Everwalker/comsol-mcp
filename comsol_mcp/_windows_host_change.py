@@ -804,7 +804,8 @@ class WindowsHostChangeExecutor:
 
     def _finish_unknown_sequence(self, admission: _ExecutionAdmission, *, phase: str,
                                  action: Mapping[str, Any], step_index: int | None,
-                                 cause: BaseException) -> None:
+                                 cause: BaseException,
+                                 result: dict[str, Any] | None = None) -> None:
         if step_index is not None:
             event = f"{phase}_STEP_INTENT"
             try:
@@ -821,14 +822,22 @@ class WindowsHostChangeExecutor:
                 # recovery annotation itself cannot be persisted.
                 pass
         try:
-            self.store.finish(admission.operation_id, status="UNKNOWN", result={
+            unknown_result = result if result is not None else {
                 "success": False, "operation": f"host.change.{phase.lower()}",
                 "execution_state": "UNKNOWN", "host_change_state": "RECOVERY_REQUIRED",
                 "effective_policy_state": "UNVERIFIED", "safe_retry": False,
                 "cause_code": getattr(cause, "code", type(cause).__name__),
                 "evidence_classification": "SOFTWARE_ONLY" if self.software_only
                     else "WINDOWS_NATIVE_READBACK_ONLY",
-            })
+            }
+            if (not isinstance(unknown_result, dict)
+                    or unknown_result.get("success") is not False
+                    or unknown_result.get("execution_state") != "UNKNOWN"
+                    or unknown_result.get("host_change_state") != "RECOVERY_REQUIRED"
+                    or unknown_result.get("safe_retry") is not False):
+                raise ValueError("custom recovery result must remain UNKNOWN and non-retryable")
+            self.store.finish(admission.operation_id, status="UNKNOWN",
+                              result=dict(unknown_result))
         except BaseException:
             pass
 

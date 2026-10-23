@@ -1,12 +1,14 @@
-"""Original userenv CREATE output and FreeSid ownership; no DELETE export."""
+"""Original userenv CREATE and DELETE call owners; no postimage claims."""
 from __future__ import annotations
 import ctypes as C
+import threading
 from ._windows_owned_resources import registry_for
 from ._windows_host_preflight_owner import scalar
 from ._windows_service_sid import fail
 
 H = C.c_void_p
 D = C.c_uint32
+_DELETE_ATTEMPT_SEAL = object()
 
 
 class SidAndAttributes(C.Structure):
@@ -40,6 +42,91 @@ class _NativeCreateAttempt:
             fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN',
                  'the original native CREATE attempt completed more than once')
         self._finished = True
+
+
+class _NativeDeleteAttempt:
+    """Captured exact Delete function/argument and one-entry state machine."""
+    __slots__ = ("_seal", "effect", "api", "original_call", "userenv", "function",
+                 "name_buffer", "arguments", "state", "hresult", "_entered",
+                 "_finished", "_reserved", "_state_lock")
+
+    def __init__(self, *, effect, api, original_call, userenv, function,
+                 name_buffer, arguments, seal):
+        if seal is not _DELETE_ATTEMPT_SEAL:
+            fail("HOST_CHANGE_APPCONTAINER_DELETE_OWNER_UNKNOWN",
+                 "Delete attempt can only be captured by the original native adapter")
+        self._seal = seal
+        self.effect, self.api, self.original_call = effect, api, original_call
+        self.userenv, self.function = userenv, function
+        self.name_buffer, self.arguments = name_buffer, arguments
+        self.state, self.hresult = "PRE_SDK", None
+        self._entered, self._finished = False, False
+        self._reserved = False
+        self._state_lock = threading.Lock()
+
+    @property
+    def entered(self):
+        return self._entered
+
+    @property
+    def finished(self):
+        return self._finished
+
+    def reserve_entry(self):
+        """Reserve the sole SDK entry while the terminal runtime fence is locked."""
+        with self._state_lock:
+            if (self._reserved or self._entered or self._finished
+                    or self.state != "PRE_SDK"):
+                fail("HOST_CHANGE_APPCONTAINER_DELETE_REPLAY_REFUSED",
+                     "the original Delete attempt already has an entry reservation")
+            self._reserved = True
+            self.state = "RESERVED"
+
+    def claim_preparation(self):
+        """Consume the reservation before external preflight, without holding runtime locks."""
+        with self._state_lock:
+            if (not self._reserved or self._entered or self._finished
+                    or self.state != "RESERVED"):
+                fail("HOST_CHANGE_APPCONTAINER_DELETE_REPLAY_REFUSED",
+                     "the original Delete attempt has no available entry reservation")
+            self.state = "PREPARING"
+
+    def enter(self):
+        with self._state_lock:
+            if (not self._reserved or self._entered or self._finished
+                    or self.state != "PREPARING"):
+                fail("HOST_CHANGE_APPCONTAINER_DELETE_REPLAY_REFUSED",
+                     "the original Delete attempt can enter the SDK at most once")
+            self._entered = True
+            self.state = "INVOKING"
+
+    def capture_return(self, value):
+        with self._state_lock:
+            if (not self._entered or self._finished or self.state != "INVOKING"
+                    or type(value) is not int or not -(2**31) <= value < 2**31
+                    or self.hresult is not None):
+                self.state = "UNKNOWN"
+                fail("HOST_CHANGE_APPCONTAINER_DELETE_RETURN_UNKNOWN",
+                     "Delete did not return one exact signed 32-bit HRESULT")
+            self.hresult = value
+            self.state = "API_CONFIRMED" if value == 0 else "UNKNOWN"
+
+    def mark_failed(self):
+        with self._state_lock:
+            if self._finished:
+                return
+            if self.state in {"RESERVED", "PREPARING", "INVOKING"}:
+                self.state = "UNKNOWN"
+            self._finished = True
+
+    def mark_finished(self):
+        with self._state_lock:
+            if self._finished:
+                fail("HOST_CHANGE_APPCONTAINER_DELETE_OWNER_UNKNOWN",
+                     "the original Delete attempt finished more than once")
+            if self.state in {"RESERVED", "PREPARING", "INVOKING"}:
+                self.state = "UNKNOWN"
+            self._finished = True
 
 
 def sdk(api):
@@ -140,6 +227,111 @@ def create(api, policy, expected_subject):
         return _create_original(api, policy, expected_subject, effect, attempt)
     finally:
         attempt.mark_finished()
+
+
+def capture_delete_attempt(api, effect):
+    """Capture one original Userenv export and its exact name buffer, without calling it."""
+    from ._windows_appcontainer_lifecycle import ProfileEffect
+    if type(effect) is not ProfileEffect:
+        fail("HOST_CHANGE_APPCONTAINER_OWNER_REQUIRED",
+             "the exact original ProfileEffect is required before Delete")
+    effect.require_rooted(api)
+    original_call = effect._original_call
+    calls = original_call[0] if type(original_call) is tuple and original_call else None
+    userenv = getattr(api, "_appcontainer_userenv", None)
+    if (original_call is not api._appcontainer_original_call
+            or calls is not getattr(api, "_captured_mutation_sdk", None)
+            or effect._original_userenv is None or userenv is not effect._original_userenv
+            or not isinstance(calls, dict)
+            or not callable(calls.get("CreateAppContainerProfile"))
+            or not callable(calls.get("FreeSid"))
+            or effect._hresult != 0 or not effect._create_entered
+            or effect._sid_text is None
+            or effect._sid_text.casefold() != effect.appcontainer_sid.casefold()
+            or not original_call[5]() or not original_call[6]()):
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_OWNER_UNKNOWN",
+             "the original successful CREATE/API/userenv owner is not retained")
+    function = getattr(userenv, "DeleteAppContainerProfile", None)
+    if not callable(function):
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_API_UNAVAILABLE",
+             "the original Userenv library has no callable DeleteAppContainerProfile export")
+    try:
+        function.argtypes = [C.c_wchar_p]
+        function.restype = C.c_int32
+    except (AttributeError, TypeError, ValueError) as exc:
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_API_INVALID",
+             "the captured Delete export cannot be bound to HRESULT(PCWSTR)")
+    prior = calls.get("DeleteAppContainerProfile")
+    if prior is not None and prior is not function:
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_OWNER_UNKNOWN",
+             "the captured original Delete export changed")
+    calls["DeleteAppContainerProfile"] = function
+    name = effect.profile_name
+    try:
+        encoded = name.encode("ascii")
+    except (AttributeError, UnicodeEncodeError):
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_NAME_INVALID",
+             "original profile name is not the validated ASCII identifier")
+    if not encoded or "\x00" in name or len(encoded) > 64:
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_NAME_INVALID",
+             "original profile name is outside the documented bounded contract")
+    buffer = C.create_unicode_buffer(name)
+    if buffer.value != name:
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_NAME_INVALID",
+             "captured wide-character profile name differs from original CREATE")
+    return _NativeDeleteAttempt(
+        effect=effect, api=api, original_call=original_call, userenv=userenv,
+        function=function, name_buffer=buffer, arguments=(buffer,),
+        seal=_DELETE_ATTEMPT_SEAL,
+    )
+
+
+def delete_appcontainer_profile(effect, attempt):
+    """Enter the original Userenv Delete once; S_OK confirms only its API return."""
+    from ._windows_appcontainer_lifecycle import ProfileEffect
+    if (type(effect) is not ProfileEffect or type(attempt) is not _NativeDeleteAttempt
+            or attempt._seal is not _DELETE_ATTEMPT_SEAL
+            or attempt.effect is not effect or attempt.api is not effect.api
+            or attempt.original_call is not effect._original_call
+            or effect.api._appcontainer_original_call is not effect._original_call
+            or getattr(effect.api, "_appcontainer_userenv", None) is not attempt.userenv
+            or effect._original_userenv is not attempt.userenv
+            or getattr(effect.api, "_captured_mutation_sdk", None) is not effect._original_call[0]
+            or effect._original_call[0].get("DeleteAppContainerProfile") is not attempt.function
+            or getattr(attempt.userenv, "DeleteAppContainerProfile", None) is not attempt.function
+            or attempt.arguments != (attempt.name_buffer,)
+            or attempt.name_buffer.value != effect.profile_name
+            or effect._hresult != 0 or effect._sid_text is None
+            or effect._sid_text.casefold() != effect.appcontainer_sid.casefold()):
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_OWNER_UNKNOWN",
+             "captured Delete API/function/name buffer no longer matches the original effect")
+    effect.require_rooted(effect.api)
+    registry = registry_for(effect.api)
+    from ._windows_service_sid import original_preflights_terminal
+    if (registry.owner is not effect.api or registry.unresolved()
+            or not original_preflights_terminal(effect.api)
+            or not effect._original_call[5]() or not effect._original_call[6]()):
+        fail("HOST_CHANGE_APPCONTAINER_DELETE_RESOURCES_UNRESOLVED",
+             "original CREATE allocations or SDK cleanup are not terminal before Delete")
+    attempt.claim_preparation()
+    # This final observation uses the same captured process-user adapter and
+    # occurs immediately before the irreversible call. It is outside the
+    # runtime lock and does not retire the AppContainer lifetime Gate.
+    no_impersonation(effect.api)
+    attempt.enter()
+    try:
+        raw = attempt.function(*attempt.arguments)
+        attempt.capture_return(raw)
+        if attempt.state != "API_CONFIRMED":
+            fail("HOST_CHANGE_APPCONTAINER_DELETE_HRESULT_NOT_SUCCESS",
+                 "Delete returned a nonzero HRESULT; native outcome is UNKNOWN")
+        return attempt.hresult
+    except BaseException:
+        attempt.mark_failed()
+        raise
+    finally:
+        if not attempt.finished:
+            attempt.mark_finished()
 
 
 def _create_original(api, policy, expected_subject, effect, attempt):

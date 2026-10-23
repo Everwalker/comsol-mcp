@@ -1,6 +1,6 @@
 # 当前续跑交接 — 2026-10-23
 
-当前主线快照（续跑 r157）：6fa60d2b（Mac历史R4单Server限定原生证据）已普通push并独立freshfetch核对四文件；用户直接授权本MASTER_GOAL后续Main验收阶段按白名单持续同步。Windows目录R3已在同一原始child完成单次GO：Enum DWORD0/226行、VQ SIZE_T48共2027次、Free DWORD0一次，355 capability SID与226份严格UTF16复制获Main限定原生验收，原owner源内确认RELEASED；完整性/可见性/absence/generation/restore仍UNVERIFIED，OS child退出未观察，无REPORT/ACK/重复SDK。AppC当前d7连贯去重2520 PASS，Main增量功能审查无新问题，待Hume机械核验后实际merge；WindowsDelete原生/fullpostimage未通过。Main已确定下一步Gate活动reservation及held-A生命周期源码整改；Mac Core/Worker仅PREP。required原生矩阵、最终独立Reviewer与整体目标仍IN_PROGRESS，R9历史缺原件保留FAIL/NOT_RUN。
+当前主线快照（续跑 r158）：目录R3限定原生阶段47444e0d已普通push并freshfetch逐文件一致；同原child实际Enum0/226行、VQ2027次、Free0一次/原owner RELEASED，absence/generation/restore与OS退出仍未证明。AppC当前d7连贯2520唯一PASS经Main功能与Hume机械审查限定接收，9个测试过的Python文件已按原字节合入，准备15文件白名单普通同步；Delete S_OK仅API_CONFIRMED，generic RESTORE仍UNKNOWN/POSTIMAGE_UNVERIFIED/RECOVERY_REQUIRED。相同Primary已转独立私有Gate reservation+held-A四源闭环，不改旧证据/Resume。Mac Core/Worker具体PREP已交，Main全程序审查及交接compact版本引用修正中，尚无setup/Server/Worker/compute放行。完整恢复、required原生矩阵与最终fresh Reviewer未通过，整体IN_PROGRESS；R9缺原件保持FAIL/NOT_RUN。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。

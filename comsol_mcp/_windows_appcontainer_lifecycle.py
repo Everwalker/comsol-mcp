@@ -1,7 +1,7 @@
-"""Private same-daemon lifetime for one original AppContainer CREATE.
+"""Private same-daemon lifetime for one original AppContainer CREATE/DELETE.
 
-This module retains the exact in-memory owner of a possible persistent profile.
-It does not implement restoration, generation, deletion, or launch authority.
+The retained effect authorizes one API-return-only Delete through its original
+SDK owner. It does not prove profile removal, storage absence, or generation.
 """
 from __future__ import annotations
 
@@ -12,10 +12,59 @@ import os
 import sys
 import threading
 from typing import Any
+from uuid import uuid4
 
 from ._windows_service_sid import fail
 
 _PROFILE_EFFECT_SEAL = object()
+_RESTORE_SELECTION_SEAL = object()
+_RESTORE_ATTEMPT_SEAL = object()
+
+
+class ProfileRestoreSelection:
+    """Result of selecting one exact daemon-rooted original profile effect."""
+
+    __slots__ = ("_seal", "daemon", "request", "record", "executor", "effect",
+                 "action", "plan_sha256", "receipt_sha256", "restore_sha256",
+                 "restore_body", "expected_resource_sha256")
+
+    def __init__(self, *, daemon: Any, request: Any, record: Any, executor: Any,
+                 effect: "ProfileEffect", action: dict[str, Any],
+                 plan_sha256: str, receipt_sha256: str, restore_sha256: str,
+                 restore_body: dict[str, Any], expected_resource_sha256: str,
+                 seal: object):
+        if seal is not _RESTORE_SELECTION_SEAL:
+            fail("HOST_CHANGE_APPCONTAINER_OWNER_SEAL_REQUIRED",
+                 "restore selection can only be issued by the original-effect selector")
+        self._seal = seal
+        self.daemon, self.request, self.record = daemon, request, record
+        self.executor, self.effect, self.action = executor, effect, dict(action)
+        self.plan_sha256, self.receipt_sha256 = plan_sha256, receipt_sha256
+        self.restore_sha256, self.restore_body = restore_sha256, dict(restore_body)
+        self.expected_resource_sha256 = expected_resource_sha256
+
+
+class ProfileRestoreAttempt:
+    """One non-replayable restore request bound before its native SDK entry."""
+
+    __slots__ = ("_seal", "attempt_id", "selection", "admission",
+                 "authorization_ref_sha256", "dependency_sha256",
+                 "baseline_sha256", "native_attempt", "pause")
+
+    def __init__(self, *, selection: ProfileRestoreSelection, admission: Any,
+                 authorization_ref_sha256: str, dependency_sha256: str,
+                 baseline_sha256: str, native_attempt: Any, pause: Any,
+                 seal: object):
+        if seal is not _RESTORE_ATTEMPT_SEAL:
+            fail("HOST_CHANGE_APPCONTAINER_OWNER_SEAL_REQUIRED",
+                 "restore attempts can only be issued by the original lifecycle")
+        self._seal = seal
+        self.attempt_id = str(uuid4())
+        self.selection, self.admission = selection, admission
+        self.authorization_ref_sha256 = authorization_ref_sha256
+        self.dependency_sha256 = dependency_sha256
+        self.baseline_sha256 = baseline_sha256
+        self.native_attempt, self.pause = native_attempt, pause
 
 
 def _canonical(value: Any) -> bytes:
@@ -67,7 +116,9 @@ class ProfileEffect:
         "birth_filetime_100ns", "user_sid", "namespace", "_software_only",
         "_seal", "_original_call", "_create_entered", "_hresult", "_sid_bytes",
         "_sid_text", "_store_result", "_root_key", "_last_reconcile",
-        "_initial_original_call", "_native_attempt",
+        "_initial_original_call", "_native_attempt", "_original_userenv",
+        "_apply_result_sha256", "_apply_receipt_sha256", "_apply_job_id",
+        "_apply_admission_id", "_restore_attempt",
     )
 
     def __setattr__(self, name, value):
@@ -119,6 +170,12 @@ class ProfileEffect:
         self._last_reconcile = None
         self._initial_original_call = getattr(self.api, "_appcontainer_original_call", None)
         self._native_attempt = None
+        self._original_userenv = None
+        self._apply_result_sha256 = None
+        self._apply_receipt_sha256 = None
+        self._apply_job_id = None
+        self._apply_admission_id = None
+        self._restore_attempt = None
 
     @property
     def software_only(self) -> bool:
@@ -145,10 +202,13 @@ class ProfileEffect:
                 or not isinstance(original_call[0], dict)
                 or not callable(original_call[0].get("CreateAppContainerProfile"))
                 or not callable(original_call[0].get("FreeSid"))
-                or not callable(original_call[5]) or not callable(original_call[6])):
+                or not callable(original_call[5]) or not callable(original_call[6])
+                or self._original_userenv is not None
+                or getattr(api, "_appcontainer_userenv", None) is None):
             fail("HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN",
                  "the exact original SDK call and closer lifetime could not be retained")
         self._original_call = original_call
+        self._original_userenv = api._appcontainer_userenv
 
     def bind_native_attempt(self, api: Any, attempt: Any) -> None:
         self.require_rooted(api)
@@ -197,14 +257,67 @@ class ProfileEffect:
         self._sid_text = sid_text
 
     def record_store_success(self, admission: Any, store: Any,
-                             accepted: Any, status: Any) -> None:
+                             accepted: Any, status: Any, receipt: Any) -> None:
         self.require_rooted(self.api)
         if (admission is not self.admission or store is not self.executor.store
                 or accepted is not True or status != "SUCCEEDED"
-                or self._store_result is not None):
+                or self._store_result is not None
+                or self._hresult != 0 or self._sid_bytes is None
+                or self._sid_text.casefold() != self.appcontainer_sid.casefold()):
             fail("HOST_CHANGE_APPCONTAINER_RESULT_PERSISTENCE_UNKNOWN",
                  "the exact original CREATE operation result did not persist successfully")
+        from ._w26_os_resources import AppliedHostChangeReceipt, _sha256
+        from ._windows_host_change import _receipt_payload_v2
+        if (not isinstance(receipt, AppliedHostChangeReceipt)
+                or receipt.plan_sha256 != self.request.plan.sha256
+                or receipt.host_id != self.profile.host_id
+                or receipt.platform != "windows"
+                or len(receipt.actions) != 1
+                or receipt.actions[0].get("resource_kind") != "appcontainer_profile"
+                or receipt.actions[0].get("resource_key") != self.request.plan.as_dict()["change_manifest"][0]["ownership_guid"]):
+            fail("HOST_CHANGE_APPCONTAINER_RESULT_PERSISTENCE_UNKNOWN",
+                 "the persisted AppContainer receipt does not bind the exact original CREATE plan")
+        operation = store.get_operation(admission.operation_id)
+        job = store.operation_job(admission.operation_id)
+        if (not isinstance(operation, dict) or operation.get("status") != "SUCCEEDED"
+                or not isinstance(job, dict) or job.get("job_id") != admission.job_id
+                or job.get("status") != "SUCCEEDED"
+                or store.host_control_admission_state(admission.admission_id) != "APPLIED"):
+            fail("HOST_CHANGE_APPCONTAINER_RESULT_PERSISTENCE_UNKNOWN",
+                 "the original CREATE result, job, and journal state did not durably agree")
+        result = operation.get("result")
+        expected_receipt = {
+            **_receipt_payload_v2(self.request.plan, self.profile, tuple(receipt.actions)),
+            "receipt_sha256": receipt.receipt_sha256,
+        }
+        if (not isinstance(result, dict)
+                or result.get("execution_state") != "SUCCEEDED"
+                or result.get("receipt_sha256") != receipt.receipt_sha256
+                or result.get("applied_receipt") != expected_receipt):
+            fail("HOST_CHANGE_APPCONTAINER_RESULT_PERSISTENCE_UNKNOWN",
+                 "the exact successful CREATE receipt was not durably read back")
         self._store_result = (store, admission.operation_id, status)
+        self._apply_result_sha256 = _sha256(result)
+        self._apply_receipt_sha256 = receipt.receipt_sha256
+        self._apply_job_id = admission.job_id
+        self._apply_admission_id = admission.admission_id
+
+    def bind_restore_attempt(self, api: Any, attempt: ProfileRestoreAttempt) -> None:
+        self.require_rooted(api)
+        if (type(attempt) is not ProfileRestoreAttempt
+                or attempt._seal is not _RESTORE_ATTEMPT_SEAL
+                or attempt.selection.effect is not self
+                # RESTORE's executor is freshly loaded and necessarily owns a
+                # different adapter.  The Delete attempt must remain bound to
+                # the original CREATE effect's API, which is the owner retained
+                # by this ProfileEffect.
+                or attempt.selection.effect.api is not api
+                or self._restore_attempt is not None
+                or attempt.native_attempt.effect is not self
+                or attempt.native_attempt.api is not api):
+            fail("HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN",
+                 "the original profile effect cannot bind this restore attempt")
+        self._restore_attempt = attempt
 
     def reconcile_original_native_resources(self, request: Any, executor: Any) -> str:
         """Validate the exact original SDK owners while keeping successful CREATE rooted."""
@@ -513,3 +626,261 @@ def root_profile_effect(daemon: Any, effect: ProfileEffect) -> ProfileEffect:
         if roots.get(key) is not effect:
             fail("HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN", "daemon failed to retain the exact original profile effect")
     return effect
+
+
+def _expected_created_resource(profile: Any) -> dict[str, Any]:
+    policy = profile.windows_isolation
+    return {
+        "profile_name": policy.appcontainer_profile_name,
+        "appcontainer_sid": policy.appcontainer_sid,
+        "service_user_sid": policy.service_logon_sid,
+        "creation_result": "S_OK",
+        "capabilities_state": "NOT_READ_BACK",
+        "generation_state": "UNAVAILABLE",
+    }
+
+
+def _restore_selection_digest(plan: Any, profile: Any, receipt: Any,
+                              action: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
+    from . import _w26_os_resources as resources
+    from ._windows_host_change import _verify_sequence_receipt
+    _payload, actions, created_hashes = _verify_sequence_receipt(plan, profile, receipt)
+    if (len(actions) != 1 or actions[0].get("resource_kind") != "appcontainer_profile"
+            or actions[0].get("operation") != "CREATE"
+            or _canonical(actions[0]) != _canonical(action)
+            or action.get("resource_key") != action.get("ownership_guid")
+            or set(created_hashes) != {action.get("action_id")}):
+        fail("HOST_CHANGE_APPCONTAINER_RECEIPT_MISMATCH",
+             "restore requires the sole exact original AppContainer CREATE receipt")
+    expected_resource_sha256 = resources._sha256(_expected_created_resource(profile))
+    if created_hashes[action["action_id"]] != expected_resource_sha256:
+        fail("HOST_CHANGE_APPCONTAINER_RECEIPT_MISMATCH",
+             "the CREATE receipt differs from the deterministic original API-return record")
+    body = {
+        "schema": "comsol-mcp.appcontainer-profile-restore/1",
+        "source_plan_sha256": plan.sha256,
+        "source_receipt_sha256": receipt.receipt_sha256,
+        "profile_sha256": profile.sha256,
+        "resource_kind": "appcontainer_profile",
+        "resource_key": action["resource_key"],
+        "expected_created_resource_sha256": expected_resource_sha256,
+        "operation": "DELETE",
+        "acceptance_target": "NATIVE_API_RETURN_ONLY",
+    }
+    return body, resources._sha256(body), expected_resource_sha256
+
+
+def _validate_original_apply_store(effect: ProfileEffect, receipt: Any) -> None:
+    from . import _w26_os_resources as resources
+    if (effect._store_result is None or effect._store_result[0] is not effect.executor.store
+            or effect._store_result[1] != effect.admission.operation_id
+            or effect._store_result[2] != "SUCCEEDED"
+            or effect._apply_admission_id != effect.admission.admission_id
+            or effect._apply_job_id != effect.admission.job_id
+            or effect._apply_receipt_sha256 != receipt.receipt_sha256
+            or effect._apply_result_sha256 is None):
+        fail("HOST_CHANGE_APPCONTAINER_APPLY_RESULT_UNKNOWN",
+             "the exact original durable CREATE result is not retained")
+    store = effect.executor.store
+    operation = store.get_operation(effect.admission.operation_id)
+    job = store.operation_job(effect.admission.operation_id)
+    if (not isinstance(operation, dict) or operation.get("status") != "SUCCEEDED"
+            or resources._sha256(operation.get("result")) != effect._apply_result_sha256
+            or not isinstance(job, dict) or job.get("job_id") != effect.admission.job_id
+            or job.get("status") != "SUCCEEDED"
+            or store.host_control_admission_state(effect.admission.admission_id) != "APPLIED"):
+        fail("HOST_CHANGE_APPCONTAINER_APPLY_RESULT_UNKNOWN",
+             "the original CREATE operation, job, or terminal journal no longer matches")
+    result = operation.get("result")
+    if (not isinstance(result, dict) or result.get("receipt_sha256") != receipt.receipt_sha256
+            or result.get("applied_receipt", {}).get("receipt_sha256") != receipt.receipt_sha256
+            or result.get("execution_state") != "SUCCEEDED"):
+        fail("HOST_CHANGE_APPCONTAINER_APPLY_RESULT_UNKNOWN",
+             "the durable original CREATE receipt differs from the selected restore receipt")
+
+
+def _validate_original_effect_for_restore(effect: ProfileEffect, *, daemon: Any,
+                                          request: Any, executor: Any,
+                                          action: dict[str, Any], receipt: Any) -> None:
+    from ._windows_owned_resources import registry_for
+    from ._windows_service_sid import original_preflights_terminal
+    effect.require_rooted(effect.api)
+    source_binding_matches = (
+        effect.request.profile_source_sha256 == request.profile_source_sha256
+        and (
+            (effect.software_only and effect.profile_source_sha256 is None)
+            or (not effect.software_only
+                and effect.profile_source_sha256 == request.profile_source_sha256)
+        )
+    )
+    if (effect.daemon is not daemon or effect.runtime is not request.runtime
+            or effect.request.phase != "APPLY"
+            or effect.request.runtime is not request.runtime
+            or effect.request.authority is not request.authority
+            or effect.request.provider is not request.provider
+            or effect.request.project_id != request.project_id
+            or effect.profile.sha256 != executor.profile.sha256
+            or not source_binding_matches
+            or effect.profile.windows_isolation is None
+            or effect.policy.appcontainer_profile_name != action.get("resource_name")
+            or effect.profile.project_id != request.project_id
+            or effect.provider is not request.provider
+            or effect.authority is not request.authority
+            or effect.api is not effect.executor.api
+            or effect.api._appcontainer_original_call is not effect._original_call
+            or effect._original_call is None
+            or effect._original_userenv is None
+            or getattr(effect.api, "_appcontainer_userenv", None) is not effect._original_userenv
+            or effect._hresult != 0 or not effect._create_entered
+            or effect._sid_bytes is None
+            or effect._sid_text is None
+            or effect._sid_text.casefold() != effect.appcontainer_sid.casefold()
+            or effect._native_attempt is None
+            or not effect._native_attempt.entered or not effect._native_attempt.finished
+            or effect._original_call[3].get("result") != 0
+            or effect._original_call[5]() is not True
+            or effect._original_call[6]() is not True
+            or not original_preflights_terminal(effect.api)
+            or registry_for(effect.api).owner is not effect.api
+            or registry_for(effect.api).unresolved()):
+        fail("HOST_CHANGE_APPCONTAINER_ORIGINAL_EFFECT_UNKNOWN",
+             "original API, copied SID, process/runtime, or owned native closures are not terminal")
+    _validate_original_apply_store(effect, receipt)
+    if effect.software_only:
+        from ._windows_host_change import _SOFTWARE_TEST_TOKEN
+        if (executor.software_only is not True
+                or executor._software_test_seal is not _SOFTWARE_TEST_TOKEN
+                or effect.executor._software_test_seal is not _SOFTWARE_TEST_TOKEN
+                or effect.pid != os.getpid()
+                or effect.user_sid.casefold() != effect.service_user_sid.casefold()):
+            fail("HOST_CHANGE_APPCONTAINER_TEST_OWNER_REQUIRED",
+                 "software-only restore requires the exact same-process sealed fixture owner")
+        return
+
+    from ._control_daemon import ControlDaemon
+    from ._host_scoped_provider import HostScopedProvider
+    from ._windows_t037 import WindowsT037ProfileV2, load_trusted_profile
+    from ._windows_t037_broker import InternalHostControlRequest, _HOST_CONTROL_REQUEST_SEAL
+    from ._windows_t037_wfp import CtypesWindowsWfpMutationApi
+    from ._windows_host_change import (
+        WindowsHostChangeExecutor, _TrustedProfileLoadOrigin,
+        _NATIVE_PROFILE_LOADER_TOKEN, _current_windows_binding,
+    )
+    from ._project_authority import ProjectAuthority
+    if (type(daemon) is not ControlDaemon or type(request) is not InternalHostControlRequest
+            or request._seal is not _HOST_CONTROL_REQUEST_SEAL or request._used is not True
+            or request.phase != "RESTORE"
+            or type(executor) is not WindowsHostChangeExecutor
+            or executor.software_only is not False
+            or executor._software_test_seal is not None
+            or type(executor.api) is not CtypesWindowsWfpMutationApi
+            or type(request.authority) is not ProjectAuthority
+            or type(request.provider) is not HostScopedProvider
+            or type(daemon._windows_t037_profile) is not WindowsT037ProfileV2
+            or effect.software_only
+            or executor.profile is effect.profile
+            or executor.provider is not request.provider
+            or executor.authority is not request.authority
+            or request.authority is not daemon.project_authority
+            or request.provider is not daemon._scoped_host_provider):
+        fail("HOST_CHANGE_APPCONTAINER_OWNER_BINDING_MISMATCH",
+             "restore must use the original daemon/runtime and fresh normal trusted-loader executor")
+    wrapper = daemon._windows_t037_profile
+    origin = executor._trusted_profile_load_origin
+    binding = _binding_tuple(daemon, request.runtime, wrapper,
+                             daemon._scoped_host_provider, daemon.project_authority)
+    current = load_trusted_profile(daemon._windows_t037_profile_path)
+
+    def same_source(candidate: Any) -> bool:
+        return (
+            type(candidate) is WindowsT037ProfileV2
+            and candidate.source_sha256 == effect.profile_source_sha256
+            and dict(candidate.source_identity) == dict(effect.profile_source_identity)
+            and candidate.sha256 == effect.profile_wrapper.sha256
+            and candidate.host_resource_profile.sha256 == effect.profile.sha256
+            and candidate.security_semantics == effect.profile_wrapper.security_semantics
+            and candidate.wrapper_schema == effect.profile_wrapper.wrapper_schema
+        )
+
+    if (type(origin) is not _TrustedProfileLoadOrigin
+            or origin._seal is not _NATIVE_PROFILE_LOADER_TOKEN
+            or origin is not executor._trusted_profile_load_origin
+            or origin.profile_wrapper is wrapper
+            or origin.profile_path != binding[5]
+            or not origin.matches(origin.profile_wrapper, binding[5])
+            or not same_source(origin.profile_wrapper)
+            or not same_source(current)
+            or not same_source(effect.daemon_profile_wrapper)
+            or dict(current.source_identity) != dict(origin.profile_wrapper.source_identity)
+            or current.source_sha256 != origin.profile_wrapper.source_sha256
+            or current.sha256 != origin.profile_wrapper.sha256
+            or executor.profile.sha256 != effect.profile.sha256
+            or executor.profile.windows_isolation.as_dict() != effect.policy.as_dict()
+            or wrapper.host_resource_profile.sha256 != effect.profile.sha256):
+        fail("HOST_CHANGE_APPCONTAINER_PROFILE_SOURCE_CHANGED",
+             "the original CREATE, current daemon source, and fresh trusted-loader restore source differ")
+    _current_windows_binding(executor.profile)
+    launcher = [image for image in effect.profile_wrapper.launch_images if image.role == "launcher"]
+    if len(launcher) != 1:
+        fail("HOST_CHANGE_APPCONTAINER_OWNER_SOURCE_MISMATCH",
+             "the exact original configured SCM launcher image is not unique")
+    birth, user_sid = _native_process_identity(effect.pid, effect.service_user_sid, launcher[0].path)
+    if (birth != effect.birth_filetime_100ns
+            or user_sid.casefold() != effect.user_sid.casefold()):
+        fail("HOST_CHANGE_APPCONTAINER_OWNER_SOURCE_MISMATCH",
+             "current process birth or token user differs from the original CREATE owner")
+
+
+def select_original_profile_effect(*, daemon: Any, request: Any, record: Any,
+                                   executor: Any, plan: Any, receipt: Any,
+                                   action: dict[str, Any]) -> ProfileRestoreSelection:
+    """Select exactly one original rooted successful CREATE; never adopt by name."""
+    from ._windows_host_change import _normalize_supported_actions
+    if (request.phase != "RESTORE" or request.plan is not plan
+            or request.receipt is not receipt
+            or record.get("request") is not request
+            or record.get("executor") is not executor):
+        fail("HOST_CHANGE_APPCONTAINER_OWNER_BINDING_MISMATCH",
+             "the sealed current RESTORE request/executor must bind the selection")
+    roots = getattr(daemon, "_retained_appcontainer_profile_effects", None)
+    lock = getattr(daemon, "_appcontainer_profile_effect_lock", None)
+    if not isinstance(roots, dict) or lock is None:
+        fail("HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN",
+             "the original daemon profile-effect root is unavailable")
+    _, actions = _normalize_supported_actions(plan, executor.profile)
+    if len(actions) != 1 or _canonical(actions[0]) != _canonical(action):
+        fail("HOST_CHANGE_APPCONTAINER_ACTION_MISMATCH",
+             "restore selection action differs from the exact supported plan")
+    with lock:
+        candidates = [
+            effect for effect in tuple(roots.values())
+            if type(effect) is ProfileEffect and effect._is_rooted()
+            and effect.daemon is daemon and effect.runtime is request.runtime
+            and effect.request.authority is request.authority
+            and effect.request.provider is request.provider
+            and effect.request.project_id == request.project_id
+            and effect.profile.sha256 == executor.profile.sha256
+            and effect.request.profile_source_sha256 == request.profile_source_sha256
+            and ((effect.software_only and effect.profile_source_sha256 is None)
+                 or (not effect.software_only
+                     and effect.profile_source_sha256 == request.profile_source_sha256))
+            and effect._apply_receipt_sha256 == receipt.receipt_sha256
+            and effect.request.plan.sha256 == plan.sha256
+            and roots.get(effect._root_key) is effect
+        ]
+    if len(candidates) != 1:
+        fail("HOST_CHANGE_APPCONTAINER_ORIGINAL_EFFECT_UNKNOWN",
+             "restore requires exactly one matching daemon-rooted original CREATE effect")
+    effect = candidates[0]
+    _validate_original_effect_for_restore(effect, daemon=daemon, request=request,
+                                          executor=executor, action=action,
+                                          receipt=receipt)
+    restore_body, restore_sha, expected_sha = _restore_selection_digest(
+        plan, executor.profile, receipt, action)
+    return ProfileRestoreSelection(
+        daemon=daemon, request=request, record=record, executor=executor,
+        effect=effect, action=action, plan_sha256=plan.sha256,
+        receipt_sha256=receipt.receipt_sha256, restore_sha256=restore_sha,
+        restore_body=restore_body, expected_resource_sha256=expected_sha,
+        seal=_RESTORE_SELECTION_SEAL,
+    )
