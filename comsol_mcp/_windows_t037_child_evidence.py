@@ -153,6 +153,7 @@ class TokenObservation:
     authentication_id: int
     modified_id: int
     is_appcontainer: bool
+    groups: tuple[SidAttributes, ...] | None = None  # Historical constructions did not observe TokenGroups.
 
 
 @dataclass(frozen=True)
@@ -529,6 +530,7 @@ class WindowsChildEvidenceApi:
             statistics_before = get(10)
             statistics_before.at(0, 56)
             user = parse_sid_attributes(get(1))
+            groups = parse_groups(get(2))
             restricted = parse_groups(get(11))
             caps = parse_groups(get(30))
             integrity = parse_sid_attributes(get(25))
@@ -551,7 +553,7 @@ class WindowsChildEvidenceApi:
                     f"before={statistics_before.raw.hex()}, after={statistics_after.raw.hex()}"))
             return TokenObservation(user, restricted, caps, integrity, int(integrity.sid.split("-")[-1]),
                                     policy, tuple(privileges), statistics_before.uint(0, 8),
-                                    statistics_before.uint(8, 8), statistics_before.uint(48, 8), bool(appcontainer))
+                                    statistics_before.uint(8, 8), statistics_before.uint(48, 8), bool(appcontainer), groups=groups)
         finally:
             entry.release_owned(entry.registry.owner)
 

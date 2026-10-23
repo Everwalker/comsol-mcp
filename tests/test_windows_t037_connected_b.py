@@ -102,6 +102,7 @@ class _QuerySDK:
             modified=18 if self.fault=='token_drift' and self.opens==2 else 17
             struct.pack_into('<Q',raw,48,modified);return bytes(raw)
         if kind==1:return self.sid_attr('S-1-5-999' if self.fault=='user' else self.profile.service_account_sid,base)
+        if kind==2:return self.groups(('S-1-5-32-545',),base)  # Ordinary groups, not a policy target.
         if kind==11:return self.groups(('S-1-5-99-7',),base)  # No invented restricted-SID target.
         if kind==30:return self.groups(('S-1-15-999',) if self.fault=='capabilities' else self.profile.capability_sids,base)
         if kind==25:return self.sid_attr('S-1-16-42424',base)  # Observed, target undefined.

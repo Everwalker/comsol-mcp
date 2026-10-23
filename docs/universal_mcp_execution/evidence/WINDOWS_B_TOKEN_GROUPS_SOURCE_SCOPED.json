@@ -1,0 +1,87 @@
+{
+ "schema": "windows-b-token-groups-source-scoped/1",
+ "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_ONLY",
+ "base_commit": "ade2ba54ac1f0c302e79b459f01ba1df84dcd5f0",
+ "members": [
+  {
+   "path": "comsol_mcp/_windows_t037_child_evidence.py",
+   "bytes": 37112,
+   "sha256": "3d5e87c79a976778d8869618f5c98b00a95c9e4a50271ab7d2e64327475195cc"
+  },
+  {
+   "path": "tests/test_windows_t037_connected_b.py",
+   "bytes": 27858,
+   "sha256": "900be5b1fe79575afc899108a59fd8d816ebed78217d95bbc68b5631e89094fc"
+  },
+  {
+   "path": "tests/test_windows_t037_token_groups.py",
+   "bytes": 12093,
+   "sha256": "42b6bb8ac880a1182fe225cefb8d9d4cf84829427835d3135781dca0a81ff210"
+  }
+ ],
+ "behavior": {
+  "TokenObservation.groups": "Backward-compatible appended tuple[SidAttributes,...] | None = None; None means historical/unobserved, () means observed known empty.",
+  "production_reader": "Actual TokenGroups(class2) uses existing bounded _token_buffer/parse_groups inside existing statistics-before/after window on the original TOKEN_QUERY HANDLE.",
+  "raw_facts": "Complete ordered SID/attributes tuple preserved, including duplicates and all raw attribute bits; ordinary group changes participate in existing dataclass token-stability equality.",
+  "preserved_guards": "Original HANDLE registry/ownership, buffer bounds, statistics-change refusal, close-once and close-UNKNOWN/no-retry unchanged.",
+  "existing_fixture_delta": "Only a TokenGroups class2 export-buffer branch added; all original test assertions retained.",
+  "capability": "B remains UNQUALIFIED; no new token-policy target, C producer, issuer, Resume or native qualification permission."
+ },
+ "software": {
+  "unique_tests": 148,
+  "passed": 148,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "deselected": 0,
+  "modules": {
+   "test_windows_t037_token_groups.py": 22,
+   "test_windows_t037_child_evidence.py": 83,
+   "test_windows_t037_connected_b.py": 43
+  },
+  "final_junit": {
+   "path": "_state/universal-windows-b-token-groups-20261024/attempt-03/junit.xml",
+   "bytes": 24401,
+   "sha256": "0c32bbbd81d5d0368cd2d937cf3eb84fd587dc2b491406b36bd95738c0483c4b"
+  },
+  "input_binding": {
+   "base_members": 210,
+   "tested_members": 211,
+   "source_before_after_equal": true,
+   "actual_origins": 69,
+   "returned_source_reads": 69,
+   "module_frames": 69,
+   "final_forbidden_effect_attempts": 0,
+   "CodeType_chain": "NOT_CAPTURED"
+  },
+  "boundary": "Fake SDK exports exercise actual production reader/registry/connected-B functions. Local Darwin provider ACL/mount exports are also pure fixture leaves; no actual host/native certification."
+ },
+ "preserved_failure_history": [
+  {
+   "attempt": "attempt-01",
+   "result": "22 FAIL; initial fixture HANDLE argument mismatch and two blocked libc-load attempts. Preserved; not the valid full old-source counter."
+  },
+  {
+   "attempt": "attempt-02",
+   "result": "Same final 22 new tests on original source: 22 FAIL, 0 ERROR/SKIP, no forbidden effect attempts.",
+   "junit_path": "_state/universal-windows-b-token-groups-20261024/attempt-02/junit.xml",
+   "junit_sha256": "1e1ed448cd73d84eb1224ee3b1dfc8e9714fa888466ba5500737f61d7bd88a4d"
+  }
+ ],
+ "Main_acceptance": {
+  "path": "_state/universal-main-review/20261024-b-token-groups/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+  "bytes": 4550,
+  "sha256": "2534055d296e23e4a0d5cd9721fd107f8f696735f2de4ac983c541ab78104f34",
+  "scope": "Source/software concentrated review; no independent test rerun or native acceptance claimed."
+ },
+ "not_accepted_or_run": {
+  "Windows_native": "NOT_RUN",
+  "token_policy_target_qualification": "NOT_RUN",
+  "C_qualification": "NOT_RUN",
+  "Resume": "NOT_GRANTED; NOT_RUN",
+  "full_native_matrix": "NOT_RUN",
+  "final_Reviewer": "NOT_RUN",
+  "MASTER_GOAL": "NOT_COMPLETE"
+ },
+ "publication_scope": "Exact three accepted Python files plus this compact only. No Main3/Git/runtime/material or other production writes; copying identical bytes is not a new test run."
+}

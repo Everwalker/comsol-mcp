@@ -1,0 +1,183 @@
+{
+  "application_wheel": {
+    "native_execution": "NOT_RUN",
+    "sha256": "0671f2cb781a26452289c315d033444d731a1b6afda1488c6c17b9a2519923f0",
+    "size_bytes": 3104354,
+    "version": "0.1.10"
+  },
+  "evidence_bindings": {
+    "bundle_verification_sha256": "d5528b8b94b642803d839da55d9da6d4d6b3df396fed6b7ea88c1a6ae66cfcc5",
+    "command_receipt_index_sha256": "1d8084005d9521e2dee1add1da3149d1fa2665ea299477c80500271d32fa2905",
+    "final_pin_index_sha256": "922c4f4e9a974a93956c77c7e7e20ab23461a3ff8eacecd65bda616733aa7bad",
+    "intel_derived_provenance_sha256": "c286890e102fb5d359100ee886ce01e0e956867e691814514ff1f0229ba2dac1",
+    "intel_license_file_sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+    "m4_delivery_sha256": "66f0d12519709cedba125de04a61231239175e9e11de53b3e9ad0f13ec92d7f5",
+    "release_manifest_sha256": "165da7122da02005373084cfc1d08dddc98d07112c5cfd4079e88459b21fa566",
+    "sdk_protocol_result_sha256": "6ef6283276831c6479a25b544d4169b3eeecc626198c8eb4c60592fbe7c66caa",
+    "source_manifest_file_sha256": "4a8ae9e499bfd30b8b19b83decf87988a0af2fcdba72a465c8c2baad09fe7dd3",
+    "source_wheel_installed_binding_sha256": "e952cf4a6383c597dfe7c395c1c443c3968604fe9e3a8c52e3fbe3a862f29b2c"
+  },
+  "failure_history": {
+    "current_package_blocker": null,
+    "initial_official_build": "Failed because the exact source allowlist omitted tools/release_transition_lifecycle.py; the successful retry included that helper from the same ADE2 commit. No newer-source file was added.",
+    "receipt_freeze_self_checks": [
+      {
+        "attempt": 0,
+        "summary": "Receipt preflight stopped on an invalid fixed-source assertion before package writes."
+      },
+      {
+        "attempt": 1,
+        "summary": "Receipt audit compared numeric SDK operation count 0 with an empty list; stopped before package writes."
+      },
+      {
+        "attempt": 2,
+        "summary": "Post-write readback compared different status labels; private receipt files were written, with no package/source/shared-source or Git effect."
+      }
+    ]
+  },
+  "historical_separation": {
+    "clarification": "The old 0860 wheel remains bound to source 3d92 and differs from this ADE2 wheel by SHA256 despite the shared version label.",
+    "new_wheel_sha256": "0671f2cb781a26452289c315d033444d731a1b6afda1488c6c17b9a2519923f0",
+    "new_wheel_size_bytes": 3104354,
+    "old_source_commit": "3d92b3c736f31e6e3ace99418629c78ab1969169",
+    "old_wheel_sha256": "0860fc6ad5c85543369d4aa115d9fa40f679e7e2b0fbdd29fef71662da5b0680",
+    "old_wheel_size_bytes": 3073144,
+    "shared_version_label": "0.1.10"
+  },
+  "intel_cryptography_input": {
+    "build_evidence_sha256": "b7494ac75568878ed3afaf9bafa13a2e374f7af493cab59409a7f625634d4c8a",
+    "derived_wheel": {
+      "filename": "cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl",
+      "sha256": "2973023be3599d26bfeaa82b08b2fd2b3c90f9df4d61647494fb59b84dac1254",
+      "size_bytes": 4043680
+    },
+    "native_component": {
+      "license": "Apache-2.0",
+      "license_file_sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+      "name": "OpenSSL",
+      "source_sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "version": "4.0.3"
+    },
+    "provenance_evidence_sha256": "c286890e102fb5d359100ee886ce01e0e956867e691814514ff1f0229ba2dac1",
+    "source_lock_sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
+    "source_sdist_sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+    "status": "BUILD_CANDIDATE",
+    "target": "macos_x86_64",
+    "upstream_source_patched": false,
+    "upstream_support": "UNSUPPORTED_BY_UPSTREAM since 49.0.0; project-derived build only",
+    "uv_lock_modified": false,
+    "legacy_license_member_note": "Inherited archive member uses openssl-4.0.2-LICENSE.txt; actual content/provenance/SBOM bind OpenSSL4.0.3 and exact documented license hash."
+  },
+  "limits": {
+    "external_publication": "NOT_PERFORMED",
+    "not_claimed": [
+      "native M4 U10",
+      "aggregate 427-test PASS",
+      "restoration acceptance",
+      "Reviewer or Goal completion",
+      "whole U01/U10 or latest global-source packaging",
+      "Windows/Intel target installation"
+    ]
+  },
+  "main_review_status": "MAIN_ACCEPTED_SCOPED_SOURCE_PACKAGE_AND_MAC_SOFTWARE_ONLY",
+  "not_run": {
+    "JDK_Java_javac_csc_COMSOL": "NOT_RUN",
+    "Windows_SSH_external_network_online_pip": "NOT_RUN",
+    "macos_x86_64_install": "NOT_RUN",
+    "native_engine_and_native_api": "NOT_RUN",
+    "windows_install": "NOT_RUN"
+  },
+  "offline_bundles": {
+    "macos_arm64": {
+      "archive_member_count": 54,
+      "local_install": "PASS_OFFLINE_INSTALL",
+      "locked_dependency_count": 41,
+      "manifest_member_count": 53,
+      "native_execution": "NOT_RUN",
+      "sha256": "692115b8c3dad84e6991a6ab61dc0bf95fc9780a3f52354ba1d73c2ec88b7031",
+      "size_bytes": 31287222,
+      "static_member_hash_verification": "PASS_STATIC_BUNDLE_MANIFEST_AND_MEMBER_HASHES",
+      "wheel_count_including_application": 42
+    },
+    "macos_x86_64": {
+      "archive_member_count": 56,
+      "local_install": "NOT_RUN",
+      "locked_dependency_count": 41,
+      "manifest_member_count": 55,
+      "native_execution": "NOT_RUN",
+      "sha256": "977507548566434e2c1b1ae7391e6908caa78388cd5d3bbfe32ed36e7e96a9d8",
+      "size_bytes": 36462228,
+      "static_member_hash_verification": "PASS_STATIC_BUNDLE_MANIFEST_AND_MEMBER_HASHES",
+      "wheel_count_including_application": 42
+    },
+    "win_amd64": {
+      "archive_member_count": 47,
+      "local_install": "NOT_RUN",
+      "locked_dependency_count": 34,
+      "manifest_member_count": 46,
+      "native_execution": "NOT_RUN",
+      "sha256": "be0ada7c86585aa399bf5e991e10290e0092ed62189368bb5884d16fd764b7c2",
+      "size_bytes": 31342580,
+      "static_member_hash_verification": "PASS_STATIC_BUNDLE_MANIFEST_AND_MEMBER_HASHES",
+      "wheel_count_including_application": 35
+    }
+  },
+  "proposal_status": "MAIN_ACCEPTED_STAGE",
+  "publication_status": "LOCAL_STAGE_PENDING_NONFORCE_SYNC",
+  "schema": "comsol-mcp-prepared-launch-ade2-offline-source-package-scoped/1",
+  "software_checks": {
+    "macos_arm64_install": {
+      "host": {
+        "machine": "arm64",
+        "python": "3.12.13",
+        "sys_platform": "darwin"
+      },
+      "method": "Fresh local venv; no-index, binary-only, hash-required pip install from the verified ARM64 bundle.",
+      "pip_check": "PASS",
+      "pip_flags": [
+        "--no-index",
+        "--only-binary=:all:",
+        "--no-compile",
+        "--require-hashes"
+      ],
+      "source_wheel_installed_members_byte_identical": 194,
+      "status": "PASS"
+    },
+    "standard_sdk_stdio": {
+      "listed_schema_count": 112,
+      "methods": [
+        "ClientSession.initialize",
+        "ClientSession.list_tools"
+      ],
+      "operation_calls": 0,
+      "project_session_resource_comsol_or_solver_calls": 0,
+      "status": "PASS_SOFTWARE_ONLY_INITIALIZE_AND_TOOLS_LIST",
+      "stdio_child_returncode": 0
+    }
+  },
+  "source": {
+    "added_package_modules": [
+      "comsol_mcp/_windows_t037_launch_inputs.py",
+      "comsol_mcp/_windows_worker_bootstrap.py"
+    ],
+    "commit": "ade2ba54ac1f0c302e79b459f01ba1df84dcd5f0",
+    "package_source_member_count": 194,
+    "parent": "e3ed78d89067f8a8496db5f880c1a17b95d0636b",
+    "scope_note": "Frozen ADE2 archive only; excludes the later privately accepted Primary B-group Windows reader/tests and makes no latest-global source claim.",
+    "source_manifest_file_count": 197,
+    "source_manifest_sha256": "7670afc986e6cee298808d8ed43fd6ded7b654e2e057beb191c3bddb684e58d0"
+  },
+  "Main_acceptance": {
+    "path": "_state/universal-main-review/20261024-prepared-launch-package/MAIN_SOURCE_PACKAGE_ACCEPTANCE.json",
+    "bytes": 4571,
+    "sha256": "854c5d3eb142bb47c534ef1ce63f6811a9b363e7cd1c9cb2b2a9beaa7d91739d",
+    "scope": "ACCEPTED_SCOPED_SOURCE_PACKAGE_AND_MAC_SOFTWARE_ONLY"
+  },
+  "independent_mechanical_readback": {
+    "sha256": "53d9fc048fb54e85291b0c10c213018d5213c82869fe667b2a4652f44348e3da",
+    "bytes": 21546,
+    "rehashed_unique_files": 268,
+    "fixed_Git_blob_matches": 202,
+    "errors": 0
+  }
+}
