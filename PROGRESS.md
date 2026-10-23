@@ -43,6 +43,8 @@
 
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：Root122/SCM客户端108已同步ed09e598并独立fetch一致；同Primary现持续实现未来Windows原ManagedStopOrigin/scoped stop，旧实例/ref不动。Gate1136源软件经Main限定验收、待精确同步；目录观察器95已同步f439，临时独立诊断进程方案仅PREP。四配置/argv/MIC实化还需源码，未授权host apply。最终统一Reviewer尚未开始。
+已发布c8db组合35测试文件的1366项软件PASS经Main限定核验，693输入及162模块/164执行/122loader已独立机械核一致；但Main追加两项各1FAIL：一为运行进程GetProcessTimes的lpExitTime未定义，当前client错误要求0。另一为restricted服务的专用mutable state需要精确serviceSID数据写权限，旧RO模板不合格；该修正只限state/endpoint，不放宽代码/config/全局owner或给AppC/World写权。同Leib正做两项闭环整改，旧108/1366不重写，不据此声明当前全部PASS。
+
+下一动作：Root122/SCM客户端108已同步ed09e598并独立fetch一致；同Primary现持续实现未来Windows原ManagedStopOrigin/scoped stop，旧实例/ref不动。Gate1136源软件已同步c8db并独立回读，同Leib正做已发布组合受影响回归；目录观察器95已同步f439，临时独立诊断进程方案仅PREP。四配置/argv/MIC实化还需源码，未授权host apply。最终统一Reviewer尚未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。
