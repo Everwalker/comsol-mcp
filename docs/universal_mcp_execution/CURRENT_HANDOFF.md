@@ -1,6 +1,6 @@
 # 当前续跑交接 — 2026-10-23
 
-当前主线快照（续跑 r156）：用户精确授权后，fa624c00（typed827软件）与d7e77550（publisher1788软件）已普通push，独立freshfetch HEAD=origin/main d7e77550。Mac历史R4实际1Server公共start→原child回收/监听消失→STOPPED获Main限定原生验收，Worker/model/solver0，不能升格当前全MCP。Windows四文件85707B已传输并Main核真实远程pins；原launcher/独立collect均exit0，Main核READY同child28536/birth134372205668143557/noJob0/Enum0-root0；PhaseB sender只PREP，GO未放行。AppC343候选两项整改Main功能审查无剩余实质问题，同Primary正在currentd7私有联合软件验证。B等待连贯Gate/A-hold设计，不另造未接线helper。完整恢复、required原生矩阵与最终独立Reviewer未通过，整体IN_PROGRESS。 R9历史getter原证据经6步定点查找仍缺，旧FAIL/NOT_RUN保留。
+当前主线快照（续跑 r157）：6fa60d2b（Mac历史R4单Server限定原生证据）已普通push并独立freshfetch核对四文件；用户直接授权本MASTER_GOAL后续Main验收阶段按白名单持续同步。Windows目录R3已在同一原始child完成单次GO：Enum DWORD0/226行、VQ SIZE_T48共2027次、Free DWORD0一次，355 capability SID与226份严格UTF16复制获Main限定原生验收，原owner源内确认RELEASED；完整性/可见性/absence/generation/restore仍UNVERIFIED，OS child退出未观察，无REPORT/ACK/重复SDK。AppC当前d7连贯去重2520 PASS，Main增量功能审查无新问题，待Hume机械核验后实际merge；WindowsDelete原生/fullpostimage未通过。Main已确定下一步Gate活动reservation及held-A生命周期源码整改；Mac Core/Worker仅PREP。required原生矩阵、最终独立Reviewer与整体目标仍IN_PROGRESS，R9历史缺原件保留FAIL/NOT_RUN。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
