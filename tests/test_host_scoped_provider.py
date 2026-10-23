@@ -127,6 +127,50 @@ def test_provider_exact_scopes_expiry_pinned_config_and_local_noclobber_sink(tmp
         provider.close()
 
 
+def test_session_stop_provider_scope_is_closed_windows_original_lifetime_class(tmp_path):
+    project_id = "managed-stop-project"
+    scope = {
+        "schema": "comsol-mcp-managed-stop-scope/1",
+        "runtime_id": {"id": "comsol64", "class": "comsol_mcp._session_context.SessionRuntimeConfig"},
+        "platform": "windows",
+        "ownership_mode": "originalManagedLifetime",
+        "host_source": {
+            "t037_source_sha256": "a" * 64,
+            "host_resource_profile_sha256": "b" * 64,
+            "host_id": "host-17",
+        },
+    }
+    config = {"schema": CONFIG_SCHEMA, "destinations": [],
+              "grants": [_grant(project_id, "session.stop", "stop-ref", scope)]}
+    provider = load_host_scoped_provider(_write_config(tmp_path / "managed-stop-config", config))
+    try:
+        assert provider.verify_scope(project_id, "session.stop", scope, "stop-ref") is True
+        assert provider(project_id, "stop-ref") is False
+        assert provider.verify_scope("another-project", "session.stop", scope, "stop-ref") is False
+        assert provider.verify_scope(project_id, "session.stop", scope, "wrong-ref") is False
+
+        invalid = [
+            {**scope, "project_id": project_id},
+            {**scope, "session_id": "caller-selected"},
+            {**scope, "platform": "darwin"},
+            {**scope, "ownership_mode": "storeReconstructed"},
+            {**scope, "runtime_id": {"id": "comsol64", "class": "Runtime"}},
+            {**scope, "host_source": {**scope["host_source"], "t037_source_sha256": "A" * 64}},
+            {**scope, "host_source": {**scope["host_source"], "host_id": "host/other"}},
+        ]
+        for candidate in invalid:
+            assert provider.verify_scope(project_id, "session.stop", candidate, "stop-ref") is False
+            with pytest.raises(ExecutionContractError) as malformed:
+                scope_sha256(project_id, "session.stop", candidate)
+            assert malformed.value.code == "AUTHORIZATION_SCOPE_INVALID"
+        assert provider.verify_scope(project_id, "project.policy_set", scope, "stop-ref") is False
+        with pytest.raises(ExecutionContractError) as ungrantable:
+            scope_sha256(project_id, "project.policy_set", scope)
+        assert ungrantable.value.code == "AUTHORIZATION_SCOPE_INVALID"
+    finally:
+        provider.close()
+
+
 def test_provider_refuses_insecure_config_and_sink_replacement(tmp_path):
     project_id = "project-test"
     sink = _private_dir(tmp_path / "registered-sink")

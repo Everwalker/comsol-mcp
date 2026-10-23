@@ -8,11 +8,17 @@ from comsol_mcp._windows_t037_native import DWORD,BOOL,HANDLE,WORD,BYTE
 from tests.test_windows_child_acl import _observer
 
 
-def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False):
-    profile,acl_api,acl_launch,acl_events=_observer()
+def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override=None):
+    observed_profile,acl_api,acl_launch,acl_events=_observer()
     from dataclasses import replace
     from comsol_mcp._windows_job_limits import JobLimitsV1, EXTENDED_LIMIT
-    profile=replace(profile,job_limits=JobLimitsV1(4096,16384,4),wrapper_schema=win.PROFILE_SCHEMA_V3)
+    if profile_override is None:
+        profile=replace(observed_profile,job_limits=JobLimitsV1(4096,16384,4),
+                        wrapper_schema=win.PROFILE_SCHEMA_V3)
+    else:
+        profile=profile_override
+        if profile.job_limits is None or profile.wrapper_schema != win.PROFILE_SCHEMA_V3:
+            raise AssertionError("profile_override must already carry the native test Job contract")
     events=[];state={'alive':True,'cleanup_fail':cleanup_fail,'acl':None,'assigned':False}
     job_data={'bytes':bytes(EXTENDED_LIMIT())}
     class PI(C.Structure):
@@ -77,7 +83,8 @@ def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False):
         return state['acl']
     monkeypatch.setattr('comsol_mcp._windows_t037_acl.check_suspended_child_dacl',acl_gate)
     api._job_process_ids=lambda job:[456] if state["assigned"] and state["alive"] else []
-    assert api.create_job(profile=profile)==300
+    if profile_override is None:
+        assert api.create_job(profile=profile)==300
     return profile,api,events,state
 
 

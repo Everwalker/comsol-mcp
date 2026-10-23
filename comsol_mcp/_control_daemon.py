@@ -426,6 +426,10 @@ class ControlDaemon:
         # launcher Popen handle and the host-observed process birth/listener.
         # Durable lifecycle rows deliberately do not recreate this handle.
         self._session_server_handles: dict[tuple[str, str], ManagedServerHandle] = {}
+        # A scoped managed-stop origin is created before the original launch
+        # call and retained for the daemon lifetime, including UNKNOWN and
+        # public handle-map removal. Durable lifecycle rows never rebuild it.
+        self._managed_stop_origins: dict[tuple[str, str], Any] = {}
         self._session_t037_process_factories: dict[tuple[str, str], Any] = {}
         self._retained_host_control_executors = {}
         # A successful AppContainer CREATE outlives its temporary SDK
@@ -5580,9 +5584,7 @@ class ControlDaemon:
         self.project_authority.authorize_operation(project_id, "host_control")
         if authorization_ref is None:
             return None
-        if (not isinstance(authorization_ref, str) or not authorization_ref.strip()
-                or len(authorization_ref) > 512 or any(ord(char) < 32 for char in authorization_ref)):
-            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "authorization_ref is malformed")
+        self._server_control_authorization_ref_digest(authorization_ref)
         verifier = self.project_authority.authorization_verifier
         if verifier is not None:
             try:
@@ -5592,6 +5594,62 @@ class ControlDaemon:
             if accepted is not True:
                 raise ExecutionContractError("AUTHORIZATION_REQUIRED", "Server control authorization was not accepted")
         return hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _server_control_authorization_ref_digest(authorization_ref: str | None, *, required: bool = True) -> str | None:
+        if authorization_ref is None and not required:
+            return None
+        if (not isinstance(authorization_ref, str) or not authorization_ref.strip()
+                or len(authorization_ref) > 512 or any(ord(char) < 32 for char in authorization_ref)):
+            raise ExecutionContractError("AUTHORIZATION_REQUIRED", "authorization_ref is malformed")
+        return hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest()
+
+    def _managed_stop_provider(self):
+        from ._host_scoped_provider import HostScopedProvider
+        provider = self._scoped_host_provider
+        return provider if type(provider) is HostScopedProvider else None
+
+    def _uses_original_windows_t037_managed_stop_mode(self, factory: Any) -> bool:
+        """Limit stop-origin enrollment to this daemon's configured Windows SCM lane."""
+        if (self._managed_stop_provider() is None or self._windows_t037_profile is None
+                or factory is None):
+            return False
+        launcher_platform = getattr(self.session_server_launcher, "platform_name", None)
+        return (
+            launcher_platform in {"win32", "nt", "windows"}
+            and getattr(self, "_windows_t037_scm_binding", None) is not None
+            and getattr(self, "_windows_t037_scm_runtime", None) is not None
+        )
+
+    def _authorize_managed_stop_effect(self, project_id: str, session_id: str,
+                                       authorization_ref: str, handle: ManagedServerHandle, *,
+                                       allow_never_resumed: bool = False):
+        """Check one exact live origin immediately before its stop effect."""
+        from ._managed_stop_origin import ManagedStopOriginError
+
+        provider = self._managed_stop_provider()
+        origin = self._managed_stop_origins.get((project_id, session_id))
+        if provider is None or origin is None:
+            raise ManagedStopOriginError("scoped stop has no retained original SCM/T037 lifetime root")
+        if origin.provider is not provider:
+            raise ManagedStopOriginError("scoped stop provider differs from the original lifetime root")
+        origin.validate_for_stop(self, handle, allow_never_resumed=allow_never_resumed)
+        self.project_authority.authorize_operation(project_id, "host_control")
+        try:
+            accepted = provider.verify_scope(project_id, "session.stop", origin.scope, authorization_ref)
+        except ExecutionContractError:
+            raise
+        except Exception as exc:
+            raise ExecutionContractError(
+                "AUTHORIZATION_STATE_UNKNOWN", "scoped Server-stop authorization could not be revalidated",
+                safe_retry=False, stage="pre_dispatch",
+            ) from exc
+        if accepted is not True:
+            raise ExecutionContractError(
+                "AUTHORIZATION_REQUIRED", "session.stop is not covered by the exact live managed-origin grant",
+                safe_retry=False, stage="pre_dispatch",
+            )
+        return origin, origin.audit_digests(authorization_ref)
 
     def _dispatch_session_start(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         project_id, runtime_id = routed["project_id"], routed["runtime_id"]
@@ -5730,6 +5788,20 @@ class ControlDaemon:
                 launch_options = {"observation_sink": record_startup_observation}
                 if t037_factory is not None:
                     launch_options["process_factory"] = t037_factory
+                if self._uses_original_windows_t037_managed_stop_mode(t037_factory):
+                    from ._managed_stop_origin import create_original_managed_stop_origin
+                    origin = create_original_managed_stop_origin(
+                        self, project_id=project_id, session_id=session_id,
+                        start_record=record, runtime=runtime,
+                        factory=t037_factory, launcher=self.session_server_launcher,
+                    )
+                    if key in self._managed_stop_origins:
+                        raise ExecutionContractError(
+                            "MANAGED_STOP_ORIGIN_UNKNOWN", "session already retains an original stop-origin root",
+                            safe_retry=False, stage="pre_dispatch",
+                        )
+                    self._managed_stop_origins[key] = origin
+                    launch_options["owner_handoff"] = origin.launcher_handoff
                 handle = self.session_server_launcher.start(runtime, project_id, session_id,
                                                             **launch_options)
                 if not isinstance(handle, ManagedServerHandle):
@@ -5862,7 +5934,13 @@ class ControlDaemon:
 
     def _dispatch_session_stop(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         project_id, session_id = routed["project_id"], routed["session_id"]
-        authorization_digest = self._authorize_server_control(project_id, routed.get("authorization_ref"))
+        authorization_ref = routed.get("authorization_ref")
+        scoped_provider = self._managed_stop_provider()
+        if scoped_provider is not None:
+            self.project_authority.authorize_operation(project_id, "host_control")
+            authorization_digest = self._server_control_authorization_ref_digest(authorization_ref)
+        else:
+            authorization_digest = self._authorize_server_control(project_id, authorization_ref)
         record, reused = self._begin_session_mutation("session.stop", routed, execution)
         if reused:
             return record["result"] if record.get("result") is not None else self._pending(record, session_id=session_id)
@@ -5876,6 +5954,39 @@ class ControlDaemon:
                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
             key = (project_id, session_id)
             retained_handle = self._session_server_handles.get(key)
+            if scoped_provider is not None and retained_handle is not None:
+                process = getattr(retained_handle, "process", None)
+                try:
+                    from ._windows_t037 import is_native_suspended_child
+                    native_cleanup_candidate = is_native_suspended_child(process)
+                except Exception:
+                    native_cleanup_candidate = False
+                native_already_terminal = (
+                    native_cleanup_candidate and retained_handle.retired is True
+                    and getattr(process, "_closed", False) is True
+                    and type(getattr(process, "returncode", None)) is int
+                )
+                if native_cleanup_candidate and not native_already_terminal:
+                    try:
+                        origin, audit = self._authorize_managed_stop_effect(
+                            project_id, session_id, authorization_ref, retained_handle,
+                            allow_never_resumed=True,
+                        )
+                        self.store.add_event(record["job_id"], "ManagedStopAuthorization", {
+                            "project_id": project_id, "session_id": session_id,
+                            "request_id": record["request_id"],
+                            "operation_id": record["operation_id"],
+                            "origin_state": origin.handoff_state, **audit,
+                        })
+                    except ExecutionContractError as exc:
+                        unknown = exc.code == "MANAGED_STOP_ORIGIN_UNKNOWN"
+                        return self._finish(record, self._exception(exc), "UNKNOWN" if unknown else "FAILED")
+                    except Exception as exc:
+                        return self._finish(record, self._error(
+                            "MANAGED_STOP_AUDIT_UNAVAILABLE", "scoped stop authorization audit could not be persisted",
+                            data={"session_id": session_id, "server_stopped": False},
+                            cause_type=type(exc).__name__, safe_retry=False,
+                        ), "FAILED")
             native_result = self._stop_retained_native_server(record, lifecycle, key, retained_handle, authorization_digest)
             if native_result is not None:
                 return native_result
@@ -5940,6 +6051,26 @@ class ControlDaemon:
                           "engine_dispatched": False},
                     execution_state_unknown=unknown, safe_retry=not unknown,
                 ), "UNKNOWN" if unknown else "FAILED")
+            if scoped_provider is not None:
+                try:
+                    origin, audit = self._authorize_managed_stop_effect(
+                        project_id, session_id, authorization_ref, handle,
+                    )
+                    self.store.add_event(record["job_id"], "ManagedStopAuthorization", {
+                        "project_id": project_id, "session_id": session_id,
+                        "request_id": record["request_id"],
+                        "operation_id": record["operation_id"],
+                        "origin_state": origin.handoff_state, **audit,
+                    })
+                except ExecutionContractError as exc:
+                    unknown = exc.code == "MANAGED_STOP_ORIGIN_UNKNOWN"
+                    return self._finish(record, self._exception(exc), "UNKNOWN" if unknown else "FAILED")
+                except Exception as exc:
+                    return self._finish(record, self._error(
+                        "MANAGED_STOP_AUDIT_UNAVAILABLE", "scoped stop authorization audit could not be persisted",
+                        data={"session_id": session_id, "server_stopped": False},
+                        cause_type=type(exc).__name__, safe_retry=False,
+                    ), "FAILED")
             stopping = self._updated_session_lifecycle(
                 lifecycle, state="STOPPING", client_state=lifecycle["client_state"],
                 worker_instance_id=lifecycle["worker_instance_id"],

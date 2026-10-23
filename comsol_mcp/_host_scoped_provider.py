@@ -32,10 +32,12 @@ MAX_GRANTS = 1024
 WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS = "windows-read-control-owner-dacl-persistent-acls"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_QUALIFIED_CLASS = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$")
 _TARGET_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$")
-_GRANT_ACTIONS = frozenset({"model.close", "artifact.publish",
+_GRANT_ACTIONS = frozenset({"model.close", "artifact.publish", "session.stop",
                             "host.change.apply", "host.change.restore"})
 _MODEL_REF_KEYS = frozenset({"schema_version", "session_id", "server_instance_id", "model_tag", "generation"})
+MANAGED_STOP_SCOPE_SCHEMA = "comsol-mcp-managed-stop-scope/1"
 
 # macOS SDK sys/mount.h defines MNT_IGNORE_OWNERSHIP as 0x00200000.  The
 # Darwin statfs ABI is checked below before interpreting f_flags; statvfs
@@ -226,6 +228,35 @@ def _normalize_scope(project_id: str, action: str, scope: Mapping[str, Any]) -> 
                 "destination_ref": scope["destination_ref"],
                 "destination_registration_sha256": scope["destination_registration_sha256"],
                 "artifacts": normalized}
+    if action == "session.stop":
+        required = {"schema", "runtime_id", "platform", "ownership_mode", "host_source"}
+        runtime = scope.get("runtime_id") if isinstance(scope, Mapping) else None
+        host_source = scope.get("host_source") if isinstance(scope, Mapping) else None
+        if (not isinstance(scope, Mapping) or set(scope) != required
+                or scope.get("schema") != MANAGED_STOP_SCOPE_SCHEMA
+                or scope.get("platform") != "windows"
+                or scope.get("ownership_mode") != "originalManagedLifetime"
+                or not isinstance(runtime, Mapping) or set(runtime) != {"id", "class"}
+                or not isinstance(runtime.get("id"), str) or not _IDENTIFIER.fullmatch(runtime["id"])
+                or not isinstance(runtime.get("class"), str) or len(runtime["class"]) > 256
+                or not _QUALIFIED_CLASS.fullmatch(runtime["class"])
+                or not isinstance(host_source, Mapping)
+                or set(host_source) != {"t037_source_sha256", "host_resource_profile_sha256", "host_id"}
+                or not isinstance(host_source.get("t037_source_sha256"), str)
+                or not _SHA256.fullmatch(host_source["t037_source_sha256"])
+                or not isinstance(host_source.get("host_resource_profile_sha256"), str)
+                or not _SHA256.fullmatch(host_source["host_resource_profile_sha256"])
+                or not isinstance(host_source.get("host_id"), str)
+                or not _IDENTIFIER.fullmatch(host_source["host_id"])):
+            raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "session.stop scope is malformed or outside the Windows original-owner class")
+        return {"schema": MANAGED_STOP_SCOPE_SCHEMA,
+                "runtime_id": {"id": runtime["id"], "class": runtime["class"]},
+                "platform": "windows", "ownership_mode": "originalManagedLifetime",
+                "host_source": {
+                    "t037_source_sha256": host_source["t037_source_sha256"],
+                    "host_resource_profile_sha256": host_source["host_resource_profile_sha256"],
+                    "host_id": host_source["host_id"],
+                }}
     if action in {"host.change.apply", "host.change.restore"}:
         required = {"root", "host_id", "profile_sha256", "plan_sha256", "phase",
                     "source_plan_sha256", "source_receipt_sha256"}

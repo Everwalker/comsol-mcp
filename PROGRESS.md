@@ -1,12 +1,12 @@
 # 当前进度 — 2026-10-23
 
-当前源码检查点 r135：bounded catalog scan经Main完整源码/测试/harness审查及Hume80+50项独立引用核对，148 PASS（原95保留+53新控）。226/256长名称压力查询1810/2050，既有8192预算不变；29事件绑定3次正常模块加载与原返回code，未冒充逐函数/native执行证明。原2 FAIL及旧postrun记录保留，原compact精确备份。将仅发布本source/software单位，R3尚未PREP/放行。scoped stop Main反例1 FAIL与四配置NEW_DIRECTORY root权限冲突仍同Agent整改；最终Reviewer/完整原生未通过，整体IN_PROGRESS。
+当前主线快照（续跑 r141）：Git HEAD/origin/main 上次独立回读一致为 c13047140574a9dc3144dc3c49102c8cbfd1686f。当前Stop限定源码/软件已Main接收：冻结699文件、1676项全通过，含旧1366、Stop115、catalog148与当前client增量，原Main反例一次；Hume核对与Main独立691个Git blob匹配，待精确13文件普通发布。辅助旧tar a02a指针未解析，明确UNVERIFIED，不作为当前源码验收依据。publisher282功能审查完成，同Luna继续当前Stop基线组合；配置cached SDK alias继续整改。R3四文件传输遭自动审批两次在启动前拒绝，strict-key主机身份已核对，现等精确用户授权，目录/传输/诊断/self/SDK/GO均未发生。完整原生矩阵和最终Reviewer未通过，整体IN_PROGRESS。
 
 
-当前只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
+历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
 
 
-当前续跑检查点 r131：scoped stop 原110项软件PASS保留；Main在同一冻结源码独立反例1 FAIL，发现非Windows普通启动被误纳入SCM origin，已由同Primary连续整改，并补原never-resumed子链软件覆盖。四配置680 PASS/1项实际原生读取明确排除，但真正四加载器正向仍被service-RX与私有ACL规则冲突阻塞；Main核对SCM write-restricted语义后决策，未放松guard。publisher与bounded catalog scan继续独立源租约；全部原生宿主变更未授权/未执行，最终Reviewer未开始，整体IN_PROGRESS。
+历史续跑检查点 r131：scoped stop 原110项软件PASS保留；Main在同一冻结源码独立反例1 FAIL，发现非Windows普通启动被误纳入SCM origin，已由同Primary连续整改，并补原never-resumed子链软件覆盖。四配置680 PASS/1项实际原生读取明确排除，但真正四加载器正向仍被service-RX与私有ACL规则冲突阻塞；Main核对SCM write-restricted语义后决策，未放松guard。publisher与bounded catalog scan继续独立源租约；全部原生宿主变更未授权/未执行，最终Reviewer未开始，整体IN_PROGRESS。
 
 
 **IN_PROGRESS：通用核心尚未完成。** 执行 [MASTER_GOAL](docs/universal_mcp_execution/MASTER_GOAL.md)，以 [RESUME](docs/universal_mcp_execution/state/RESUME.json) 和 [当前交接](docs/universal_mcp_execution/CURRENT_HANDOFF.md) 续跑。原三案例科学终点已拆出，历史失败及 UNKNOWN 保留。

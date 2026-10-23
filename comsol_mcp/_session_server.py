@@ -566,7 +566,8 @@ class OwnedServerLauncher:
 
     def start(self, runtime: SessionRuntimeConfig, project_id: str, session_id: str, *,
               observation_sink: Callable[[Mapping[str, Any]], None] | None = None,
-              process_factory: Callable[..., Any] | None = None) -> ManagedServerHandle:
+              process_factory: Callable[..., Any] | None = None,
+              owner_handoff: Callable[..., None] | None = None) -> ManagedServerHandle:
         selected_process_factory = self.process_factory if process_factory is None else process_factory
         if not callable(selected_process_factory):
             raise OwnedServerError("owned Server process factory is not callable")
@@ -595,6 +596,10 @@ class OwnedServerLauncher:
         # lookup can occur in the interval between a child birth and retaining
         # its exact Popen handle.
         executable = str(Path(command[0]).resolve())
+        if owner_handoff is not None:
+            owner_handoff("PRE_CREATE", runtime=runtime,
+                          process_factory=selected_process_factory, command=tuple(command),
+                          executable=executable, directories=directories)
         log_handle = directories.log_file.open("ab", buffering=0)
         options: dict[str, Any] = {
             "cwd": str(directories.root), "stdin": subprocess.DEVNULL,
@@ -652,6 +657,14 @@ class OwnedServerLauncher:
                                                launch_argv=tuple(command))
                 retained.process = exc.transfer_to(retained)
                 retained.suspended_launch_recovery = retained.process
+                if owner_handoff is not None:
+                    try:
+                        owner_handoff("CHILD_HANDLE", handle=retained)
+                    except Exception:
+                        # The exact child remains attached to this original
+                        # handle. The daemon will record UNKNOWN; it must not
+                        # retrofit a fresh stop origin from the exception.
+                        pass
                 persistence_failed = False
                 try:
                     emit_observation("STARTUP_UNKNOWN", pid=retained.process.pid,
@@ -697,6 +710,8 @@ class OwnedServerLauncher:
             from ._windows_t037 import _RetainedSuspendedChild
             if type(process) is _RetainedSuspendedChild:
                 process.transfer_owner(process._api, handle)
+            if owner_handoff is not None:
+                owner_handoff("CHILD_HANDLE", handle=handle)
             emit_observation("PROCESS_CREATED", pid=process_pid, child_handle=handle)
             birth, start_epoch_ms = _birth_identity(process_pid, self.process_identity_reader)
             handle.start_epoch_ms = start_epoch_ms
@@ -761,6 +776,8 @@ class OwnedServerLauncher:
             )
             handle.endpoint = endpoint
             handle.process_identity = identity
+            if owner_handoff is not None:
+                owner_handoff("READY", handle=handle)
             emit_observation("READY", pid=process_pid, birth=birth, child_handle=handle)
             return handle
         except _StartupObservationError:
