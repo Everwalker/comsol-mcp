@@ -12,6 +12,7 @@ import weakref
 import pytest
 from comsol_mcp import _windows_scm_endpoint as m
 from comsol_mcp import _control_client as client
+from comsol_mcp._execution_contract import ExecutionContractError
 
 LOCATOR=r'C:\Users\Everwalker\private\locator.json'
 HOME=r'C:\ProgramData\ComsolMCP_Test\service-state'
@@ -38,6 +39,7 @@ def descriptor(owner,*,protected=True,extra=()):
 class SDK:
     def __init__(self):
         self.calls=[];self.keep=[];self.handles={};self.regions={};self.seq=100
+        self.wait_calls=[];self.process_calls=[]
         self.last_error=0;self.fault=None;self.native_effects=[]
         self.secret=base64.urlsafe_b64encode(bytes(range(32))).rstrip(b'=').decode()
         self.locator={'schema':m.SCHEMA,'service_name':'ComsolMCP_Test','control_home':HOME}
@@ -57,6 +59,7 @@ class SDK:
             'QueryServiceConfig2W':self.sid_mode,'QueryServiceStatusEx':self.status,
             'LookupAccountNameW':self.lookup,'CommandLineToArgvW':self.args,'LocalSize':self.local_size,
             'OpenProcess':self.process,'GetProcessId':lambda h:1234,
+            'WaitForSingleObject':self.wait,
             'GetProcessTimes':self.times,'QueryFullProcessImageNameW':self.image,
         }
         assert set(callbacks)==set(m.READONLY_SDK)
@@ -194,8 +197,14 @@ class SDK:
         C.cast(count,C.POINTER(m.B))[0]=len(encoded);return base
     def local_size(self,pointer):return C.sizeof(self.regions[self.address(pointer)])
     def process(self,rights,inherit,pid):
-        assert rights==0x1000 and inherit==0 and pid==1234
+        assert rights==0x101000 and inherit==0 and pid==1234
+        self.process_calls.append((rights,inherit,pid))
         return self.handle(('process',pid))
+    def wait(self,handle,milliseconds):
+        assert type(milliseconds) is int and milliseconds==0
+        assert self.handles[self.address(handle)]==('process',1234)
+        self.wait_calls.append((handle,milliseconds))
+        return 258
     def times(self,handle,created,exited,kernel,user):
         birth=116444736000000000+(2001 if self.fault=='birth' else 2000)*10000
         C.memmove(created,birth.to_bytes(8,'little'),8);return 1
@@ -256,7 +265,7 @@ def test_original_unknown_is_rooted_no_reacquire_or_explicit_release_retry(sdk,f
 def test_known_close_success_ack_uses_only_original_cached_result(sdk,monkeypatch):
     api=m._SoftwareApi(sdk.exports,lambda:sdk.last_error,seal=m._SOFTWARE)
     owner=m._Owner(api,LOCATOR)
-    handle=owner.returned('OpenProcess','CloseHandle',0x1000,0,1234)
+    handle=owner.returned('OpenProcess','CloseHandle',0x101000,0,1234)
     def fail(event,original):raise RuntimeError('software bookkeeping failure')
     monkeypatch.setattr(owner,'checkpoint',fail)
     with pytest.raises(RuntimeError):owner.finish()
@@ -332,7 +341,7 @@ def test_malformed_or_unreturned_release_result_is_sticky_original_owner(sdk,nam
 @pytest.mark.parametrize('change',['storage','closer','sdk','owner','forged-ack'])
 def test_original_holder_binding_cannot_be_replaced_or_acknowledged(sdk,change):
     api=m._SoftwareApi(sdk.exports,lambda:sdk.last_error,seal=m._SOFTWARE)
-    owner=m._Owner(api,LOCATOR);owner.returned('OpenProcess','CloseHandle',0x1000,0,1234)
+    owner=m._Owner(api,LOCATOR);owner.returned('OpenProcess','CloseHandle',0x101000,0,1234)
     resource=owner.resources[0]
     if change=='storage':resource.storage=m.H(resource.value)
     elif change=='closer':resource.closer=lambda *_:1
@@ -355,7 +364,7 @@ def test_root_pop_ack_fault_keeps_original_finished_native_facts(sdk,monkeypatch
             return super().pop(key)
     roots=Roots();monkeypatch.setattr(m,'_ROOTS',roots)
     api=m._SoftwareApi(sdk.exports,lambda:sdk.last_error,seal=m._SOFTWARE)
-    owner=m._Owner(api,LOCATOR);owner.returned('OpenProcess','CloseHandle',0x1000,0,1234)
+    owner=m._Owner(api,LOCATOR);owner.returned('OpenProcess','CloseHandle',0x101000,0,1234)
     with pytest.raises(RuntimeError):owner.finish()
     before=list(sdk.calls);assert roots[id(owner)] is owner
     roots.fail=False;m.recover_owned(owner)
@@ -420,6 +429,9 @@ def test_native_constructor_binds_closed_readonly_export_list_without_invoking_i
     monkeypatch.setattr(C,'get_last_error',lambda:0,raising=False)
     api=m._Api()
     assert set(bound)==set(m.READONLY_SDK) and set(api.sdk)==set(m.READONLY_SDK)
+    assert m.SPECS['kernel32']['WaitForSingleObject']==(m.D,[m.H,m.D],'DWORD')
+    assert api.sdk['WaitForSingleObject'].restype is C.c_uint32
+    assert api.sdk['WaitForSingleObject'].argtypes==[C.c_void_p,C.c_uint32]
     assert not any(word in name for name in bound for word in ('Adjust','SetSecurity','CreateService','StartService','Delete','Fwpm'))
 
 
@@ -479,3 +491,191 @@ def test_last_access_time_change_is_not_source_content_drift(sdk):
         return result
     sdk.exports['GetFileInformationByHandleEx']=access_only
     assert verify(sdk)._origin is m._SOFTWARE
+
+
+def _normal_wait_dispatch(sdk,monkeypatch):
+    monkeypatch.setenv(m.ENV,LOCATOR)
+    monkeypatch.setattr(m,'_native_api',lambda:m._SoftwareApi(sdk.exports,lambda:sdk.last_error,seal=m._SOFTWARE))
+    monkeypatch.setattr(client,'control_home',lambda:pytest.fail('default home touched'))
+    monkeypatch.setattr(client,'_spawn_control_daemon',lambda *a:pytest.fail('replacement daemon'))
+    requests=[]
+    def request(endpoint,payload,timeout):
+        assert type(endpoint) is m._Endpoint and endpoint._origin is m._SOFTWARE
+        requests.append(payload['operation'])
+        return {'success':True,'data':{}}
+    monkeypatch.setattr(client,'_request',request)
+    result=client.dispatch('project.inspect',{},dict(request_id='wait-check',idempotency_key='wait-check'))
+    return result,requests
+
+
+@pytest.mark.parametrize('exit_output',[0,0x123456789ABCDEF0,0xFFFFFFFFFFFFFFFF],
+                         ids=['zero-undefined-exit','arbitrary-undefined-exit','maximum-undefined-exit'])
+def test_normal_raw_liveness_uses_same_original_zero_wait_not_live_exit_buffer(sdk,monkeypatch,exit_output):
+    original=sdk.times
+    def times(handle,created,exited,kernel,user):
+        result=original(handle,created,exited,kernel,user)
+        C.memmove(exited,exit_output.to_bytes(8,'little'),8)
+        return result
+    sdk.exports['GetProcessTimes']=sdk.function('GetProcessTimes',times)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['success'] and requests==['session_health','project.inspect']
+    assert sdk.process_calls==[(0x101000,0,1234)]
+    assert len(sdk.wait_calls)==2 and sdk.wait_calls[0][0] is sdk.wait_calls[1][0]
+    handle=sdk.wait_calls[0][0]
+    assert all(ms==0 for _,ms in sdk.wait_calls)
+    assert sdk.native_effects.count(('close',handle.value))==1
+    assert sdk.calls.count('GetProcessTimes')==2 and not m._ROOTS
+
+
+@pytest.mark.parametrize('stage',[1,2],ids=['first-check','second-check'])
+@pytest.mark.parametrize('status',[0,0x80,0xFFFFFFFF,257,259],
+                         ids=['signaled','abandoned','failed','unexpected-low','unexpected-high'])
+def test_normal_raw_wait_known_nonlive_or_unknown_status_never_reaches_transport(sdk,monkeypatch,stage,status):
+    original=sdk.wait
+    def wait(handle,milliseconds):
+        original(handle,milliseconds)
+        return status if len(sdk.wait_calls)==stage else 258
+    sdk.exports['WaitForSingleObject']=sdk.function('WaitForSingleObject',wait)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert result['data']['control_startup_outcome']=='NOT_ATTEMPTED'
+    assert sdk.process_calls==[(0x101000,0,1234)] and len(sdk.wait_calls)==stage
+    assert sdk.calls.count('GetProcessTimes')==stage-1
+    assert len({id(h) for h,ms in sdk.wait_calls})==1
+    assert all(ms==0 for h,ms in sdk.wait_calls)
+    assert sdk.native_effects.count(('close',sdk.wait_calls[0][0].value))==1
+    assert not m._ROOTS  # Known readonly result permits confirmed original cleanup.
+
+
+@pytest.mark.parametrize('stage',[1,2],ids=['first-check','second-check'])
+@pytest.mark.parametrize('outcome',['none','false','true','float','opaque','conversion-raise','sdk-raise','last-error-opaque'])
+def test_normal_raw_wait_opaque_retains_original_owner_without_query_close_or_retry(sdk,monkeypatch,stage,outcome):
+    class LostValue:
+        @property
+        def value(self):raise RuntimeError('software DWORD conversion lost')
+    original=sdk.wait
+    raw={'none':None,'false':False,'true':True,'float':258.0,'opaque':object(),'conversion-raise':LostValue()}
+    def wait(handle,milliseconds):
+        original(handle,milliseconds)
+        if len(sdk.wait_calls)!=stage:return 258
+        if outcome=='sdk-raise':raise OSError('software wait return lost')
+        if outcome=='last-error-opaque':
+            sdk.last_error=object()
+            return 258
+        return raw[outcome]
+    function=sdk.function('WaitForSingleObject',wait)
+    sdk.exports['WaitForSingleObject']=function
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert result['data']['control_startup_outcome']=='NOT_ATTEMPTED'
+    assert len(m._ROOTS)==1
+    owner=next(iter(m._ROOTS.values()));weak=weakref.ref(owner)
+    assert owner.opaque and owner.first_cause is not None
+    original_cause=owner.first_cause
+    wait_call=next(c for c in reversed(owner.calls) if c.name=='WaitForSingleObject')
+    assert wait_call.entered and wait_call.result is None and wait_call.function is function
+    assert wait_call.args==(sdk.wait_calls[-1][0],0)
+    process=next(r for r in owner.resources if r.owned and r.storage is sdk.wait_calls[0][0])
+    assert process.storage.value==process.value and process.close_call is None and not process.closed
+    before=list(sdk.calls)
+    with pytest.raises(m.AttachError):m.recover_owned(owner)
+    with pytest.raises(m.AttachError):verify(sdk)
+    gc.collect()
+    assert weak() is owner and m._ROOTS[id(owner)] is owner and owner.first_cause is original_cause
+    assert sdk.calls==before and sdk.native_effects.count(('close',process.value))==0
+    assert sdk.calls.count('OpenProcess')==1 and len(sdk.wait_calls)==stage
+
+
+def test_closed_software_exports_require_wait_without_any_acquisition(sdk):
+    exports=dict(sdk.exports);del exports['WaitForSingleObject']
+    with pytest.raises(m.AttachError) as exc:m._software_verify(LOCATOR,exports,lambda:0)
+    assert exc.value.code=='SOFTWARE_BOUNDARY' and not sdk.calls and not m._ROOTS
+
+
+def _state_permissions(sdk,*,paths=None,principal=SERVICE,mask=0x1301BF,service_flags=0,client_flags=0,deny=False):
+    paths=set(paths or (HOME,ntpath.join(HOME,'control.json')))
+    original=sdk.security
+    def security(handle,kind,flags,owner,group,dacl,sacl,out):
+        path=sdk.handles[sdk.address(handle)][1]
+        if path not in paths:return original(handle,kind,flags,owner,group,dacl,sacl,out)
+        assert kind==1 and flags==7
+        user=CLIENT if path.startswith(r'C:\Users') else m.SY
+        raw=bytearray(descriptor(user,extra=((principal,mask),)))
+        offset=int.from_bytes(raw[16:20],'little');cursor=offset+8
+        for ace_kind,ace_flags,access,subject in m.b.decode_sd(bytes(raw))['aces']:
+            if subject==principal:raw[cursor+1]=service_flags
+            if subject==CLIENT:raw[cursor+1]=client_flags
+            cursor+=int.from_bytes(raw[cursor+2:cursor+4],'little')
+        if deny:
+            entry=struct.pack('<BBHI',1,0,8+len(sid(principal)),mask)+sid(principal)
+            raw.extend(entry)
+            struct.pack_into('<H',raw,offset+2,len(raw)-offset)
+            struct.pack_into('<H',raw,offset+4,int.from_bytes(raw[offset+4:offset+6],'little')+1)
+        C.cast(out,C.POINTER(m.H))[0]=sdk.alloc(bytes(raw))
+        return 0
+    sdk.exports['GetSecurityInfo']=sdk.function('GetSecurityInfo',security)
+
+
+@pytest.mark.parametrize('service_flags',[0,3],ids=['explicit-service-data','service-data-child-inheritance'])
+def test_normal_raw_exact_service_state_modify_and_undefined_exit_coexist(sdk,monkeypatch,service_flags):
+    _state_permissions(sdk,service_flags=service_flags)
+    original=sdk.times
+    def times(handle,created,exited,kernel,user):
+        result=original(handle,created,exited,kernel,user)
+        C.memmove(exited,(0x123456789ABCDEF0).to_bytes(8,'little'),8)
+        return result
+    sdk.exports['GetProcessTimes']=sdk.function('GetProcessTimes',times)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['success'] and requests==['session_health','project.inspect']
+    assert len(sdk.wait_calls)==2 and sdk.wait_calls[0][0] is sdk.wait_calls[1][0]
+    assert sdk.process_calls==[(0x101000,0,1234)] and not m._ROOTS
+
+
+@pytest.mark.parametrize('path',[HOME,ntpath.join(HOME,'control.json')],ids=['state','endpoint'])
+@pytest.mark.parametrize('extra',[0x40000,0x80000,0x1000000,0x10000000,0x40000000,0x40,0x200],
+                         ids=['write-dacl','write-owner','system-security','generic-all','generic-write','delete-child','unrecognized'])
+def test_normal_raw_service_data_mask_cannot_grant_security_or_extra_rights(sdk,monkeypatch,path,extra):
+    _state_permissions(sdk,paths=[path],mask=0x1301BF|extra)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert result['data']['control_startup_outcome']=='NOT_ATTEMPTED'
+    assert not m._ROOTS
+
+
+@pytest.mark.parametrize('principal',[CLIENT,'S-1-5-11','S-1-5-32-545','S-1-1-0','S-1-15-2-1','S-1-5-80-9-8-7-6-5'])
+def test_normal_raw_foreign_group_appcontainer_world_or_client_cannot_write_state(sdk,monkeypatch,principal):
+    _state_permissions(sdk,principal=principal)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert not m._ROOTS
+
+
+@pytest.mark.parametrize('path',[r'C:\ProgramData',LOCATOR],ids=['target-ancestor','client-private-source'])
+def test_normal_raw_service_data_permission_does_not_extend_to_ancestor_or_locator(sdk,monkeypatch,path):
+    _state_permissions(sdk,paths=[path])
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert not m._ROOTS
+
+
+def test_default_private_source_policy_never_inherits_target_service_data_exception():
+    sd=m.b.decode_sd(descriptor(CLIENT,extra=((SERVICE,0x1301BF),)))
+    with pytest.raises(ExecutionContractError) as exc:
+        m._policy(sd,CLIENT,final=True,target=False,service_sid=SERVICE)
+    assert exc.value.code=='HOST_PROVIDER_CONFIG_INVALID'
+
+
+@pytest.mark.parametrize('client_flags',[1,2,3,8,16],ids=['object-inherit','container-inherit','both-inherit','inherit-only','inherited'])
+def test_normal_raw_client_read_grant_cannot_inherit_to_private_database_or_state(sdk,monkeypatch,client_flags):
+    _state_permissions(sdk,client_flags=client_flags)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert not m._ROOTS
+
+
+@pytest.mark.parametrize('principal',[SERVICE,CLIENT,'S-1-1-0'])
+def test_deny_ace_cannot_cancel_a_forbidden_allow_in_target_state(sdk,monkeypatch,principal):
+    _state_permissions(sdk,principal=principal,mask=0x1F01FF,deny=True)
+    result,requests=_normal_wait_dispatch(sdk,monkeypatch)
+    assert result['data']['status']=='NOT_SUBMITTED' and not requests
+    assert not m._ROOTS

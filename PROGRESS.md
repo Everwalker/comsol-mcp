@@ -41,9 +41,11 @@
 
 - 原AppContainer生命周期门控经Main限定源码/软件验收：固定81c选定630原输入/632候选，1136PASS＝1095已发布相关回归+41新控制（旧Main8不计入）；143实际import记录与73packet引用核对。完整出生/独立preflight计数、原factory关闭和持久逻辑pause接线，原Job/native/issuer正文不改；全部原参与者正常退休、原Job确认关闭才可pause。原失败保留、无loader执行trace或实际Windows调用，尚未接Root/Delete/Resume。见[门控证据](docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_GATE.json)。
 
+- SCM客户端两项Main反例整改经限定源码/软件验收：固定c8db+三overlay/两原counter，173PASS（旧108完整子集+63新控制+原counter2各一次），25imports/27执行/22loader，694基线/696候选已核。Main在最终冻结82dd源独立原样2PASS；两个原1FAIL和中间失败保留。原HANDLE零毫秒wait与精确serviceSID专用state数据权限已接线；source owner/closer/UNKNOWN主体不改。实际SDK/HTTP/跨用户与AppC读写controlplane否定仍未跑。见[修复证据](docs/universal_mcp_execution/evidence/WINDOWS_SCM_CLIENT_SOURCE_REPAIR.json)。
+
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-已发布c8db组合35测试文件的1366项软件PASS经Main限定核验，693输入及162模块/164执行/122loader已独立机械核一致；但Main追加两项各1FAIL：一为运行进程GetProcessTimes的lpExitTime未定义，当前client错误要求0。另一为restricted服务的专用mutable state需要精确serviceSID数据写权限，旧RO模板不合格；该修正只限state/endpoint，不放宽代码/config/全局owner或给AppC/World写权。同Leib正做两项闭环整改，旧108/1366不重写，不据此声明当前全部PASS。
+已发布c8db组合35测试文件的1366项软件PASS经Main限定核验，693输入及162模块/164执行/122loader已独立机械核一致；但Main追加两项各1FAIL：一为运行进程GetProcessTimes的lpExitTime未定义，当前client错误要求0。另一为restricted服务的专用mutable state需要精确serviceSID数据写权限，旧RO模板不合格；该修正只限state/endpoint，不放宽代码/config/全局owner或给AppC/World写权。两项现由新173及Main原样独立2PASS闭合源码范围，旧108/1366与失败不重写；仍非整体/native全部PASS。
 
 下一动作：Root122/SCM客户端108已同步ed09e598并独立fetch一致；同Primary现持续实现未来Windows原ManagedStopOrigin/scoped stop，旧实例/ref不动。Gate1136源软件已同步c8db并独立回读，同Leib正做已发布组合受影响回归；目录观察器95已同步f439，临时独立诊断进程方案仅PREP。四配置/argv/MIC实化还需源码，未授权host apply。最终统一Reviewer尚未开始。
 

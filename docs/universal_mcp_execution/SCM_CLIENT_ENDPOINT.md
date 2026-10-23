@@ -22,9 +22,16 @@ environment variable is absent. Non-Windows attachment refuses.
 The dedicated reader uses only a closed set of readonly Windows SDK exports.
 It reuses the established private-path ACL policy for the locator and ancestor
 traversal. Its separate target policy requires SYSTEM ownership and a protected
-DACL on both the state directory and `control.json`. Effective writers must be
-SYSTEM or Administrators; other data readers may only be the actual current
-client SID and the exact SCM-observed service SID, with read/execute rights.
+DACL on both the state directory and `control.json`. SYSTEM and Administrators
+retain their trusted rights. Only on these dedicated final mutable targets,
+the exact SCM-observed service SID may have bounded data modify/delete rights
+within `0x1301BF`. It may not gain WRITE_DAC, WRITE_OWNER,
+ACCESS_SYSTEM_SECURITY, GENERIC_ALL, or unrecognized rights. The actual client
+remains read/execute only with explicit noninheriting ACEs, so its grant cannot
+propagate to other private state files. Foreign, World and AppContainer writers
+are refused. Ancestors, locator, code/config and global private-path rules gain
+no service write permission. Restricted service identity alone does not prove
+that SYSTEM/Administrators-only state is writable by that service.
 No global private-owner rule is relaxed. A locator does not create these ACLs
 or grant the client access to the service state.
 
@@ -34,9 +41,17 @@ LastAccessTime is excluded. Readonly SCM queries must identify the exact
 RUNNING, own-process, LocalSystem service with a restricted service SID. Its
 configured binary argv must run normal Python with `-B -I -m
 comsol_mcp._control_daemon`, the exact home and service name. An independently
-opened query-only process HANDLE must agree with the protected endpoint's
+opened process HANDLE with only `PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE`
+must agree with the protected endpoint's
 PID/birth, actual SYSTEM token user and binary image. SCM configuration is
 compared again; this is not a claim to read the process's complete command line.
+Both process checks use nonblocking `WaitForSingleObject(originalHandle, 0)`
+and accept only `WAIT_TIMEOUT (258)`. A signaled process, failed/unknown wait,
+or malformed SDK result refuses before transport. There is no wait loop,
+re-open by PID, or SDK retry. The live process's `GetProcessTimes` exit buffer
+is ignored because its contents are undefined; creation time remains required.
+See [GetProcessTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes)
+and [WaitForSingleObject](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject).
 
 The bearer is read privately from the protected endpoint file. It is never a
 locator field, a documented example, an error detail, or an evidence receipt.

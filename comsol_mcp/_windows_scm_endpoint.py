@@ -29,6 +29,8 @@ _ROOTS, _LOCK = {}, threading.RLock()
 SY, BA = 'S-1-5-18', 'S-1-5-32-544'
 TI = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
 D, B, H = C.c_uint32, C.c_int32, C.c_void_p
+PROCESS_QUERY_LIMITED_INFORMATION, SYNCHRONIZE = 0x1000, 0x00100000
+WAIT_TIMEOUT = 258
 
 
 class AttachError(RuntimeError):
@@ -87,6 +89,7 @@ SPECS = {
         'GetCurrentProcess': (H, [], 'PSEUDO'),
         'GetCurrentThread': (H, [], 'PSEUDO'),
         'OpenProcess': (H, [D,B,D], 'PTR'),
+        'WaitForSingleObject': (D, [H,D], 'DWORD'),
         'GetProcessId': (D, [H], 'DWORD'),
         'GetProcessTimes': (B,[H,*([C.POINTER(p._FileTime)]*4)],'BOOL'),
         'QueryFullProcessImageNameW': (B,[H,D,C.c_wchar_p,C.POINTER(D)],'BOOL'),
@@ -376,16 +379,20 @@ def _policy(sd, current, *, final, target, service_sid):
     if sd['owner']!=SY or not sd['control']&0x1000:
         _bad('TARGET_PRIVATE_OWNER_OR_DACL')
     for kind,flags,mask,sid in sd['aces']:
+        if kind!=1 and sid==current and sid not in {SY,BA} and flags:
+            _bad('TARGET_CLIENT_INHERITANCE')
         if kind==1 or flags&8:
             continue
         if sid not in {SY,BA,current,service_sid}:
             _bad('TARGET_READER')
         if sid not in {SY,BA}:
-            # Generic read/execute only; never map/cancel a write with deny ACEs.
+            # Only the exact SCM-observed service may modify dedicated target
+            # data. Client grants stay readonly and cannot inherit to other state.
             mapped=mask&~(0x80000000|0x20000000)
             if mask&0x80000000:mapped|=0x120089
             if mask&0x20000000:mapped|=0x1200A0
-            if mapped&~0x1200A9:
+            allowed=0x1301BF if sid==service_sid and sid!=current else 0x1200A9
+            if mapped&~allowed:
                 _bad('TARGET_WRITER')
 
 
@@ -450,7 +457,12 @@ def _file(owner,path,*,directory,current,target=False,service_sid=None):
             fp=_fingerprint(owner,handle,isdir);raw,sd=_descriptor(owner,handle)
             if facts and fp[0]!=facts[0][0][0]:
                 _bad('FILE_VOLUME')
-            _policy(sd,current,final=i==len(chain)-1,target=target,service_sid=service_sid)
+            # The exact mutable state directory is also the immediate parent
+            # of control.json. It retains that target role in this pinned chain;
+            # earlier ancestors still use the unchanged private-path policy.
+            state_parent=(target and not directory and owner.home is not None
+                and path==ntpath.join(owner.home,'control.json') and i==len(chain)-2)
+            _policy(sd,current,final=i==len(chain)-1 or state_parent,target=target,service_sid=service_sid)
             facts.append((fp,raw))
             owner.pins.append((handle,isdir,fp,raw))
         content=None if directory else _read_file(owner,chain[-1],facts[-1][0][2],16384)
@@ -542,11 +554,15 @@ def _service_sid(owner,name):
 
 
 def _process(owner,handle,pid):
+    wait,_=owner.call('WaitForSingleObject',handle,0)
+    if wait==0:_bad('PROCESS_NOT_RUNNING')
+    if wait!=WAIT_TIMEOUT:_bad('PROCESS_LIVENESS_UNKNOWN')
     actual,_=owner.call('GetProcessId',handle)
     times=tuple(p._FileTime() for _ in range(4))
     owner.bool('GetProcessTimes',handle,*(C.byref(t) for t in times))
-    creation=int.from_bytes(bytes(times[0]),'little');exit_time=int.from_bytes(bytes(times[1]),'little')
-    if actual!=pid or exit_time or creation<116444736000000000:
+    # GetProcessTimes leaves lpExitTime undefined for a live process.
+    creation=int.from_bytes(bytes(times[0]),'little')
+    if actual!=pid or creation<116444736000000000:
         _bad('PROCESS_IDENTITY')
     image=C.create_unicode_buffer(32768);length=D(len(image))
     owner.bool('QueryFullProcessImageNameW',handle,0,image,C.byref(length))
@@ -611,7 +627,8 @@ def _verify(locator,api):
             if base64.urlsafe_b64encode(base64.b64decode(values['token']+'=',altchars=b'-_',validate=True)).rstrip(b'=').decode()!=values['token']:
                 _bad('ENDPOINT_SCHEMA')
             if values['pid']!=before[0]:_bad('PROCESS_IDENTITY')
-            process=owner.returned('OpenProcess','CloseHandle',0x1000,0,values['pid'])
+            process=owner.returned('OpenProcess','CloseHandle',
+                PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,0,values['pid'])
             identity=_process(owner,process,values['pid'])
             if (identity[0]!=values['process_start_epoch_ms'] or ntpath.normcase(identity[1])!=ntpath.normcase(before[1][0])
                     or _user(owner,process)!=SY):_bad('PROCESS_IDENTITY')
