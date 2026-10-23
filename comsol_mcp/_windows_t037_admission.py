@@ -42,6 +42,8 @@ def _bind_daemon_runtime(daemon, runtime):
         runtime._daemon_binding=binding
         daemon._windows_t037_scm_runtime=runtime
         daemon._windows_t037_scm_binding=binding
+        from ._windows_appcontainer_gate import _bind_original_profile_gate
+        _bind_original_profile_gate(binding)
 
 
 def _require_daemon_binding(binding):
@@ -66,13 +68,16 @@ def _require_daemon_binding(binding):
 def _bind_session_factory(daemon, factory, key):
     from ._windows_t037 import T037SessionProcessFactory
     binding=getattr(daemon,'_windows_t037_scm_binding',None)
-    _runtime,_daemon,profile,_provider=_require_daemon_binding(binding)
-    if (_daemon is not daemon or type(factory) is not T037SessionProcessFactory
-            or factory.profile is not profile or key[1]!=factory.session_id
-            or daemon._session_t037_process_factories.get(key) is not factory or factory._closed
-            or getattr(factory,'_scm_binding',None) is not None):
-        _refuse('SCM_FACTORY_BINDING_MISMATCH','registered original factory is required before static SDK reads')
-    factory._scm_binding=(binding,daemon,key,factory)
+    runtime,_daemon,profile,_provider=_require_daemon_binding(binding)
+    with runtime._lock:
+        _require_daemon_binding(binding)
+        if (_daemon is not daemon or type(factory) is not T037SessionProcessFactory
+                or factory.profile is not profile or key[1]!=factory.session_id
+                or daemon._session_t037_process_factories.get(key) is not factory or factory._closed
+                or getattr(factory,'_scm_binding',None) is not None):
+            _refuse('SCM_FACTORY_BINDING_MISMATCH','registered original factory is required before static SDK reads')
+        from ._windows_appcontainer_gate import _register_factory
+        _register_factory(factory,(binding,daemon,key,factory))
 
 
 def _require_factory_runtime(factory):
@@ -91,24 +96,8 @@ def _require_factory_runtime(factory):
 
 @contextmanager
 def _factory_birth_scope(factory):
-    # Runtime validation may wait for another birth. Never wait for that lock
-    # under the global control gate: metadata dispatch must remain responsive.
-    runtime,daemon,_profile,_provider=_require_factory_runtime(factory)
-    with daemon._dispatch_condition:
-        if daemon._closing:
-            _refuse('SCM_DAEMON_BINDING_MISMATCH','original daemon is closing; no new birth')
-        daemon._worker_admission_inflight+=1
-    try:
-        # The original runtime still linearizes SCM stop with the birth body.
-        # close waits on the existing admission counter without holding it up.
-        with runtime._lock:
-            _require_factory_runtime(factory)
-            yield
-    finally:
-        # Release the runtime first, then wake close through its short gate.
-        with daemon._dispatch_condition:
-            daemon._worker_admission_inflight-=1
-            daemon._dispatch_condition.notify_all()
+    from ._windows_appcontainer_gate import _factory_activity_scope
+    with _factory_activity_scope(factory):yield
 
 
 def _observe_static_inputs(profile, owner):

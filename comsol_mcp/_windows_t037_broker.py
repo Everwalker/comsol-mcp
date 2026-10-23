@@ -240,6 +240,7 @@ class ScmServiceRuntime:
         self._status_handle: Any = None
         self._original_status_handle: Any = None
         self._daemon_binding = None
+        self._profile_gate = None
         self._state = "REGISTERING"
         self._lock = threading.RLock()
 
@@ -275,6 +276,20 @@ class ScmServiceRuntime:
         with self._lock:
             self._active = False
             self._state = "STOPPED"
+
+
+def _require_runtime_identity(runtime):
+    """Original callback identity for cleanup, including after SCM stopped."""
+    if type(runtime) is not ScmServiceRuntime or runtime._seal is not _SCM_RUNTIME_SEAL:
+        _fail("SCM_RUNTIME_MISMATCH", "actual original ServiceMain runtime is required")
+    with runtime._lock:
+        broker=runtime._broker
+        if (type(broker) is not _ORIGINAL_SCM_BROKER_TYPE or broker is not runtime._original_broker
+                or broker._runtime is not runtime or not broker._started or not broker._entered
+                or broker.service_name!=broker._original_service_name or runtime._status_handle is None
+                or runtime._status_handle is not runtime._original_status_handle):
+            _fail("SCM_RUNTIME_MISMATCH", "original callback/status identity changed; no owner substitution")
+    return runtime
 
 
 def _require_original_runtime(runtime, *, running=True):

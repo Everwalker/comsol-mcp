@@ -1073,6 +1073,7 @@ class T037SessionProcessFactory:
         self._closed = False
         self._prebirth_observers = []
         self._scm_binding = None
+        self._profile_participant = None
         self._job_key = hashlib.sha256((profile.source_sha256 + "\0" + session_id).encode()).hexdigest()
         # Read-only network intent stays bound to this constructor's exact
         # profile. This captures configuration only, never native admission.
@@ -1107,20 +1108,25 @@ class T037SessionProcessFactory:
         return CanonicalSocket(intent.bind_address, port)
 
     def __call__(self, command: Sequence[str], **options: Any):
-        self.preflight()
-        if os.name != "nt":
-            _refuse(ERROR_UNSUPPORTED, "T037 process launch requires Windows")
-        from ._windows_t037_admission import _factory_birth_scope
+        from ._windows_t037_admission import _factory_birth_scope, _require_factory_runtime
         with _factory_birth_scope(self):
+            self.preflight()
+            _require_factory_runtime(self)
+            if os.name != "nt":
+                _refuse(ERROR_UNSUPPORTED, "T037 process launch requires Windows")
+            from ._windows_appcontainer_gate import _record_factory_api, _record_factory_job
             api = self._api if self._api is not None else _Win32LaunchApi()
             self._api = api
+            _record_factory_api(self, api)
             role = self._infer_role(command)
             if self._job is None:
                 # The existing producer alone creates/configures/readbacks a
                 # genuinely fresh empty Job; no unborn child is required at A.
                 self._job = api.create_job(profile=self.profile)
+                _record_factory_job(self, api, self._job)
             else:
                 self._require_original_job_members()
+            _require_factory_runtime(self)
             return api.create_suspended_appcontainer_child(
                 command, options, profile=self.profile, job=self._job, role=role,
                 session_factory=self,
@@ -1148,6 +1154,11 @@ class T037SessionProcessFactory:
 
     def preflight(self) -> None:
         """Refuse before directory/file/child side effects until native proof exists."""
+        from ._windows_t037_admission import _factory_birth_scope
+        with _factory_birth_scope(self):
+            return T037SessionProcessFactory._preflight_owned(self)
+
+    def _preflight_owned(self) -> None:
         if self._closed:
             _refuse(ERROR_POLICY_UNVERIFIED, "T037 session process factory is closed")
         if os.name == "nt":
@@ -1175,6 +1186,61 @@ class T037SessionProcessFactory:
         return self._job_key
 
     def close(self) -> None:
+        from ._windows_appcontainer_gate import _factory_close_scope, _Participant
+        with _factory_close_scope(self) as participant:
+            if participant is None:
+                return T037SessionProcessFactory._close_owned_resources(self)
+            if not participant.close_returned:
+                T037SessionProcessFactory._close_owned_resources(self)
+                participant.close_returned = True
+            _Participant.acknowledge_close(participant)
+
+    def _profile_terminal_snapshot(self, participant, _observer_type=WindowsT037Observer):
+        """Pure original-object terminal bridge; never query a released HANDLE."""
+        from ._windows_appcontainer_gate import _participant
+        from ._windows_owned_resources import registry_for
+        from ._windows_job_limits import _original_job_close_call
+        from ._windows_t037_targets import NativeTargetReader, _READS
+        if (_participant(self) is not participant or not participant.close_returned
+                or self._closed is not True or self._job is not None
+                or self._api is not participant.api or registry_for(self).unresolved()):
+            _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original factory close/observation lifetime is not terminal")
+        api=self._api;call=participant.job_call
+        if api is not None:
+            if registry_for(api).unresolved():
+                _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original API still owns native resources")
+            if call is not None:
+                if (getattr(self,"_job_close_call",None) is not call
+                        or _original_job_close_call(api,call.value,expected=call) is not call
+                        or call.phase!='NATIVE_CONFIRMED' or call.entry.state!='RELEASED'):
+                    _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original cached Job release is not confirmed")
+            elif getattr(api,"_job_close_call",None) is not None or getattr(api,"_job_limit_bindings",None):
+                _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "no-Job factory has an unclassified Job acquisition")
+            if any(getattr(api,name,None) for name in ("_retained_children","_unclassified_create_handles",
+                    "_retained_launch_cleanup","_retained_parent_bindings","_retained_child_tokens")):
+                _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original child/launch resource ownership remains retained")
+        elif call is not None:
+            _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original Job API was lost")
+        observations=[]
+        for observer in participant.observer_refs:
+            if type(observer) is NativeTargetReader:
+                if (observer.owner is not self or observer.registry is not registry_for(self)
+                        or observer.retired is not True or _READS.get(id(observer)) is not None):
+                    _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original pinned source reader has not retired")
+                apis=(observer.api,observer.mic)
+            elif type(observer) is _observer_type:
+                apis=(observer.api,*(a.api for a in getattr(observer,"_native_policy_adapters",())))
+            else:
+                _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "unknown metadata cannot certify an observation lifetime")
+            for observed_api in apis:
+                if (registry_for(observed_api) is not registry_for(self)
+                        or any(getattr(observed_api,name,None) is not None for name in
+                            ("pending_root","pending_relative","_finite_pending_sd","pending"))):
+                    _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original observation API/output remains pending")
+            observations.append((observer,apis))
+        return (self,api,call,tuple(observations),participant.observers)
+
+    def _close_owned_resources(self) -> None:
         from ._windows_owned_resources import registry_for
         if registry_for(self).unresolved():
             _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "factory-owned prebirth native observations remain unresolved")

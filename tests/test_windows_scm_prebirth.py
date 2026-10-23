@@ -14,6 +14,7 @@ import json
 import os
 import socket
 import subprocess
+import sys
 import threading
 
 import pytest
@@ -61,6 +62,23 @@ def running_factory_chain(daemon, factory, tmp_path, monkeypatch, *, profile_pat
     provider=_write_provider(tmp_path/'scm-provider',profile.host_resource_profile,[])
     scm=_ScmApi();ready=threading.Event();release=threading.Event();errors=[];runtimes=[]
     with monkeypatch.context() as m:
+        # The G2 SDK fixture toggles win.os.name through the shared os module.
+        # Keep real provider filesystem checks on their actual host OS/path
+        # class; bytes, ownership, mount and pinned-fd checks remain real.
+        from comsol_mcp import _host_scoped_provider as provider_module
+        m.setattr(provider_module,'os',NS(**dict(vars(provider_module.os))))
+        m.setattr(provider_module,'Path',type(tmp_path))
+        if sys.platform=='darwin':
+            # ctypes.CDLL also consults shared os.name. Bind the real local
+            # libc before the old G2 Windows-SDK fixture toggles that name;
+            # the original ACL/mount functions still execute on every read.
+            libc=provider_module.ctypes.CDLL(None,use_errno=True)
+            host_ctypes=NS(**dict(vars(provider_module.ctypes)))
+            def local_libc(name,**options):
+                assert name is None and options=={'use_errno':True}
+                return libc
+            host_ctypes.CDLL=local_libc
+            m.setattr(provider_module,'ctypes',host_ctypes)
         m.setattr(daemon,'_scoped_host_provider',provider)
         m.setattr(daemon.project_authority,'authorization_verifier',provider)
         m.setattr(daemon,'_windows_t037_profile_path',profile_path)
