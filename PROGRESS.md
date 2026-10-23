@@ -1,5 +1,11 @@
 # 当前进度 — 2026-10-23
 
+当前只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
+
+
+当前续跑检查点 r131：scoped stop 原110项软件PASS保留；Main在同一冻结源码独立反例1 FAIL，发现非Windows普通启动被误纳入SCM origin，已由同Primary连续整改，并补原never-resumed子链软件覆盖。四配置680 PASS/1项实际原生读取明确排除，但真正四加载器正向仍被service-RX与私有ACL规则冲突阻塞；Main核对SCM write-restricted语义后决策，未放松guard。publisher与bounded catalog scan继续独立源租约；全部原生宿主变更未授权/未执行，最终Reviewer未开始，整体IN_PROGRESS。
+
+
 **IN_PROGRESS：通用核心尚未完成。** 执行 [MASTER_GOAL](docs/universal_mcp_execution/MASTER_GOAL.md)，以 [RESUME](docs/universal_mcp_execution/state/RESUME.json) 和 [当前交接](docs/universal_mcp_execution/CURRENT_HANDOFF.md) 续跑。原三案例科学终点已拆出，历史失败及 UNKNOWN 保留。
 
 - M0 恢复 PASS：固定源码/tree、21,682 个原跟踪文件，候选3,978映射/1,105对象核验；36项恢复工具测试通过。
@@ -47,6 +53,6 @@
 
 已发布c8db组合35测试文件的1366项软件PASS经Main限定核验，693输入及162模块/164执行/122loader已独立机械核一致；但Main追加两项各1FAIL：一为运行进程GetProcessTimes的lpExitTime未定义，当前client错误要求0。另一为restricted服务的专用mutable state需要精确serviceSID数据写权限，旧RO模板不合格；该修正只限state/endpoint，不放宽代码/config/全局owner或给AppC/World写权。两项现由新173及Main原样独立2PASS闭合源码范围，旧108/1366与失败不重写；仍非整体/native全部PASS。
 
-下一动作：Root122/SCM客户端108已同步ed09e598并独立fetch一致；同Primary现持续实现未来Windows原ManagedStopOrigin/scoped stop，旧实例/ref不动。Gate1136源软件已同步c8db并独立回读，同Leib正做已发布组合受影响回归；目录观察器95已同步f439，临时独立诊断进程方案仅PREP。四配置/argv/MIC实化还需源码，未授权host apply。最终统一Reviewer尚未开始。
+下一动作：客户端173两反例修复已同步830690db并独立fetch一致；Root122/SCM客户端108前序ed09e598保持原范围；同Primary现持续实现未来Windows原ManagedStopOrigin/scoped stop，旧实例/ref不动。Gate1136源软件已同步c8db并独立回读，同Leib正做已发布组合受影响回归；目录观察器95已同步f439，临时独立诊断进程方案仅PREP。四配置/argv/MIC实化还需源码，未授权host apply。最终统一Reviewer尚未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

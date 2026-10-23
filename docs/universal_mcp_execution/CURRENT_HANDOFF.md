@@ -1,8 +1,14 @@
 # 当前续跑交接 — 2026-10-23
 
+当前只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
+
+
+当前续跑检查点 r131：scoped stop 原110项软件PASS保留；Main在同一冻结源码独立反例1 FAIL，发现非Windows普通启动被误纳入SCM origin，已由同Primary连续整改，并补原never-resumed子链软件覆盖。四配置680 PASS/1项实际原生读取明确排除，但真正四加载器正向仍被service-RX与私有ACL规则冲突阻塞；Main核对SCM write-restricted语义后决策，未放松guard。publisher与bounded catalog scan继续独立源租约；全部原生宿主变更未授权/未执行，最终Reviewer未开始，整体IN_PROGRESS。
+
+
 目标 **IN_PROGRESS**，没有U01–U12整组完成或最终原生验收。唯一续跑指针为 [state/RESUME.json](state/RESUME.json)，合同为 [MASTER_GOAL](MASTER_GOAL.md)/[RELEASE_DOD](RELEASE_DOD.md)。主线是通用MCP，历史三案例与失败证据保留；阶段发布不是停止点。候选冻结后须由fresh强Reviewer自行选择两类未预设任务并循环整改，Main不预设其题目。
 
-规范生产树为本repository，分支universal-core。恢复基线cd472817/tree94e6523b，21,682原跟踪文件、3,978映射/1,105对象已核验。最近发布cb5a53938da5c39a8e6da1e0058d7264cb02558b（1366限定组合软件与两新失败检查点），前序c8dbd8a1（Gate1136限定源软件），前序ed09e598（Root122/SCM-client108两个限定源软件单位），前序f43928d1（独立NetIso source/software95），前序81c36ea7（有限A source/software1103），前序4d08d9e5（runtime交接source/software284及历史R2限定），前序18a2d068（installer上下文source/software220及只读R2），前序ad96297e（r4资源/metadata检查点），前序84e4b708（r4 Mac准备元数据），前序0fbd29b4（初始bootstrap源软件/只读元数据），前序8f96f15a（磁盘/root源软件），前序05da827f（原Job关闭源软件），Interp/void为035b3b96，前序4c1750b5（原生部分进度/新UNKNOWN）、96c6c9f8（SCM接线软件）、0926fc5e（离线主机包工具）、275c1b84（ControlClient）、7ae6140e（原child-owner）、b90ef486（固定监听）、5aed6a04（Core/W17）均普通发布并独立fetch一致。AGENTS148–152持续授权非force origin/main同步；Main独占Git和三份规范状态，按精确白名单stage，不含其他Agent WIP。旧ca7/c45暂存约束已结束。
+规范生产树为本repository，分支universal-core。恢复基线cd472817/tree94e6523b，21,682原跟踪文件、3,978映射/1,105对象已核验。最近发布830690db5a46a364d5a32b6f54fffcca4c8db6b2（客户端173两反例源码整改），前序cb5a5393（1366限定组合软件与两新失败检查点），前序c8dbd8a1（Gate1136限定源软件），前序ed09e598（Root122/SCM-client108两个限定源软件单位），前序f43928d1（独立NetIso source/software95），前序81c36ea7（有限A source/software1103），前序4d08d9e5（runtime交接source/software284及历史R2限定），前序18a2d068（installer上下文source/software220及只读R2），前序ad96297e（r4资源/metadata检查点），前序84e4b708（r4 Mac准备元数据），前序0fbd29b4（初始bootstrap源软件/只读元数据），前序8f96f15a（磁盘/root源软件），前序05da827f（原Job关闭源软件），Interp/void为035b3b96，前序4c1750b5（原生部分进度/新UNKNOWN）、96c6c9f8（SCM接线软件）、0926fc5e（离线主机包工具）、275c1b84（ControlClient）、7ae6140e（原child-owner）、b90ef486（固定监听）、5aed6a04（Core/W17）均普通发布并独立fetch一致。AGENTS148–152持续授权非force origin/main同步；Main独占Git和三份规范状态，按精确白名单stage，不含其他Agent WIP。旧ca7/c45暂存约束已结束。
 
 已验收有限基线：M0恢复36工具测试；M1 303软件/24公共签名/112正常安装工具协议，GENERAL_COVERAGE一次冻结273动作/427原子断言（414核心/13案例）。M3旧347PASS/1FAIL/1排除保留；精确旧源码仓库副本恢复单项PASS，W23另一历史delta仍缺。M4三架构构件与131发布软件、Mac/Windows安装112工具已限定验收；Intel同版本cryptography派生wheel披露，Intel COMSOL硬件未验证。生命周期核对118原始记录/36文件，0.1.10同版本代码切换回退/全状态备份恢复/standalone CPython非空venv卸载通过；Framework卸载UNKNOWN保留。Windows/Intel完整生命周期及原生T056未据此通过。
 
@@ -53,3 +59,5 @@ Windows静态runtime交接/ABI/known-close-ack现经Main限定接收：clean0fbd
 Leib新client修复173返回，含原Main两counter各一次；Main已完整delta审查并在最终冻结源独立原样2PASS，机械核对待回，尚未发布。目录R2B原一次Enum0返回226>探针64，原VQ48/Free0各一次、原owner已RELEASED；非空解析NOT_RUN，不能当空目录/absence。原事实未改；Lorentz已转纯源码局部UTF16扫描效率单元，生产row256/query8192等上限不变，未来R3只能新冻结/新预算另行Main放行。Primary stop90/20deselect未接收，已明确允许原本机Python子进程/loopback软件fixtures和短privateTmp闭合相关回归，非COMSOL/native进程或真实授权变更。
 
 client173现经Main限定接收：694固定Git/696候选、25imports/27frames/22loader/139packetrefs匹配，Main两原counter在最终82dd/b792源独立2PASS；旧108/1366/各1FAIL/中间失败保留。Legacy1366compact预Main指针7d57与当前cb5a元数据965a差异有真实旧INPUT_COMPACT副本，不改原历史。非本轮两providerfile扩展失败按原范围披露，不称完整provider文件通过。R2实际目录已Main限定核对Enum0/226、VQ48、原Free0与RELEASED；仅返回/释放ABI，非空复制未跑，原ROW_BUDGET64不改。
+
+客户端173精确7文件已普通同步830690并独立fetch一致，index empty；Leib按SCM_ENDPOINT_PUBLISHER_CONTRACT转新helper/nativehelper，自己取得同一个原ProcessLock并保留原文件/HANDLE来源，最终安全publish/replace/withdraw；Controller只产privatepatch，不碰Primary共享Stop源码。Hume单独核R2原始只读SDK与retained/released事实。目标持续IN_PROGRESS，未启动最终Reviewer。

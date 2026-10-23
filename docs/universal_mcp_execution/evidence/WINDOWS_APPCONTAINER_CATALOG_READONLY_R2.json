@@ -1,0 +1,134 @@
+{
+  "schema": "windows-appcontainer-catalog-readonly-r2/1",
+  "status": "MAIN_ACCEPTED_LIMITED_ACTUAL_ENUM_FREE_ABI_ROW_COPY_NOT_RUN",
+  "recorded_utc": "2026-10-23T03:27:49.549986+00:00",
+  "frozen_source_commit": "f43928d1f47341abf29ea463276098bc9dc111f0",
+  "catalog_source": {
+    "path": "comsol_mcp/_windows_appcontainer_catalog.py",
+    "sha256": "d0ddca5f56eecd2c9eb2232a7582295400672f75cbfec77e6a1035ed5a4a3ef6",
+    "bytes": 24418
+  },
+  "scope": "One temporary ordinary diagnostic process, actual Windows64 CPython3.12; same original child after parent-launcher return, self no-Job READY, then one separately Main-released literal GO. No host service/security change or COMSOL.",
+  "observations": {
+    "self_calls": {
+      "GetCurrentProcess": 1,
+      "IsProcessInJob": 1,
+      "GetProcessTimes": 1
+    },
+    "IsProcessInJob_BOOL": 1,
+    "in_job_result": 0,
+    "identity": "Recorded original PID35404/birth134371945523321334 only, not fresh liveness or control authority",
+    "catalog_calls": {
+      "NetworkIsolationEnumAppContainers": 1,
+      "VirtualQuery": 1,
+      "NetworkIsolationFreeAppContainers": 1
+    },
+    "Enum_DWORD": 0,
+    "returned_count": 226,
+    "VirtualQuery_SIZE_T": 48,
+    "Free_DWORD": 0,
+    "probe_max_rows": 64,
+    "error": "ROW_BUDGET before nonempty rows/SID/UTF16/capability decode",
+    "observation": null,
+    "source_owner": "RELEASED_SOURCE_CLEANUP_CONFIRMED",
+    "original_free_cached_outcome": 0,
+    "SDK_effect_retry": false
+  },
+  "limits": {
+    "nonempty_row_layout_SID_UTF16_capability_copy": "NOT_RUN;226 exceeds frozen probe64, not empty/absence",
+    "OS_child_exit_or_returncode": "NOT_OBSERVED; transport exit0 is not diagnostic child exit",
+    "generation_absence_completeness_storage_restore": "UNVERIFIED; no authority or generation issued",
+    "WFP_isolation_B_C_Resume_COMSOL_whole_MCP": "NOT_RUN_NOT_QUALIFIED",
+    "host_mutation": "No service/account/ACL/WFP/BFE/security/COMSOL change",
+    "process_control": "No PID reopen, signal, kill, owner reconstruction, retry or release ACK sent",
+    "TCB": "Pinned program/source and captured call records only; no all-DLL/all-host activity theorem"
+  },
+  "reviews": {
+    "Main_program": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/MAIN_PROGRAM_REVIEW.json",
+      "bytes": 4857,
+      "sha256": "3b411f17fee995768abcead7e72f18125886d16e8c99a2550de1d102bbdc2126"
+    },
+    "Main_phase_A_release": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/MAIN_PHASE_A_RELEASE.json",
+      "bytes": 3400,
+      "sha256": "464355f2ab4e9b45d290bd619a7a579f48bdbbac4e2a6f81bc2851dda590d729"
+    },
+    "Main_phase_A_readback": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/MAIN_PHASE_A_READBACK.json",
+      "bytes": 2885,
+      "sha256": "c80bbce9f093bdbb3aad245098eeb0f03d30b2ac21752823dbe68630cd297868"
+    },
+    "Main_phase_B_release": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/MAIN_PHASE_B_RELEASE.json",
+      "bytes": 2428,
+      "sha256": "0a5ab9756298a1daf816ea7cdab2f1aacd94eb082d154d5534635d562844dec5"
+    },
+    "Main_phase_B_review": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/MAIN_PHASE_B_REVIEW.json",
+      "bytes": 3013,
+      "sha256": "4f80c8a24f9b85c4c9616ffd0c26339bf75846998fd33e76030ebbab2845821e"
+    },
+    "independent_mechanical": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/NATIVE_R2_MECHANICAL_CHECK.json",
+      "bytes": 11895,
+      "sha256": "08d082e83a5834adfc3109d2b6d422ad0764656fd74b1ca506990d1497683fc4"
+    }
+  },
+  "receipts": {
+    "phase_A": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/phase-a/PHASE_A_RECEIPT.json",
+      "bytes": 6429,
+      "sha256": "3b04840a8e341f68cd85fe0397c85a7328434ba0e392113e9c0dc39a5f22b32f"
+    },
+    "phase_B": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/phase-b/PHASE_B_RECEIPT.json",
+      "bytes": 7178,
+      "sha256": "3a95e203129f588c153e77336af7bf53c93822e809fe0e7a6fe3e754c4b1bf57"
+    },
+    "READY": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/phase-a/readback/READY_DIAGNOSTIC_ONLY.json",
+      "bytes": 30149,
+      "sha256": "c24731523cc88a0f02026390543666df87819edcb1cd922939d860605013bdf8"
+    },
+    "status": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/phase-b/readback/status-000.json",
+      "bytes": 35506,
+      "sha256": "f3a0ce7e31087e892669ccbb7819b86ff51b1fc0dada1f988405fcd510bc965e"
+    },
+    "frozen_manifest": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/run-manifest.json",
+      "bytes": 5188,
+      "sha256": "4226f2d19c0d62b0506373c9f7d94bac0329932b7722c7fa881d399d01e9ea41"
+    },
+    "program": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/observe_catalog_once.py",
+      "bytes": 37009,
+      "sha256": "0a630db6620106e14bdd12ae9c9ad981dac842ce84d75157c899b76093bfb3a6"
+    },
+    "launcher": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/launch_catalog_once.py",
+      "bytes": 10231,
+      "sha256": "8463d2bdeaf68b9348272476617a2855ac0a6958db03a68f300a64069126440a"
+    },
+    "source_zip": {
+      "path": "_state/universal-windows-appcontainer-catalog/native-readonly-r2/frozen-catalog-sources.zip",
+      "bytes": 24920,
+      "sha256": "aff1c99c5c6d4f40f05a2829d3eacac716967b2177a28484ff7d79088fa239e2"
+    }
+  },
+  "mechanical": {
+    "references": 271,
+    "local_files": 114,
+    "wire_raw_copies": 15,
+    "all_matching": true,
+    "issues": [],
+    "qualification": "Saved input/raw/source binding check only, no new SDK execution or functional acceptance"
+  },
+  "preserved_history": {
+    "r1": "Unexecuted draft actual program02fe25...24402bytes differs old manifest df5d...24026bytes; all9 originals/copies preserved, no retroactive binding claim",
+    "phase_A_checker": "Original compound false remains; only argv4 forward/backslash text differs, strict Windows Path source expression matches, no retry or path guard weakening",
+    "probe_budget": "Frozen probe64 kept; production rows256 and other fixed budgets unchanged by this actual run"
+  },
+  "next": "Review separate source-only bounded-name scan, publish only after Main acceptance; any new R3 requires fresh nonce/program/manifest/2-source ZIP frozen before Main release, existing production defaults, no replay of R2."
+}
