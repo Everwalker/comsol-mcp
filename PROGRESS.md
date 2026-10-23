@@ -1,6 +1,6 @@
 # 当前进度 — 2026-10-23
 
-当前主线快照（续跑 r141）：Git HEAD/origin/main 上次独立回读一致为 c13047140574a9dc3144dc3c49102c8cbfd1686f。当前Stop限定源码/软件已Main接收：冻结699文件、1676项全通过，含旧1366、Stop115、catalog148与当前client增量，原Main反例一次；Hume核对与Main独立691个Git blob匹配，待精确13文件普通发布。辅助旧tar a02a指针未解析，明确UNVERIFIED，不作为当前源码验收依据。publisher282功能审查完成，同Luna继续当前Stop基线组合；配置cached SDK alias继续整改。R3四文件传输遭自动审批两次在启动前拒绝，strict-key主机身份已核对，现等精确用户授权，目录/传输/诊断/self/SDK/GO均未发生。完整原生矩阵和最终Reviewer未通过，整体IN_PROGRESS。
+当前主线快照（续跑 r143）：HEAD/origin/main 上次独立fetch一致为 e1bba51006d010c8416802cb9a6aca7de2c5d6f5，Stop1676限定源码/软件已普通发布。四配置及cached SDK alias整改753 PASS/1原生测试明确排除，Main与增量机械核对完成，准备精确11文件发布；R28反例仅冻结/postrun绑定，R30为121实际exec/244源码code归档，完整922 after-map未保存，边界明确。之后同Kier实现recipe4 typedStop authoring；同Primary继续AppC API_CONFIRMED、同Leib继续publisher组合。R3传输仍等精确用户授权；Mac只刷新资源事实，无新Server/计算。全量原生矩阵与最终独立Reviewer未通过，整体IN_PROGRESS。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。

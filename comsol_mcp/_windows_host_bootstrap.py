@@ -25,6 +25,7 @@ import threading
 import zipfile
 
 SCHEMA = "comsol-mcp.windows-initial-host-bootstrap/1"
+SCHEMA_V2 = "comsol-mcp.windows-initial-host-bootstrap/2"
 MAX_PLAN = 2 * 1024 * 1024
 MAX_FILES = 8192
 MAX_TOTAL = 8 * 1024**3
@@ -154,6 +155,9 @@ class BootstrapIntent:
     argv: tuple[str, ...]
     command_line: str
     sha256: str
+    schema: str = SCHEMA
+    original_raw: bytes = b""
+    provisioning: bytes = b""
 
     @property
     def directories(self):
@@ -167,7 +171,17 @@ class BootstrapIntent:
         return self.prefix if not relative else ntpath.join(self.prefix, *relative.split("/"))
 
 
-def service_argv(prefix, name):
+def service_argv(prefix, name, *, version=1):
+    if version == 2:
+        return (ntpath.join(prefix, "python312", "tools", "python.exe"), "-B", "-I",
+                "-m", "comsol_mcp._control_daemon", "--home",
+                ntpath.join(prefix, "service-state"), "--windows-scm-service-name", name,
+                "--windows-t037-profile", ntpath.join(prefix, "profiles", "trusted-profile.json"),
+                "--host-provider-config", ntpath.join(prefix, "profiles", "host-provider.json"),
+                "--memory-resource-config", ntpath.join(prefix, "profiles", "memory-resource.json"),
+                "--disk-resource-config", ntpath.join(prefix, "profiles", "disk-resource.json"))
+    if version != 1:
+        fail("PLAN_SCHEMA", "unsupported Bootstrap argv version")
     return (ntpath.join(prefix, "python312", "tools", "python.exe"), "-B", "-I",
             "-m", "comsol_mcp._control_daemon", "--home",
             ntpath.join(prefix, "service-state"), "--windows-t037-profile",
@@ -192,9 +206,11 @@ def parse_plan(raw):
                          parse_constant=lambda _: fail("PLAN_JSON", "nonfinite JSON"))
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise BootstrapError("PLAN_JSON", "invalid bounded JSON") from exc
+    version = 2 if type(doc) is dict and doc.get("schema") == SCHEMA_V2 else 1
     _fields(doc, {"schema", "prefix", "source_root", "service_name", "files",
-                  "materials", "runtime_layout", "service_argv", "quoted_command_line"})
-    if doc["schema"] != SCHEMA or doc["runtime_layout"] != "CPYTHON312_NORMAL_OFFLINE_MATERIALIZED":
+                  "materials", "runtime_layout", "service_argv", "quoted_command_line"}
+            | ({"provisioning"} if version == 2 else set()))
+    if doc["schema"] not in {SCHEMA, SCHEMA_V2} or doc["runtime_layout"] != "CPYTHON312_NORMAL_OFFLINE_MATERIALIZED":
         fail("PLAN_SCHEMA", "only the initial normal-CPython materialized layout is supported")
     name = doc["service_name"]
     if type(name) is not str or not re.fullmatch(r"ComsolMCP_[A-Za-z0-9_-]{1,60}", name):
@@ -246,12 +262,18 @@ def parse_plan(raw):
            for f in files if f.role == "jdk"]
     if digest(canonical(sorted(jdk, key=lambda r: r["path"]))) != materials["jdk_inventory_sha256"]:
         fail("PLAN_HASH", "JDK inventory digest mismatch")
-    argv = service_argv(prefix, name)
+    argv = service_argv(prefix, name, version=version)
     command_line = subprocess.list2cmdline(argv)  # formatting only: never executed
     if doc["service_argv"] != list(argv) or doc["quoted_command_line"] != command_line:
         fail("PLAN_COMMAND", "exact original argv array and Windows quoted command line required")
+    if version == 2:
+        from ._windows_scm_config_materialization import validate_recipe
+        validate_recipe(doc["provisioning"], prefix=prefix, service_name=name, files=files, argv=argv)
     return BootstrapIntent(prefix, source, name, tuple(sorted(files, key=lambda f: f.path)),
-                           tuple(sorted(materials.items())), argv, command_line, digest(canonical(doc)))
+                           tuple(sorted(materials.items())), argv, command_line,
+                           digest(raw) if version == 2 else digest(canonical(doc)),
+                           doc["schema"], raw if version == 2 else b"",
+                           canonical(doc["provisioning"]) if version == 2 else b"")
 
 
 def _sid(raw, offset=0):
@@ -565,6 +587,7 @@ class _Node:
     bridge_handle: _Handle | None = None
     runtime_handle: _Handle | None = None
     delete_handle: _Handle | None = None
+    label: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -594,6 +617,7 @@ class Bootstrap:
         self._seal, self.intent, self.backend = seal, intent, backend
         self.owner = backend.owner
         self._original_intent, self._original_backend, self._original_owner = intent, backend, self.owner
+        self._original_schema, self._approved_raw = intent.schema, intent.original_raw
         self.state, self.sources, self.anchors, self.nodes = "NEW", {}, {}, {}
         self.manager = self.service = self.service_image = self.service_sid = None
         self.apply_started = self.restore_started = False
@@ -603,6 +627,10 @@ class Bootstrap:
         self._restore_phase = None
         self.children_state = "NEVER_STARTED"
         self._retention_registered = False
+        self._configuration = None
+        self._original_configuration = None
+        self._configuration_ack = None
+        self.loaded_configs = None
 
     @property
     def children_state(self):
@@ -630,6 +658,15 @@ class Bootstrap:
                 or self.owner.api is not self.backend):
             fail("ORIGINAL_OWNER", "original installer state is not eligible")
         self.owner.check()
+        if self.intent.schema != self._original_schema:
+            fail("PLAN_DRIFT", "original plan version changed")
+        if self._original_schema == SCHEMA_V2 and (self.intent.original_raw != self._approved_raw
+                or parse_plan(self._approved_raw) != self.intent):
+            fail("PLAN_DRIFT", "original approved V2 raw bytes and typed intent differ")
+        if self._original_schema == SCHEMA_V2 and self._original_configuration is not None and (
+                self._configuration is not self._original_configuration
+                or self._original_configuration.original is not self):
+            fail('CONFIG_ORIGIN', 'copied/replaced Bootstrap or configuration owner is ineligible')
 
     def prepare(self):
         self._guard({"NEW"})
@@ -673,6 +710,9 @@ class Bootstrap:
                     fail("SOURCE_BYTES", "actual pinned source bytes differ from approved inventory")
                 self.sources[f.path] = (handle, image)
             self._materials()
+            if p.schema == SCHEMA_V2:
+                from ._windows_scm_config_materialization import prepare_configuration
+                prepare_configuration(self)
             self.state = "PREPARED_READONLY"
             return self
         except BaseException as exc:
@@ -709,18 +749,24 @@ class Bootstrap:
     def preview(self):
         self._guard({"PREPARED_READONLY", "INSTALLED_STOPPED_START_BLOCKED", "PARTIAL_KNOWN",
                      "RUNTIME_READ_PINNED_START_BLOCKED"})
-        return {"schema": SCHEMA, "plan_sha256": self.intent.sha256,
+        return {"schema": self.intent.schema, "plan_sha256": self.intent.sha256,
                 "state": self.state, "service_name": self.intent.service_name,
                 "prefix": self.intent.prefix, "argv": list(self.intent.argv),
                 "quoted_command_line": self.intent.command_line,
                 "files": len(self.intent.files), "bytes": sum(f.size for f in self.intent.files),
                 "required_privileges": list(PRIVILEGES), "SID_type": "RESTRICTED",
-                "native_start": "BLOCKED_TRUSTED_PROFILE_APPCONTAINER_PROJECT_NOT_MATERIALIZED",
+                "native_start": ("NOT_RUN_SYSTEM_RUNTIME_AND_POLICY_QUALIFICATION_REQUIRED" if self.intent.schema == SCHEMA_V2
+                    else "BLOCKED_TRUSTED_PROFILE_APPCONTAINER_PROJECT_NOT_MATERIALIZED"),
                 "authority": "LOCAL_INSTALLER_ONLY_NOT_T037",
                 "runtime": "NORMAL_OFFLINE_MATERIALIZED_PREFIX; NO_VENV; NO_PIP_EXECUTION",
                 "static_runtime_read_pins": self.state == "RUNTIME_READ_PINNED_START_BLOCKED",
-                "service_state_write_acl": "NOT_GRANTED_REQUIRES_LATER_EXPLICIT_SCOPE",
-                "trusted_profile_materialization": "NOT_PERFORMED",
+                "service_state_write_acl": ("STATIC_BOUND_SERVICE_DATA_POLICY_NOT_NATIVE_VERIFIED"
+                    if self._configuration is not None and self._configuration.state_descriptor is not None
+                    and 'service-state' in self.nodes and self.nodes['service-state'].image is not None
+                    and self.nodes['service-state'].image.raw_sd == self._configuration.state_descriptor
+                    else "NOT_GRANTED_REQUIRES_LATER_EXPLICIT_SCOPE"),
+                "trusted_profile_materialization": ("STATIC_FOUR_FILES_ONLY" if self._configuration is not None
+                    and self._configuration.resolved is not None else "NOT_PERFORMED"),
                 "token_precondition": self.backend.context(),
                 "full_AppContainer_restore": "RESTORE_NOT_IMPLEMENTED_IN_EXISTING_LEAF",
                 "apply_ready_package_claim": False}
@@ -739,6 +785,9 @@ class Bootstrap:
         self._guard({"PREPARED_READONLY"})
         if approved_plan_sha256 != self.intent.sha256 or type(approved_plan_sha256) is not str:
             fail("LOCAL_APPROVAL_REQUIRED", "explicit exact local administrator plan approval required")
+        if self.intent.schema == SCHEMA_V2:
+            from ._windows_scm_config_materialization import apply_configuration
+            return apply_configuration(self)
         context = self.backend.context()
         if not context.get("elevated_admin") or not context.get("can_assign_SYSTEM_owner"):
             fail("SYSTEM_OWNER_CONTEXT_REQUIRED", "already capable elevated token required; this installer enables no privileges")
@@ -860,10 +909,14 @@ class Bootstrap:
         for handle in live:
             if self.backend.image(handle, node.path, node.image.directory) != node.image:
                 fail("TREE_DRIFT", "original live HANDLE identity/bytes/raw SD differ")
+            if self.intent.schema == SCHEMA_V2:
+                self._configuration.compare_label(node, handle)
         if self.backend.fresh_image(node.path, node.image.directory) != node.image:
             fail("TREE_DRIFT", "fresh fileID/bytes/raw SD differ from original created postimage")
 
     def _close_pin(self, node, role, phase):
+        if self.intent.schema == SCHEMA_V2:
+            self._configuration.compare_generated_manifest()
         handle = getattr(node, role)
         self._pin_close_ack = None
         self._pin_close = _PinClose(phase, node, role, handle, handle.opened, handle.argument,
@@ -941,10 +994,14 @@ class Bootstrap:
             self._compare()  # complete namespace/SCM/static inventory before any writer closes
             self.handoff_started, self.state = True, "HANDING_OFF_STATIC_PINS"
             for node in self.nodes.values():
+                if self.intent.schema == SCHEMA_V2:
+                    self._configuration.compare_generated_manifest()
                 node.bridge_handle = self.backend.bridge_node(node.path, node.image.directory)
                 self._compare_node(node)
                 self._close_pin(node, "handle", "handoff")
                 self._compare_node(node)  # bridge preserves identity across confirmed writer close
+                if self.intent.schema == SCHEMA_V2:
+                    self._configuration.compare_generated_manifest()
                 node.runtime_handle = self.backend.runtime_node(node.path, node.image.directory)
                 self._compare_node(node)
                 self._close_pin(node, "bridge_handle", "handoff")
@@ -985,6 +1042,9 @@ class Bootstrap:
         if self.children_state != "NEVER_STARTED":
             fail("CHILDREN_UNKNOWN", "live/unknown owned children forbid restore")
         self._check_sources_anchors()
+        if self.intent.schema == SCHEMA_V2:
+            self._configuration.check_original(self)
+            self._configuration.compare_external()
         if "" not in self.nodes and not self.backend.absent(self.intent.prefix):
             fail("PREFIX_UNOWNED", "created or replaced prefix has no original acquired HANDLE")
         if self.service is not None:
@@ -1085,6 +1145,16 @@ class Bootstrap:
             self.state = "UNKNOWN"
             self.owner.uncertain = True
             raise BootstrapError("CLOSE_UNKNOWN", str(exc), owner=self) from exc
+
+    def acknowledge_configuration(self):
+        """Original cached-success metadata only; never repeats a native setter."""
+        from ._windows_scm_config_materialization import acknowledge_configuration
+        return acknowledge_configuration(self)
+
+    def load_configurations(self):
+        """Normal four loaders under the original SYSTEM actor; no start/issuer."""
+        from ._windows_scm_config_materialization import load_configurations
+        return load_configurations(self)
 
 
 def retained_bootstrap_owners():
