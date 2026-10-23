@@ -1,0 +1,112 @@
+{
+  "schema": "readme-artifact-contract-clarification/1",
+  "status": "STATIC_DOCUMENT_CHECK_COMPLETE",
+  "changed_files": [
+    "README.md",
+    "docs/universal_mcp_execution/evidence/README_ARTIFACT_CONTRACT_CLARIFICATION.json"
+  ],
+  "changes": [
+    "Chinese/English normal workflow: register loadable MPH with role=model/classification=project_local; explicit returned project/session in outer execution; matching body project_id/idempotency_key.",
+    "Keep registration data.artifact_id/sha256/size; load by returned artifact id in the same project/session; model.save still uses size_bytes.",
+    "Digest identity/classification cannot be overwritten; preserve records and inspect current schema/original job without manual state edits.",
+    "Replace old e28a R4 install guidance with the published current-source Mac software evidence link; retain native/T044/platform and JDK11 limits."
+  ],
+  "readme_before": {
+    "bytes": 11335,
+    "sha256": "d7c2d78a478075da8454ff5c2d03c0cd42c3f5b944542d273e67604b670c81cf"
+  },
+  "readme_after": {
+    "bytes": 13913,
+    "sha256": "976e895a2c6c5ea2359d50fd78755e61bf07325174e11e651b127250080f712b"
+  },
+  "source_anchors": [
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "anchors": [
+        "_register_project_artifact:2018-2087 — body/envelope equality, selected service project_write, data.artifact_id/sha256/size"
+      ],
+      "sha256": "23ace5c66e545786b0ee3ea2cde3832ec346c2e8c5d82ad6c14ce50ac36af24a"
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "anchors": [
+        "backend:477-481 — selected context backend or legacy default",
+        "_execution_session_context:11649-11669 — execution.project_id/session_id binding"
+      ],
+      "sha256": "753db45a0c1a9393e381bbd41c9abcdba953b59214e0f8532e044c41a7d09e1c"
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "anchors": [
+        "load_model:351-379 — resolve and validate before Worker tags/load",
+        "_validate_loadable_mph:382-423 — project_local registered MPH gate",
+        "save_model:936-943 — successful size_bytes field"
+      ],
+      "sha256": "ed9ef412f42a050f70fb492ad835bdf8244b76d8738a11b7331393dae95a31a9"
+    },
+    {
+      "path": "comsol_mcp/_artifact_store.py",
+      "anchors": [
+        "register_project_artifact:176-383 — digest-addressed metadata conflicts, no identity/classification overwrite"
+      ],
+      "sha256": "c7ee8c61036176dad499769fa3274f610d956e34d53d8a6bffd61e3afff253bd"
+    },
+    {
+      "path": "comsol_mcp/_g2_tools.py",
+      "anchors": [
+        "operation_call:49-51 — operation_id and arguments tool parameters"
+      ],
+      "sha256": "d62451b60a529d146c91849f47b9f51be6d19788962131e3ea24386e7a2a04f9"
+    },
+    {
+      "path": "comsol_mcp/_mcp_gateway.py",
+      "anchors": [
+        "GatewayRegistry.add_tool:186-202,254-288 — additive outer execution and retained nested arguments"
+      ],
+      "sha256": "ff40a6f0f4a472a4950bb698c3d8a0b05330ed4ffa186538cffcb3edccade16f"
+    },
+    {
+      "path": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "anchors": [
+        "artifact.register.input_schema:16778-16848 — required/allowed body fields"
+      ],
+      "sha256": "c49201c72932ac87b799da7bdbea9a982912e24bde9c3c9887c2916a1fea3b10"
+    }
+  ],
+  "package_evidence": {
+    "path": "docs/universal_mcp_execution/evidence/MAC_CURRENT_SOURCE_OFFLINE_PACKAGE.json",
+    "sha256": "572a6a2780d32f61c1c9a72b9b1af0efac19ad0e50c31a331283d25e61a06bf0",
+    "source_commit": "3d92b3c736f31e6e3ace99418629c78ab1969169",
+    "own_wheel_sha256": "0860fc6ad5c85543369d4aa115d9fa40f679e7e2b0fbdd29fef71662da5b0680",
+    "bundle_sha256": "62d61df57738b2da37bf29964643faf5d95ae8f4161160076d11d00bd5a01e27",
+    "scope": "Published Mac ARM64 offline-install/normal stdio112 software evidence only; no binary re-verification or download URL invented. Current-source T044 remains unaccepted."
+  },
+  "static_checks": {
+    "JSON_blocks_parsed": 2,
+    "artifact_example": "operation_call parameters: operation_id=artifact.register; role=model; classification=project_local; relative MPH placeholder; nonempty returned-project/session and new request/key placeholders.",
+    "catalog_body_fields_types_lengths_patterns": "CHECKED",
+    "body_outer_project_and_idempotency_equal": true,
+    "session_outer_only": true,
+    "placeholders_explicit_no_real_user_paths_or_tokens": true,
+    "host_configuration_JSON_unchanged": true,
+    "pip_command_unchanged": true,
+    "JDK11_and_default_entrypoint_scope_preserved": true,
+    "original_link_targets_retained": true,
+    "local_targets": [
+      "#english",
+      "docs/universal_mcp_execution/evidence/MAC_CURRENT_SOURCE_OFFLINE_PACKAGE.json",
+      "PROGRESS.md",
+      "docs/universal_mcp_execution/CURRENT_HANDOFF.md",
+      "docs/universal_mcp_execution/config/TARGETS.json",
+      "docs/universal_mcp_execution/MASTER_GOAL.md",
+      "continuation/README.md",
+      "docs/comsol_mcp_design_v1/README.md"
+    ],
+    "local_links": "All named files/English anchor exist; Main3 contents not read for link checking.",
+    "external_historical_link": "Unchanged HTTPS URL; syntax/preservation checked, HTTP not requested.",
+    "source_hashes_stable_during_edit": true
+  },
+  "validation_boundary": "Static documentation/source/JSON/link checks only. No runtimePASS, product/suite/SDK/JDK/native execution, installation, archive changes, Main3/code or Git operations. Classification guidance here concerns model.load, with no new Java classification claim.",
+  "readme_unified_diff_sha256": "4172cfb2bf61b96523f83c0c500c2767039174ab8242d0e32cee42d47e4bc445",
+  "utc": "2026-10-23T17:43:36.351600+00:00"
+}

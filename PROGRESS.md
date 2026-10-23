@@ -1,8 +1,8 @@
-# 当前进度 — 2026-10-23
+# 当前进度 — 2026-10-24
 
-当前主线快照（续跑 r173）：connected B源码/软件2577及历史R4有限native/fixture已发布3d92并核11远端blob。当前3d92的新Mac离线包/安装/源外112工具软件阶段已Main限定验收，Hume核208源文件/192包成员/42锁轮与47组loader执行，原失败/首个NOT_YET快照保留，准备compact+Main3精确4文件发布。本阶段native0，旧UNKNOWN不改。同Primary原AppC selector资格PREP、同Lorentz新Worker/T044原七项PREP、同Parfit原启动输入/保护bootstrap源码在独立私有副本连续进行；issuer仍拒绝，Windows新效果及未来Mac native尚未放行。整体IN_PROGRESS，fullrestore/required矩阵/最终fresh Reviewer未通过。
+当前主线快照（续跑 r185）：Mac c6e7原Worker/Server经公开MCP正常退役，Main核8回复/原Popen与birth/退出回收/Server监听消失/STOPPED-WorkerNone-runtimefalse；原743422文件/登记/失败/daemon保留。R6新Root任务PREP已报15集成软件、43冻结/36外pins，同包同MPH正确project_local，待Main计划/环境审完才metadata及独立Core放行。README普通登记/加载合同与当前包引用已Main静态验收，正按既有授权同步精确6份docs/compact/Main3。WindowsR5 source软件222与13材料已限定验收，human临时效果批准PENDING、effectsNOT_RUN。Parfit通用启动R2六P1及真实逻辑全链整改继续，意外JDK退出原证据待核。整体IN_PROGRESS，T044/full427/requirednative/restore/最终freshReviewer未通过。
 
-以下为分阶段历史记录；当前状态以首段、CURRENT_HANDOFF 与 RESUME r173 为准。
+以下为分阶段历史记录；当前状态以首段、CURRENT_HANDOFF 与 RESUME r185 为准。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
