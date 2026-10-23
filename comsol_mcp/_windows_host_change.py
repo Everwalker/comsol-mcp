@@ -35,6 +35,60 @@ _MAX_SNAPSHOT_ROWS = 100_000
 _SHA = frozenset("0123456789abcdef")
 
 
+class _TrustedProfileLoadOrigin:
+    """Unforgeable in-process receipt for one normal trusted-profile load."""
+
+    __slots__ = ("profile_wrapper", "profile_path", "source_sha256",
+                 "source_identity_sha256", "wrapper_sha256",
+                 "host_resource_sha256", "host_policy_sha256",
+                 "security_semantics", "wrapper_schema", "_seal")
+    _IMMUTABLE = frozenset(__slots__)
+
+    def __setattr__(self, name, value):
+        if name in self._IMMUTABLE and hasattr(self, name):
+            _error("HOST_CHANGE_PROFILE_LOAD_ORIGIN_UNKNOWN",
+                   "trusted profile loader origin is immutable")
+        object.__setattr__(self, name, value)
+
+    def __init__(self, *, wrapper: Any, profile_path: str | os.PathLike[str], seal: object):
+        from ._windows_t037 import WindowsT037ProfileV2
+        if (seal is not _NATIVE_PROFILE_LOADER_TOKEN
+                or type(wrapper) is not WindowsT037ProfileV2):
+            _error("HOST_CHANGE_TRUSTED_PROFILE_LOADER_REQUIRED",
+                   "a native profile origin can only be issued by the normal trusted loader")
+        profile = wrapper.host_resource_profile
+        self.profile_wrapper = wrapper
+        self.profile_path = str(profile_path)
+        self.source_sha256 = wrapper.source_sha256
+        self.source_identity_sha256 = hashlib.sha256(
+            _canonical(dict(wrapper.source_identity)).encode("utf-8")).hexdigest()
+        self.wrapper_sha256 = wrapper.sha256
+        self.host_resource_sha256 = profile.sha256
+        self.host_policy_sha256 = resources._sha256(profile.windows_isolation.as_dict())
+        self.security_semantics = wrapper.security_semantics
+        self.wrapper_schema = wrapper.wrapper_schema
+        self._seal = seal
+
+    def matches(self, wrapper: Any, profile_path: str | os.PathLike[str]) -> bool:
+        from ._windows_t037 import WindowsT037ProfileV2
+        if (self._seal is not _NATIVE_PROFILE_LOADER_TOKEN
+                or type(wrapper) is not WindowsT037ProfileV2
+                or wrapper is not self.profile_wrapper
+                or str(profile_path) != self.profile_path):
+            return False
+        profile = wrapper.host_resource_profile
+        return (
+            wrapper.source_sha256 == self.source_sha256
+            and hashlib.sha256(_canonical(dict(wrapper.source_identity)).encode("utf-8")).hexdigest()
+                == self.source_identity_sha256
+            and wrapper.sha256 == self.wrapper_sha256
+            and profile.sha256 == self.host_resource_sha256
+            and resources._sha256(profile.windows_isolation.as_dict()) == self.host_policy_sha256
+            and wrapper.security_semantics == self.security_semantics
+            and wrapper.wrapper_schema == self.wrapper_schema
+        )
+
+
 class WindowsHostChangeError(ExecutionContractError):
     """Typed pre-effect refusal or durable unknown from host mutation."""
 
@@ -562,7 +616,8 @@ class WindowsHostChangeExecutor:
 
     def __init__(self, *, store: OperationStore, authority: ProjectAuthority,
                  profile: Any, api: Any, software_only: bool,
-                 _construction_token: object | None = None):
+                 _construction_token: object | None = None,
+                 _trusted_profile_load_origin: _TrustedProfileLoadOrigin | None = None):
         if (type(store) is not OperationStore or type(authority) is not ProjectAuthority
                 or authority.store is not store or type(profile) is not resources.HostResourceProfile
                 or type(authority.authorization_verifier) is not HostScopedProvider):
@@ -579,10 +634,21 @@ class WindowsHostChangeExecutor:
                    "native host mutation construction must come from the trusted startup profile loader")
         if not software_only and type(api) is not CtypesWindowsWfpMutationApi:
             _error("HOST_CHANGE_NATIVE_API_REQUIRED", "production execution requires the fixed native WFP adapter")
+        if software_only:
+            if _trusted_profile_load_origin is not None:
+                _error("HOST_CHANGE_PROFILE_LOAD_ORIGIN_MISMATCH",
+                       "software-only executors cannot carry a native trusted-loader origin")
+        elif (type(_trusted_profile_load_origin) is not _TrustedProfileLoadOrigin
+              or _trusted_profile_load_origin._seal is not _NATIVE_PROFILE_LOADER_TOKEN
+              or _trusted_profile_load_origin.profile_wrapper.host_resource_profile is not profile):
+            _error("HOST_CHANGE_PROFILE_LOAD_ORIGIN_REQUIRED",
+                   "native execution must retain the exact profile returned by its trusted loader")
         self.store, self.authority, self.profile = store, authority, profile
         self.provider = authority.authorization_verifier
         self.api = api
         self.software_only = software_only
+        self._trusted_profile_load_origin = _trusted_profile_load_origin
+        self._software_test_seal = (_SOFTWARE_TEST_TOKEN if software_only else None)
 
     @classmethod
     def from_trusted_profile_path(cls, *, store: OperationStore, authority: ProjectAuthority,
@@ -595,9 +661,14 @@ class WindowsHostChangeExecutor:
             _error("HOST_CHANGE_PROFILE_V2_REQUIRED", "v1 intent-only profile cannot authorize a Windows host mutation")
         profile = loaded.host_resource_profile
         _current_windows_binding(profile)
+        origin = _TrustedProfileLoadOrigin(
+            wrapper=loaded, profile_path=trusted_profile_path,
+            seal=_NATIVE_PROFILE_LOADER_TOKEN,
+        )
         return cls(store=store, authority=authority, profile=profile,
                    api=CtypesWindowsWfpMutationApi(), software_only=False,
-                   _construction_token=_NATIVE_PROFILE_LOADER_TOKEN)
+                   _construction_token=_NATIVE_PROFILE_LOADER_TOKEN,
+                   _trusted_profile_load_origin=origin)
 
     @classmethod
     def _for_software_test(cls, *, store: OperationStore, authority: ProjectAuthority,

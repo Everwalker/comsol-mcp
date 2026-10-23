@@ -428,6 +428,11 @@ class ControlDaemon:
         self._session_server_handles: dict[tuple[str, str], ManagedServerHandle] = {}
         self._session_t037_process_factories: dict[tuple[str, str], Any] = {}
         self._retained_host_control_executors = {}
+        # A successful AppContainer CREATE outlives its temporary SDK
+        # allocations and operation executor. Keep its exact private owner
+        # separately so ordinary executor cleanup cannot release the profile.
+        self._retained_appcontainer_profile_effects = {}
+        self._appcontainer_profile_effect_lock = threading.RLock()
         self._t037_policy_observation_owner = None
         self.desktop = DesktopCoordinator(
             store=self.store,
@@ -762,6 +767,19 @@ class ControlDaemon:
             self._retained_host_control_executors.pop(record["key"], None)
             record["key"] = actual_key
         executor._on_original_host_admission = bind_admission
+
+        def retain_appcontainer_effect(actual_executor, admission, action, subject):
+            if actual_executor is not executor or record["executor"] is not executor:
+                raise ExecutionContractError(
+                    "HOST_CONTROL_OWNER_UNKNOWN",
+                    "AppContainer CREATE must use the exact original admitted executor", safe_retry=False,
+                )
+            return self._retain_appcontainer_profile_effect(
+                request=request, record=record, executor=executor,
+                admission=admission, action=action, subject=subject,
+            )
+
+        executor._on_original_appcontainer_profile_effect = retain_appcontainer_effect
         if (executor.profile.sha256 != request.profile_sha256
                 or executor.provider is not request.provider
                 or executor.authority is not request.authority):
@@ -774,6 +792,39 @@ class ControlDaemon:
                                     authorization_ref=request.authorization_ref)
         raise ExecutionContractError("HOST_CONTROL_PHASE_UNSUPPORTED", "internal host-control phase is unsupported")
 
+    def _retain_appcontainer_profile_effect(self, *, request, record, executor,
+                                            admission, action, subject):
+        """Root one original CREATE effect before entering its native SDK call."""
+        from . import _windows_appcontainer_lifecycle as lifecycle
+
+        if (record.get("request") is not request or record.get("executor") is not executor
+                or self._retained_host_control_executors.get(record.get("key")) is not record):
+            raise ExecutionContractError(
+                "HOST_CHANGE_APPCONTAINER_OWNER_BINDING_MISMATCH",
+                "the original host-control request/executor must remain retained before profile CREATE",
+                safe_retry=False,
+            )
+        if executor.software_only:
+            effect = lifecycle.create_software_test_profile_effect(
+                daemon=self, request=request, record=record, executor=executor,
+                admission=admission, action=action, subject=subject,
+                test_token=executor._software_test_seal,
+            )
+        else:
+            effect = lifecycle.create_native_profile_effect(
+                daemon=self, request=request, record=record, executor=executor,
+                admission=admission, action=action, subject=subject,
+            )
+        if getattr(executor.api, "_appcontainer_profile_effect", None) is not None:
+            raise ExecutionContractError(
+                "HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN",
+                "an original API already retains a profile effect", safe_retry=False,
+            )
+        lifecycle.root_profile_effect(self, effect)
+        executor.api._appcontainer_profile_effect = effect
+        effect.require_rooted(executor.api)
+        return effect
+
     def _reconcile_original_host_control_executor(self, original_request, original_executor,
                                                  *, original_preflight_owner=None):
         """Private cleanup reconciliation only; never retry apply/restore or alter Store UNKNOWN."""
@@ -781,6 +832,11 @@ class ControlDaemon:
         records = [record for record in self._retained_host_control_executors.values()
                    if record["request"] is original_request and record["executor"] is original_executor]
         if len(records) != 1:
+            effects = [effect for effect in getattr(self, "_retained_appcontainer_profile_effects", {}).values()
+                       if effect.request is original_request and effect.executor is original_executor]
+            if not records and len(effects) == 1:
+                effects[0].reconcile_original_native_resources(original_request, original_executor)
+                return
             raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "original retained request/executor identity required", safe_retry=False)
         if original_executor is None:
             from ._windows_host_preflight_owner import confirmed_original_cleanup
@@ -800,6 +856,12 @@ class ControlDaemon:
         from ._windows_service_sid import original_preflights_terminal
         if registry.owner is not original_executor.api or registry.unresolved() or not original_preflights_terminal(original_executor.api):
             raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "original native resources remain unresolved", safe_retry=False)
+        effects = [effect for effect in getattr(self, "_retained_appcontainer_profile_effects", {}).values()
+                   if effect.request is original_request and effect.executor is original_executor]
+        if len(effects) > 1:
+            raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "multiple original profile effects share one executor", safe_retry=False)
+        if effects:
+            effects[0].reconcile_original_native_resources(original_request, original_executor)
         self._retained_host_control_executors.pop(records[0]["key"])
 
     def _dispatch_admitted(self, request):

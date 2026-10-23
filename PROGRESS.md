@@ -35,8 +35,12 @@
 
 - 独立AppContainer NetIso目录观察器经Main限定source/software验收：全部518生产/454测试行已读，固定81c的21,780原Git/archive+两新文件为21,782，95项PASS/2实际项目imports/92引用一致。Win64自然布局、手工UTF16与原DWORD0 Enum/Free/强root/有界可读span/未知不重放/确认后纯记账覆盖；初始84与新增3FAIL另保留。Microsoft primary成员与API约定核对，installed SDK头版本和真实ABI仍未验证。只输出诊断，empty/stale/flags1不产absence/恢复/launch资格；尚未接Root，native实际0调用。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_CATALOG.json)。
 
+- AppContainer持久owner源码/软件经Main限定接收：正常fresh loader原1FAIL已修复，原counter在最终六源快照独立1PASS；新洁净122PASS、60实际origins/48生产loader事件、5726 Python输入核对一致。旧112/122/失败原件保留，计数不叠加。原生CREATE/restore/Delete/Gate集成均未验证。见[owner证据](docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_OWNER.json)。
+
+- 显式SCM attach-only客户端源码/软件经Main限定接收：644生产/481新测试行及client增量审查，固定81c+五overlay的108PASS、685原Git/688候选/24实际import记录一致；记录为post-pytest源快照，非loader轨迹。无默认home回退/新daemon；实际SDK/HTTP/跨用户交付未跑，protected SYSTEM端点publisher仍缺。旧开发源码未逐轮冻结、首次准备失败仅说明均披露。见[客户端证据](docs/universal_mcp_execution/evidence/WINDOWS_SCM_CLIENT_ENDPOINT.json)。
+
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：普通同步独立NetIso观察器95的软件阶段（只诊断，absence/generation/restore均未qualified）。Root fresh-loader修复Main原counter独立1PASS，但focused122缺actual import trace，已同Luna以不变源码补洁净运行，旧112/失败保留；Gate1136待集中审查，Kier实施显式SCM attach-only。Main选择未来Windows原ManagedStopOrigin+scoped stop消费，旧实例/拒绝ref不动。最终统一Reviewer尚未开始。
+下一动作：精确同步Root122与SCM客户端108已限定验收源码；随后同Primary实现未来Windows原ManagedStopOrigin/scoped stop，旧实例/ref不动。Gate1136功能审查完成、机械核对待回；目录观察器95已同步f439，临时独立诊断进程方案仅PREP。四配置/argv/MIC实化还需源码，未授权host apply。最终统一Reviewer尚未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

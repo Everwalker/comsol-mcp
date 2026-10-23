@@ -13,6 +13,35 @@ class SidAndAttributes(C.Structure):
     _fields_ = [('sid', H), ('attributes', D)]
 
 
+class _NativeCreateAttempt:
+    """Local control-flow witness for whether the exact SDK call was entered."""
+    __slots__ = ("_entered", "_finished")
+
+    def __init__(self):
+        self._entered = False
+        self._finished = False
+
+    @property
+    def entered(self):
+        return self._entered
+
+    @property
+    def finished(self):
+        return self._finished
+
+    def mark_entered(self):
+        if self._entered or self._finished:
+            fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN',
+                 'the original native CREATE attempt entered more than once')
+        self._entered = True
+
+    def mark_finished(self):
+        if self._finished:
+            fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN',
+                 'the original native CREATE attempt completed more than once')
+        self._finished = True
+
+
 def sdk(api):
     calls = getattr(api, '_captured_mutation_sdk', None)
     if calls is None:
@@ -72,9 +101,51 @@ def no_impersonation(api):
 
 
 def create(api, policy, expected_subject):
+    from ._windows_appcontainer_lifecycle import ProfileEffect
+    effect = getattr(api, '_appcontainer_profile_effect', None)
+    if type(effect) is not ProfileEffect:
+        fail('HOST_CHANGE_APPCONTAINER_OWNER_REQUIRED',
+             'the exact daemon-rooted ProfileEffect is required before native CREATE')
+    effect.require_rooted(api)
+    if (effect.policy is not policy or effect.profile_name != policy.appcontainer_profile_name
+            or effect.appcontainer_sid.casefold() != policy.appcontainer_sid.casefold()
+            or effect.subject is not expected_subject):
+        fail('HOST_CHANGE_APPCONTAINER_OWNER_BINDING_MISMATCH',
+             'the original CREATE arguments differ from the retained profile effect')
+    if effect.software_only:
+        from ._windows_host_change import _SOFTWARE_TEST_TOKEN
+        if (not effect.executor.software_only
+                or effect.executor._software_test_seal is not _SOFTWARE_TEST_TOKEN):
+            fail('HOST_CHANGE_APPCONTAINER_TEST_OWNER_REQUIRED',
+                 'synthetic AppContainer calls require the explicit SOFTWARE_ONLY executor seal')
+    else:
+        from ._windows_host_change import _TrustedProfileLoadOrigin, _NATIVE_PROFILE_LOADER_TOKEN
+        origin = effect.loader_origin
+        if (effect.executor.software_only is not False
+                or effect.executor._software_test_seal is not None
+                or type(origin) is not _TrustedProfileLoadOrigin
+                or origin._seal is not _NATIVE_PROFILE_LOADER_TOKEN
+                or origin is not effect.executor._trusted_profile_load_origin
+                or effect.profile_wrapper is not origin.profile_wrapper
+                or effect.daemon_profile_wrapper is not effect.daemon._windows_t037_profile
+                or effect.profile is not effect.executor.profile
+                or effect.profile is not effect.profile_wrapper.host_resource_profile
+                or effect.policy is not effect.profile.windows_isolation
+                or not origin.matches(effect.profile_wrapper, effect.profile_path)):
+            fail('HOST_CHANGE_APPCONTAINER_OWNER_BINDING_MISMATCH',
+                 'the native effect lost its exact fresh-loader profile/origin or daemon source binding')
+    attempt = _NativeCreateAttempt()
+    effect.bind_native_attempt(api, attempt)
+    try:
+        return _create_original(api, policy, expected_subject, effect, attempt)
+    finally:
+        attempt.mark_finished()
+
+
+def _create_original(api, policy, expected_subject, effect, attempt):
     calls = sdk(api); r = registry_for(api)
     previous = getattr(api, '_appcontainer_original_call', None)
-    if r.unresolved() or (previous is not None and not previous[5]()):
+    if r.unresolved() or previous is not None:
         fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN', 'original native resources require cleanup before CREATE')
     if api._service_sid_observe(policy.service_name) != expected_subject:
         fail('HOST_CHANGE_APPCONTAINER_SUBJECT_CHANGED', 'original active service subject changed before CREATE')
@@ -83,7 +154,7 @@ def create(api, policy, expected_subject):
     caps = (SidAndAttributes * len(policy.capability_sids))()
     allocations = []; output = H(); result = None; entry = None; first = None
     allocation_confirmed = False
-    create_entered = False; create_succeeded = False; sid_released = False; capability_terminals = []
+    create_succeeded = False; sid_released = False; capability_terminals = []
     state = {'allocation_confirmed': False, 'address': None, 'result': None, 'outcome': 'UNKNOWN'}
     # Exact SDK call buffers and outcomes remain with the original adapter if
     # return/pointer/cleanup is unknown. They grant no OS profile generation.
@@ -91,10 +162,13 @@ def create(api, policy, expected_subject):
         # Actual SDK/closer facts live in the original call closure. Public
         # diagnostic state cannot classify a missing HRESULT or confirm frees.
         return (api._appcontainer_original_call is original_call
-                and (not create_entered or (create_succeeded and allocation_confirmed and sid_released))
+                and (not attempt.entered or (create_succeeded and allocation_confirmed and sid_released))
                 and all(confirmed() for confirmed in capability_terminals))
-    original_call = (calls, caps, output, state, expected_subject, terminal)
+    def entered():
+        return attempt.entered
+    original_call = (calls, caps, output, state, expected_subject, terminal, entered)
     api._appcontainer_original_call = original_call
+    effect.bind_original_call(api, original_call)
     def retain_capability_closer(address):
         original_entry = r.find(api, address, domain='mutation_local')
         if original_entry is None:
@@ -122,13 +196,26 @@ def create(api, policy, expected_subject):
                 fail('HOST_CHANGE_APPCONTAINER_CAPABILITY_UNKNOWN', 'original capability SID allocation failed')
             caps[index] = SidAndAttributes(allocation.value, 4)
         try:
-            create_entered = True
+            expected_capability_entries = {
+                id(r.find(api, address, domain='mutation_local')) for address in allocations
+            }
+            unresolved = r.unresolved()
+            if (None in expected_capability_entries or len(unresolved) != len(expected_capability_entries)
+                    or any(id(item) not in expected_capability_entries
+                           or item.adapter is not api or item.domain != 'mutation_local'
+                           for item in unresolved)):
+                fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN',
+                     'only the exact original capability buffers may remain owned before CREATE')
+            no_impersonation(api)
+            attempt.mark_entered()
+            effect.mark_create_entered(api, original_call)
             result = calls['CreateAppContainerProfile'](policy.appcontainer_profile_name,
                 policy.appcontainer_profile_name, policy.appcontainer_profile_name,
                 caps if len(caps) else None, len(caps), C.byref(output))
             raw = getattr(result, 'value', result)
             if type(raw) is not int or not -(2**31) <= raw < 2**31:
                 fail('HOST_CHANGE_APPCONTAINER_HRESULT_UNKNOWN', 'original HRESULT return is not signed 32-bit')
+            effect.capture_hresult(api, original_call, raw)
             create_succeeded = raw == 0
             state['result'] = raw
             state['allocation_confirmed'] = False
@@ -169,6 +256,7 @@ def create(api, policy, expected_subject):
         text = 'S-1-' + str(int.from_bytes(raw[2:8], 'big')) + ''.join('-' + str(int.from_bytes(raw[i:i+4], 'little')) for i in range(8, length, 4))
         allocation_confirmed = True
         state['allocation_confirmed'] = True
+        effect.capture_validated_sid(api, original_call, raw, text)
         if text != policy.appcontainer_sid:
             fail('HOST_CHANGE_APPCONTAINER_SID_MISMATCH', 'CREATE returned a different AppContainer SID')
         return {'profile_name': policy.appcontainer_profile_name, 'appcontainer_sid': text,

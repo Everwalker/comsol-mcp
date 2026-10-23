@@ -1,0 +1,207 @@
+{
+  "kind": "WINDOWS_SCM_CLIENT_ENDPOINT",
+  "recorded_utc": "2026-10-23T00:58:33.912935+00:00",
+  "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE108_ONLY",
+  "review": "MAIN_ACCEPTED_WITH_EXPLICIT_SOURCE_AND_EVIDENCE_LIMITS",
+  "baseline_commit": "81c36ea7a61fc83de4d968b9a2b0484da7c3682c",
+  "contract": {
+    "path": "_state/universal-windows-scm-endpoint/CONTRACT.input.json",
+    "bytes": 6422,
+    "sha256": "d61a47c81613268837e509130815620e87c9fa79fd026476474ea8398d6027ab"
+  },
+  "source_manifest": {
+    "path": "_state/universal-windows-scm-endpoint/SOURCE_MANIFEST_R4.json",
+    "bytes": 120647,
+    "sha256": "5e286bcabafd1e27d89200dfd743703d031afa7c76bbe40b902bc10d6d3e164a"
+  },
+  "files": [
+    {
+      "path": "comsol_mcp/_windows_scm_endpoint.py",
+      "bytes": 28841,
+      "sha256": "6c769447e536219245495fcb8cad6c9b48c5eecb13ebad9ed05cc83036d88626",
+      "frozen": {
+        "path": "_state/universal-windows-scm-endpoint/candidate-r4/comsol_mcp/_windows_scm_endpoint.py",
+        "bytes": 28841,
+        "sha256": "6c769447e536219245495fcb8cad6c9b48c5eecb13ebad9ed05cc83036d88626"
+      }
+    },
+    {
+      "path": "comsol_mcp/_control_client.py",
+      "bytes": 10681,
+      "sha256": "b4680fefbcb40ef9800d149518d1a92a0c316073a18c6931f110dfd600dc3e22",
+      "frozen": {
+        "path": "_state/universal-windows-scm-endpoint/candidate-r4/comsol_mcp/_control_client.py",
+        "bytes": 10681,
+        "sha256": "b4680fefbcb40ef9800d149518d1a92a0c316073a18c6931f110dfd600dc3e22"
+      }
+    },
+    {
+      "path": "tests/test_windows_scm_endpoint.py",
+      "bytes": 25684,
+      "sha256": "337e1217b72bbb17481f6464bf149d9abf498f752179d34bf502b99de4f86a95",
+      "frozen": {
+        "path": "_state/universal-windows-scm-endpoint/candidate-r4/tests/test_windows_scm_endpoint.py",
+        "bytes": 25684,
+        "sha256": "337e1217b72bbb17481f6464bf149d9abf498f752179d34bf502b99de4f86a95"
+      }
+    },
+    {
+      "path": "tests/test_control_client.py",
+      "bytes": 16607,
+      "sha256": "e8ddaf66aafd4927ef933f97fc452979164ff4b20c2f6afd0d597a35a53ca7ab",
+      "frozen": {
+        "path": "_state/universal-windows-scm-endpoint/candidate-r4/tests/test_control_client.py",
+        "bytes": 16607,
+        "sha256": "e8ddaf66aafd4927ef933f97fc452979164ff4b20c2f6afd0d597a35a53ca7ab"
+      }
+    },
+    {
+      "path": "docs/universal_mcp_execution/SCM_CLIENT_ENDPOINT.md",
+      "bytes": 3879,
+      "sha256": "8ef68e5c60c22666de2fb3f62bc9408e7b42299abd934279fede2ad46c17a7aa",
+      "frozen": {
+        "path": "_state/universal-windows-scm-endpoint/candidate-r4/docs/universal_mcp_execution/SCM_CLIENT_ENDPOINT.md",
+        "bytes": 3879,
+        "sha256": "8ef68e5c60c22666de2fb3f62bc9408e7b42299abd934279fede2ad46c17a7aa"
+      }
+    }
+  ],
+  "interface": {
+    "env": "COMSOL_SERVER_MCP_SCM_ENDPOINT_CONFIG",
+    "locator": "Closed schema comsol-mcp.scm-client-endpoint/1: schema,service_name,control_home only; operator current-user private file. No token/provider/receipt/PID fields.",
+    "source": "verify_endpoint(locator) chooses exact native readonly API; private explicit _SoftwareApi/exports path marks SOFTWARE_ONLY, never wire/native authority.",
+    "control_client": "Explicit environment selects before control_home; target exact home, no suffix/default fallback. Native source and original cleanup before one fixed-loopback authenticated session_health. Requested operation sent only after success.",
+    "pre_dispatch": "CONTROL_REQUEST_NOT_SUBMITTED, control_startup_outcome NOT_ATTEMPTED for attach-only refusal. No mkdir/chmod/log/token copy/spawn/service start/stop/PID signal.",
+    "post_dispatch": "Original UNKNOWN/idempotency behavior; no automatic operation retry.",
+    "secrets": "Bearer remains original private memory and transport header. Safe endpoint repr and generic public errors, no valid token examples or values in docs/receipts."
+  },
+  "security": {
+    "locator": "Existing _validate_windows_acl_policy reused for actual current-user final owner and pinned ancestor policy; no global helper modification.",
+    "target": "Dedicated SYSTEM final owner + protected DACL; writers SYSTEM/Admin; data readers only SYSTEM/Admin/actual current client/exact SCM lookup service SID. SYSTEM/admin ancestor TCB; client read permission never becomes ancestor ownership/write trust.",
+    "path": "No-reparse original relative HANDLE traversal, persistent ACLs, full volume/FILE_ID_128, descriptor and bounded contents before/after; LastAccessTime excluded.",
+    "SCM": "Readonly connect/config/status/name-to-SID; exact own-process RUNNING/LocalSystem/restricted SID. Actual configured argv normal Python -B -I -m daemon, exact --home and service name; no actual process complete-cmdline claim.",
+    "process": "Original query-only process HANDLE, GetProcessId/GetProcessTimes/image and actual SYSTEM token; positive protected endpoint PID/birth agrees with SCM, two stable observations; no PID enumeration/adoption/termination.",
+    "ownership": "Original call/output/SDK/closer stored before acquisition. Strong process-local owners, cached once-normalized results. Lost/opaque/partial output and uncertain close fence reader; no explicit/automatic SDK release replay or requery-for-proof. Known success bookkeeping can finish only under original owner/bindings.",
+    "allocation": "SDK allocated SD/argv LocalFree ownership distinct from caller-owned token/SCM/file buffers. Low/malformed pointers get no free permission; VirtualQuery readability alone never mints ownership.",
+    "readonly_exports": 28,
+    "SDK_mutator_constructors_used": false
+  },
+  "software": {
+    "JUnit": {
+      "path": "_state/universal-windows-scm-endpoint/final-r4.xml",
+      "bytes": 16123,
+      "sha256": "ddab6fed9e560541cb18d0feaf4d6d44bbde4aed764a2bafa7448f0ac11dcc67"
+    },
+    "counts": {
+      "tests": 108,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 108
+    },
+    "by_file": {
+      "tests.test_windows_scm_endpoint": 83,
+      "tests.test_control_client": 19,
+      "tests.test_host_scoped_provider": 6
+    },
+    "command": {
+      "path": "_state/universal-windows-scm-endpoint/final-r4.command.json",
+      "bytes": 365,
+      "sha256": "c94858253ecaff7789357c4519a97f598115bcf1377d2fa72211b327d633dcd9"
+    },
+    "stdout": {
+      "path": "_state/universal-windows-scm-endpoint/final-r4.stdout",
+      "bytes": 180,
+      "sha256": "f754dc4e59d6eab59d2a9f6cc80ced14000da126ef1f2275c252a6997e75ad9f"
+    },
+    "stderr": {
+      "path": "_state/universal-windows-scm-endpoint/final-r4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "actual_imports": {
+      "path": "_state/universal-windows-scm-endpoint/final-r4.xml.imports.json",
+      "bytes": 4457,
+      "sha256": "bb83e042735a9bf373d125c85587e67f1bc3e2bc91fa2a3a5cd5fe7b57b4d27d"
+    },
+    "import_count": 24,
+    "import_scope": "All observed comsol_mcp and tests.test_* files under clean81c tree; stdlib/dependencies not counted. Five lease overlays only; no Primary Root/LeibGate WIP.",
+    "compatibility": {
+      "path": "_state/universal-windows-scm-endpoint/COMPATIBILITY_CHECKS.json",
+      "bytes": 160,
+      "sha256": "31a5b9e1f66675fba44fa9b64b1e34276d76fd0213fce7a7248dd2e97610d1ea"
+    },
+    "controls": [
+      "Full normal dispatch SOFTWARE_ONLY raw Win64 path/security/SCM/argv/PID/birth positive and negative routes; source refusal never reaches HTTP or default home.",
+      "Closed schema, duplicate/invalid JSON, path traversal/UNC/ADS/reparse, owner/reader/writer/ancestor/identity drift, exact service/SID/argv/image/birth checks.",
+      "Raw SD/ACL/ACE/SID/offset bounds, caller vs allocated output storage, strict scalar/malformed/opaque/before-or-after-effect SDK outcomes and original strong GC roots.",
+      "Original closer/storage/API/owner bindings, forged bookkeeping, metadata-only cached-success/root-pop continuations, no second close/free/query after unknown.",
+      "Readonly constructor exports bound to fake symbols only, no native call; actual global private ACL pure-policy regression; default client AST and original tests unchanged."
+    ],
+    "history": {
+      "development49": {
+        "path": "_state/universal-windows-scm-endpoint/development-r1.xml",
+        "bytes": 7191,
+        "sha256": "01a756ed96e5c9113bcb3ee7356e33b5df8d02d4581961ebe88923175aa4243f"
+      },
+      "development88": {
+        "path": "_state/universal-windows-scm-endpoint/development-r2.xml",
+        "bytes": 13145,
+        "sha256": "dff6b03b41770fb1e0d2952973097e09213ffc0e31e61a27f3407f7b70913a00"
+      },
+      "previous106": {
+        "path": "_state/universal-windows-scm-endpoint/final-r3.xml",
+        "bytes": 15814,
+        "sha256": "667e953cbb2beae7ac088c94c03882bd5ef1d643aaff32f00edfa6d8b345cb8c"
+      },
+      "counts_not_added": true,
+      "scope": "Earlier passing software runs retained with their actual import hashes; current108 only bound to candidate-r4. Prior source snapshots were not frozen per development run; do not relabel those as current.",
+      "setup_failure_limit": "First extraction refusal retained as note only; original raw traceback unavailable. Historical per-run source bytes not all retained."
+    },
+    "actual_import_evidence_limit": "Post-pytest sys.modules source snapshot only; no loader execution trace, no dependency/interpreter identity claim."
+  },
+  "finite_source_gap": {
+    "file": "comsol_mcp/_control_daemon.py",
+    "baseline_sha256": "8e15f8a376c73309d543a32e9006137c095ba7112984aa1123fdb9d9074d4d1c",
+    "lines": "81c:13521-13543",
+    "fact": "Existing publisher writes control.json.tmp then chmod0600/replace; no protected SYSTEM DACL publisher added here. This consumer keeps the mandatory protected-DACL refusal. Native target access and provision of compliant actual state require Main decision/authorization; no target file was inspected or changed.",
+    "not_architecture_or_fix": "No Controller/Bootstrap/Root/Gate/Catalog edit or permissions workaround."
+  },
+  "evidence_scope": {
+    "native_readonly_SDK": "NOT_RUN",
+    "Windows_SCM": "NOT_RUN",
+    "HTTP": "NOT_RUN",
+    "cross_user_delivery": "UNVERIFIED",
+    "host_apply": "NOT_AUTHORIZED",
+    "T037": "NOT_RUN",
+    "ISOLATION": "UNVERIFIED",
+    "COMSOL_JVM_GUI_starts": 0,
+    "host_security_changes": 0
+  },
+  "write_scope": {
+    "shared_production": [
+      "comsol_mcp/_windows_scm_endpoint.py",
+      "comsol_mcp/_control_client.py"
+    ],
+    "tests": [
+      "tests/test_windows_scm_endpoint.py",
+      "tests/test_control_client.py"
+    ],
+    "docs": [
+      "docs/universal_mcp_execution/SCM_CLIENT_ENDPOINT.md",
+      "docs/universal_mcp_execution/evidence/WINDOWS_SCM_CLIENT_ENDPOINT.json"
+    ],
+    "Main_Git_other_source_changes": 0
+  },
+  "next_for_Main": "Review five-file source/test/docs delta and exact clean81c binding, plus endpoint publisher prerequisite. No native/client-to-SYSTEM capability or authorization is claimed.",
+  "artifact_manifest": {
+    "path": "_state/universal-windows-scm-endpoint/ARTIFACTS.json",
+    "bytes": 7327,
+    "sha256": "a433fab213c69f2f69e8fe78867214f7263744de81dbdac968fba10620c50d87"
+  },
+  "Main_review": {
+    "path": "_state/universal-main-review/20261023-scm-client-endpoint/MAIN_REVIEW.json",
+    "bytes": 3944,
+    "sha256": "3dea6024fdc9322770b8ce6b9edf5b1923e75e19242375c3c605d0f8b485bf94"
+  }
+}

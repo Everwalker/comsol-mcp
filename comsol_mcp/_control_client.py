@@ -25,6 +25,13 @@ class ControlStartupError(RuntimeError):
         self.action = action
 
 
+class ScmAttachError(ControlStartupError):
+    """Explicit existing-service preflight failed; startup was never attempted."""
+
+    def __init__(self):
+        super().__init__("Explicit SCM attach-only preflight failed; requested operation was not submitted.")
+
+
 # Windows MCP stdio hosts are placed in an SDK-created Job Object whose close
 # policy terminates descendants.  A control daemon started from that host must
 # request all three creation flags together or it is still owned by the Job.
@@ -128,6 +135,20 @@ def _spawn_control_daemon(home: Path, stream):
 
 
 def ensure_control() -> dict:
+    # Select before control_home: even a blank/malformed locator is attach-only.
+    locator = os.environ.get("COMSOL_SERVER_MCP_SCM_ENDPOINT_CONFIG")
+    if locator is not None:
+        try:
+            from ._windows_scm_endpoint import verify_endpoint
+            endpoint = verify_endpoint(locator)
+            result = _request(endpoint, {"operation": "session_health", "arguments": {}, "execution": {}}, 1.0)
+            if not isinstance(result, dict) or result.get("success") is not True:
+                raise ScmAttachError()
+            return endpoint
+        except Exception:
+            # Native/private causes stay with their original reader. Neither
+            # endpoint bytes nor transport exception text enter public errors.
+            raise ScmAttachError() from None
     home = control_home()
     endpoint = _read_endpoint(home)
     if endpoint:
@@ -205,7 +226,7 @@ def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
                 # ensure_control may have started a daemon before discovering
                 # that it is not ready. This describes the requested operation
                 # only and makes no claim about control-daemon startup effects.
-                "control_startup_outcome": "UNRESOLVED",
+                "control_startup_outcome": "NOT_ATTEMPTED" if isinstance(exc, ScmAttachError) else "UNRESOLVED",
             },
         }
 

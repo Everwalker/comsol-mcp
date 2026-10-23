@@ -36,6 +36,21 @@ def _assert_not_submitted(result, request_id="r", idempotency_key="k"):
     }
 
 
+@pytest.mark.parametrize('locator',['',r'C:\private\locator.json'])
+def test_explicit_scm_locator_non_windows_is_attach_only_before_home(monkeypatch,locator):
+    from comsol_mcp import _windows_scm_endpoint as scm
+    from types import SimpleNamespace
+    monkeypatch.setenv(scm.ENV,locator)
+    monkeypatch.setattr(scm,'os',SimpleNamespace(name='posix'))
+    monkeypatch.setattr(client,'control_home',lambda:pytest.fail('SCM mode touched default home'))
+    monkeypatch.setattr(client,'_request',lambda *a:pytest.fail('native source not verified'))
+    monkeypatch.setattr(client,'_spawn_control_daemon',lambda *a:pytest.fail('SCM mode spawned daemon'))
+    result=client.dispatch('project.inspect',{},dict(request_id='r',idempotency_key='k'))
+    assert result['data']['status']=='NOT_SUBMITTED'
+    assert result['data']['control_startup_outcome']=='NOT_ATTEMPTED'
+    assert result['execution']==dict(request_id='r',idempotency_key='k')
+
+
 def test_transport_lost_response_never_resubmits_and_retains_identity(monkeypatch):
     calls = []
     monkeypatch.setattr(client, "ensure_control", lambda: {"port": 1234, "token": "secret"})

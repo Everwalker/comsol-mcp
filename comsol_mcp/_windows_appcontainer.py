@@ -40,6 +40,7 @@ def validate_journal_leaf(baseline, row):
 
 def apply(executor, plan, approval):
     from ._windows_host_change import _normalize_supported_actions, _current_windows_binding, _receipt_payload_v2
+    from . import _windows_appcontainer_lifecycle as lifecycle
     _, actions = _normalize_supported_actions(plan, executor.profile)
     action = actions[0]
     profile = executor.profile
@@ -57,6 +58,7 @@ def apply(executor, plan, approval):
                                'resource_key': action['resource_key'], 'identity_sha256': action['desired_identity_sha256'],
                                'dependency_sha256': dep, 'expected_resource_sha256': None}]}}
     admission = executor._admit(phase='APPLY', plan_sha256=plan.sha256, approval=approval, baseline=baseline)
+    profile_effect = None
     try:
         executor._start(admission)
         intent = {'step_index': 0, 'action_id': action['action_id'], 'resource_kind': 'appcontainer_profile',
@@ -64,6 +66,21 @@ def apply(executor, plan, approval):
                   'dependency_sha256': dep}
         executor.store.append_host_control_mutation_step_event(admission_id=admission.admission_id,
             event='APPLY_STEP_INTENT', payload=intent)
+        effect_factory = getattr(executor, '_on_original_appcontainer_profile_effect', None)
+        if not callable(effect_factory):
+            fail('HOST_CHANGE_APPCONTAINER_OWNER_REQUIRED',
+                 'the exact daemon-rooted profile effect must exist before native CREATE')
+        profile_effect = effect_factory(executor, admission, action, subject)
+        if (type(profile_effect) is not lifecycle.ProfileEffect
+                or profile_effect.executor is not executor
+                or profile_effect.admission is not admission
+                or profile_effect.api is not executor.api):
+            fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN',
+                 'daemon returned an unbound original profile effect')
+        profile_effect.require_rooted(executor.api)
+        if getattr(executor.api, '_appcontainer_profile_effect', None) is not profile_effect:
+            fail('HOST_CHANGE_APPCONTAINER_OWNER_UNKNOWN',
+                 'the original SDK API does not retain its daemon-rooted profile effect')
         returned = executor.api._appcontainer_create(policy, subject)
         expected = {'profile_name': policy.appcontainer_profile_name, 'appcontainer_sid': policy.appcontainer_sid,
                     'service_user_sid': policy.service_logon_sid, 'creation_result': 'S_OK',
@@ -88,6 +105,7 @@ def apply(executor, plan, approval):
         accepted, state = executor.store.finish(admission.operation_id, status='SUCCEEDED', result=result)
         if not accepted or state != 'SUCCEEDED':
             fail('HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN', 'AppContainer CREATE result was not durably recorded')
+        profile_effect.record_store_success(admission, executor.store, accepted, state)
         return receipt
     except BaseException as error:
         executor._finish_unknown_sequence(admission, phase='APPLY', action=action, step_index=0, cause=error)
