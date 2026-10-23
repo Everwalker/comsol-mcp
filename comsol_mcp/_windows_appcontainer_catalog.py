@@ -215,26 +215,33 @@ class _Reader:
                 or size > _U64 - pointer):
             _fail("POINTER_BOUNDS", "null/overflow/over-budget native span")
 
+    def _region(self, cursor):
+        self.owner._check_original()
+        self.queries += 1
+        if self.queries > self.owner.bounds.span_queries:
+            _fail("QUERY_BUDGET", "VirtualQuery span budget exceeded")
+        info, argument = _MemoryInfo(), PTR(cursor)
+        args, outputs = (argument, C.byref(info), C.sizeof(info)), (argument, info)
+        call = _Call(self.owner.query_fn, args, outputs)
+        binding = (len(self.owner.queries), call, args, outputs)
+        self.owner.queries.append(call)  # actual CallerBuf retained before dispatch
+        returned = call.invoke(64)
+        if returned != C.sizeof(info):
+            _fail("MEMORY_INFO", "VirtualQuery returned no exact Win64 information extent")
+        base, region_size = info.BaseAddress, info.RegionSize
+        if (type(base) is not int or not 0 < base <= cursor or not region_size
+                or region_size > _U64 - base or not cursor < base + region_size
+                or info.State != 0x1000 or info.Protect & 0x100
+                or info.Protect & 0xFF not in {2, 4, 8, 0x20, 0x40, 0x80}):
+            _fail("MEMORY_UNREADABLE", "native span is not committed and readable")
+        return info, binding
+
     def chunks(self, pointer, size):
         self._range(pointer, size)
         cursor, remaining = pointer, size
         while remaining:
-            self.owner._check_original()
-            self.queries += 1
-            if self.queries > self.owner.bounds.span_queries:
-                _fail("QUERY_BUDGET", "VirtualQuery span budget exceeded")
-            info, argument = _MemoryInfo(), PTR(cursor)
-            call = _Call(self.owner.query_fn, (argument, C.byref(info), C.sizeof(info)), (argument, info))
-            self.owner.queries.append(call)  # actual CallerBuf retained before dispatch
-            returned = call.invoke(64)
-            if returned != C.sizeof(info):
-                _fail("MEMORY_INFO", "VirtualQuery returned no exact Win64 information extent")
+            info, _ = self._region(cursor)
             base, region_size = info.BaseAddress, info.RegionSize
-            if (type(base) is not int or not 0 < base <= cursor or not region_size
-                    or region_size > _U64 - base or not cursor < base + region_size
-                    or info.State != 0x1000 or info.Protect & 0x100
-                    or info.Protect & 0xFF not in {2, 4, 8, 0x20, 0x40, 0x80}):
-                _fail("MEMORY_UNREADABLE", "native span is not committed and readable")
             amount = min(remaining, base + region_size - cursor)
             yield cursor, amount
             cursor, remaining = cursor + amount, remaining - amount
@@ -265,20 +272,80 @@ class _Reader:
     def name(self, pointer):
         if type(pointer) is not int or pointer % 2:
             _fail("UTF16", "aligned non-null UTF16 pointer required")
+        owner, calls = self.owner, self.owner.queries
         raw = bytearray()
-        for index in range(self.owner.bounds.name_utf16_units + 1):
-            unit = self.read(pointer + index * 2, 2)
-            if unit == b"\0\0":
-                if not raw:
-                    _fail("UTF16", "nonempty appContainerName required")
-                try:
-                    return bytes(raw).decode("utf-16-le", errors="strict"), bytes(raw)
-                except UnicodeDecodeError as exc:
-                    raise CatalogError("UTF16", "malformed native UTF16 name") from exc
-            if index == self.owner.bounds.name_utf16_units:
-                break
-            raw.extend(unit)
-        _fail("UTF16_BOUNDS", "name has no terminator within bounded original UTF16 span")
+        region, region_end, allocation = None, pointer, None
+        needed = []
+
+        def original():
+            if self.owner is not owner or owner.queries is not calls:
+                owner.state = "UNKNOWN"
+                _fail("OWNER_DRIFT", "original name reader/query root changed", owner=owner)
+            if owner.state != "ENUM_RETURNED" or not owner.base_valid or owner.free_call is not None:
+                _fail("NAME_STATE", "name scan requires the retained unfreed original Enum allocation", owner=owner)
+            owner._check_original()
+
+        def checked(record):
+            binding, returned_raw, info_fields, cursor = record
+            position, call, args, outputs = binding
+            argument, info = outputs
+            if (position >= len(calls) or calls[position] is not call or call.function is not owner.query_fn
+                    or call.args is not args or call.outputs is not outputs or call.raw is not returned_raw
+                    or call.state != "RETURNED" or type(call.scalar) is not int or call.scalar != C.sizeof(info)
+                    or args[0] is not argument or args[1]._obj is not info or args[2] != C.sizeof(info)
+                    or argument.value != cursor
+                    or tuple(getattr(info, field) for field, _ in _MemoryInfo._fields_) != info_fields):
+                owner.state = "UNKNOWN"
+                _fail("OWNER_DRIFT", "original validated name query/caller metadata changed", owner=owner)
+
+        # A single-name SDK snapshot readability bound, never a global cache or
+        # ownership proof. Only exact words through NUL are copied. The private
+        # finite TCB assumes the retained SDK snapshot, not an OS-wide page freeze.
+        try:
+            for index in range(owner.bounds.name_utf16_units + 1):
+                original()
+                cursor = pointer + index * 2
+                self._range(cursor, 2)
+                if self.copied + 2 > owner.bounds.copied_bytes:
+                    _fail("COPY_BUDGET", "total copied native bytes exceed finite budget")
+                needed.clear()
+                if region is not None and cursor < region_end:
+                    needed.append(region)
+                while cursor + 2 > region_end:
+                    original()
+                    query_cursor = max(cursor, region_end)
+                    info, binding = self._region(query_cursor)
+                    original()
+                    current = info.AllocationBase
+                    if type(current) is not int or not 0 < current <= info.BaseAddress:
+                        _fail("MEMORY_UNREADABLE", "name region has no bounded original allocation base")
+                    if allocation is not None and allocation != current:
+                        _fail("MEMORY_ALLOCATION", "name scan cannot cross unrelated native allocations")
+                    allocation = current
+                    region = (binding, binding[1].raw,
+                              tuple(getattr(info, field) for field, _ in _MemoryInfo._fields_), query_cursor)
+                    checked(region)
+                    region_end = info.BaseAddress + info.RegionSize
+                    needed.append(region)
+                original()
+                for record in needed:
+                    checked(record)  # both regions are checked before a split WORD is copied
+                self.copied += 2
+                unit = C.string_at(cursor, 2)
+                if unit == b"\0\0":
+                    if not raw:
+                        _fail("UTF16", "nonempty appContainerName required")
+                    try:
+                        return bytes(raw).decode("utf-16-le", errors="strict"), bytes(raw)
+                    except UnicodeDecodeError as exc:
+                        raise CatalogError("UTF16", "malformed native UTF16 name") from exc
+                if index == owner.bounds.name_utf16_units:
+                    break
+                raw.extend(unit)
+            _fail("UTF16_BOUNDS", "name has no terminator within bounded original UTF16 span")
+        finally:
+            needed.clear()
+            region, region_end, allocation = None, pointer, None
 
 
 class _Owner:

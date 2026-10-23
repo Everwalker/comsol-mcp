@@ -1,0 +1,258 @@
+{
+  "schema": "windows-appcontainer-catalog-bounded-scan/1",
+  "recorded_utc": "2026-10-23T03:30:14.507892+00:00",
+  "state": "PASS_MAIN_SCOPED_SOURCE_SOFTWARE148_EXECUTION_BINDING_NOT_NATIVE",
+  "baseline_commit": "cb5a53938da5c39a8e6da1e0058d7264cb02558b",
+  "changed_paths": [
+    "comsol_mcp/_windows_appcontainer_catalog.py",
+    "tests/test_windows_appcontainer_catalog.py",
+    "docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_CATALOG_SCAN.json"
+  ],
+  "source": {
+    "path": "comsol_mcp/_windows_appcontainer_catalog.py",
+    "bytes": 28160,
+    "sha256": "4ce2cbe651b2561c98a51236adb385796d8869ca30be7b59a9fb35afca5755a2"
+  },
+  "tests": {
+    "path": "tests/test_windows_appcontainer_catalog.py",
+    "bytes": 39119,
+    "sha256": "74577a64a8e73447855f5542b690063fa21445cd6a3c2a95c0fa4ae2656ab6b0"
+  },
+  "implementation": "Per-name lazy validated VirtualQuery region scan; exact 2-byte UTF16 copies through NUL. Original owner/state/query/CallerBuf binding checked per word. Validate both regions before split WORD; never query unread future region. Local cache discarded on name exit; no global cache/after-Free reuse. Same reservation bound is not allocator ownership or a page freeze theorem.",
+  "unchanged_defaults_and_ceilings": {
+    "rows": 256,
+    "capabilities_per_row": 64,
+    "capabilities_total": 4096,
+    "name_utf16_units": 1024,
+    "binary_count": 4096,
+    "copied_bytes": 2097152,
+    "span_queries": 8192
+  },
+  "scope_verification": "All production outside _Reader, other Reader methods, imports, ABI, Bounds, original Call/Owner/Enum/Free/UNKNOWN/ack and diagnostic bodies AST-identical to cb5a. Original95 test byte prefix and AST unchanged; 53 new software cases. Only chunks/name changed and _region added.",
+  "software": [
+    {
+      "label": "original95",
+      "tests": 95,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "stress": [],
+      "junit": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/original95/junit.xml",
+        "bytes": 15584,
+        "sha256": "f0bb508af869b18cbc32fe8706f05877fc1aa4b15543b72b4bf8da13055074bd"
+      },
+      "actual_imports": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/original95/actual-imports.json",
+        "bytes": 4348,
+        "sha256": "9dbc9732d7bef0cd7eca3f6198643dad051f3c2d7677b40f3bed82ae9f417f9a"
+      },
+      "inputs": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/original95/inputs.json",
+        "bytes": 1576,
+        "sha256": "92bab2eb291904460191b3b67dbe6d9357fe16f237a53d55fcf0886cefd9b6a8"
+      }
+    },
+    {
+      "label": "stress-before",
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "stress": [
+        {
+          "case": "test_software_default_budget_long_names_with_caps_stress[226]",
+          "properties": {
+            "software_query_calls": "8192",
+            "original_owner_state": "RELEASED",
+            "query_limit_unchanged": "8192"
+          },
+          "failure_messages": [
+            "comsol_mcp._windows_appcontainer_catalog.CatalogError: VirtualQuery span budget exceeded"
+          ]
+        },
+        {
+          "case": "test_software_default_budget_long_names_with_caps_stress[256]",
+          "properties": {
+            "software_query_calls": "8192",
+            "original_owner_state": "RELEASED",
+            "query_limit_unchanged": "8192"
+          },
+          "failure_messages": [
+            "comsol_mcp._windows_appcontainer_catalog.CatalogError: VirtualQuery span budget exceeded"
+          ]
+        }
+      ],
+      "junit": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/stress-before/junit.xml",
+        "bytes": 5013,
+        "sha256": "a299b33e5e86b3360f50ad6efb6d36047c9c67c85e30a07882c045f33e597560"
+      },
+      "actual_imports": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/stress-before/actual-imports.json",
+        "bytes": 4363,
+        "sha256": "b040a2e1b5f1e79982c81c9ad06fedc88ac76c2e2847c3f22d51d4190d5c828e"
+      },
+      "inputs": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/stress-before/inputs.json",
+        "bytes": 1644,
+        "sha256": "215ddb3271e6953aba19325e1e991ace077d1696343c796fd53d0a63c5ce9d68"
+      }
+    },
+    {
+      "label": "optimized97",
+      "tests": 97,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "stress": [
+        {
+          "case": "test_software_default_budget_long_names_with_caps_stress[226]",
+          "properties": {
+            "software_query_calls": "1810",
+            "original_owner_state": "RELEASED",
+            "query_limit_unchanged": "8192"
+          },
+          "failure_messages": []
+        },
+        {
+          "case": "test_software_default_budget_long_names_with_caps_stress[256]",
+          "properties": {
+            "software_query_calls": "2050",
+            "original_owner_state": "RELEASED",
+            "query_limit_unchanged": "8192"
+          },
+          "failure_messages": []
+        }
+      ],
+      "junit": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/optimized97/junit.xml",
+        "bytes": 16272,
+        "sha256": "57efe2ec75008ba630056ab632c2cbd432fe74137ef3d21dc615fcb25ba0aecb"
+      },
+      "actual_imports": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/optimized97/actual-imports.json",
+        "bytes": 4351,
+        "sha256": "ca64172ea435e17c91386fe8ad230ac8d9d7c917eca263951155e7845a18c9f8"
+      },
+      "inputs": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/optimized97/inputs.json",
+        "bytes": 1581,
+        "sha256": "f87839bafb44ed21c1f59e752138c81613772d24f17c79a1ad50f58105e13c9a"
+      }
+    },
+    {
+      "label": "expanded-first",
+      "tests": 148,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "stress": [
+        {
+          "case": "test_software_default_budget_long_names_with_caps_stress[226]",
+          "properties": {
+            "software_query_calls": "1810",
+            "original_owner_state": "RELEASED",
+            "query_limit_unchanged": "8192"
+          },
+          "failure_messages": []
+        },
+        {
+          "case": "test_software_default_budget_long_names_with_caps_stress[256]",
+          "properties": {
+            "software_query_calls": "2050",
+            "original_owner_state": "RELEASED",
+            "query_limit_unchanged": "8192"
+          },
+          "failure_messages": []
+        }
+      ],
+      "junit": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/expanded-first/junit.xml",
+        "bytes": 24492,
+        "sha256": "d571378dc04e0457be7419586208e990e37da85669ee1dcfc9388cff3905367c"
+      },
+      "actual_imports": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/expanded-first/actual-imports.json",
+        "bytes": 4351,
+        "sha256": "796cc60c5815710850579ff1baed36392d0f23a3b4d066e74c79a9dde367defe"
+      },
+      "inputs": {
+        "path": "_state/universal-windows-appcontainer-catalog-scan/runs/expanded-first/inputs.json",
+        "bytes": 1584,
+        "sha256": "f04c0d174e071c1d26ec4978e4178a535e4d92ac4fec68769453ea464af66a7a"
+      }
+    }
+  ],
+  "coverage": [
+    "226/256 raw Win64 rows, 64+UTF16-unit names and capabilities under production defaults",
+    "exact NUL/no overread/page edge/guard adjacent/split WORD and surrogate",
+    "noaccess/guard/reserved/short/opaque/write-then-raise/foreign allocation/overflow",
+    "remaining copied-byte budget1/2/3/4 and genuine query-region budget exhaustion",
+    "13 owner/API/binding drifts and13 cached query/CallerBuf/result substitutions",
+    "per-name reset, after-Free/Free-between-words/ack-pending, UNKNOWN no repeat and independent owner"
+  ],
+  "receipt": {
+    "path": "_state/universal-windows-appcontainer-catalog-scan/UNIT_RECEIPT.json",
+    "bytes": 24865,
+    "sha256": "99b75b298feb232cd4cdce50a4c1e0d809bd5c4592957cb5829520ab66c7416a"
+  },
+  "static": {
+    "path": "_state/universal-windows-appcontainer-catalog-scan/STATIC_CHECKS.json",
+    "bytes": 2721,
+    "sha256": "a07bf161c52ac3ce7695ef2c7be7829257b99857a2bd0db1d2e67ba7f3dc3f59"
+  },
+  "diff": {
+    "path": "_state/universal-windows-appcontainer-catalog-scan/candidate.patch",
+    "bytes": 24851,
+    "sha256": "26550a0fcb0443a98e78030560cd5a6402504174e19bcc6516f2abb8d89ea3b4"
+  },
+  "documentation": {
+    "path": "_state/universal-windows-appcontainer-catalog-scan/README.md",
+    "bytes": 3550,
+    "sha256": "8706ad3b5e64f02304627260ff6e42d0c5e23212ddcbd69e7bcd6a3ae90e8c1b"
+  },
+  "preserved": "Original95, before-stress2FAIL, optimized97 and full148 raw/JUnit/inputs/imports remain unchanged. Exact run archives are after-run hash-verified copies, not relabeled loader origins. Two xunit2 record_property warnings remain. Setup127/missing-pytest failures retained. Transport capacity failure is not an effective source attempt.",
+  "historical_r2": "Original R2 Enum0/count226>probe64/VirtualQuery48/oneFree0/sourceRELEASED remains historical limited ABI/copy/cleanup evidence; original ROW_BUDGET is not nonempty decode. No old R2 source/compact/raw changes or retry.",
+  "native_candidate": "NOT_RUN; no Windows/SDK/SSH/HTTP/Popen/native diagnostic or R3 PREP/run in this unit.",
+  "authority": "DIAGNOSTIC_ONLY; actual native names/nonempty decode NOT_RUN. Absence/completeness/visibility/profile-generation/storage/restore/B_C_Resume/T037/native policy remain UNVERIFIED. Software and JSON do not issue native ownership or admission authority.",
+  "next": "Main reviews exact patch and frozen software bindings, then ordinary publication. Any R3 uses fresh nonce and existing defaults only after separate Main review/release; no R2 replay.",
+  "execution_binding_v2": {
+    "status": "148PASS_0FAIL_0ERROR_0SKIP_ONE_RERUN_SAME_SOURCE_TEST",
+    "receipt": {
+      "path": "_state/universal-windows-appcontainer-catalog-scan/execution-trace-v2/FINAL_RECEIPT.json",
+      "bytes": 8901,
+      "sha256": "55cc2fbb6a6179c5db787bc1f92f597475900d28c7741bd7344d8bbcf01663de"
+    },
+    "trace": {
+      "path": "_state/universal-windows-appcontainer-catalog-scan/execution-trace-v2/run/execution.jsonl",
+      "bytes": 11488,
+      "sha256": "93972762ee44bc283e53820949c7bbfe6fe06dbb917756fc78be2d6b5ac5bb98"
+    },
+    "junit": {
+      "path": "_state/universal-windows-appcontainer-catalog-scan/execution-trace-v2/run/junit.xml",
+      "bytes": 24492,
+      "sha256": "88ff21ab4b156d7974f333fa7181dcdddbc2046f6fd55cae3ea06414730863b7"
+    },
+    "actual_trace_events": 29,
+    "binding": "Before project imports: original SourceFileLoader exec_module entry/exit identity and source hashes; actual get_data/source_to_code/compile source bytes, original returned-code identity and exec audit. Original pytest rewrite input/returned code/exec separately observed. All4 inputs unchanged before/after; errors0. Earlier get_source values remain postrun reads, never relabeled execution bytes.",
+    "preservation": "Old80 refs/compact/FREEZE/JUnit/raw verified unchanged. This proposed compact is separate until Hume old-packet review completes. No source/test/defaults/native scope change; native/R3 NOT_RUN. Main publication first."
+  },
+  "Main_review": {
+    "path": "_state/universal-main-review/20261023-catalog-scan/MAIN_REVIEW.json",
+    "bytes": 4695,
+    "sha256": "028540cefbac3f48a81c2f278e839d52339ce9dd5d6da093c7a458293936d20a"
+  },
+  "independent_mechanical": {
+    "old80": {
+      "path": "_state/universal-windows-appcontainer-catalog-scan/INPUT_MECHANICAL_CHECK.json",
+      "bytes": 10883,
+      "sha256": "47e3b0ab6e3a3e39ced2075d5686f65cac5a86ea64ddb7a299f73657170deece"
+    },
+    "new50": {
+      "path": "_state/universal-windows-appcontainer-catalog-scan/execution-trace-v2/EXECUTION_TRACE_MECHANICAL_CHECK.json",
+      "bytes": 10888,
+      "sha256": "51b1f8c17c9fab1e69b6f644a66ed61e22bbf200fc20628828a1c5364ec2c5d1"
+    }
+  }
+}

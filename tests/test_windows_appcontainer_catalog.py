@@ -452,3 +452,312 @@ def test_native_entry_has_no_provider_json_or_callable_injection_and_no_side_eff
     assert query.argtypes == [m.PTR, C.POINTER(m._MemoryInfo), m.SIZE_T]
     assert list(inspect.signature(m.observe_catalog).parameters) == ["flags", "bounds"]
     with pytest.raises(TypeError): m.observe_catalog(api=sdk)
+
+
+@pytest.mark.parametrize("rows", [226, 256])
+def test_software_default_budget_long_names_with_caps_stress(rows, record_property):
+    """Synthetic Win64 buffers, not the contents of the historical native catalog."""
+    sdk, expected = Fixture(rows), []
+    for index, row in enumerate(sdk.array):
+        name = "Software.Package.应用😀.%04d.%s" % (index, "N" * 64)
+        app = sid(2, 0x80000000 + index)
+        row.appContainerSid = sdk.buffer(app)
+        row.appContainerName = sdk.buffer((name + "\0").encode("utf-16-le"))
+        expected.append((app, name))
+    owner = sdk.owner()
+    assert vars(owner.bounds) == dict(rows=256, capabilities_per_row=64, capabilities_total=4096,
+        name_utf16_units=1024, binary_count=4096, copied_bytes=2 * 1024 * 1024, span_queries=8192)
+    try:
+        result = owner.read()
+    finally:
+        record_property("software_query_calls", len([c for c in sdk.calls if c[0] == "query"]))
+        record_property("original_owner_state", owner.state)
+        record_property("query_limit_unchanged", owner.bounds.span_queries)
+    assert [(row.appcontainer_sid, row.name) for row in result.observation.rows] == expected
+    assert all(row.user_sid == USER and row.capabilities == (m.Capability(CAP, 0x80000004),)
+               for row in result.observation.rows)
+    assert result.observation.state == "ROWS_OBSERVED_UNVERIFIED"
+    assert result.observation.source == "SOFTWARE_ONLY" and result.observation.authority == "DIAGNOSTIC_ONLY"
+    assert result.observation.absence == result.observation.visibility == "UNVERIFIED"
+    assert len([c for c in sdk.calls if c[0] == "query"]) <= 2 + rows * 8
+    assert sdk.calls.count(("enum", 0)) == sdk.calls.count(("free", sdk.pointer)) == 1
+    assert owner.state == "RELEASED" and not m.retained_catalog_owners()
+
+
+def scan_fixture(data, segments=None):
+    """Synthetic name allocation; segments are VQ regions of this same buffer."""
+    sdk = Fixture()
+    pointer = sdk.buffer(data)
+    sdk.array[0].appContainerName = pointer
+    if segments:
+        sdk.regions[:] = [r for r in sdk.regions if r[0] != pointer]
+        sdk.regions.extend([[pointer + start, pointer + end, 0x1000, protection]
+                            for start, end, protection in segments])
+    def allocation(info):
+        if pointer <= info.BaseAddress < pointer + len(data): info.AllocationBase = pointer
+    sdk.query_hook = allocation
+    return sdk, pointer
+
+
+def scan_leaf(sdk, pointer, monkeypatch, *, bounds=None, prefix=0, action=None):
+    """Private software leaf injection still uses original Enum/root/release path."""
+    owner, held = sdk.owner(bounds=bounds), {}
+    def rows(reader):
+        held["reader"] = reader
+        if prefix: reader.read(sdk.pointer, prefix)
+        held["value"] = action(reader, owner) if action else reader.name(pointer)
+        return ()
+    monkeypatch.setattr(owner, "_copy_rows", rows)
+    return owner, held
+
+
+def name_reads(monkeypatch, pointer, extent, *, through=None, after=None):
+    original, copied = m.C.string_at, []
+    def read(address, count):
+        if pointer <= address < pointer + extent:
+            assert count == 2, "SOFTWARE name must copy one exact WORD"
+            assert address + count <= pointer + (extent if through is None else through), "SOFTWARE overread"
+            copied.append((address, count))
+            result = original(address, count)
+            if after: after(address, result)
+            return result
+        return original(address, count)
+    monkeypatch.setattr(m.C, "string_at", read)
+    return copied
+
+
+def test_scan_stops_exactly_at_nul_without_copying_readable_tail_or_future_query(monkeypatch):
+    raw = "A😀\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw + b"DO_NOT_READ_TRAILING_BYTES")
+    reads = name_reads(monkeypatch, pointer, len(raw) + 25, through=len(raw))
+    owner, held = scan_leaf(sdk, pointer, monkeypatch)
+    owner.read()
+    assert held["value"] == ("A😀", raw[:-2])
+    assert reads == [(pointer + offset, 2) for offset in range(0, len(raw), 2)]
+    assert [c[1] for c in sdk.calls if c[0] == "query" and pointer <= c[1] < pointer + len(raw)] == [pointer]
+    assert set(vars(held["reader"])) == {"owner", "copied", "queries"}
+
+
+def test_scan_nul_at_readable_page_end_never_touches_adjacent_guard_page(monkeypatch):
+    sdk = Fixture()
+    storage = C.create_string_buffer(3 * 4096)
+    base = sdk.hold(storage)
+    sdk.regions[:] = [r for r in sdk.regions if r[0] != base]
+    page = (base + 4095) & ~4095
+    raw = "Edge😀\0".encode("utf-16-le")
+    pointer = page + 4096 - len(raw)
+    C.memmove(pointer, raw, len(raw))
+    sdk.regions.extend([[page, page + 4096, 0x1000, 4], [page + 4096, page + 8192, 0x1000, 0x104]])
+    def region(info):
+        if page <= info.BaseAddress < page + 8192: info.AllocationBase = page
+    sdk.query_hook = region
+    reads = name_reads(monkeypatch, pointer, len(raw) + 4096, through=len(raw))
+    owner, held = scan_leaf(sdk, pointer, monkeypatch)
+    owner.read()
+    assert held["value"] == ("Edge😀", raw[:-2])
+    assert len(reads) == len(raw) // 2
+    assert not any(c[0] == "query" and c[1] >= page + 4096 and c[1] < page + 8192 for c in sdk.calls)
+
+
+@pytest.mark.parametrize("split", [1, 2, 3, 5])
+def test_scan_split_word_and_surrogate_regions_validate_both_before_word_copy(split, monkeypatch):
+    raw = "A😀\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw, [(0, split, 4), (split, len(raw), 2)])
+    original, validated = sdk.query_hook, []
+    def query(info):
+        original(info)
+        if pointer <= info.BaseAddress < pointer + len(raw):
+            validated.append((info.BaseAddress, info.BaseAddress + info.RegionSize))
+    sdk.query_hook = query
+    def before_return(address, result):
+        assert all(any(start <= byte < end for start, end in validated) for byte in (address, address + 1))
+    reads = name_reads(monkeypatch, pointer, len(raw), after=before_return)
+    owner, held = scan_leaf(sdk, pointer, monkeypatch)
+    owner.read()
+    assert held["value"] == ("A😀", raw[:-2]) and len(reads) == len(raw) // 2
+    assert len(validated) == 2 and owner.state == "RELEASED"
+
+
+@pytest.mark.parametrize("failure", ["noaccess", "guard", "reserved", "short", "raise", "opaque", "allocation", "null_allocation", "overflow"])
+def test_scan_bad_next_region_never_reads_unvalidated_word_and_preserves_unknown(failure, monkeypatch):
+    raw = "A\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw, [(0, 1, 4), (1, len(raw), 4)])
+    original = sdk.query_hook
+    def query(info):
+        original(info)
+        if info.BaseAddress != pointer + 1: return
+        if failure == "noaccess": info.Protect = 1
+        elif failure == "guard": info.Protect = 0x104
+        elif failure == "reserved": info.State = 0x2000
+        elif failure == "short": sdk.query_result = 47
+        elif failure == "opaque": sdk.query_result = Once(True)
+        elif failure == "allocation": info.AllocationBase = pointer + 1
+        elif failure == "null_allocation": info.AllocationBase = None
+        elif failure == "overflow": info.RegionSize = m._U64 - info.BaseAddress + 1
+        else: raise OSError("SOFTWARE second name region wrote output then lost return")
+    sdk.query_hook = query
+    reads = name_reads(monkeypatch, pointer, len(raw))
+    owner, held = scan_leaf(sdk, pointer, monkeypatch)
+    with pytest.raises(m.CatalogError): owner.read()
+    assert reads == []
+    unknown = failure in {"raise", "opaque"}
+    assert owner.state == ("UNKNOWN" if unknown else "RELEASED")
+    assert len([c for c in sdk.calls if c[0] == "free"]) == (0 if unknown else 1)
+    before = list(sdk.calls)
+    with pytest.raises(m.CatalogError): held["reader"].name(pointer)
+    assert sdk.calls == before and reads == []
+    if unknown:
+        with pytest.raises(m.CatalogError): m.recover_catalog_owner(owner)
+        assert sdk.calls == before and owner in m.retained_catalog_owners()
+
+
+@pytest.mark.parametrize("remaining", [1, 2, 3, 4])
+def test_scan_short_remaining_copy_budget_does_not_prevalidate_maximum_name(remaining, monkeypatch):
+    raw = "A\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    reads = name_reads(monkeypatch, pointer, len(raw))
+    owner, held = scan_leaf(sdk, pointer, monkeypatch, bounds=m.Bounds(copied_bytes=88), prefix=88 - remaining)
+    if remaining == 4:
+        owner.read()
+        assert held["value"] == ("A", b"A\0")
+    else:
+        with pytest.raises(m.CatalogError) as caught: owner.read()
+        assert caught.value.code == "COPY_BUDGET"
+    assert len(reads) == (0 if remaining == 1 else 2 if remaining == 4 else 1)
+    assert len([c for c in sdk.calls if c[0] == "query" and pointer <= c[1] < pointer + len(raw)]) == (0 if remaining == 1 else 1)
+    assert held["reader"].copied <= 88 and owner.state == "RELEASED"
+
+
+def test_scan_real_region_exhaustion_keeps_query_budget_meaningful(monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw, [(i, i + 1, 4) for i in range(len(raw))])
+    reads = name_reads(monkeypatch, pointer, len(raw))
+    owner, _ = scan_leaf(sdk, pointer, monkeypatch, bounds=m.Bounds(span_queries=5))
+    with pytest.raises(m.CatalogError) as caught: owner.read()
+    assert caught.value.code == "QUERY_BUDGET" and len(reads) == 2
+    assert len([c for c in sdk.calls if c[0] == "query"]) == 5
+    assert sdk.calls.count(("free", sdk.pointer)) == 1 and owner.state == "RELEASED"
+
+
+@pytest.mark.parametrize("drift", ["api", "query_fn", "api_query", "free_fn", "bounds", "pointer", "count", "flags", "libraries", "enum_args", "queries", "reader_owner", "unknown"])
+def test_scan_each_cached_word_rechecks_original_owner_bindings(drift, monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    owner, held = scan_leaf(sdk, pointer, monkeypatch)
+    other = Fixture().owner() if drift == "reader_owner" else None
+    def change(address, result):
+        if address != pointer: return
+        if drift == "api": owner.api = copy.copy(owner.api)
+        elif drift == "query_fn": owner.query_fn = lambda *args: 48
+        elif drift == "api_query": owner.api.query = sdk.query
+        elif drift == "free_fn": owner.free_fn = sdk.free
+        elif drift == "bounds": owner.bounds = m.Bounds()
+        elif drift == "pointer": owner.slot.value += 8
+        elif drift == "count": owner.count.value += 1
+        elif drift == "flags": owner.flags = 1
+        elif drift == "libraries": owner.api.keepalive = ()
+        elif drift == "enum_args": owner.args = tuple([*owner.args])
+        elif drift == "queries": owner.queries = list(owner.queries)
+        elif drift == "reader_owner": held["reader"].owner = other
+        else: owner.state = "UNKNOWN"
+    reads = name_reads(monkeypatch, pointer, len(raw), after=change)
+    with pytest.raises(m.CatalogError): owner.read()
+    assert reads == [(pointer, 2)] and owner.state == "UNKNOWN"
+    before = list(sdk.calls)
+    with pytest.raises(m.CatalogError): m.recover_catalog_owner(owner)
+    assert sdk.calls == before and not any(c[0] == "free" for c in sdk.calls)
+    if other is not None:
+        assert other.read().owner.state == "RELEASED"
+
+
+@pytest.mark.parametrize("drift", ["function", "args", "outputs", "raw", "scalar", "call_state", "call_copy", "caller_pointer", "base", "extent", "allocation", "protection", "state"])
+def test_scan_cached_region_cannot_adopt_substituted_query_or_caller_metadata(drift, monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    owner, _ = scan_leaf(sdk, pointer, monkeypatch)
+    def change(address, result):
+        if address != pointer: return
+        call = owner.queries[-1]; info = call.outputs[1]
+        if drift == "function": call.function = sdk.query
+        elif drift == "args": call.args = tuple([*call.args])
+        elif drift == "outputs": call.outputs = tuple([*call.outputs])
+        elif drift == "raw": call.raw = object()
+        elif drift == "scalar": call.scalar = 47
+        elif drift == "call_state": call.state = "UNKNOWN"
+        elif drift == "call_copy": owner.queries[-1] = copy.copy(call)
+        elif drift == "caller_pointer": call.outputs[0].value += 2
+        elif drift == "base": info.BaseAddress += 2
+        elif drift == "extent": info.RegionSize += 2
+        elif drift == "allocation": info.AllocationBase += 2
+        elif drift == "protection": info.Protect = 1
+        else: info.State = 0x2000
+    reads = name_reads(monkeypatch, pointer, len(raw), after=change)
+    with pytest.raises(m.CatalogError): owner.read()
+    assert reads == [(pointer, 2)] and owner.state == "UNKNOWN"
+    before = list(sdk.calls)
+    with pytest.raises(m.CatalogError): m.recover_catalog_owner(owner)
+    assert sdk.calls == before and not any(c[0] == "free" for c in sdk.calls)
+
+
+def test_scan_cache_ends_with_each_name_even_for_same_pointer_and_region(monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    reads = name_reads(monkeypatch, pointer, len(raw))
+    def twice(reader, owner):
+        assert reader.name(pointer) == ("AB", raw[:-2])
+        next(region for region in sdk.regions if region[0] == pointer)[3] = 1
+        reader.name(pointer)
+    owner, held = scan_leaf(sdk, pointer, monkeypatch, action=twice)
+    with pytest.raises(m.CatalogError) as caught: owner.read()
+    assert caught.value.code == "MEMORY_UNREADABLE" and len(reads) == 3
+    assert len([c for c in sdk.calls if c[0] == "query" and c[1] == pointer]) == 2
+    assert set(vars(held["reader"])) == {"owner", "copied", "queries"} and owner.state == "RELEASED"
+
+
+def test_scan_after_known_free_never_reuses_region_or_reads_freed_bytes(monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    reads = name_reads(monkeypatch, pointer, len(raw))
+    owner, held = scan_leaf(sdk, pointer, monkeypatch)
+    owner.read(); before = list(sdk.calls); copied = list(reads)
+    with pytest.raises(m.CatalogError) as caught: held["reader"].name(pointer)
+    assert caught.value.code == "NAME_STATE" and owner.state == "RELEASED"
+    assert sdk.calls == before and reads == copied and not m.retained_catalog_owners()
+
+
+def test_scan_free_between_words_prevents_further_reads_without_second_free(monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    owner, _ = scan_leaf(sdk, pointer, monkeypatch)
+    def free(address, result):
+        if address == pointer: owner.release()
+    reads = name_reads(monkeypatch, pointer, len(raw), after=free)
+    with pytest.raises(m.CatalogError) as caught: owner.read()
+    assert caught.value.code == "NAME_STATE" and reads == [(pointer, 2)]
+    assert sdk.calls.count(("free", sdk.pointer)) == 1 and owner.state == "RELEASED"
+
+
+def test_scan_confirmed_free0_pending_metadata_is_not_read_permission(monkeypatch):
+    owner, sdk = ack_pending(monkeypatch)
+    before = list(sdk.calls)
+    with pytest.raises(m.CatalogError) as caught: m._Reader(owner).name(sdk.array[0].appContainerName)
+    assert caught.value.code == "NAME_STATE" and owner.state == "FREE_ACK_PENDING"
+    assert sdk.calls == before and sdk.free_status.reads == 1
+    m.recover_catalog_owner(owner)
+    assert owner.state == "RELEASED" and sdk.calls == before
+
+
+def test_scan_original_query_argument_substitution_before_sdk_returns_is_retained(monkeypatch):
+    raw = "AB\0".encode("utf-16-le")
+    sdk, pointer = scan_fixture(raw)
+    owner, _ = scan_leaf(sdk, pointer, monkeypatch)
+    original = sdk.query_hook
+    def substituted(info):
+        original(info)
+        if info.BaseAddress == pointer:
+            call = owner.queries[-1]
+            call.args = tuple([*call.args])
+    sdk.query_hook = substituted
+    reads = name_reads(monkeypatch, pointer, len(raw))
+    with pytest.raises(m.CatalogError): owner.read()
+    assert reads == [] and owner.state == "UNKNOWN" and not any(c[0] == "free" for c in sdk.calls)
