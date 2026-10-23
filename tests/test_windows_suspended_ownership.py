@@ -30,12 +30,67 @@ def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override
         acl_api.descriptor=descriptor
     events=[];state={'alive':True,'cleanup_fail':cleanup_fail,'acl':None,'assigned':False}
     job_data={'bytes':bytes(EXTENDED_LIMIT())}
+    from comsol_mcp import _windows_t037_child_evidence as evidence
+    import struct
+    state['primary_privileges']=[(23,'SeChangeNotifyPrivilege',3)]
+    state['primary_queries']=[];state['primary_calls']=[]
+    def sid_bytes(value):
+        v=value.split('-')
+        return bytes((1,len(v)-3))+int(v[2]).to_bytes(6,'big')+b''.join(struct.pack('<I',int(x)) for x in v[3:])
+    def rows_bytes(rows,base):
+        tail=b'';head=[];offset=8+16*len(rows)
+        for text,attrs in rows:
+            head.append(struct.pack('<QI4x',base+offset+len(tail),attrs));tail+=sid_bytes(text)
+        return struct.pack('<I4x',len(rows))+b''.join(head)+tail
+    def primary_rows():
+        return (("S-1-5-32-545",7),("S-1-5-5-1-2",0xC0000007),
+                (profile.service_sid,7),("S-1-16-16384",0x60))
+    state['primary_rows']=primary_rows
     class PI(C.Structure):
         _fields_=[('hProcess',HANDLE),('hThread',HANDLE),('dwProcessId',DWORD),('dwThreadId',DWORD)]
     class A:
         def OpenProcessToken(self,p,access,out):
-            events.append(('open-token',int(p),access));C.cast(out,C.POINTER(HANDLE)).contents.value=55;return 1
+            events.append(('open-token',int(p),access));C.cast(out,C.POINTER(HANDLE)).contents.value=55 if int(p)==1 else 58;return 1
         def DuplicateTokenEx(self,t,access,attrs,level,kind,out):C.cast(out,C.POINTER(HANDLE)).contents.value=56;return 1
+        def CreateRestrictedToken(self,existing,flags,disable,disabled,delete,privileges,restrict,restricted,out):
+            from comsol_mcp._windows_t037_primary import LUID_AND_ATTRIBUTES, SID_AND_ATTRIBUTES
+            assert flags==0 and disable==0 and disabled is None
+            deleted=[]
+            for i in range(delete):
+                row=C.cast(privileges,C.POINTER(LUID_AND_ATTRIBUTES))[i]
+                assert row.Attributes==0
+                deleted.append(row.Luid.LowPart|((row.Luid.HighPart&0xFFFFFFFF)<<32))
+            for i in range(restrict):
+                assert C.cast(restricted,C.POINTER(SID_AND_ATTRIBUTES))[i].Attributes==0
+            state['primary_calls'].append(('CreateRestrictedToken',tuple(deleted),restrict))
+            state['deleted_luids']=set(deleted)
+            C.cast(out,C.POINTER(HANDLE)).contents.value=57
+            return 1
+        def GetTokenInformation(self,token,kind,storage,capacity,used):
+            h=getattr(token,'value',token);state['primary_queries'].append((h,kind,storage is not None))
+            base=C.addressof(storage) if storage is not None else 0
+            if kind==10:
+                raw=bytearray(56);struct.pack_into('<QQ',raw,0,h,4);struct.pack_into('<Q',raw,48,100+h);raw=bytes(raw)
+            elif kind in (1,25):
+                text=profile.service_account_sid if kind==1 else 'S-1-16-16384'
+                raw=struct.pack('<QI4x',base+16,0 if kind==1 else 0x60)+sid_bytes(text)
+            elif kind==2:raw=rows_bytes(primary_rows(),base)
+            elif kind==11:raw=rows_bytes((('S-1-5-99-7',4),),base)
+            elif kind==30:raw=rows_bytes((),base)
+            elif kind==27:raw=struct.pack('<I',3)
+            elif kind==29:raw=struct.pack('<I',0)
+            elif kind==3:
+                rows=[x for x in state['primary_privileges'] if h!=57 or x[0] not in state.get('deleted_luids',set())]
+                raw=struct.pack('<I',len(rows))+b''.join(struct.pack('<QI',x[0],x[2]) for x in rows)
+            else:raise AssertionError(kind)
+            C.cast(used,C.POINTER(DWORD)).contents.value=len(raw)
+            if storage is None:return 0
+            assert len(raw)<=capacity;C.memmove(storage,raw,len(raw));return 1
+        def LookupPrivilegeNameW(self,system,luid,storage,used):
+            value=C.cast(luid,C.POINTER(evidence.U64)).contents.value
+            text=next(x[1] for x in state['primary_privileges'] if x[0]==value)
+            raw=text.encode('utf-16-le');C.memmove(storage,raw+b'\0\0',len(raw)+2)
+            C.cast(used,C.POINTER(DWORD)).contents.value=len(text);return 1
         def ConvertStringSidToSidW(self,text,out):C.cast(out,C.POINTER(C.c_void_p)).contents.value=77;return 1
         def CreateProcessAsUserW(self,*args):
             events.append('CREATE_SUSPENDED');pi=C.cast(args[-1],C.POINTER(PI)).contents
@@ -59,6 +114,7 @@ def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override
     api=win._Win32LaunchApi.__new__(win._Win32LaunchApi)
     api.C=C;api.W=SimpleNamespace(HANDLE=HANDLE,DWORD=DWORD,BOOL=BOOL,WORD=WORD,BYTE=BYTE,UINT=DWORD,LPCWSTR=C.c_wchar_p,LPWSTR=C.c_wchar_p)
     api.a=A();api.k=K()
+    monkeypatch.setattr(C,'get_last_error',lambda:122,raising=False)
     def check(ok,label):
         if not ok:raise win.WindowsT037Error('NATIVE_TEST_FAILURE',label)
     api._check=check

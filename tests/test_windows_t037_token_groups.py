@@ -242,8 +242,9 @@ def test_normal_factory_connected_B_carries_actual_groups_and_keeps_issuer_unqua
         original = sdk.token_bytes
         def token_bytes(kind, base, read=False):
             if kind == 2:
-                attrs = 0x10 if drift and sdk.opens == 2 else 0x80000004
-                return group_bytes((('S-1-5-32-545', attrs),), base)
+                attrs = 0x11 if drift and sdk.opens == 2 else 7
+                return group_bytes((('S-1-5-32-545', attrs), ('S-1-5-5-1-2', 0xC0000007),
+                    (factory.profile.service_sid, 7), ('S-1-16-4096', 0x60)), base)
             return original(kind, base, read)
         monkeypatch.setattr(sdk, 'token_bytes', token_bytes)
         error = launch_refusal(factory, command)
@@ -253,8 +254,8 @@ def test_normal_factory_connected_B_carries_actual_groups_and_keeps_issuer_unqua
         assert actual.qualification == 'UNQUALIFIED' and actual.state == 'DIAGNOSTIC_ONLY_NOT_ADMISSION'
         assert actual.finite_state == ('MISMATCH' if drift else 'MATCHED_FINITE_CHECKS_ONLY')
         assert dict((c.name, c.matches) for c in actual.finite_comparisons)['token_stable'] is (not drift)
-        assert actual.observations.token_before.groups == (e.SidAttributes('S-1-5-32-545', 0x80000004),)
-        assert actual.observations.token_after.groups[0].attributes == (0x10 if drift else 0x80000004)
+        assert actual.observations.token_before.groups[0] == e.SidAttributes('S-1-5-32-545', 7)
+        assert actual.observations.token_after.groups[0].attributes == (0x11 if drift else 7)
         assert sdk.opens == 2 and sdk.closed == [901, 944, 902]
         assert 'RESUME' not in events and not resume._pending
         known_child_cleanup(api, factory)

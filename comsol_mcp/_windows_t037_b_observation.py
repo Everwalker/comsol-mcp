@@ -17,11 +17,7 @@ from ._execution_contract import ExecutionContractError
 from ._windows_owned_resources import registry_for
 
 _SEAL = object()
-_UNDEFINED = (
-    'token_modified_id_absolute', 'privilege_allowlist', 'restricted_sid_allowlist',
-    'group_attribute_policy', 'integrity_level_target', 'mandatory_policy_target',
-    'actual_C_and_purpose_provenance', 'native_controls',
-)
+_UNDEFINED = ('actual_C_and_purpose_provenance', 'native_controls')
 
 
 def _fail(code, message):
@@ -39,6 +35,7 @@ class ConnectedChildBObservation:
     undefined_targets: tuple[str, ...] = field(default=_UNDEFINED, init=False)
     qualification: str = field(default='UNQUALIFIED', init=False)
     state: str = field(default='DIAGNOSTIC_ONLY_NOT_ADMISSION', init=False)
+    selected_policy_issues: tuple[evidence.Issue, ...] = ()
 
 
 class _OriginalBObserver:
@@ -48,6 +45,11 @@ class _OriginalBObserver:
             _fail('B_ORIGINAL_OWNER_REQUIRED', 'original launch observer required')
         self._seal = seal
         self.process, self.factory, self.held = process, factory, held
+        from ._windows_t037_primary import OriginalBirthPreparation
+        self.preparation = getattr(process, '_birth_preparation', None)
+        if type(self.preparation) is not OriginalBirthPreparation:
+            _fail('B_PRIMARY_CONTEXT_UNKNOWN', 'original submitted-primary preparation is unavailable')
+        self.submitted_primary = self.preparation.require_child(process)
         self.launch_api, self.profile = process._api, factory.profile
         self.parent, self.job = process._parent_binding, process._original_job
         self.parent_context = (self.parent.launch_api, self.parent.query, self.parent.pid,
@@ -100,10 +102,14 @@ def _current(owner):
             or registry_for(owner.launch_api) is not owner.registry or not p.never_resumed):
         _fail('B_ORIGINAL_CONTEXT_CHANGED', 'original child/factory/profile/Job/parent/thread changed')
     p._require_observable()
+    if (p._birth_preparation is not owner.preparation
+            or owner.preparation.require_child(p) is not owner.submitted_primary):
+        _fail('B_PRIMARY_CONTEXT_UNKNOWN', 'original submitted-primary snapshot changed')
     _creation(p)
 
 
-def _result(observation, profile, digests, issues=()):
+def _result(observation, profile, digests, issues=(), *, primary=None):
+    policy_issues = []
     comparisons = [] if observation is None else [c for c in observation.comparisons if c.name != 'expected_modified_id']
     token_before = observation.token_before if observation else None
     token_after = observation.token_after if observation else None
@@ -119,6 +125,17 @@ def _result(observation, profile, digests, issues=()):
         ))
 
     token_checks(token_before, 'before'); token_checks(token_after, 'after')
+    from ._windows_t037_primary import child_policy
+    for token, suffix in ((token_before, 'before'), (token_after, 'after')):
+        matched = None
+        try:
+            if type(primary) is evidence.TokenObservation and type(token) is evidence.TokenObservation and token.groups is not None:
+                matched = child_policy(primary, token, profile)
+        except ExecutionContractError as error:
+            matched = False
+            policy_issues.append(evidence.Issue('selected_token_policy_'+suffix,
+                'original_submitted_primary', error.code, detail=str(error)))
+        comparisons.append(evidence.Comparison('selected_token_policy_'+suffix, matched))
     comparisons.append(evidence.Comparison('fixed_child_creation_policy',
         type(policy.flags) is int and policy.flags == 1
         and policy.no_child_process_creation is True
@@ -129,7 +146,7 @@ def _result(observation, profile, digests, issues=()):
     all_issues = (observation.issues if observation else ()) + tuple(issues)
     finite = ('UNVERIFIED' if observation is None or all_issues or any(v is None for v in values) else
         'MISMATCH' if any(v is False for v in values) else 'MATCHED_FINITE_CHECKS_ONLY')
-    return ConnectedChildBObservation(observation, tuple(comparisons), tuple(all_issues), finite, digests)
+    return ConnectedChildBObservation(observation, tuple(comparisons), tuple(all_issues), finite, digests, selected_policy_issues=tuple(policy_issues))
 
 
 def observe_original_child_b(process, *, factory):
@@ -152,6 +169,7 @@ def observe_original_child_b(process, *, factory):
     process._connected_b_observer = owner
     try:
         _current(owner)
+        owner.preparation.recheck_submitted()
         # Root the actual adapter before its possibly failing initialization.
         owner.api = evidence.WindowsChildEvidenceApi.__new__(evidence.WindowsChildEvidenceApi)
         evidence.WindowsChildEvidenceApi.__init__(owner.api, owner_api=owner.launch_api)
@@ -159,7 +177,7 @@ def observe_original_child_b(process, *, factory):
         owner.borrowed, owner.pin = evidence.borrow_original_child(process, api=owner.api)
         observation = evidence.observe_child(owner.borrowed, owner.pin,
             expected_command_line=raw_command)  # Absolute modified-ID target is deliberately unspecified.
-        owner.result = _result(observation, owner.profile, digests)
+        owner.result = _result(observation, owner.profile, digests, primary=owner.submitted_primary)
         unknown = [e for e in owner.registry.unresolved() if e.state == 'UNKNOWN']
         if unknown:
             owner.state = 'UNKNOWN'; owner.error = unknown[0].error
@@ -167,6 +185,7 @@ def observe_original_child_b(process, *, factory):
         _current(owner)
         if _require_held_finite_a(factory) is not held:
             _fail('B_ORIGINAL_CONTEXT_CHANGED', 'held finite A was replaced during B')
+        owner.preparation.recheck_submitted()
         owner.state = 'OBSERVED'
         return owner.result
     except (evidence.ObservationError, OSError) as error:

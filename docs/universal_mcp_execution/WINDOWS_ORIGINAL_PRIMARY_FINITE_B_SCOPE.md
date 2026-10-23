@@ -1,0 +1,32 @@
+Current Main disposition: scoped source/software accepted after the lookup guard repair. The exact eight authored files are bound to 316 selected software PASS on base454; B remains UNQUALIFIED and the issuer still refuses. Main record: `_state/universal-main-review/20261024-b-primary-finite/MAIN_R4_SOURCE_SOFTWARE_ACCEPTANCE.json` (4821 bytes, SHA256 `1b4cb2f5fc65d9936d8a60370df6ebf01fd1082dda86741478ea5a762d74b18b`). The executor notes below are the preserved handoff context; full affected/native/427/restore/final Reviewer acceptance remains open.
+
+# Repaired lookup guard: current private source/software handoff
+
+Status: pending Main concentrated acceptance; **NOT_INTEGRATED**. Current fixed base is `454360f2ad7a0173bcd28e0b9fa7b6c133d57489` plus the exact pending eight B overlay files. The accepted G3 source/test and fixed fixture are copied baseline inputs, not authored B changes. Old delivery-r3/attempt-12 and all failure/raw records remain unchanged.
+
+## Narrow rework and actual results
+
+Only `WindowsChildEvidenceApi.read_owned_token`'s privilege loop changes relative to r3. Each lookup roots its actual callable, LUID, output name/length buffers, arguments and borrowed original entry before entry. The existing guard runs immediately before and after each call. The actual raw return is latched before the post-call guard; BOOL checking and decoding follow it. The existing sticky preparation/entry UNKNOWN path retains these actual objects and refuses later SDK calls, close, A read, CREATE, Resume or retry. Cached callables alone are not the guard. The rest of the method AST and all other production functions are exact r3.
+
+Two real same-thread SDK-seam counters use a legitimate allowed privilege plus disabled Debug before deletion. Both fail on exact unfixed r3 in attempt-13: a second lookup was actually entered after export substitution or real preparation UNKNOWN. Both pass after repair, together with a normal multi-privilege deletion/known-cleanup positive. Existing primary-test function ASTs and file prefix are unchanged.
+
+Attempt-14 is3PASS. Attempt-15 is301PASS0FES on the original611 projection (193.69s); it is never relabelled454. The first454 combination had a collection-only missing fixture-import path error in attempt-16; its raw is retained. A private runner-only source/tests path correction led to attempt-17: **316PASS0FES**, comprising the B301 plus accepted unit-readback test nodes. Original298 occur once. 217 source members are equal before/after/candidate/delivery. Actual execution binds 113 origins, 92 SourceFileLoader and 21 rewrite intervals, 113 returned-source records and 113 frames; zero binding/effect errors. **CodeType chains NOT_CAPTURED**.
+
+Old broader338=289PASS49FAIL and same44FAIL on baseline611 stay FAIL. The separate prepared-lifecycle follow-up has initial67=22PASS45FAIL (44 original plus one stale related SDK-export fixture); it is not included in the passing B union and needs an explicit new-source rebase/retest. No full affected/repository PASS is claimed.
+
+This private delivery proposes four production and four test files plus doc/compact. Main owns integration/publication. Shared source/Main3/Git and old native runtimes are not written. B remainsUNQUALIFIED and issuer refuses; Windows/SDK/native/process/network/JDK/COMSOL, C/Resume, full restore/matrix, finalReviewer and Goal areNOT_RUN/unresolved.
+
+## Original-primary and selected-policy scope retained from r3
+
+The normal T037 factory roots `OriginalBirthPreparation` on its actual API/factory before the first token acquisition. Original native function references, arguments, output slots, buffers, closers, native registry entries and transfer state stay reachable through ambiguity. The existing complete parser now also borrows an already-owned TOKEN; it does not open/adopt/close a second token. The original process wrapper retains its own one-open/one-close behavior, bounded buffers and complete statistics-before/after guard. The parser/statistics path outside the corrected privilege loop is AST-identical to frozen r3; no parser normalization or weaker cleanup is introduced.
+
+The producer duplicates the actual process token and, when necessary, calls CreateRestrictedToken with Flags=0 to delete the actual LUIDs outside Main's maximum-presence budget `{SeChangeNotifyPrivilege}`. Disabled privileges count as present. Restricting SID input rows use Attributes=0 as required by the SDK; observed and returned raw maps are never zeroed or normalized. Returned-primary security semantics and remaining privileges are read back strictly. TokenId/ModifiedId are actual dynamic identities of each distinct token, with stable queries of the same final submitted instance; no parent/child or duplicate absolute-ID theorem is asserted.
+
+The exact submitted TOKEN slot/preparation is bound to the actual retained child before CREATE and checked at original CREATE entry. B consumes that same snapshot through the normal held-A/factory path. Selected checks cover Low IL, mandatory NO_WRITE_UP masks1/3, privilege name/LUID/presence/attributes, complete ordinary group maps and only the chosen deny-only conversion, finite optional new package/ALL_APPLICATION_PACKAGES rows attrs7, exact restricting raw maps and approved capabilities attrs4. Unknown/incomplete/unexpected observations do not qualify B. Original child observation/cleanup methods also reject preparation UNKNOWN; a pure same-object transfer never clears it.
+
+Normal SCM stop/drain is separated from lost original identity: new acquisitions require existing live admission, while original identity remains checked during cleanup. No Gate, Root, registry, provider, grants, LaunchInputs, Java or issuer policy was relaxed. Active original API replacement is blocked until known preparation retirement. Actual sealed-child errors survive primary unwind with the additional real error chained.
+
+B remains `UNQUALIFIED`; issuer remains unchanged and refuses. This is not C/bootstrap/Resume implementation or native authority.
+
+
+Exact source/test/raw SHA256 values and original failure paths are in the sibling compact and delivery RAW_CONTEXT. All manifest digests hash exact raw bytes. This document is a post-test metadata derivative; tested Python bytes are unchanged.

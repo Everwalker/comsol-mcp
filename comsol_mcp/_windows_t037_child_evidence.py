@@ -506,15 +506,27 @@ class WindowsChildEvidenceApi:
                                    number("GetProcessIdOfThread", thread), birth("GetProcessTimes", process),
                                    birth("GetThreadTimes", thread), live(process), live(thread))
 
-    def _token_buffer(self, token, kind):
+    def _token_buffer(self, token, kind, *, _guard=None):
         size = U32()
-        ok = self.a.GetTokenInformation(token, kind, None, 0, C.byref(size))
+        returned = U32()
+        context = {"function": self.a.GetTokenInformation, "token": token, "kind": kind,
+                   "size_slot": size, "returned_slot": returned, "storage": None, "raw_returns": []}
+        if not hasattr(self, "_token_query_contexts"):
+            self._token_query_contexts = []
+        self._token_query_contexts.append(context)  # Actual slots/function retained before SDK entry.
+        if _guard is not None: _guard()
+        ok = context["function"](token, kind, None, 0, C.byref(size))
+        context["raw_returns"].append(ok)
+        if _guard is not None: _guard()
         error = C.get_last_error()
         if ok or error != 122 or not 0 < size.value <= MAX_BUFFER:
             raise ObservationError("GetTokenInformation(size)", "SDK_SIZE_ERROR", error, f"class={kind}, size={size.value}")
         storage = C.create_string_buffer(size.value)
-        returned = U32()
-        ok = self.a.GetTokenInformation(token, kind, storage, size.value, C.byref(returned))
+        context["storage"] = storage
+        if _guard is not None: _guard()
+        ok = context["function"](token, kind, storage, size.value, C.byref(returned))
+        context["raw_returns"].append(ok)
+        if _guard is not None: _guard()
         self._check(ok, f"GetTokenInformation({kind})")
         if not 0 < returned.value <= size.value:
             _bad("GetTokenInformation", detail=f"class={kind}, capacity={size.value}, returned={returned.value}")
@@ -526,36 +538,69 @@ class WindowsChildEvidenceApi:
         self._check(self.a.OpenProcessToken(process, 8, C.byref(token)), "OpenProcessToken(TOKEN_QUERY)")
         entry = self._owned_handle(token.value, "child_evidence_token")
         try:
-            get = lambda kind: self._token_buffer(token, kind)
-            statistics_before = get(10)
-            statistics_before.at(0, 56)
-            user = parse_sid_attributes(get(1))
-            groups = parse_groups(get(2))
-            restricted = parse_groups(get(11))
-            caps = parse_groups(get(30))
-            integrity = parse_sid_attributes(get(25))
-            if not integrity.sid.startswith("S-1-16-") or len(integrity.sid.split("-")) != 4:
-                _bad("TokenIntegrityLevel", detail="not an integrity authority with one RID")
-            policy = get(27).uint(0)
-            appcontainer = get(29).uint(0)
-            if appcontainer not in (0, 1):
-                _bad("TokenIsAppContainer", detail="non-BOOL SDK result")
-            privileges = []
-            for item in parse_privileges(get(3)):
-                luid, size = U64(item.luid), U32(MAX_UTF16)
-                name = C.create_unicode_buffer(MAX_UTF16)
-                self._check(self.a.LookupPrivilegeNameW(None, C.byref(luid), name, C.byref(size)), "LookupPrivilegeNameW")
-                text = decode_utf16(C.string_at(C.addressof(name), C.sizeof(name)), size.value, terminated=True)
-                privileges.append(Privilege(item.luid, item.attributes, text))
-            statistics_after = get(10)
-            if statistics_before.raw != statistics_after.raw:
-                raise ObservationError("TokenStatistics", "TOKEN_CHANGED_DURING_QUERY", detail=(
-                    f"before={statistics_before.raw.hex()}, after={statistics_after.raw.hex()}"))
-            return TokenObservation(user, restricted, caps, integrity, int(integrity.sid.split("-")[-1]),
-                                    policy, tuple(privileges), statistics_before.uint(0, 8),
-                                    statistics_before.uint(8, 8), statistics_before.uint(48, 8), bool(appcontainer), groups=groups)
+            return self.read_owned_token(entry)
         finally:
             entry.release_owned(entry.registry.owner)
+
+    def read_owned_token(self, entry):
+        """Borrow one actual original TOKEN entry; never open/adopt/close it here."""
+        from ._windows_t037_primary import OriginalBirthPreparation
+        registry = registry_for(self)
+        if type(entry) is not _OwnedResource or entry.registry is not registry:
+            _bad("borrowed TOKEN", "INVALID_BORROW")
+        binding = (entry.adapter, entry.handle, entry.value, entry.closer, entry.mode, entry.label, entry.seq)
+        preparation = next((x for x in entry.keepalive if type(x) is OriginalBirthPreparation), None)
+        def guard():
+            if (entry.adapter, entry.handle, entry.value, entry.closer, entry.mode, entry.label, entry.seq) != binding:
+                _bad("borrowed TOKEN", "HANDLE_BINDING_CHANGED")
+            _entry(entry, registry.owner, binding[0])
+            if any(x.state == "UNKNOWN" for x in registry.unresolved()):
+                _bad("borrowed TOKEN", "RESOURCE_RELEASE_UNKNOWN")
+            if preparation is not None:
+                preparation._check()
+        guard()
+        token = entry.handle
+        get = lambda kind: self._token_buffer(token, kind, _guard=guard)
+        statistics_before = get(10)
+        statistics_before.at(0, 56)
+        user = parse_sid_attributes(get(1))
+        groups = parse_groups(get(2))
+        restricted = parse_groups(get(11))
+        caps = parse_groups(get(30))
+        integrity = parse_sid_attributes(get(25))
+        if not integrity.sid.startswith("S-1-16-") or len(integrity.sid.split("-")) != 4:
+            _bad("TokenIntegrityLevel", detail="not an integrity authority with one RID")
+        policy = get(27).uint(0)
+        appcontainer = get(29).uint(0)
+        if appcontainer not in (0, 1):
+            _bad("TokenIsAppContainer", detail="non-BOOL SDK result")
+        privileges = []
+        for item in parse_privileges(get(3)):
+            luid, size = U64(item.luid), U32(MAX_UTF16)
+            name = C.create_unicode_buffer(MAX_UTF16)
+            lookup = self.a.LookupPrivilegeNameW
+            arguments = (None, C.byref(luid), name, C.byref(size))
+            context = {"entry": entry, "function": lookup, "luid_slot": luid,
+                       "name_storage": name, "length_slot": size, "arguments": arguments,
+                       "raw_return": None, "entered": False, "returned": False}
+            if not hasattr(self, "_privilege_name_calls"):
+                self._privilege_name_calls = []
+            self._privilege_name_calls.append(context)
+            guard()
+            context["entered"] = True
+            context["raw_return"] = lookup(*arguments)
+            context["returned"] = True
+            guard()
+            self._check(context["raw_return"], "LookupPrivilegeNameW")
+            text = decode_utf16(C.string_at(C.addressof(name), C.sizeof(name)), size.value, terminated=True)
+            privileges.append(Privilege(item.luid, item.attributes, text))
+        statistics_after = get(10)
+        if statistics_before.raw != statistics_after.raw:
+            raise ObservationError("TokenStatistics", "TOKEN_CHANGED_DURING_QUERY", detail=(
+                f"before={statistics_before.raw.hex()}, after={statistics_after.raw.hex()}"))
+        return TokenObservation(user, restricted, caps, integrity, int(integrity.sid.split("-")[-1]),
+                                policy, tuple(privileges), statistics_before.uint(0, 8),
+                                statistics_before.uint(8, 8), statistics_before.uint(48, 8), bool(appcontainer), groups=groups)
 
     def child_policy(self, process):
         flags = U32()

@@ -1101,6 +1101,15 @@ class T037SessionProcessFactory:
     no observation value or caller receipt can unlock them.
     """
 
+    def __setattr__(self, name, value):
+        if (name == "_api" and value is not getattr(self, "_api", None)
+                and getattr(self, "_birth_preparations", None)):
+            # The held-A unwinder must retain this same original API while a
+            # primary acquisition/close is active or UNKNOWN, never a replacement.
+            from ._windows_t037_primary import require_no_preparation
+            require_no_preparation(self)
+        object.__setattr__(self, name, value)
+
     def __init__(self, profile: WindowsT037Profile | WindowsT037ProfileV2, session_id: str, *,
                  api: Any | None = None):
         if not isinstance(profile, (WindowsT037Profile, WindowsT037ProfileV2)):
@@ -1173,6 +1182,9 @@ class T037SessionProcessFactory:
             return roots
 
     def __call__(self, command: Sequence[str], **options: Any):
+        from ._windows_t037_primary import require_no_preparation
+        require_no_preparation(self)
+        if self._api is not None: require_no_preparation(self._api)
         from ._windows_t037_admission import _factory_birth_scope, _require_factory_runtime, _factory_static_a_scope
         with _factory_birth_scope(self), _factory_static_a_scope(self):
             self.preflight()
@@ -1224,6 +1236,9 @@ class T037SessionProcessFactory:
 
     def preflight(self) -> None:
         """Refuse before directory/file/child side effects until native proof exists."""
+        from ._windows_t037_primary import require_no_preparation
+        require_no_preparation(self)
+        if self._api is not None: require_no_preparation(self._api)
         from ._windows_t037_admission import _factory_birth_scope
         with _factory_birth_scope(self):
             return T037SessionProcessFactory._preflight_owned(self)
@@ -1287,7 +1302,7 @@ class T037SessionProcessFactory:
             elif getattr(api,"_job_close_call",None) is not None or getattr(api,"_job_limit_bindings",None):
                 _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "no-Job factory has an unclassified Job acquisition")
             if any(getattr(api,name,None) for name in ("_retained_children","_unclassified_create_handles",
-                    "_retained_launch_cleanup","_retained_parent_bindings","_retained_child_tokens")):
+                    "_retained_launch_cleanup","_retained_parent_bindings","_retained_child_tokens","_birth_preparations")):
                 _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original child/launch resource ownership remains retained")
         elif call is not None:
             _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original Job API was lost")
@@ -1311,6 +1326,9 @@ class T037SessionProcessFactory:
         return (self,api,call,tuple(observations),participant.observers)
 
     def _close_owned_resources(self) -> None:
+        from ._windows_t037_primary import require_no_preparation
+        require_no_preparation(self)
+        if self._api is not None: require_no_preparation(self._api)
         from ._windows_owned_resources import registry_for
         if registry_for(self).unresolved():
             _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "factory-owned prebirth native observations remain unresolved")
@@ -1551,7 +1569,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         "_close_mode", "_original_poll", "_original_wait", "_original_terminate",
         "_original_times", "_original_profile", "_original_factory", "_original_job",
         "_original_role", "_parent_binding", "_image_api", "_image_entry", "_image_binding", "_outputs", "_owner",
-        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer", "_launch_inputs"})
+        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer", "_launch_inputs", "_birth_preparation"})
 
     def __setattr__(self, name, value):
         if name in self._FIXED and hasattr(self, name):
@@ -1560,7 +1578,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
 
     def __init__(self, api, process_info, args, job, *, profile, role, session_factory,
                  parent, image_api, image_entry, call_storage, create_arguments,
-                 launch_inputs=None, seal):
+                 launch_inputs=None, birth_preparation=None, seal):
         if seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
             _refuse(ERROR_POLICY_UNVERIFIED, "retained child requires native call storage")
         from ._windows_owned_resources import registry_for, handle_closer
@@ -1575,6 +1593,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         self._original_profile, self._original_factory = profile, session_factory
         self._original_job, self._original_role = job, role
         self._launch_inputs = launch_inputs
+        self._birth_preparation = birth_preparation
         if getattr(profile, "prepared_launch", None) is not None and (launch_inputs is None
                 or launch_inputs.factory is not session_factory or launch_inputs.profile is not profile
                 or launch_inputs.role != role):
@@ -1672,6 +1691,8 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
             _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original main thread ownership changed")
 
     def create_original(self):
+        if self._birth_preparation is not None:
+            self._birth_preparation.require_child(self)
         self._check_original()
         if self._call_entered or self._closed:
             _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "original CreateProcess call cannot be repeated")
@@ -1739,6 +1760,8 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         return self._seal is _NATIVE_SUSPENDED_CHILD_SEAL and self._creation_confirmed and not self._resume_attempted
 
     def _require_observable(self):
+        if self._birth_preparation is not None and self._birth_preparation.state != 'RELEASED':
+            self._birth_preparation.require_child(self)
         self._check_original()
         if not self._creation_confirmed:
             _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unconfirmed creation cannot be polled/waited/terminated")
@@ -1959,6 +1982,14 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         self.a.DuplicateTokenEx.argtypes = [W.HANDLE, W.DWORD, C.c_void_p, C.c_int,
                                              C.c_int, C.POINTER(W.HANDLE)]
         self.a.DuplicateTokenEx.restype = W.BOOL
+        from ._windows_t037_primary import require_abi, SID_AND_ATTRIBUTES, LUID_AND_ATTRIBUTES
+        from ._windows_t037_child_evidence import U32, I32, PTR
+        require_abi()
+        self.a.CreateRestrictedToken.argtypes = [PTR, U32, U32, C.POINTER(SID_AND_ATTRIBUTES),
+            U32, C.POINTER(LUID_AND_ATTRIBUTES), U32, C.POINTER(SID_AND_ATTRIBUTES), C.POINTER(PTR)]
+        self.a.CreateRestrictedToken.restype = I32
+        self.a.LookupPrivilegeNameW.argtypes = [W.LPCWSTR, C.POINTER(C.c_uint64), W.LPWSTR, C.POINTER(U32)]
+        self.a.LookupPrivilegeNameW.restype = I32
         self.a.ConvertStringSidToSidW.argtypes = [W.LPCWSTR, C.POINTER(C.c_void_p)]
         self.a.ConvertStringSidToSidW.restype = W.BOOL
         self.a.CreateProcessAsUserW.argtypes = [W.HANDLE, W.LPCWSTR, W.LPWSTR,
@@ -2145,6 +2176,8 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
     def create_suspended_appcontainer_child(self, command: Sequence[str], options: Mapping[str, Any], *,
                                              profile: WindowsT037Profile, job: Any, role: str,
                                              session_factory: Any = None, launch_inputs: Any = None):
+        from ._windows_t037_primary import OriginalBirthPreparation, _SEAL as _PRIMARY_SEAL, require_no_preparation
+        require_no_preparation(self)
         from ._windows_job_limits import require_configured_job
         require_configured_job(self, job, profile)
         if session_factory is not None and (
@@ -2208,6 +2241,7 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         primary_token = W.HANDLE()
         process_handle = thread_handle = None
         retained_child = None
+        preparation = None
         native_parent = None
         attribute_pointer = None
         image_verified = False
@@ -2219,24 +2253,10 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                 _refuse(ERROR_POLICY_UNVERIFIED, f"T037 {role} image does not match trusted startup configuration")
             image_verified = True
 
-            # Use the daemon's already-running dedicated service account token;
-            # no credentials, LogonUser, service install, or privilege change.
-            current_token = W.HANDLE()
-            token_access = 0x0008 | 0x0002 | 0x0001 | 0x0080 | 0x0100
-            self._check(self.a.OpenProcessToken(self.k.GetCurrentProcess(), token_access,
-                                                C.byref(current_token)), "OpenProcessToken(service)")
-            native_closer,native_mode=handle_closer(self)
-            current_owner=own(self,current_token,native_closer,mode=native_mode,label="current_token")
-            try:
-                service_observation = self.read_token(current_token)
-                if service_observation.get("user_sid", "").casefold() != profile.service_account_sid.casefold():
-                    _refuse(ERROR_POLICY_UNVERIFIED, "daemon is not running as the configured dedicated service identity")
-                # TOKEN_PRIMARY=1, SecurityImpersonation=2.
-                self._check(self.a.DuplicateTokenEx(current_token, token_access, None, 2, 1,
-                                                     C.byref(primary_token)), "DuplicateTokenEx(primary)")
-                own(self,primary_token,native_closer,mode=native_mode,label="primary_token")
-            finally:
-                current_owner.release_owned(registry.owner)
+            preparation = OriginalBirthPreparation(self, profile, session_factory, job, seal=_PRIMARY_SEAL)
+            preparation.prepare()
+            primary_token = preparation.primary_slot
+            native_closer, native_mode = preparation.closer, preparation.close_mode
 
             self._check(self.a.ConvertStringSidToSidW(profile.appcontainer_sid, C.byref(app_sid)),
                         "ConvertStringSidToSidW(AppContainer)")
@@ -2330,12 +2350,13 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                 session_factory=session_factory, parent=native_parent, image_api=image_api,
                 image_entry=image_entry,
                 call_storage=(process_info, startup, command_line, environment, primary_token,
-                              attr_storage, security_caps, handles_array),
+                              attr_storage, security_caps, handles_array, preparation),
                 create_arguments=(primary_token, image_path, command_line, None, None, True, flags,
                     C.cast(environment, C.c_void_p) if environment is not None else None,
                     cwd, C.byref(startup), C.byref(process_info)),
-                launch_inputs=launch_inputs,
+                launch_inputs=launch_inputs, birth_preparation=preparation,
                 seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+            preparation.bind_child(retained_child)
             if session_factory is not None and profile.wrapper_schema == PROFILE_SCHEMA_V4:
                 from ._windows_t037_targets import _require_held_finite_a
                 _require_held_finite_a(session_factory)  # Original pins, immediately before CREATE.
@@ -2414,6 +2435,12 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     seal=_G2_SESSION_LAUNCH_OWNER_SEAL,
                 )
         except BaseException as cause:
+            if preparation is not None and preparation.state == 'UNKNOWN':
+                if retained_child is not None and retained_child._call_entered:
+                    raise NativeSuspendedChildLaunchError(
+                        retained_child, cause, preparation.error,
+                        seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
+                raise  # Original pending token output owns the uncertainty; no later SDK/cleanup.
             if retained_child is not None:
                 if not retained_child._call_entered or retained_child._no_effect:
                     retained_child._closed = True
@@ -2426,6 +2453,21 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                             retained_child, cause, cleanup_error, seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
             raise
         finally:
+            if preparation is not None:
+                if preparation.state == 'UNKNOWN':
+                    pending = sys.exc_info()[1]
+                    if (isinstance(pending, NativeSuspendedChildLaunchError)
+                            and pending._process is retained_child):
+                        raise pending  # Preserve the actual original child handoff, not a replacement.
+                    raise preparation.error
+                pending = sys.exc_info()[1]
+                try:
+                    preparation.close()  # On first unknown close, stop before any other SDK release.
+                except BaseException as primary_error:
+                    if (isinstance(pending, NativeSuspendedChildLaunchError)
+                            and pending._process is retained_child):
+                        raise pending from primary_error  # Preserve both real retained owners/errors.
+                    raise
             pending_error = sys.exc_info()[1]
             release_failures = launch_release_failures
             def release(label, callback, *args, free_result=False):

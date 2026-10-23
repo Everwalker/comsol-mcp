@@ -78,6 +78,15 @@ class _QuerySDK:
             if self.fault=='sdk_buffer':args[2].value='SDK MUTATED'
             return result
         api.a.CreateProcessAsUserW=created
+        # Both adapters model the same thread-local last-error cell. A failed
+        # B getter must not leave error=5 on a later primary size-probe that
+        # actually returns ERROR_INSUFFICIENT_BUFFER=122.
+        primary_info=api.a.GetTokenInformation
+        def primary_query(*args):
+            result=primary_info(*args)
+            if args[2] is None:self.last_error=122
+            return result
+        api.a.GetTokenInformation=primary_query
 
     def pid(self,handle):self.calls.append('identity');return 457 if self.fault=='pid' else 456
     def process_times(self,h,birth,*tail):
@@ -89,7 +98,7 @@ class _QuerySDK:
         assert p==200 and access==8
         self.opens+=1;self.stat_reads=0;self.calls.append('token')
         C.cast(out,C.POINTER(e.PTR)).contents.value=900+self.opens;return 1
-    def sid_attr(self,text,base):return struct.pack('<QI4x',base+16,0x60)+_sid(text)
+    def sid_attr(self,text,base,attrs=0x60):return struct.pack('<QI4x',base+16,attrs)+_sid(text)
     def groups(self,sids,base):
         rows=[];tail=b'';offset=8+16*len(sids)
         for text in sids:
@@ -101,12 +110,15 @@ class _QuerySDK:
             raw=bytearray(56);struct.pack_into('<Q',raw,0,3);struct.pack_into('<Q',raw,8,4)
             modified=18 if self.fault=='token_drift' and self.opens==2 else 17
             struct.pack_into('<Q',raw,48,modified);return bytes(raw)
-        if kind==1:return self.sid_attr('S-1-5-999' if self.fault=='user' else self.profile.service_account_sid,base)
-        if kind==2:return self.groups(('S-1-5-32-545',),base)  # Ordinary groups, not a policy target.
+        if kind==1:return self.sid_attr('S-1-5-999' if self.fault=='user' else self.profile.service_account_sid,base,0)
+        if kind==2:
+            from tests.test_windows_t037_token_groups import group_bytes
+            return group_bytes((('S-1-5-32-545',7),('S-1-5-5-1-2',0xC0000007),
+                (self.profile.service_sid,7),('S-1-16-4096',0x60)),base)
         if kind==11:return self.groups(('S-1-5-99-7',),base)  # No invented restricted-SID target.
         if kind==30:return self.groups(('S-1-15-999',) if self.fault=='capabilities' else self.profile.capability_sids,base)
-        if kind==25:return self.sid_attr('S-1-16-42424',base)  # Observed, target undefined.
-        if kind==27:return struct.pack('<I',9)
+        if kind==25:return self.sid_attr('S-1-16-4096',base)  # Main-selected Low target.
+        if kind==27:return struct.pack('<I',3)
         if kind==29:return struct.pack('<I',0 if self.fault=='not_appcontainer' else 1)
         if kind==3:return struct.pack('<IQI',1,23,0x80000002)
         raise AssertionError(kind)
@@ -117,7 +129,7 @@ class _QuerySDK:
         if self.fault=='token_partial' and kind==25:self.last_error=5;return 0
         assert len(data)<=capacity;C.memmove(storage,data,len(data));return 1
     def privilege_name(self,system,luid,storage,used):
-        C.cast(used,C.POINTER(e.U32)).contents.value=_text(storage,'SeFixturePrivilege');return 1
+        C.cast(used,C.POINTER(e.U32)).contents.value=_text(storage,'SeChangeNotifyPrivilege');return 1
     def policy(self,p,kind,out,size):
         self.calls.append('policy');assert p==200 and kind==13 and size==4
         C.cast(out,C.POINTER(e.U32)).contents.value=2 if self.fault=='policy' else 0x80000001 if self.fault=='reserved_policy' else 1
@@ -217,8 +229,8 @@ def test_normal_v4_connected_original_B_full_observer_matches_but_issuer_still_d
         assert result.finite_state=='MATCHED_FINITE_CHECKS_ONLY' and not result.issues
         assert result.qualification=='UNQUALIFIED' and result.state=='DIAGNOSTIC_ONLY_NOT_ADMISSION'
         assert dict((c.name,c.matches) for c in result.observations.comparisons)['expected_modified_id'] is None
-        assert result.observations.token_before.modified_id==17 and result.observations.token_before.integrity_rid==42424
-        assert result.observations.token_before.mandatory_policy==9 and result.observations.token_before.privileges[0].attributes==0x80000002
+        assert result.observations.token_before.modified_id==17 and result.observations.token_before.integrity_rid==4096
+        assert result.observations.token_before.mandatory_policy==3 and result.observations.token_before.privileges[0].attributes==0x80000002
         assert result.observations.command_line.command_line==sdk.raw_command
         assert result.observations.image.pinned_before.sha256==hashlib.sha256(sdk.payload).hexdigest()
         assert sdk.calls.count('WMI')==1 and sdk.opens==2 and len(sdk.uninit)==1
