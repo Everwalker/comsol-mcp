@@ -100,7 +100,8 @@ class LabelCall:
 
 class NativeCompanion:
     def __init__(self, original):
-        if type(original) is not b.Bootstrap or original.intent.schema != b.SCHEMA_V2:
+        if (type(original) is not b.Bootstrap
+                or original.intent.schema not in {b.SCHEMA_V2, b.SCHEMA_V3}):
             b.fail("ORIGINAL_OWNER", "original versioned Bootstrap required")
         original._guard({"NEW"})
         self.original, self.backend, self.owner = original, original.backend, original.owner
@@ -148,7 +149,8 @@ class NativeCompanion:
             b.fail("CONFIG_NATIVE_ORIGIN", "only exact newly created original nodes can be labelled")
         self.original._original_handle(node.handle)
         explicit_label(raw)
-        directory = node.relative in self.original._configuration.directories
+        directory = (node.image.directory if node.image is not None
+                     else node.relative in self.original._configuration.directories)
         before = self.backend.image(node.handle, node.path, directory)
         before_label = self.read_label(node.handle)
         storage = C.create_string_buffer(raw, len(raw))
@@ -168,12 +170,16 @@ class NativeCompanion:
 
     def create_bytes(self, node, raw, descriptor):
         self.check()
+        config = self.original._configuration
+        launch = self.original.intent.prepared_launch
+        is_protected_manifest = (launch is not None and node.relative == launch.manifest_path
+                                 and descriptor == config.final_descriptors[False])
         if (type(raw) is not bytes or not 0 < len(raw) <= b.MAX_PLAN
                 or node not in self.original.nodes.values() or node.handle is not None):
             b.fail("CONFIG_BYTES", "registered original generated node and frozen bounded bytes required")
-        if descriptor != self.original._configuration.descriptors[False]:
-            b.fail('CONFIG_SD', 'only the frozen original immutable config descriptor may be used')
-        b.check_security(descriptor)
+        if descriptor != config.descriptors[False] and not is_protected_manifest:
+            b.fail('CONFIG_SD', 'only frozen config data or the exact final protected launch manifest descriptor may be used')
+        b.check_security(descriptor, service_sid=self.original.service_sid if is_protected_manifest else None)
         handle = self.backend._open(node.path, False, write=True, create=True, raw_sd=descriptor)
         node.handle = handle
         buffer = C.create_string_buffer(raw, len(raw))

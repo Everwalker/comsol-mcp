@@ -6,13 +6,15 @@ stop, or adopt a Server after the original Popen handle has been lost.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
+import ntpath
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -199,16 +201,27 @@ def owned_server_preferences_directory(
             raise OwnedServerError("owned Server process belongs to a different session or runtime path")
         selected_platform = platform_name or sys.platform
         if selected_platform in {"win32", "nt", "windows"}:
-            # The isolated Windows install deliberately aliases bin/win64 to
-            # the inspected runtime. Resolving the launched executable thus
-            # points outside owned_root, but it must still be this runtime's
-            # exact Server binary.
             runtime_executable = (
                 Path(runtime.installation_root).resolve(strict=True)
                 / "bin" / "win64" / "comsolmphserver.exe"
             ).resolve(strict=True)
             if expected_executable != runtime_executable:
-                raise OwnedServerError("owned Server launcher differs from the bound runtime installation")
+                try:
+                    expected_copy = (owned_root / "installation" / "bin" / "win64"
+                                     / "comsolmphserver.exe").resolve(strict=True)
+                    copy_info = expected_copy.lstat()
+                    source_info = runtime_executable.lstat()
+                    if (expected_executable != expected_copy or not expected_copy.is_file()
+                            or expected_copy.is_symlink() or source_info.st_nlink != 1
+                            or copy_info.st_nlink != 1
+                            or getattr(copy_info, "st_file_attributes", 0) & 0x400
+                            or getattr(source_info, "st_file_attributes", 0) & 0x400
+                            or _sha256(expected_copy) != _sha256(runtime_executable)):
+                        raise OwnedServerError("owned Server regular copy differs from the bound runtime installation image")
+                except OwnedServerError:
+                    raise
+                except Exception as exc:
+                    raise OwnedServerError("owned Server regular copy could not be bound to the original runtime installation") from exc
         return preferences_real
     except OwnedServerError:
         raise
@@ -294,6 +307,105 @@ def prepare_private_loopback_installation(source_root: Path, private_root: Path)
         raise
 
 
+def prepare_prepared_t037_installation(source_root: Path, private_root: Path, manifest: Any) -> dict[str, Any]:
+    """Copy only the installer-pinned finite vendor inventory as regular files."""
+    from ._windows_t037_launch_inputs import verify_regular_directory, verify_regular_file
+    from . import _windows_worker_bootstrap as prepared
+    if (type(manifest) is not prepared.PreparedLaunchManifest
+            or manifest._seal is not prepared._MANIFEST_SEAL):
+        raise OwnedServerError("prepared T037 view requires the exact loaded protected installer manifest")
+    VENDOR_PREFIX = prepared.VENDOR_PREFIX
+    source = Path(source_root)
+    target = Path(private_root)
+    try:
+        verify_regular_directory(source)
+        verify_regular_directory(target)
+    except Exception as exc:
+        raise OwnedServerError("prepared T037 roots must be ordinary non-reparse directories") from exc
+    if (not source.is_absolute() or not target.is_absolute() or any(target.iterdir())):
+        raise OwnedServerError("prepared T037 Server roots must be the exact original source and a fresh private view")
+    if os.path.normcase(os.path.normpath(os.fspath(source))) != os.path.normcase(manifest.vendor_source_root):
+        raise OwnedServerError("prepared T037 Server source root differs from the protected installer manifest")
+    copied = []
+    try:
+        for row in manifest.vendor_files:
+            source_path = Path(row["source_path"])
+            prepared_path = Path(manifest.installation_prefix, *row["target"].split("/"))
+            if (os.path.normcase(os.path.normpath(os.fspath(source_path))) != os.path.normcase(
+                    os.path.normpath(os.fspath(source / Path(*row["source"].split("/")))))):
+                raise OwnedServerError("prepared vendor origin path differs from the original COMSOL runtime")
+            verify_regular_file(source_path, size=row["source_size"], sha256=row["source_sha256"])
+            verify_regular_file(prepared_path, size=row["target_size"], sha256=row["target_sha256"])
+            if not row["target"].casefold().startswith(VENDOR_PREFIX.casefold()):
+                raise OwnedServerError("prepared vendor target escaped the fixed regular-copy view")
+            relative = row["target"][len(VENDOR_PREFIX):]
+            destination = target.joinpath(*relative.split("/"))
+            directory = destination.parent
+            missing = []
+            cursor = directory
+            while cursor != target:
+                try:
+                    info = cursor.lstat()
+                except FileNotFoundError:
+                    missing.append(cursor)
+                    cursor = cursor.parent
+                    continue
+                if (not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode)
+                        or getattr(info, "st_file_attributes", 0) & 0x400):
+                    raise OwnedServerError("prepared private vendor parent is not an ordinary directory")
+                break
+            for item in reversed(missing):
+                item.mkdir(mode=0o700)
+                verify_regular_directory(item)
+            try:
+                destination.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                raise OwnedServerError("prepared private vendor file collided with a prior path")
+            with prepared_path.open("rb") as source_stream, destination.open("xb") as target_stream:
+                shutil.copyfileobj(source_stream, target_stream, length=1024 * 1024)
+            verify_regular_file(destination, size=row["target_size"], sha256=row["target_sha256"])
+            copied.append(relative)
+        expected = {row["target"][len(VENDOR_PREFIX):] for row in manifest.vendor_files}
+        expected_dirs = {""}
+        for relative in expected:
+            parts = relative.split("/")[:-1]
+            expected_dirs.update("/".join(parts[:index]) for index in range(1, len(parts) + 1))
+        actual_files, actual_dirs = set(), {""}
+        pending = [target]
+        while pending:
+            parent = pending.pop()
+            with os.scandir(parent) as entries:
+                for entry in entries:
+                    path = Path(entry.path)
+                    info = path.lstat()
+                    if (stat.S_ISLNK(info.st_mode)
+                            or getattr(info, "st_file_attributes", 0) & 0x400):
+                        raise OwnedServerError("prepared private vendor view contains a symlink or reparse point")
+                    relative = path.relative_to(target).as_posix()
+                    if stat.S_ISDIR(info.st_mode):
+                        actual_dirs.add(relative)
+                        verify_regular_directory(path)
+                        pending.append(path)
+                    elif stat.S_ISREG(info.st_mode):
+                        actual_files.add(relative)
+                    else:
+                        raise OwnedServerError("prepared private vendor view contains a non-regular object")
+        if (actual_files != expected or actual_dirs != expected_dirs
+                or len(copied) != len(expected)):
+            raise OwnedServerError("prepared private vendor view differs from its complete finite inventory")
+        server_config = next(row for row in manifest.vendor_files if row["role"] == "server_config")
+        return {"source_root": str(source), "private_root": str(target),
+                "vendor_file_count": len(copied), "vendor_targets_sha256": hashlib.sha256(
+                    json.dumps(sorted(copied), separators=(",", ":")).encode()).hexdigest(),
+                "private_server_config_sha256": server_config["target_sha256"],
+                "install_tree_mutated": False, "view_kind": "FINITE_REGULAR_COPIES"}
+    except BaseException:
+        shutil.rmtree(target, ignore_errors=True)
+        raise
+
+
 def _sha256(path: Path) -> str:
     import hashlib
 
@@ -335,7 +447,21 @@ def build_server_command(directories: ServerDirectories, *, platform_name: str |
         launcher = root / "bin" / "comsol"
         prefix = [str(launcher), "mphserver"]
     elif selected in {"win32", "nt", "windows"}:
-        launcher = root / "bin" / "win64" / "comsolmphserver.exe"
+        manifest = getattr(getattr(process_factory, "profile", None), "prepared_launch", None)
+        if intent is not None:
+            from . import _windows_worker_bootstrap as prepared
+            if (type(manifest) is not prepared.PreparedLaunchManifest
+                    or manifest._seal is not prepared._MANIFEST_SEAL
+                    or not manifest.server_image.startswith(prepared.VENDOR_PREFIX)):
+                raise OwnedServerError("T037 Server requires the exact original protected vendor image")
+            launcher_text = ntpath.join(manifest.installation_prefix, *manifest.server_image.split("/"))
+            if ntpath.commonpath((ntpath.normcase(launcher_text),
+                                  ntpath.normcase(manifest.prepared_vendor_root))) != ntpath.normcase(
+                                      manifest.prepared_vendor_root):
+                raise OwnedServerError("T037 Server image escaped the original protected vendor root")
+            launcher = Path(launcher_text)
+        else:
+            launcher = root / "bin" / "win64" / "comsolmphserver.exe"
         prefix = [str(launcher)]
     else:
         raise OwnedServerError("owned COMSOL Server launcher is not verified for this platform")
@@ -577,6 +703,12 @@ class OwnedServerLauncher:
             # and before any process API or fallback can run.
             preflight()
         network_intent = _t037_network_intent(selected_process_factory)
+        prepared_manifest = None
+        if network_intent is not None:
+            prepared_manifest = getattr(selected_process_factory.profile, "prepared_launch", None)
+            if prepared_manifest is None:
+                raise OwnedServerError("T037 Server requires the original installer prepared-launch manifest")
+            selected_process_factory.read_launch_os_roots()
         expected_endpoint = None
         if network_intent is not None:
             from ._windows_t037 import T037SessionProcessFactory
@@ -587,7 +719,8 @@ class OwnedServerLauncher:
             windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id,
                                              server_np=self.server_np, process_factory=selected_process_factory)
         directories = create_server_directories(runtime, project_id, session_id)
-        prepare_private_loopback_installation(runtime.installation_root, directories.private_installation)
+        if prepared_manifest is None:
+            prepare_private_loopback_installation(runtime.installation_root, directories.private_installation)
         command = build_server_command(directories, platform_name=self.platform_name,
                                        server_np=self.server_np, process_factory=selected_process_factory)
         if _t037_network_intent(selected_process_factory) != network_intent:
@@ -595,7 +728,7 @@ class OwnedServerLauncher:
         # Resolve the executable before CreateProcess so no fallible path
         # lookup can occur in the interval between a child birth and retaining
         # its exact Popen handle.
-        executable = str(Path(command[0]).resolve())
+        executable = command[0] if prepared_manifest is not None else str(Path(command[0]).resolve())
         if owner_handoff is not None:
             owner_handoff("PRE_CREATE", runtime=runtime,
                           process_factory=selected_process_factory, command=tuple(command),
@@ -605,6 +738,19 @@ class OwnedServerLauncher:
             "cwd": str(directories.root), "stdin": subprocess.DEVNULL,
             "stdout": log_handle, "stderr": subprocess.STDOUT,
         }
+        launch_inputs = None
+        if prepared_manifest is not None:
+            from ._windows_t037_launch_inputs import build_server_inputs, verify_role_cwd
+            role_cwd = verify_role_cwd(prepared_manifest, "server")
+            launch_inputs = build_server_inputs(selected_process_factory, runtime, directories, command,
+                stdio=(subprocess.DEVNULL, log_handle, subprocess.STDOUT))
+            if os.path.normcase(os.path.normpath(role_cwd)) != os.path.normcase(
+                    os.path.normpath(launch_inputs.cwd)):
+                log_handle.close()
+                raise OwnedServerError("prepared Server role cwd differs from the submitted launch input")
+            options.update(cwd=launch_inputs.cwd, env=dict(launch_inputs.environment),
+                           executable=launch_inputs.executable,
+                           creationflags=launch_inputs.creationflags)
         if self.platform_name in {"win32", "nt", "windows"}:
             options["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             # Supplying lpApplicationName avoids CreateProcessW treating the
@@ -647,7 +793,12 @@ class OwnedServerLauncher:
                 raise
 
         try:
-            process = selected_process_factory(command, **options)
+            if launch_inputs is None:
+                process = selected_process_factory(command, **options)
+            else:
+                from ._windows_t037_launch_inputs import activate_launch_inputs
+                with activate_launch_inputs(selected_process_factory, launch_inputs):
+                    process = selected_process_factory(command, **options)
         except Exception as exc:
             from ._windows_t037 import NativeSuspendedChildLaunchError
             if type(exc) is NativeSuspendedChildLaunchError:

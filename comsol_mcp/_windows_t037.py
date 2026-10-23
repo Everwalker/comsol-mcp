@@ -101,6 +101,8 @@ class WindowsT037ProfileV2:
     job_limits: Any = None
     wrapper_schema: str = PROFILE_SCHEMA_V2
     finite_targets: Any = None
+    prepared_launch_reference: Mapping[str, str] | None = None
+    prepared_launch: Any = None
 
     @property
     def profile_id(self) -> str:
@@ -163,10 +165,13 @@ class WindowsT037ProfileV2:
         if self.wrapper_schema == PROFILE_SCHEMA_V4:
             from ._windows_job_limits import require_limits
             from ._windows_t037_targets import require_contract
-            return hashlib.sha256(json.dumps({"schema": PROFILE_SCHEMA_V4,
+            document = {"schema": PROFILE_SCHEMA_V4,
                 "host_resource_profile_sha256": self.host_resource_profile.sha256,
                 "job_limits": require_limits(self).as_dict(),
-                "finite_targets": require_contract(self).as_dict()}, sort_keys=True,
+                "finite_targets": require_contract(self).as_dict()}
+            if self.prepared_launch_reference is not None:
+                document["prepared_launch"] = dict(self.prepared_launch_reference)
+            return hashlib.sha256(json.dumps(document, sort_keys=True,
                 separators=(",", ":"), allow_nan=False).encode()).hexdigest()
         if self.wrapper_schema == PROFILE_SCHEMA_V3:
             from ._windows_job_limits import require_limits
@@ -334,15 +339,25 @@ def parse_profile_v4_document(document: Any, *, source_sha256: str,
                               security_semantics: str = "UNVERIFIED") -> WindowsT037ProfileV2:
     """Finite static intent only. Parsing never retains a native source origin."""
     from ._windows_t037_targets import parse_contract
+    base_fields = {"schema", "host_resource_profile", "job_limits", "finite_targets"}
     if (type(document) is not dict or document.get("schema") != PROFILE_SCHEMA_V4
-            or set(document) != {"schema", "host_resource_profile", "job_limits", "finite_targets"}):
+            or set(document) not in (base_fields, base_fields | {"prepared_launch"})):
         _refuse(ERROR_PROFILE_INVALID, "T037 v4 requires its exact finite-target wrapper")
     previous = parse_profile_v3_document({"schema": PROFILE_SCHEMA_V3,
         "host_resource_profile": document["host_resource_profile"], "job_limits": document["job_limits"]},
         source_sha256=source_sha256, source_identity=source_identity, security_semantics=security_semantics)
     targets = parse_contract(document["finite_targets"], previous.host_resource_profile)
+    reference = None
+    if "prepared_launch" in document:
+        from ._windows_worker_bootstrap import MANIFEST_PATH, MANIFEST_REFERENCE_SCHEMA
+        value = document["prepared_launch"]
+        if (type(value) is not dict or set(value) != {"schema", "path"}
+                or value["schema"] != MANIFEST_REFERENCE_SCHEMA or value["path"] != MANIFEST_PATH):
+            _refuse(ERROR_PROFILE_INVALID, "T037 prepared manifest reference must use its fixed protected path")
+        reference = dict(value)
     return WindowsT037ProfileV2(previous.host_resource_profile, previous.source_sha256,
-        previous.source_identity, previous.security_semantics, previous.job_limits, PROFILE_SCHEMA_V4, targets)
+        previous.source_identity, previous.security_semantics, previous.job_limits, PROFILE_SCHEMA_V4, targets,
+        reference)
 
 
 def load_trusted_profile(path: str | os.PathLike[str], *,
@@ -428,6 +443,28 @@ def load_trusted_profile(path: str | os.PathLike[str], *,
     if not _constant_digest_equal(profile.host_fingerprint_sha256, actual_fingerprint):
         _refuse(ERROR_HOST_MISMATCH, "T037 profile is bound to a different Windows host")
     if type(profile) is WindowsT037ProfileV2 and profile.wrapper_schema == PROFILE_SCHEMA_V4:
+        if profile.prepared_launch_reference is not None:
+            from dataclasses import replace
+            from ._windows_worker_bootstrap import MANIFEST_PATH, load_protected_manifest
+            from ._windows_t037_bootstrap import read_private_bootstrap
+            if target.parent.name.casefold() != "profiles":
+                _refuse(ERROR_PROFILE_INVALID, "prepared profile must be inside its fixed profiles directory")
+            prefix = target.parent.parent
+            manifest_path = prefix.joinpath(*MANIFEST_PATH.split("/"))
+            expected_manifest_path = ntpath.normcase(ntpath.normpath(os.fspath(manifest_path)))
+            if (ntpath.normcase(os.fspath(manifest_path)) != expected_manifest_path
+                    or not ntpath.isabs(os.fspath(manifest_path))):
+                _refuse(ERROR_PROFILE_INVALID, "prepared manifest path is not canonical")
+            try:
+                raw_manifest = read_private_bootstrap(manifest_path)
+                launch = load_protected_manifest(raw_manifest, path=os.fspath(manifest_path),
+                    profile_sha256=profile.source_sha256,
+                    server_image_sha256=profile.server_image_sha256,
+                    worker_image_sha256=profile.worker_image_sha256)
+            except Exception as exc:
+                raise WindowsT037Error(ERROR_PROFILE_INVALID,
+                    "prepared launch manifest failed the original protected reader/binding check") from exc
+            profile = replace(profile, prepared_launch=launch)
         from ._windows_t037_targets import _retain_loaded_origin
         _retain_loaded_origin(profile, os.fspath(target))
     return profile
@@ -712,6 +749,10 @@ class _Win32ReadOnlyApi:
         self.k.OpenProcess.restype = W.HANDLE
         self.k.GetCurrentProcess.argtypes = []
         self.k.GetCurrentProcess.restype = W.HANDLE
+        self.k.GetSystemWindowsDirectoryW.argtypes = [W.LPWSTR, W.UINT]
+        self.k.GetSystemWindowsDirectoryW.restype = W.UINT
+        self.k.GetSystemDirectoryW.argtypes = [W.LPWSTR, W.UINT]
+        self.k.GetSystemDirectoryW.restype = W.UINT
         self.k.CloseHandle.argtypes = [W.HANDLE]
         self.k.CloseHandle.restype = W.BOOL
         self.k.GetProcessTimes.argtypes = [W.HANDLE, C.c_void_p, C.c_void_p, C.c_void_p, C.c_void_p]
@@ -1074,6 +1115,8 @@ class T037SessionProcessFactory:
         self._prebirth_observers = []
         self._scm_binding = None
         self._profile_participant = None
+        self._launch_os_roots = None
+        self._active_launch_input = None
         self._job_key = hashlib.sha256((profile.source_sha256 + "\0" + session_id).encode()).hexdigest()
         # Read-only network intent stays bound to this constructor's exact
         # profile. This captures configuration only, never native admission.
@@ -1107,6 +1150,28 @@ class T037SessionProcessFactory:
         port = intent.server_listen_port if role == "server" else intent.worker_listen_port
         return CanonicalSocket(intent.bind_address, port)
 
+    def read_launch_os_roots(self):
+        """Read the two shared OS roots through this registered original provider."""
+        if getattr(self.profile, "prepared_launch", None) is None:
+            _refuse(ERROR_PROFILE_INVALID, "prepared-launch OS roots require its loaded original manifest")
+        from ._windows_t037_admission import _factory_birth_scope, _factory_static_a_scope
+        with _factory_birth_scope(self), _factory_static_a_scope(self):
+            if os.name != "nt":
+                _refuse(ERROR_UNSUPPORTED, "actual Windows roots are unavailable on this platform")
+            api = self._api
+            if api is None:
+                api = _Win32LaunchApi()
+                self._api = api
+            if type(api) is not _Win32LaunchApi:
+                _refuse(ERROR_POLICY_UNVERIFIED, "prepared role roots require the exact original Windows provider")
+            from ._windows_appcontainer_gate import _record_factory_api
+            _record_factory_api(self, api)
+            roots = api.system_roots()
+            if self._launch_os_roots is not None and self._launch_os_roots != roots:
+                _refuse(ERROR_HOST_MISMATCH, "original Windows root observations changed during this factory lifetime")
+            self._launch_os_roots = roots
+            return roots
+
     def __call__(self, command: Sequence[str], **options: Any):
         from ._windows_t037_admission import _factory_birth_scope, _require_factory_runtime, _factory_static_a_scope
         with _factory_birth_scope(self), _factory_static_a_scope(self):
@@ -1120,6 +1185,10 @@ class T037SessionProcessFactory:
             _record_factory_api(self, api)
             role = self._infer_role(command)
             _require_factory_runtime(self)
+            from ._windows_t037_launch_inputs import consume_launch_inputs
+            launch_inputs = consume_launch_inputs(self, command, options, role)
+            if launch_inputs is not None:
+                launch_inputs.verify_protected_material(self)
             if self._job is None:
                 # The existing producer alone creates/configures/readbacks a
                 # genuinely fresh empty Job; no unborn child is required at A.
@@ -1130,7 +1199,7 @@ class T037SessionProcessFactory:
             _require_factory_runtime(self)
             return api.create_suspended_appcontainer_child(
                 command, options, profile=self.profile, job=self._job, role=role,
-                session_factory=self,
+                session_factory=self, launch_inputs=launch_inputs,
             )
 
     def _require_original_job_members(self):
@@ -1482,7 +1551,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         "_close_mode", "_original_poll", "_original_wait", "_original_terminate",
         "_original_times", "_original_profile", "_original_factory", "_original_job",
         "_original_role", "_parent_binding", "_image_api", "_image_entry", "_image_binding", "_outputs", "_owner",
-        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer"})
+        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer", "_launch_inputs"})
 
     def __setattr__(self, name, value):
         if name in self._FIXED and hasattr(self, name):
@@ -1490,7 +1559,8 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         object.__setattr__(self, name, value)
 
     def __init__(self, api, process_info, args, job, *, profile, role, session_factory,
-                 parent, image_api, image_entry, call_storage, create_arguments, seal):
+                 parent, image_api, image_entry, call_storage, create_arguments,
+                 launch_inputs=None, seal):
         if seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
             _refuse(ERROR_POLICY_UNVERIFIED, "retained child requires native call storage")
         from ._windows_owned_resources import registry_for, handle_closer
@@ -1504,6 +1574,11 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         self._original_terminate, self._original_times = api.terminate_process, api.process_times
         self._original_profile, self._original_factory = profile, session_factory
         self._original_job, self._original_role = job, role
+        self._launch_inputs = launch_inputs
+        if getattr(profile, "prepared_launch", None) is not None and (launch_inputs is None
+                or launch_inputs.factory is not session_factory or launch_inputs.profile is not profile
+                or launch_inputs.role != role):
+            _refuse(ERROR_POLICY_UNVERIFIED, "prepared T037 child must retain its exact normal producer inputs")
         self._parent_binding = parent
         self._image_api, self._image_entry = image_api, image_entry
         self._image_binding = (image_entry.adapter, image_entry.closer, image_entry.handle,
@@ -1550,6 +1625,10 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
                 or tuple(self.args) != self._creation_parameters[1]
                 or (not self._closed and getattr(self._api, "_retained_children", {}).get(id(self)) is not self)):
             _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original native call/storage/API binding changed")
+        if getattr(self._original_profile, "prepared_launch", None) is not None:
+            if self._launch_inputs is None:
+                _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "prepared original child lost its launch input record")
+            self._launch_inputs.validate_native_storage(self, self._api)
         if hasattr(self, "_outputs"):
             slot = self._process_info
             if (self._outputs != (slot.hProcess, slot.hThread, slot.dwProcessId, slot.dwThreadId)
@@ -1887,6 +1966,28 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
             C.c_void_p, C.c_void_p]
         self.a.CreateProcessAsUserW.restype = W.BOOL
 
+    def system_roots(self):
+        """Use one bounded call per shared-root reader; never ambient environment."""
+        C = self.C
+        capacity = 32768
+        values = []
+        for name in ("GetSystemWindowsDirectoryW", "GetSystemDirectoryW"):
+            buffer = C.create_unicode_buffer(capacity)
+            count = int(getattr(self.k, name)(buffer, capacity))
+            if not 0 < count < capacity:
+                _refuse(ERROR_UNSUPPORTED, f"original {name} returned an invalid character count")
+            value = buffer.value
+            if (len(value.encode("utf-16-le")) // 2 != count or not ntpath.isabs(value)
+                    or value.startswith("\\\\")):
+                _refuse(ERROR_UNSUPPORTED, f"original {name} result differs from its counted local path")
+            values.append(ntpath.normpath(value))
+        windows_root, system_root = values
+        if (ntpath.normcase(ntpath.dirname(system_root)) != ntpath.normcase(windows_root)
+                or ntpath.basename(system_root).casefold() != "system32"
+                or ntpath.splitdrive(windows_root)[0].casefold() != ntpath.splitdrive(system_root)[0].casefold()):
+            _refuse(ERROR_UNSUPPORTED, "original System32 path is not the expected shared Windows child")
+        return windows_root, system_root
+
     def create_job(self, *, profile=None):
         from ._windows_job_limits import create_owned_job
         return create_owned_job(self, profile)
@@ -2043,7 +2144,7 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
 
     def create_suspended_appcontainer_child(self, command: Sequence[str], options: Mapping[str, Any], *,
                                              profile: WindowsT037Profile, job: Any, role: str,
-                                             session_factory: Any = None):
+                                             session_factory: Any = None, launch_inputs: Any = None):
         from ._windows_job_limits import require_configured_job
         require_configured_job(self, job, profile)
         if session_factory is not None and (
@@ -2065,6 +2166,16 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         C, W = self.C, self.W
         if role not in {"server", "worker"}:
             _refuse(ERROR_PROFILE_INVALID, "T037 child role is unsupported")
+        if getattr(profile, "prepared_launch", None) is not None:
+            from ._windows_t037_launch_inputs import LaunchInputs
+            if (type(launch_inputs) is not LaunchInputs or launch_inputs.factory is not session_factory
+                    or launch_inputs.profile is not profile or launch_inputs.role != role):
+                _refuse(ERROR_POLICY_UNVERIFIED, "prepared T037 native child requires its exact original LaunchInputs")
+            from ._windows_t037_launch_inputs import require_consumed_launch_inputs
+            require_consumed_launch_inputs(session_factory, launch_inputs)
+            launch_inputs.validate_submission(session_factory, command, options, role)
+        elif launch_inputs is not None:
+            _refuse(ERROR_POLICY_UNVERIFIED, "prepared LaunchInputs cannot attach to a legacy T037 profile")
         if (not isinstance(command, Sequence) or isinstance(command, (str, bytes)) or not command
                 or any(not isinstance(value, str) or "\x00" in value for value in command)):
             _refuse(ERROR_PROFILE_INVALID, "T037 command must be a nonempty NUL-free string array")
@@ -2223,6 +2334,7 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                 create_arguments=(primary_token, image_path, command_line, None, None, True, flags,
                     C.cast(environment, C.c_void_p) if environment is not None else None,
                     cwd, C.byref(startup), C.byref(process_info)),
+                launch_inputs=launch_inputs,
                 seal=_NATIVE_SUSPENDED_CHILD_SEAL)
             if session_factory is not None and profile.wrapper_schema == PROFILE_SCHEMA_V4:
                 from ._windows_t037_targets import _require_held_finite_a

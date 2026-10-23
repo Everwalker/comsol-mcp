@@ -431,6 +431,12 @@ class PersistentJavaWorker:
                 # Do not run javac or touch the endpoint cache until the
                 # injected execution boundary admits this exact session.
                 preflight()
+            prepared_manifest = None
+            if type(self._process_factory) is T037SessionProcessFactory:
+                prepared_manifest = getattr(self._process_factory.profile, "prepared_launch", None)
+                if prepared_manifest is None:
+                    raise JavaWorkerError("T037 Worker requires the original installer prepared-launch manifest")
+                self._process_factory.read_launch_os_roots()
             intent = _t037_network_intent(self._process_factory)
             if intent is not None:
                 expected = T037SessionProcessFactory.network_endpoint(self._process_factory, "worker")
@@ -444,49 +450,97 @@ class PersistentJavaWorker:
             if intent is not None and (endpoint.exists() or endpoint.is_symlink()):
                 raise JavaWorkerError("T037 startup cannot adopt or overwrite an existing Worker endpoint")
             self.paths.validate()
-            classpath, classpath_hash, jar_count, jar_content_hash = self.paths.classpath()
-            self.state_dir.mkdir(parents=True, exist_ok=True)
-            try: os.chmod(self.state_dir, 0o700)
-            except OSError: pass
-            source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
-            source_bytes = source.read_bytes()
-            cache_key, cache_receipt = self.paths.compilation_cache_fingerprint(source_bytes, classpath_hash, jar_content_hash)
-            classes = self.state_dir / "classes" / cache_key
-            marker = classes / ".compiled"
-            receipt_file = classes / "cache_receipt.json"
-            if not marker.is_file() or not receipt_file.is_file():
-                classes.mkdir(parents=True, exist_ok=True)
-                command = [str(self.paths.executable("javac")), "-cp", classpath, "-encoding", "UTF-8", "-d", str(classes), str(source)]
-                if admission_owner is None:
-                    compile_result = subprocess.run(command,
-                        text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-                else:
-                    admission_owner.before_effect("Worker_javac_birth", 60.0)
-                    compile_process = subprocess.Popen(command, text=True, encoding="utf-8", errors="replace",
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
-                    stdout, stderr = admission_owner.wait_child(compile_process, "worker_javac", 60.0)
-                    compile_result = subprocess.CompletedProcess(command, compile_process.returncode, stdout, stderr)
-                if compile_result.returncode:
-                    raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
-                receipt_file.write_text(json.dumps(cache_receipt, indent=2, sort_keys=True), encoding="utf-8")
-                marker.write_text(cache_key + "\n", encoding="ascii")
-            self._classes_dir = classes
+            if prepared_manifest is not None:
+                from ._windows_t037_launch_inputs import verify_manifest_classes, verify_source_classpath
+                classpath_entries = verify_source_classpath(self.paths, prepared_manifest)
+                classpath_rows = [row for row in prepared_manifest.vendor_files if row["role"] == "classpath"]
+                classpath_hash = hashlib.sha256(json.dumps(
+                    [{"path": path, "size": row["source_size"], "sha256": row["source_sha256"]}
+                     for path, row in zip(classpath_entries, classpath_rows)],
+                    sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                jar_content_hash = hashlib.sha256(json.dumps(
+                    [row["source_sha256"] for row in classpath_rows], separators=(",", ":")).encode()).hexdigest()
+                jar_count = len(classpath_entries)
+                classpath = self.paths.classpath_separator.join(classpath_entries)
+                classes = Path(verify_manifest_classes(prepared_manifest))
+                self._classes_dir = classes
+            else:
+                classpath, classpath_hash, jar_count, jar_content_hash = self.paths.classpath()
+                self.state_dir.mkdir(parents=True, exist_ok=True)
+                try: os.chmod(self.state_dir, 0o700)
+                except OSError: pass
+                source = Path(__file__).with_name("worker_java") / "PersistentComsolWorker.java"
+                source_bytes = source.read_bytes()
+                cache_key, cache_receipt = self.paths.compilation_cache_fingerprint(source_bytes, classpath_hash, jar_content_hash)
+                classes = self.state_dir / "classes" / cache_key
+                marker = classes / ".compiled"
+                receipt_file = classes / "cache_receipt.json"
+                if not marker.is_file() or not receipt_file.is_file():
+                    classes.mkdir(parents=True, exist_ok=True)
+                    command = [str(self.paths.executable("javac")), "-cp", classpath, "-encoding", "UTF-8", "-d", str(classes), str(source)]
+                    if admission_owner is None:
+                        compile_result = subprocess.run(command,
+                            text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+                    else:
+                        admission_owner.before_effect("Worker_javac_birth", 60.0)
+                        compile_process = subprocess.Popen(command, text=True, encoding="utf-8", errors="replace",
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+                        stdout, stderr = admission_owner.wait_child(compile_process, "worker_javac", 60.0)
+                        compile_result = subprocess.CompletedProcess(command, compile_process.returncode, stdout, stderr)
+                    if compile_result.returncode:
+                        raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
+                    receipt_file.write_text(json.dumps(cache_receipt, indent=2, sort_keys=True), encoding="utf-8")
+                    marker.write_text(cache_key + "\n", encoding="ascii")
+                self._classes_dir = classes
             endpoint = self.state_dir / "worker_endpoint.json"
             if admission_owner is not None and (endpoint.exists() or endpoint.is_symlink()):
                 raise JavaWorkerError("coupled startup cannot adopt an existing Worker endpoint")
             existing = self._attach_existing(endpoint) if intent is None else None
             if existing is not None:
                 return existing
-            command = [str(self.paths.executable("java"))]
-            if self.paths.private_prefs is not None:
-                command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
-            command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
-                        "comsol_mcp.worker_java.PersistentComsolWorker", "--port",
-                        str(intent.worker_listen_port if intent is not None else 0), "--endpoint-file", str(endpoint),
-                        "--server-lock-root", str(self.paths.resolved_global_lock_root)]
-            command += ["--generation", str(self._next_generation)]
-            environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
-            log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+            launch_inputs = None
+            if prepared_manifest is not None:
+                from ._windows_t037_launch_inputs import build_worker_inputs, verify_role_cwd
+                self.state_dir.mkdir(parents=True, exist_ok=True)
+                try: os.chmod(self.state_dir, 0o700)
+                except OSError: pass
+                temp_dir = self.state_dir / "tmp"
+                if temp_dir.is_symlink() or (temp_dir.exists() and not temp_dir.is_dir()):
+                    raise JavaWorkerError("T037 Worker temporary leaf is not an ordinary directory")
+                temp_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+                try: os.chmod(temp_dir, 0o700)
+                except OSError: pass
+                log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+                expected = ("127.0.0.1", intent.worker_listen_port)
+                launch_inputs = build_worker_inputs(self._process_factory, self.paths,
+                    state_dir=self.state_dir, temp_dir=temp_dir, preferences=self.paths.private_prefs,
+                    endpoint=expected, server_lock_root=self.paths.resolved_global_lock_root,
+                    generation=self._next_generation, token=self._token, classpath=classpath_entries,
+                    stdio=(subprocess.DEVNULL, subprocess.DEVNULL, log))
+                if os.path.normcase(os.path.normpath(verify_role_cwd(prepared_manifest, "worker"))) != os.path.normcase(
+                        os.path.normpath(launch_inputs.cwd)):
+                    log.close()
+                    raise JavaWorkerError("prepared Worker role cwd differs from the submitted launch input")
+                command = list(launch_inputs.argv)
+                environment = dict(launch_inputs.environment)
+                options = {"text": launch_inputs.text, "stdin": subprocess.DEVNULL,
+                    "stdout": subprocess.DEVNULL, "stderr": log, "env": environment,
+                    "cwd": launch_inputs.cwd, "executable": launch_inputs.executable,
+                    "start_new_session": launch_inputs.start_new_session,
+                    "creationflags": launch_inputs.creationflags}
+            else:
+                command = [str(self.paths.executable("java"))]
+                if self.paths.private_prefs is not None:
+                    command.append(f"-Dcs.prefsdir={self.paths.private_prefs}")
+                command += ["-cp", str(classes) + self.paths.classpath_separator + classpath,
+                            "comsol_mcp.worker_java.PersistentComsolWorker", "--port",
+                            str(intent.worker_listen_port if intent is not None else 0), "--endpoint-file", str(endpoint),
+                            "--server-lock-root", str(self.paths.resolved_global_lock_root)]
+                command += ["--generation", str(self._next_generation)]
+                environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+                log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+                options = {"text": True, "stdout": subprocess.DEVNULL, "stderr": log,
+                           "env": environment, "start_new_session": True}
             if _t037_network_intent(self._process_factory) != intent:
                 log.close()
                 raise JavaWorkerError("T037 fixed listener profile changed before Worker creation")
@@ -495,8 +549,12 @@ class PersistentJavaWorker:
             try:
                 if admission_owner is not None:
                     admission_owner.before_effect("Worker_Popen_birth", startup_timeout_s)
-                self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
-                                        env=environment, start_new_session=True)
+                if launch_inputs is None:
+                    self._process = factory(command, **options)
+                else:
+                    from ._windows_t037_launch_inputs import activate_launch_inputs
+                    with activate_launch_inputs(factory, launch_inputs):
+                        self._process = factory(command, **options)
                 if intent is not None:
                     # Retain the factory's exact return and private successful
                     # HANDLE owner before ready files or PID observations.

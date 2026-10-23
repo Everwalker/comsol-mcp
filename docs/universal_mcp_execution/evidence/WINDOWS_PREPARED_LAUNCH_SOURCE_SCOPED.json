@@ -1,0 +1,285 @@
+{
+  "schema": "windows-prepared-launch-source-scoped-evidence/1",
+  "status": "MAIN_ACCEPTED_SOURCE_AND_SCOPED_PYTHON_ONLY",
+  "product_baseline_commit": "3d92b3c736f31e6e3ace99418629c78ab1969169",
+  "shared_repository_head_before_integration": "e3ed78d89067f8a8496db5f880c1a17b95d0636b",
+  "candidate": "_state/universal-windows-original-launch-inputs/candidate-r2",
+  "source_manifest": {
+    "path": "_state/universal-windows-original-launch-inputs/delivery-r2/candidate-r2-source-manifest.json",
+    "bytes": 5622,
+    "sha256": "9bcea85603e68056a6cfaeb4f3733a1fca4b8e49b0fe3b7df936556d099fafb8"
+  },
+  "main_acceptance": {
+    "path": "_state/universal-main-review/20261024-prepared-launch-r2/FINAL_MAIN_SOURCE_ACCEPTANCE.json",
+    "bytes": 5594,
+    "sha256": "608343b52f8b9dc2c04a7731f78c424b7b677b940e7ea63fb9bee0a1cec33183"
+  },
+  "review_basis": [
+    {
+      "path": "_state/universal-main-review/20261024-prepared-launch-r2/MAIN_SOURCE_REVIEW.json",
+      "bytes": 8062,
+      "sha256": "9373e640f92ebf84f8b1435e8470b8bcca4c947891f214b1237a7ab808c86d01"
+    },
+    {
+      "path": "_state/universal-main-review/20261024-prepared-launch-installer-source-assist/R2_ADVICE.json",
+      "bytes": 11913,
+      "sha256": "cd007dd70bee992a39d2f6bfea582e0b41cd3dbfd044e8edc630a02b3894a260"
+    }
+  ],
+  "integration_scope": {
+    "exact_candidate_source_and_test_files": 9,
+    "files": [
+      {
+        "path": "comsol_mcp/_windows_host_bootstrap.py",
+        "candidate_r2_bytes": 116130,
+        "candidate_r2_sha256": "0016094fca1b92671c3fa41bf62a3ea4b0c24665156c851e0d09a9a0d90f5d54",
+        "published_baseline_status": "MODIFIED",
+        "published_baseline_sha256": "fdc0720541e13955fc2d458df395890ee5613afd7955377b8db026dc455b01f0"
+      },
+      {
+        "path": "comsol_mcp/_windows_worker_bootstrap.py",
+        "candidate_r2_bytes": 47059,
+        "candidate_r2_sha256": "dea022a3a692c63c507ddf3307fc13e2d7062734c2069a086a471e5f25b90e25",
+        "published_baseline_status": "ADDED",
+        "published_baseline_sha256": null
+      },
+      {
+        "path": "comsol_mcp/_windows_t037.py",
+        "candidate_r2_bytes": 151013,
+        "candidate_r2_sha256": "551263bdaba7dcf6175b6e4be76b442d8ff9f290415852b3eed8ea7eead2a508",
+        "published_baseline_status": "MODIFIED",
+        "published_baseline_sha256": "ca6ff709dcc57c0da37db756fd6519fc64fbf5a22f9d1baf3f5bd02ec5993b24"
+      },
+      {
+        "path": "comsol_mcp/_windows_t037_launch_inputs.py",
+        "candidate_r2_bytes": 23180,
+        "candidate_r2_sha256": "53c5341aaf6c7d86b57376a8d1e222d13046a2737bf712fc1a990d122ed4be2a",
+        "published_baseline_status": "ADDED",
+        "published_baseline_sha256": null
+      },
+      {
+        "path": "comsol_mcp/_windows_scm_config_materialization.py",
+        "candidate_r2_bytes": 67533,
+        "candidate_r2_sha256": "5125b2c5e084f0e97b270d836a7df552bc827221c9fe48537416d096508f719f",
+        "published_baseline_status": "MODIFIED",
+        "published_baseline_sha256": "f8ffe54af04a3a32422da61fa86ebcb48e39036cf2605f45283abab274bf9b82"
+      },
+      {
+        "path": "comsol_mcp/_session_server.py",
+        "candidate_r2_bytes": 56694,
+        "candidate_r2_sha256": "47afbf5fb284a4b615739e8416d349dba8e625420deb7e11ad5cbf854c63fb76",
+        "published_baseline_status": "MODIFIED",
+        "published_baseline_sha256": "d66a3fc1a9d62a845b5de9ee0c241010e02cb5590c7d19dd4ae15fbe8986f486"
+      },
+      {
+        "path": "comsol_mcp/_java_worker.py",
+        "candidate_r2_bytes": 89234,
+        "candidate_r2_sha256": "50b6cc49e566d642035f3fc091133eea36ea1ed4ae0dd0ef9a588c81360bb286",
+        "published_baseline_status": "MODIFIED",
+        "published_baseline_sha256": "2f835a9c761d3782a19509ddab1b89e16cb374bc3bba28df5758906fb8fed75e"
+      },
+      {
+        "path": "tests/test_windows_prepared_launch.py",
+        "candidate_r2_bytes": 59060,
+        "candidate_r2_sha256": "9e5f5eb95cd4ecd1294abc8be818e425790dc2fec077fa09ba55a826ae2cbf1f",
+        "published_baseline_status": "ADDED",
+        "published_baseline_sha256": null
+      },
+      {
+        "path": "comsol_mcp/_windows_scm_config_native.py",
+        "candidate_r2_bytes": 10959,
+        "candidate_r2_sha256": "60d7bf9cd499d650d72f3bacfacc86ce1f33ba7796bb413aa9b98124c07d87d6",
+        "published_baseline_status": "MODIFIED",
+        "published_baseline_sha256": "a289d94ac96395a51bd22f2b6951d6086ee303e9e7c123e59afb93fc33251db8"
+      }
+    ],
+    "additional_public_compact_evidence_file": "docs/universal_mcp_execution/evidence/WINDOWS_PREPARED_LAUNCH_SOURCE_SCOPED.json",
+    "total_shared_files": 10,
+    "candidate_r1_r2_delivery_and_failure_incident_material_preserved": true,
+    "no_cache_runtime_raw_stream_or_private_review_report_copied": true
+  },
+  "accepted_source_findings": {
+    "six_direct_P1_fixes": [
+      "restored the original six _Win32LaunchApi constructor ABI bindings; system_roots remains a separate two-call method",
+      "normal prepared T037 Server binds the installer-protected finite vendor view; mutable preferences/tmp/recovery/portfile remain separate",
+      "compiler creates only a new empty output root before birth, then captures generated package directories after terminal exit",
+      "fixed Unicode WCHAR environment storage with double NUL and retained backing array",
+      "one raw ctypes PROCESS_INFORMATION accessor handles HANDLE int/None and the original PROCESS_INFORMATION remains owned",
+      "same original compiler phase captures and seals exact node/handle/image ownership through close/retirement guards"
+    ],
+    "final_SD_coherence": "Target security facts are produced from the final descriptor/readback; original source SD facts remain distinct.",
+    "additional_ScmNative_V3_seam": "Minimal necessary V2/V3 compatibility seam accepted for the existing V3 installer/manifest interface; V1 refusal and original owner/handle/security rules remain unchanged. No native-effect authorization."
+  },
+  "scoped_python_evidence": {
+    "candidate_r2_attempt_15": {
+      "result": {
+        "passed": 388,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "explicitly_deselected_NOT_RUN": 1
+      },
+      "connected_B_cases_included_in_388": 43,
+      "selected_original_test_modules": {
+        "tests/test_windows_t037_connected_b.py": 43,
+        "tests/test_windows_t037.py": 23,
+        "tests/test_windows_host_bootstrap.py": 184,
+        "tests/test_windows_scm_config_materialization.py": 115,
+        "tests/test_windows_prepared_launch.py": 23
+      },
+      "deselected_node": {
+        "nodeid": "tests.test_windows_t037.test_control_cli_accepts_profile_option_and_serve_environment",
+        "status": "NOT_RUN",
+        "reason": "Would load Darwin libproc to inspect the host process; excluded before native load."
+      },
+      "source_binding": {
+        "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-15-final-scoped-regression/source_import_and_before_after.json",
+        "bytes": 424388,
+        "sha256": "38db457364bbc1a88d56ac39dfc1fe1b83182b3dd0e817465880e54849ea47f8",
+        "source_before_after_unchanged": true,
+        "compiled_test_functions": 127,
+        "candidate_import_modules": 8,
+        "forbidden_audit_events": 0,
+        "claim_limit": "Source/import and filename binding only; no global CodeType or whole-module theorem."
+      },
+      "private_run_receipts": [
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-15-final-scoped-regression/attempt_receipt.json",
+          "bytes": 4001,
+          "sha256": "dd2a1eb100cba022db839d40295ff6eec5e387fc8a926dfa25c8a7126544d6ee",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-15-final-scoped-regression/affected.junit.xml",
+          "bytes": 69591,
+          "sha256": "9149a65dc0aeb8ce696d00cb4b650df4d0202260c7d0de468105fe57340b3bef",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-15-final-scoped-regression/stdout.raw",
+          "bytes": 515,
+          "sha256": "0c20bc756f59da5393d517ca56a516d2616e3cc2fa696cbc9ad719578439d988",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-15-final-scoped-regression/stderr.raw",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-15-final-scoped-regression/source_import_and_before_after.json",
+          "bytes": 424388,
+          "sha256": "38db457364bbc1a88d56ac39dfc1fe1b83182b3dd0e817465880e54849ea47f8",
+          "local_private_evidence_not_copied": true
+        }
+      ]
+    },
+    "candidate_r2_attempt_17_run_3_original_module_addendum": {
+      "result": {
+        "passed": 53,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "deselected": 0
+      },
+      "modules": {
+        "tests/test_session_server.py": 33,
+        "tests/test_java_worker.py": 20
+      },
+      "original_test_modules_byte_equal_to_published_baseline": {
+        "published_baseline": "3d92b3c736f31e6e3ace99418629c78ab1969169",
+        "tests/test_session_server.py": {
+          "bytes": 37303,
+          "sha256": "69a882f7687bba62456b0616c5bad284896b746b95e692fbfbda8bfb62381aff"
+        },
+        "tests/test_java_worker.py": {
+          "bytes": 48372,
+          "sha256": "77551975df32106ee5f432eae98e74bf0da82fcc6bdade4845d9cc7c1b854ee2"
+        }
+      },
+      "native_or_host_dependent_nodes_separately_NOT_RUN": 19,
+      "not_run_node_inventory": {
+        "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/static_test_selection.json",
+        "bytes": 12484,
+        "sha256": "4c46fa4685213fc1d0066b2adaf677821c20d04b09298163d1de39fa3d0a9ebb"
+      },
+      "source_binding": {
+        "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/run-3/current-regression/source_import_and_before_after.json",
+        "bytes": 41494,
+        "sha256": "8edaef6a74a3e5828d140efc4f6eb625b6b1d28da5d6d5157ab3dd1a86f038c9",
+        "before_after_snapshot_files": 11,
+        "compiled_test_code_filenames": 42,
+        "imported_product_module_origins": 8,
+        "forbidden_audit_events": 0,
+        "claim_limit": "Exact source/import-origin and test-filename binding; no global CodeType theorem."
+      },
+      "normal_path_boundary": {
+        "server": "Original OwnedServerLauncher.start READY path ran with explicit in-memory fake process and fake identity/listener readers; no Popen or socket.",
+        "worker": "PersistentJavaWorker.start reached only the existing synthetic compile-failure branch through a test-local subprocess.run replacement; successful normal Worker start remains NOT_RUN because it launches javac/Java and uses its endpoint."
+      },
+      "private_run_receipts": [
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/run-3/attempt_receipt.json",
+          "bytes": 13849,
+          "sha256": "2b3caf1c967a14123b875cc4240ab01a1f8192ed91405b49978517e10e45afc2",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/run-3/affected.junit.xml",
+          "bytes": 7610,
+          "sha256": "fdfe4aad61ee9e67e92d6e77bf362f2aa3eec97e7905ce089b98ab00fb822918",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/run-3/stdout.raw",
+          "bytes": 99,
+          "sha256": "b9418a3d11a622318f5c1b401ca3a74d26025134d6cc6b5499fc3c2a5b54edeb",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/run-3/stderr.raw",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "local_private_evidence_not_copied": true
+        },
+        {
+          "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/attempts/attempt-17-session-worker-pure-regression/run-3/current-regression/source_import_and_before_after.json",
+          "bytes": 41494,
+          "sha256": "8edaef6a74a3e5828d140efc4f6eb625b6b1d28da5d6d5157ab3dd1a86f038c9",
+          "local_private_evidence_not_copied": true
+        }
+      ]
+    },
+    "aggregate_claim_limit": "These are two bounded candidate-r2 software runs plus the supplemental source binding; do not combine them into a 427 total, whole-module PASS, or overall/native acceptance."
+  },
+  "effect_and_incident_boundaries": {
+    "current_final_software_runs": {
+      "Windows": "NOT_RUN",
+      "Windows_SDK_or_native_API": "NOT_RUN",
+      "JDK": "NOT_RUN",
+      "Java": "NOT_RUN",
+      "COMSOL": "NOT_RUN",
+      "native_host_effects": "NOT_RUN"
+    },
+    "earlier_disclosed_JDK_Java_Python_child_invocation": {
+      "occurred": true,
+      "decision_packet": {
+        "path": "_state/universal-windows-original-launch-inputs/delivery-r2/evidence/main_decision_request.json",
+        "bytes": 5445,
+        "sha256": "d1d093c5228596a98ea653e1e9b3e571fc4258e823614378b5cb8e020fb7c1ee"
+      },
+      "original_tool_references": "Incomplete/UNKNOWN",
+      "original_log_hashes": "UNKNOWN where absent",
+      "numeric_exit_codes": "UNKNOWN where absent",
+      "complete_child_retirement": "UNKNOWN; socket-denied evidence does not prove all children retired",
+      "raw_incident_evidence_published": false,
+      "current_run_zero_audit_events_do_not_erase_prior_incident": true
+    },
+    "t037_issuer": "STILL_REFUSING; no Resume/SCM/SDK activation.",
+    "server_ready_claim": "Fixture-only source behavior; not Windows/native Server acceptance.",
+    "worker_successful_native_start": "NOT_RUN",
+    "mac_artifact": "Existing Mac wheel 0860 remains separately bound to source 3d92; this integration does not relabel it or its native evidence.",
+    "overall_native_or_project_acceptance": "NOT_ESTABLISHED"
+  }
+}

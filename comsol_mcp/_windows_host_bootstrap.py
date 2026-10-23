@@ -26,6 +26,7 @@ import zipfile
 
 SCHEMA = "comsol-mcp.windows-initial-host-bootstrap/1"
 SCHEMA_V2 = "comsol-mcp.windows-initial-host-bootstrap/2"
+SCHEMA_V3 = "comsol-mcp.windows-initial-host-bootstrap/3"
 MAX_PLAN = 2 * 1024 * 1024
 MAX_FILES = 8192
 MAX_TOTAL = 8 * 1024**3
@@ -158,6 +159,7 @@ class BootstrapIntent:
     schema: str = SCHEMA
     original_raw: bytes = b""
     provisioning: bytes = b""
+    prepared_launch: object = None
 
     @property
     def directories(self):
@@ -165,6 +167,8 @@ class BootstrapIntent:
         for item in self.files:
             parts = item.path.split("/")[:-1]
             answer.update("/".join(parts[:n]) for n in range(1, len(parts) + 1))
+        if self.prepared_launch is not None:
+            answer.update(self.prepared_launch.directories)
         return tuple(sorted(answer, key=lambda p: (p.count("/"), len(p), p)))
 
     def destination(self, relative):
@@ -172,7 +176,7 @@ class BootstrapIntent:
 
 
 def service_argv(prefix, name, *, version=1):
-    if version == 2:
+    if version in {2, 3}:
         return (ntpath.join(prefix, "python312", "tools", "python.exe"), "-B", "-I",
                 "-m", "comsol_mcp._control_daemon", "--home",
                 ntpath.join(prefix, "service-state"), "--windows-scm-service-name", name,
@@ -206,11 +210,13 @@ def parse_plan(raw):
                          parse_constant=lambda _: fail("PLAN_JSON", "nonfinite JSON"))
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise BootstrapError("PLAN_JSON", "invalid bounded JSON") from exc
-    version = 2 if type(doc) is dict and doc.get("schema") == SCHEMA_V2 else 1
+    version = (3 if type(doc) is dict and doc.get("schema") == SCHEMA_V3 else
+               2 if type(doc) is dict and doc.get("schema") == SCHEMA_V2 else 1)
     _fields(doc, {"schema", "prefix", "source_root", "service_name", "files",
                   "materials", "runtime_layout", "service_argv", "quoted_command_line"}
-            | ({"provisioning"} if version == 2 else set()))
-    if doc["schema"] not in {SCHEMA, SCHEMA_V2} or doc["runtime_layout"] != "CPYTHON312_NORMAL_OFFLINE_MATERIALIZED":
+            | ({"provisioning"} if version in {2, 3} else set())
+            | ({"prepared_launch"} if version == 3 else set()))
+    if doc["schema"] not in {SCHEMA, SCHEMA_V2, SCHEMA_V3} or doc["runtime_layout"] != "CPYTHON312_NORMAL_OFFLINE_MATERIALIZED":
         fail("PLAN_SCHEMA", "only the initial normal-CPython materialized layout is supported")
     name = doc["service_name"]
     if type(name) is not str or not re.fullmatch(r"ComsolMCP_[A-Za-z0-9_-]{1,60}", name):
@@ -266,14 +272,21 @@ def parse_plan(raw):
     command_line = subprocess.list2cmdline(argv)  # formatting only: never executed
     if doc["service_argv"] != list(argv) or doc["quoted_command_line"] != command_line:
         fail("PLAN_COMMAND", "exact original argv array and Windows quoted command line required")
-    if version == 2:
+    prepared_launch = None
+    if version in {2, 3}:
         from ._windows_scm_config_materialization import validate_recipe
-        validate_recipe(doc["provisioning"], prefix=prefix, service_name=name, files=files, argv=argv)
+        validate_recipe(doc["provisioning"], prefix=prefix, service_name=name, files=files, argv=argv,
+                        prepared_launch_required=version == 3)
+    if version == 3:
+        from ._windows_worker_bootstrap import validate_recipe as validate_prepared_launch
+        prepared_launch = validate_prepared_launch(doc["prepared_launch"], prefix=prefix,
+                                                  source_root=source, files=files)
     return BootstrapIntent(prefix, source, name, tuple(sorted(files, key=lambda f: f.path)),
                            tuple(sorted(materials.items())), argv, command_line,
-                           digest(raw) if version == 2 else digest(canonical(doc)),
-                           doc["schema"], raw if version == 2 else b"",
-                           canonical(doc["provisioning"]) if version == 2 else b"")
+                          digest(raw) if version in {2, 3} else digest(canonical(doc)),
+                          doc["schema"], raw if version in {2, 3} else b"",
+                          canonical(doc["provisioning"]) if version in {2, 3} else b"",
+                          prepared_launch)
 
 
 def _sid(raw, offset=0):
@@ -451,14 +464,19 @@ class _Call:
                 fail("SDK_RETURN", "invalid BOOL return")
             if self.mode in {"DWORD", "COUNT"} and not 0 <= value <= 0xFFFFFFFF:
                 fail("SDK_RETURN", "invalid BOOL/DWORD return")
+            if self.mode in {"RESUME_COUNT", "WAIT_RESULT"} and not 0 <= value <= 0xFFFFFFFF:
+                fail("SDK_RETURN", "invalid raw installer compiler DWORD")
             self.scalar = value
             success = (value != 0 if self.mode in {"BOOL", "COUNT"} else value == 0
-                       if self.mode in {"DWORD", "LOCALFREE"} else value not in {0, -1, (1 << 64) - 1})
+                       if self.mode in {"DWORD", "LOCALFREE"} else
+                       value != 0xFFFFFFFF if self.mode == "RESUME_COUNT" else
+                       value in {0, 258} if self.mode == "WAIT_RESULT" else
+                       value not in {0, -1, (1 << 64) - 1})
             if not success:
                 error = self.owner.api.last_error()
                 if type(error) is not int or not 0 <= error <= 0xFFFFFFFF:
                     fail("SDK_ERROR", "invalid original GetLastError")
-                self.error = value if self.mode == "DWORD" else error
+                self.error = value if self.mode in {"DWORD", "RESUME_COUNT", "WAIT_RESULT"} else error
                 self.state = "KNOWN_FAILURE"
                 raise KnownSdkFailure(self.name, self.error)
             self.state = "SUCCEEDED"
@@ -471,17 +489,24 @@ class _Call:
 
 
 class _Handle:
-    def __init__(self, owner, opened, closer_name, closer, parent=None, slot=None):
+    def __init__(self, owner, opened, closer_name, closer, parent=None, slot=None,
+                 result_from_output=False):
         self.owner, self.opened, self.value = owner, opened, None
         self.original_value, self.argument, self.parent = None, None, parent
         self.closer_name, self.closer = closer_name, closer
         self.original_binding, self.slot = _binding(self.closer), slot
+        self.result_from_output = result_from_output
         self.close_call, self.closed = None, False
         self.state = "PENDING"
         owner.handles.append(self)
 
     def adopt(self, value):
-        if self.state != "PENDING" or type(value) is not int or not 0 < value < (1 << 64) - 1:
+        call_matches = (self.opened.state == "SUCCEEDED" and
+            ((self.opened.scalar == value) if not self.result_from_output else
+             self.opened.mode == "BOOL" and self.opened.scalar != 0
+             and self.slot is not None and self.slot.value == value))
+        if (self.state != "PENDING" or type(value) is not int or not 0 < value < (1 << 64) - 1
+                or not call_matches):
             fail("HANDLE_UNKNOWN", "original pending handle transfer is invalid")
         self.original_value = self.value = value
         self.argument = HANDLE(value)
@@ -618,7 +643,8 @@ class Bootstrap:
         self.owner = backend.owner
         self._original_intent, self._original_backend, self._original_owner = intent, backend, self.owner
         self._original_schema, self._approved_raw = intent.schema, intent.original_raw
-        self.state, self.sources, self.anchors, self.nodes = "NEW", {}, {}, {}
+        self._original_prepared_launch = intent.prepared_launch
+        self.state, self.sources, self.vendor_sources, self.anchors, self.nodes = "NEW", {}, {}, {}, {}
         self.manager = self.service = self.service_image = self.service_sid = None
         self.apply_started = self.restore_started = False
         self.handoff_started = False
@@ -626,6 +652,9 @@ class Bootstrap:
         self._pin_close_ack = None
         self._restore_phase = None
         self.children_state = "NEVER_STARTED"
+        self._installer_compiler_state = "NEVER_STARTED"
+        self._original_compiler_record = None
+        self._compiler_record = None
         self._retention_registered = False
         self._configuration = None
         self._original_configuration = None
@@ -646,6 +675,51 @@ class Bootstrap:
             fail("CHILDREN_UNPROVEN", "a caller cannot reclassify children as never started")
         self._children_state = value
 
+    @property
+    def installer_compiler_state(self):
+        return self._installer_compiler_state
+
+    def _set_installer_compiler_state(self, value, record):
+        transitions = {
+            "NEVER_STARTED": {"BIRTH_PENDING", "FAILED_NO_CHILD", "UNKNOWN"},
+            "BIRTH_PENDING": {"SUSPENDED", "FAILED_NO_CHILD", "UNKNOWN"},
+            "SUSPENDED": {"RESUMED", "UNKNOWN"},
+            "RESUMED": {"EXIT_KNOWN", "LIVE", "UNKNOWN"},
+            "LIVE": {"EXIT_KNOWN", "UNKNOWN"},
+            "EXIT_KNOWN": {"RETIRED", "UNKNOWN"},
+            "RETIRED": set(), "FAILED_NO_CHILD": set(), "UNKNOWN": set(),
+        }
+        if value not in transitions.get(self._installer_compiler_state, set()):
+            fail("COMPILER_STATE", "installer compiler state is independent and monotonic")
+        if value != "UNKNOWN" and (record is None or record.owner is not self.owner):
+            fail("COMPILER_OWNER", "compiler state must bind to this original Bootstrap owner")
+        if value == "FAILED_NO_CHILD" and not record.failed_no_child_verified(self):
+            fail("COMPILER_CREATE_UNKNOWN", "no-child state requires the original failed CREATE outputs and confirmed closes")
+        if value == "RETIRED" and not record.retirement_verified(self):
+            fail("COMPILER_RETIREMENT", "retired state requires the original process/job/output/close proof")
+        if self._compiler_record is None:
+            self._compiler_record = record
+            self._original_compiler_record = record
+        elif record is not self._original_compiler_record:
+            fail("COMPILER_OWNER", "compiler record cannot be replaced or reconstructed")
+        self._installer_compiler_state = value
+        self.owner.checkpoint("installer_compiler_" + value.casefold(), record)
+
+    def _compiler_transition_guard(self):
+        state = self._installer_compiler_state
+        if state not in {"NEVER_STARTED", "RETIRED", "FAILED_NO_CHILD"}:
+            fail("COMPILER_CHILD_UNKNOWN", "installer compiler lifetime/output/close state is not actually retired")
+        if state == "FAILED_NO_CHILD":
+            record = self._compiler_record
+            if (record is None or record is not self._original_compiler_record
+                    or record.owner is not self.owner or not record.failed_no_child_verified(self)):
+                fail("COMPILER_CREATE_UNKNOWN", "known no-child proof does not bind original zero outputs and closes")
+        if state == "RETIRED":
+            record = self._compiler_record
+            if (record is None or record is not self._original_compiler_record
+                    or record.owner is not self.owner or not record.retirement_verified(self)):
+                fail("COMPILER_RETIREMENT", "actual original compiler/job/output/close retirement proof is incomplete")
+
     def _retain(self):
         if not self._retention_registered:
             _retained.append(self)
@@ -660,10 +734,12 @@ class Bootstrap:
         self.owner.check()
         if self.intent.schema != self._original_schema:
             fail("PLAN_DRIFT", "original plan version changed")
-        if self._original_schema == SCHEMA_V2 and (self.intent.original_raw != self._approved_raw
+        if self.intent.prepared_launch is not self._original_prepared_launch:
+            fail("PLAN_DRIFT", "original prepared-launch recipe object changed")
+        if self._original_schema in {SCHEMA_V2, SCHEMA_V3} and (self.intent.original_raw != self._approved_raw
                 or parse_plan(self._approved_raw) != self.intent):
             fail("PLAN_DRIFT", "original approved V2 raw bytes and typed intent differ")
-        if self._original_schema == SCHEMA_V2 and self._original_configuration is not None and (
+        if self._original_schema in {SCHEMA_V2, SCHEMA_V3} and self._original_configuration is not None and (
                 self._configuration is not self._original_configuration
                 or self._original_configuration.original is not self):
             fail('CONFIG_ORIGIN', 'copied/replaced Bootstrap or configuration owner is ineligible')
@@ -681,7 +757,10 @@ class Bootstrap:
             # Pin every ancestor through the exact source root and destination
             # parent. No existing directory or unrelated ACL is ever modified.
             paths = set()
-            for path in (p.source_root, ntpath.dirname(p.prefix)):
+            roots = [p.source_root, ntpath.dirname(p.prefix)]
+            if p.prepared_launch is not None:
+                roots.append(p.prepared_launch.vendor_source_root)
+            for path in roots:
                 while len(path) > 3:
                     paths.add(path)
                     path = ntpath.dirname(path)
@@ -699,6 +778,13 @@ class Bootstrap:
                 while _within(directory, p.source_root) and directory != p.source_root:
                     source_paths.add(directory)
                     directory = ntpath.dirname(directory)
+            if p.prepared_launch is not None:
+                for row in p.prepared_launch.vendor_files:
+                    path = ntpath.join(p.prepared_launch.vendor_source_root, *row.source.split("/"))
+                    directory = ntpath.dirname(path)
+                    while _within(directory, p.prepared_launch.vendor_source_root) and directory != p.prepared_launch.vendor_source_root:
+                        source_paths.add(directory)
+                        directory = ntpath.dirname(directory)
             for path in sorted(source_paths, key=lambda x: (len(x), x)):
                 handle = self.backend.open_node(path, True)
                 self.anchors[path] = (handle, self.backend.image(handle, path, True))
@@ -709,8 +795,18 @@ class Bootstrap:
                 if (image.size, image.sha256) != (f.size, f.sha256):
                     fail("SOURCE_BYTES", "actual pinned source bytes differ from approved inventory")
                 self.sources[f.path] = (handle, image)
+            if p.prepared_launch is not None:
+                for row in p.prepared_launch.vendor_files:
+                    path = ntpath.join(p.prepared_launch.vendor_source_root, *row.source.split("/"))
+                    handle = self.backend.open_node(path, False)
+                    image = self.backend.image(handle, path, False)
+                    if (image.size, image.sha256) != (row.size, row.sha256):
+                        fail("PREPARED_VENDOR_SOURCE", "original vendor source bytes differ from the fixed copy inventory")
+                    if image.attributes & 0x400 or image.links != 1:
+                        fail("PREPARED_VENDOR_SOURCE", "vendor inputs must be ordinary single-link files")
+                    self.vendor_sources[row.source] = (handle, image)
             self._materials()
-            if p.schema == SCHEMA_V2:
+            if p.schema in {SCHEMA_V2, SCHEMA_V3}:
                 from ._windows_scm_config_materialization import prepare_configuration
                 prepare_configuration(self)
             self.state = "PREPARED_READONLY"
@@ -755,7 +851,7 @@ class Bootstrap:
                 "quoted_command_line": self.intent.command_line,
                 "files": len(self.intent.files), "bytes": sum(f.size for f in self.intent.files),
                 "required_privileges": list(PRIVILEGES), "SID_type": "RESTRICTED",
-                "native_start": ("NOT_RUN_SYSTEM_RUNTIME_AND_POLICY_QUALIFICATION_REQUIRED" if self.intent.schema == SCHEMA_V2
+                "native_start": ("NOT_RUN_SYSTEM_RUNTIME_AND_POLICY_QUALIFICATION_REQUIRED" if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}
                     else "BLOCKED_TRUSTED_PROFILE_APPCONTAINER_PROJECT_NOT_MATERIALIZED"),
                 "authority": "LOCAL_INSTALLER_ONLY_NOT_T037",
                 "runtime": "NORMAL_OFFLINE_MATERIALIZED_PREFIX; NO_VENV; NO_PIP_EXECUTION",
@@ -780,12 +876,18 @@ class Bootstrap:
             path = ntpath.join(self.intent.source_root, *f.path.split("/"))
             if self.backend.image(handle, path, False) != image:
                 fail("SOURCE_DRIFT", "pinned source bytes/identity/security changed")
+        if self.intent.prepared_launch is not None:
+            for row in self.intent.prepared_launch.vendor_files:
+                handle, image = self.vendor_sources[row.source]
+                path = ntpath.join(self.intent.prepared_launch.vendor_source_root, *row.source.split("/"))
+                if self.backend.image(handle, path, False) != image:
+                    fail("PREPARED_VENDOR_DRIFT", "original vendor source pin or security changed")
 
     def apply(self, *, approved_plan_sha256):
         self._guard({"PREPARED_READONLY"})
         if approved_plan_sha256 != self.intent.sha256 or type(approved_plan_sha256) is not str:
             fail("LOCAL_APPROVAL_REQUIRED", "explicit exact local administrator plan approval required")
-        if self.intent.schema == SCHEMA_V2:
+        if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}:
             from ._windows_scm_config_materialization import apply_configuration
             return apply_configuration(self)
         context = self.backend.context()
@@ -867,10 +969,13 @@ class Bootstrap:
             raise BootstrapError(getattr(exc, "code", "APPLY_UNKNOWN"), str(exc), owner=self) from exc
 
     def _original_handle(self, handle):
+        scalar_matches = (handle.opened.scalar == handle.original_value if not handle.result_from_output
+                          else handle.opened.mode == "BOOL" and handle.opened.scalar != 0
+                          and handle.slot is not None and handle.slot.value == handle.original_value)
         if (type(handle) is not _Handle or handle.owner is not self.owner
                 or handle not in self.owner.handles or handle.opened not in self.owner.calls
                 or handle.opened.owner is not self.owner or handle.opened.state != "SUCCEEDED"
-                or handle.opened.scalar != handle.original_value):
+                or not scalar_matches):
             fail("ORIGINAL_HANDLE", "only the actual original SDK acquisition is eligible")
         if handle.closed:
             if (handle.close_call is None or handle.close_call.state != "SUCCEEDED"
@@ -909,13 +1014,13 @@ class Bootstrap:
         for handle in live:
             if self.backend.image(handle, node.path, node.image.directory) != node.image:
                 fail("TREE_DRIFT", "original live HANDLE identity/bytes/raw SD differ")
-            if self.intent.schema == SCHEMA_V2:
+            if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}:
                 self._configuration.compare_label(node, handle)
         if self.backend.fresh_image(node.path, node.image.directory) != node.image:
             fail("TREE_DRIFT", "fresh fileID/bytes/raw SD differ from original created postimage")
 
     def _close_pin(self, node, role, phase):
-        if self.intent.schema == SCHEMA_V2:
+        if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}:
             self._configuration.compare_generated_manifest()
         handle = getattr(node, role)
         self._pin_close_ack = None
@@ -994,13 +1099,13 @@ class Bootstrap:
             self._compare()  # complete namespace/SCM/static inventory before any writer closes
             self.handoff_started, self.state = True, "HANDING_OFF_STATIC_PINS"
             for node in self.nodes.values():
-                if self.intent.schema == SCHEMA_V2:
+                if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}:
                     self._configuration.compare_generated_manifest()
                 node.bridge_handle = self.backend.bridge_node(node.path, node.image.directory)
                 self._compare_node(node)
                 self._close_pin(node, "handle", "handoff")
                 self._compare_node(node)  # bridge preserves identity across confirmed writer close
-                if self.intent.schema == SCHEMA_V2:
+                if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}:
                     self._configuration.compare_generated_manifest()
                 node.runtime_handle = self.backend.runtime_node(node.path, node.image.directory)
                 self._compare_node(node)
@@ -1041,8 +1146,9 @@ class Bootstrap:
             fail("CLOSE_UNPROVEN", "an unfinished/failed original close forbids new transition or deletion")
         if self.children_state != "NEVER_STARTED":
             fail("CHILDREN_UNKNOWN", "live/unknown owned children forbid restore")
+        self._compiler_transition_guard()
         self._check_sources_anchors()
-        if self.intent.schema == SCHEMA_V2:
+        if self.intent.schema in {SCHEMA_V2, SCHEMA_V3}:
             self._configuration.check_original(self)
             self._configuration.compare_external()
         if "" not in self.nodes and not self.backend.absent(self.intent.prefix):
@@ -1246,6 +1352,70 @@ class _FindData(C.Structure):
                 ("name", C.c_uint16 * 260), ("alternate", C.c_uint16 * 14)]
 
 
+class _StartupInfoW(C.Structure):
+    _fields_ = [("cb", DWORD), ("reserved", C.c_wchar_p), ("desktop", C.c_wchar_p),
+        ("title", C.c_wchar_p), ("x", DWORD), ("y", DWORD), ("x_size", DWORD),
+        ("y_size", DWORD), ("x_chars", DWORD), ("y_chars", DWORD), ("fill", DWORD),
+        ("flags", DWORD), ("show", C.c_uint16), ("reserved_size", C.c_uint16),
+        ("reserved_bytes", C.POINTER(C.c_ubyte)), ("stdin", HANDLE), ("stdout", HANDLE),
+        ("stderr", HANDLE)]
+
+
+class _StartupInfoExW(C.Structure):
+    _fields_ = [("startup", _StartupInfoW), ("attributes", C.c_void_p)]
+
+
+class _ProcessInformation(C.Structure):
+    _fields_ = [("process", HANDLE), ("thread", HANDLE), ("pid", DWORD), ("tid", DWORD)]
+
+
+def _raw_process_information_handle(structure, field):
+    """Read the original ctypes HANDLE output with one explicit NULL convention."""
+    if type(structure) is not _ProcessInformation or field not in {"process", "thread"}:
+        fail("COMPILER_CREATE_OUTPUT", "original PROCESS_INFORMATION field required")
+    value = getattr(structure, field)
+    if value is None:
+        return 0
+    if type(value) is not int or not 0 < value < (1 << 64) - 1:
+        fail("COMPILER_CREATE_OUTPUT", "original PROCESS_INFORMATION handle is not a legal non-NULL HANDLE")
+    return value
+
+
+class _JobBasicLimit(C.Structure):
+    _fields_ = [("per_process_user_time", C.c_int64), ("per_job_user_time", C.c_int64),
+        ("limit_flags", DWORD), ("minimum_working_set", C.c_size_t),
+        ("maximum_working_set", C.c_size_t), ("active_process_limit", DWORD),
+        ("affinity", C.c_size_t), ("priority_class", DWORD), ("scheduling_class", DWORD)]
+
+
+class _IoCounters(C.Structure):
+    _fields_ = [("read_operations", C.c_uint64), ("write_operations", C.c_uint64),
+        ("other_operations", C.c_uint64), ("read_bytes", C.c_uint64),
+        ("write_bytes", C.c_uint64), ("other_bytes", C.c_uint64)]
+
+
+class _JobExtendedLimit(C.Structure):
+    _fields_ = [("basic", _JobBasicLimit), ("io", _IoCounters),
+        ("process_memory_limit", C.c_size_t), ("job_memory_limit", C.c_size_t),
+        ("peak_process_memory", C.c_size_t), ("peak_job_memory", C.c_size_t)]
+
+
+class _JobAccounting(C.Structure):
+    _fields_ = [("total_user_time", C.c_int64), ("total_kernel_time", C.c_int64),
+        ("this_period_user_time", C.c_int64), ("this_period_kernel_time", C.c_int64),
+        ("total_page_faults", DWORD), ("total_processes", DWORD), ("active_processes", DWORD),
+        ("total_terminated_processes", DWORD)]
+
+
+class _HandleSlot:
+    def __init__(self, structure, field):
+        self.structure, self.field = structure, field
+
+    @property
+    def value(self):
+        return _raw_process_information_handle(self.structure, self.field)
+
+
 def _bounded_string(buffer, used, pointer, *, multi=False):
     if pointer is None:
         return () if multi else ""
@@ -1313,6 +1483,21 @@ class _Windows:
             "FlushFileBuffers": (self.kernel, B, [P]),
             "SetFileInformationByHandle": (self.kernel, B, [P, D, P, D]),
             "CloseHandle": (self.kernel, B, [P]),
+            "CreateJobObjectW": (self.kernel, P, [P, W]),
+            "SetInformationJobObject": (self.kernel, B, [P, D, P, D]),
+            "AssignProcessToJobObject": (self.kernel, B, [P, P]),
+            "CreateProcessW": (self.kernel, B, [W, C.c_wchar_p, P, P, B, D, P, W, P, P]),
+            "ResumeThread": (self.kernel, D, [P]),
+            "WaitForSingleObject": (self.kernel, D, [P, D]),
+            "GetExitCodeProcess": (self.kernel, B, [P, C.POINTER(D)]),
+            "QueryInformationJobObject": (self.kernel, B, [P, D, P, D, C.POINTER(D)]),
+            "GetProcessTimes": (self.kernel, B, [P, C.POINTER(_FileTime), C.POINTER(_FileTime),
+                                                  C.POINTER(_FileTime), C.POINTER(_FileTime)]),
+            "InitializeProcThreadAttributeList": (self.kernel, B, [P, D, D, C.POINTER(C.c_size_t)]),
+            "UpdateProcThreadAttribute": (self.kernel, B, [P, D, C.c_size_t, P, C.c_size_t, P, P]),
+            "DeleteProcThreadAttributeList": (self.kernel, None, [P]),
+            "GetSystemWindowsDirectoryW": (self.kernel, D, [W, D]),
+            "GetSystemDirectoryW": (self.kernel, D, [W, D]),
             "LocalFree": (self.kernel, P, [P]),
             "FindFirstFileW": (self.kernel, P, [W, C.POINTER(_FindData)]),
             "FindNextFileW": (self.kernel, B, [P, C.POINTER(_FindData)]),
@@ -1340,6 +1525,201 @@ class _Windows:
 
     def last_error(self):
         return self._get_last_error()
+
+    def system_roots(self):
+        """Read the two original counted OS roots; never consult ambient env."""
+        windows, system = C.create_unicode_buffer(32768), C.create_unicode_buffer(32768)
+        wlen = self.owner.call("GetSystemWindowsDirectoryW", (windows, len(windows)), "COUNT", outputs=(windows,))
+        slen = self.owner.call("GetSystemDirectoryW", (system, len(system)), "COUNT", outputs=(system,))
+        if (not 0 < wlen < len(windows) or not 0 < slen < len(system)
+                or len(windows.value) != wlen or len(system.value) != slen):
+            fail("SYSTEM_ROOT_BOUNDS", "original counted shared Windows/System32 paths are incomplete")
+        return windows.value, system.value
+
+    def start_fixed_compiler(self, bootstrap, record):
+        """Create one fixed suspended javac child under this Bootstrap owner."""
+        if (record.owner is not self.owner or record.process_creation_attempted
+                or bootstrap._compiler_record not in {None, record}):
+            fail("COMPILER_OWNER", "one fixed compiler birth on the original owner is required")
+        job = self.owner.acquire("CreateJobObjectW", (None, None), "CloseHandle")
+        record.job = job
+        limits = _JobExtendedLimit()
+        limits.basic.limit_flags = 0x2008  # KILL_ON_JOB_CLOSE | ACTIVE_PROCESS
+        limits.basic.active_process_limit = 1
+        self.owner.call("SetInformationJobObject", (job.arg(), 9, C.byref(limits), C.sizeof(limits)),
+                        outputs=(limits,))
+        stdio_sa = _SecurityAttributes(C.sizeof(_SecurityAttributes), None, 1)
+        stdio = self.owner.acquire("CreateFileW", ("NUL", 0xC0000000, 3, C.byref(stdio_sa), 3, 0x80, None),
+                                   "CloseHandle", parent=job, keepalive=(stdio_sa,))
+        record.stdio = stdio
+
+        size = C.c_size_t(0)
+        self.sdk["InitializeProcThreadAttributeList"](None, 2, 0, C.byref(size))
+        sizing_error = self.last_error()
+        if sizing_error != 122 or not 1 <= size.value <= 65536:
+            for handle in (record.stdio, record.job):
+                if handle is not None and not handle.closed: handle.close()
+            fail("COMPILER_ATTRIBUTES", "bounded original process attribute-list size is unavailable")
+        attributes = C.create_string_buffer(size.value)
+        attr_ptr = C.cast(attributes, C.c_void_p)
+        if not self.sdk["InitializeProcThreadAttributeList"](attr_ptr, 2, 0, C.byref(size)):
+            error = self.last_error()
+            for handle in (record.stdio, record.job):
+                if handle is not None and not handle.closed: handle.close()
+            raise KnownSdkFailure("InitializeProcThreadAttributeList", error)
+        handle_list = (HANDLE * 1)(stdio.arg())
+        policy = DWORD(1)  # PROC_THREAD_ATTRIBUTE_CHILD_PROCESS_POLICY: restricted.
+        try:
+            if not self.sdk["UpdateProcThreadAttribute"](attr_ptr, 0, 0x00020002,
+                    C.cast(handle_list, C.c_void_p), C.sizeof(handle_list), None, None):
+                raise KnownSdkFailure("UpdateProcThreadAttribute(handle-list)", self.last_error())
+            if not self.sdk["UpdateProcThreadAttribute"](attr_ptr, 0, 0x0002000E,
+                    C.byref(policy), C.sizeof(policy), None, None):
+                raise KnownSdkFailure("UpdateProcThreadAttribute(child-policy)", self.last_error())
+
+            startup = _StartupInfoExW()
+            startup.startup.cb = C.sizeof(_StartupInfoExW)
+            startup.startup.flags = 0x100  # STARTF_USESTDHANDLES.
+            startup.startup.stdin = stdio.arg()
+            startup.startup.stdout = stdio.arg()
+            startup.startup.stderr = stdio.arg()
+            startup.attributes = attr_ptr
+            process_info = _ProcessInformation()
+            command_line = C.create_unicode_buffer(subprocess.list2cmdline(list(record.argv)))
+            environment_rows = [key + "=" + record.environment[key]
+                                for key in sorted(record.environment, key=str.casefold)]
+            if (any("\0" in item for item in environment_rows)
+                    or len(environment_rows) > 128 or sum(len(item) + 1 for item in environment_rows) > 32767):
+                fail("COMPILER_ENVIRONMENT", "fixed compiler Unicode environment exceeds its bound")
+            block = "\0".join(environment_rows) + "\0\0"
+            environment = C.create_unicode_buffer(block, len(block))
+            if (len(environment) != len(block) or environment[-2] != "\0"
+                    or environment[-1] != "\0"):
+                fail("COMPILER_ENVIRONMENT", "fixed Unicode environment must retain its exact double-NUL block")
+            flags = 0x00000004 | 0x00080000 | 0x00000400 | 0x08000000
+            args = (record.argv[0], command_line, None, None, True, flags,
+                    C.cast(environment, C.c_void_p), record.cwd, C.byref(startup), C.byref(process_info))
+            create = _Call(self.owner, "CreateProcessW", self.function("CreateProcessW"), args, "BOOL",
+                           (process_info, startup, command_line, environment, attributes, handle_list, policy))
+            record.process_info, record.startup = process_info, startup
+            record.environment_buffer, record.command_buffer = environment, command_line
+            pslot, tslot = _HandleSlot(process_info, "process"), _HandleSlot(process_info, "thread")
+            process = _Handle(self.owner, create, "CloseHandle", self.function("CloseHandle"),
+                              parent=job, slot=pslot, result_from_output=True)
+            thread = _Handle(self.owner, create, "CloseHandle", self.function("CloseHandle"),
+                             parent=process, slot=tslot, result_from_output=True)
+            record.process, record.thread, record.create_call = process, thread, create
+            record.process_creation_attempted = True
+            bootstrap._set_installer_compiler_state("BIRTH_PENDING", record)
+            try:
+                create.run()
+            except KnownSdkFailure:
+                process_value = _raw_process_information_handle(process_info, "process")
+                thread_value = _raw_process_information_handle(process_info, "thread")
+                if process_value == 0 and thread_value == 0:
+                    for pending in (thread, process):
+                        pending.state, pending.closed = "NO_OUTPUT", True
+                    self.close_fixed_compiler(record, bootstrap, failed_no_child=True)
+                    bootstrap._set_installer_compiler_state("FAILED_NO_CHILD", record)
+                else:
+                    for pending in (thread, process): pending.state = "UNKNOWN"
+                    self.owner.uncertain = True
+                    bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                raise
+            except BaseException:
+                for pending in (thread, process): pending.state = "UNKNOWN"
+                self.owner.uncertain = True
+                bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                raise
+            process_value = _raw_process_information_handle(process_info, "process")
+            thread_value = _raw_process_information_handle(process_info, "thread")
+            if not process_value or not thread_value:
+                process.state = thread.state = "UNKNOWN"
+                self.owner.uncertain = True
+                bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                fail("COMPILER_CREATE_OUTPUT", "successful CreateProcessW returned incomplete original handles")
+            process.adopt(process_value)
+            thread.adopt(thread_value)
+            assign = _Call(self.owner, "AssignProcessToJobObject", self.function("AssignProcessToJobObject"),
+                           (job.arg(), process.arg()), "BOOL")
+            record.assign_call = assign
+            try:
+                assign.run()
+            except BaseException:
+                self.owner.uncertain = True
+                bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                raise
+            bootstrap._set_installer_compiler_state("SUSPENDED", record)
+
+            creation, exit_time, kernel, user = _FileTime(), _FileTime(), _FileTime(), _FileTime()
+            birth_call = _Call(self.owner, "GetProcessTimes", self.function("GetProcessTimes"),
+                (process.arg(), C.byref(creation), C.byref(exit_time), C.byref(kernel), C.byref(user)),
+                "BOOL", (creation, exit_time, kernel, user))
+            record.birth_call = birth_call
+            birth_call.run()
+            record.birth = (int(process_info.pid), (creation.high << 32) | creation.low)
+
+            resume = _Call(self.owner, "ResumeThread", self.function("ResumeThread"),
+                           (thread.arg(),), "RESUME_COUNT")
+            record.resume_call = resume
+            resume.run()
+            if resume.scalar != 1:
+                bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                fail("COMPILER_RESUME_COUNT", "original suspended compiler thread did not report prior count one")
+            bootstrap._set_installer_compiler_state("RESUMED", record)
+            wait = _Call(self.owner, "WaitForSingleObject", self.function("WaitForSingleObject"),
+                         (process.arg(), 600000), "WAIT_RESULT")
+            record.wait_call = wait
+            wait.run()
+            if wait.scalar == 258:
+                bootstrap._set_installer_compiler_state("LIVE", record)
+                fail("COMPILER_STILL_LIVE", "fixed compiler exceeded its one bounded wait")
+            exit_code = DWORD()
+            exit_call = _Call(self.owner, "GetExitCodeProcess", self.function("GetExitCodeProcess"),
+                              (process.arg(), C.byref(exit_code)), "BOOL", (exit_code,))
+            record.exit_call, record.exit_code = exit_call, None
+            exit_call.run()
+            record.exit_code = int(exit_code.value)
+            if record.exit_code == 259:
+                bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                fail("COMPILER_EXIT_UNKNOWN", "signaled process still reports STILL_ACTIVE")
+            accounting, used = _JobAccounting(), DWORD()
+            job_call = _Call(self.owner, "QueryInformationJobObject", self.function("QueryInformationJobObject"),
+                (job.arg(), 1, C.byref(accounting), C.sizeof(accounting), C.byref(used)),
+                "BOOL", (accounting, used))
+            record.job_query_call = job_call
+            job_call.run()
+            if used.value != C.sizeof(accounting) or accounting.total_processes != 1 or accounting.active_processes != 0:
+                bootstrap._set_installer_compiler_state("UNKNOWN", record)
+                fail("COMPILER_JOB_RETIREMENT", "original Job does not prove one created and zero live children")
+            record.job_total, record.job_active = int(accounting.total_processes), int(accounting.active_processes)
+            bootstrap._set_installer_compiler_state("EXIT_KNOWN", record)
+            return record
+        finally:
+            self.sdk["DeleteProcThreadAttributeList"](attr_ptr)
+            if not record.process_creation_attempted:
+                for handle in (record.stdio, record.job):
+                    if handle is not None and not handle.closed and not self.owner.uncertain:
+                        handle.close()
+
+    def close_fixed_compiler(self, record, bootstrap, *, failed_no_child=False):
+        if record.owner is not self.owner:
+            fail("COMPILER_OWNER", "original installer compiler owner required")
+        if failed_no_child:
+            for handle in (record.stdio, record.job):
+                if handle is not None and not handle.closed:
+                    handle.close()
+            return
+        if bootstrap.installer_compiler_state != "EXIT_KNOWN":
+            fail("COMPILER_EXIT_UNKNOWN", "only the original signaled and job-empty child can close")
+        for handle in (record.thread, record.process, record.stdio, record.job):
+            if handle is not None and not handle.closed:
+                handle.close()
+
+    def complete_fixed_compiler(self, record, bootstrap):
+        if record.owner is not self.owner or record.output_capture is None:
+            fail("COMPILER_OUTPUT_CAPTURE", "complete pinned output inventory required before retirement")
+        bootstrap._set_installer_compiler_state("RETIRED", record)
 
     def manager(self, writable):
         return self.owner.acquire("OpenSCManagerW", (None, None, 3 if writable else 1),

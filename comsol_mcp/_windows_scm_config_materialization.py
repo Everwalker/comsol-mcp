@@ -248,7 +248,8 @@ def _project_root(recipe, prefix, directories):
     b.fail('CONFIG_ROOT', 'unsupported/unconfigured project-root mode')
 
 
-def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, final, trusted_payload=None):
+def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, final,
+                        trusted_payload=None, prepared_launch_expected=False):
     from ._windows_t037 import parse_profile_v4_document
     from ._w26_memory_resources import parse_memory_profile_document
     from ._windows_t037_network import derive_session_network_intent
@@ -257,6 +258,8 @@ def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, f
     if trusted_payload is not None:
         trusted = json.loads(payload)  # Parse the exact frozen bytes used for the raw source hash.
     profile = parse_profile_v4_document(trusted, source_sha256=b.digest(payload))
+    if ((profile.prepared_launch_reference is not None) != prepared_launch_expected):
+        b.fail("CONFIG_PREPARED_LAUNCH", "only initial Bootstrap plan V3 may bind the fixed prepared manifest")
     host = profile.host_resource_profile
     policy = host.windows_isolation
     if (host.platform != "windows" or host.host_id != recipe["host"]["hostname"]
@@ -297,7 +300,7 @@ def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, f
     return profile
 
 
-def validate_recipe(recipe, *, prefix, service_name, files, argv):
+def validate_recipe(recipe, *, prefix, service_name, files, argv, prepared_launch_required=False):
     """Intent checks only. No native acquisition, source flag, grant or authority.
 
     Check service-SID-independent schema relations using the *approved existing
@@ -310,6 +313,8 @@ def validate_recipe(recipe, *, prefix, service_name, files, argv):
         b._fields(recipe, {"schema", "host", "project_root", "owned_directories", "labels", "templates", "state_policy"})
         if recipe["schema"] not in (SCHEMA, SCHEMA_V4):
             b.fail("CONFIG_RECIPE", "versioned finite recipe required")
+        if prepared_launch_required and recipe["schema"] != SCHEMA_V4:
+            b.fail("CONFIG_PREPARED_LAUNCH", "Bootstrap plan V3 requires the existing four-config recipe version 4")
         b._fields(recipe["host"], {"hostname", "machine_fingerprint_sha256"})
         hostname = recipe["host"]["hostname"]
         if type(hostname) is not str or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", hostname):
@@ -386,7 +391,7 @@ def validate_recipe(recipe, *, prefix, service_name, files, argv):
             file_descriptor_hex=_planned_sd(False).hex(), private_directory_descriptor_hex=_planned_sd(True).hex(),
             root_holder_descriptor_hex=_planned_sd(True).hex()))
         _validate_documents(projected, recipe=recipe, prefix=prefix, name=service_name, files=files,
-                            argv=argv, root=root, final=False)
+                            argv=argv, root=root, final=False, prepared_launch_expected=False)
         return b.canonical(recipe)
     except b.BootstrapError:
         raise
@@ -433,7 +438,17 @@ class _Configuration:
         self.loader_error = None
         self.directories = tuple(sorted(set(original.intent.directories) | set(self.recipe['owned_directories']),
                                         key=lambda p: (p.count('/'), len(p), p)))
-        self.expected_namespace = frozenset((*self.directories, *(f.path for f in original.intent.files), *CONFIG_PATHS))
+        launch = original.intent.prepared_launch
+        launch_files = () if launch is None else (*launch.vendor_targets, launch.manifest_path)
+        self.expected_namespace = frozenset((*self.directories, *(f.path for f in original.intent.files),
+                                             *CONFIG_PATHS, *launch_files))
+        self.launch_output_paths = None
+        self.launch_manifest_bytes = None
+        self._sealed_launch_output_paths = None
+        self._sealed_launch_capture = None
+        self._sealed_launch_manifest_bytes = None
+        self.vendor_target_facts = {}
+        self._vendor_target_facts_seal = None
         self.descriptors = {False: self.backend.sd(False), True: self.backend.sd(True)}
         for directory, raw in self.descriptors.items():
             if raw != _planned_sd(directory):
@@ -456,6 +471,12 @@ class _Configuration:
                 or original.intent is not self.intent or original.owner is not self.owner
                 or original.backend is not self.backend or self.intent.original_raw != self.raw
                 or self.intent.provisioning != self.recipe_raw or b.canonical(self.recipe) != self.recipe_raw
+                or self.intent.prepared_launch is not self.original._original_prepared_launch
+                or self._sealed_launch_output_paths is not None and self.launch_output_paths != self._sealed_launch_output_paths
+                or self._sealed_launch_capture is not None and not self._launch_capture_is_exact()
+                or self._sealed_launch_manifest_bytes is not None and self.launch_manifest_bytes != self._sealed_launch_manifest_bytes
+                or self._vendor_target_facts_seal is not None
+                    and b.digest(b.canonical(self.vendor_target_facts)) != self._vendor_target_facts_seal
                 or b.parse_plan(self.raw) != self.intent or not set(original.nodes) <= self.expected_namespace
                 or self.directories != self._directories or self.expected_namespace != self._expected_namespace
                 or tuple(sorted(self.descriptors.items())) != self._descriptors
@@ -516,6 +537,35 @@ class _Configuration:
             self.original._compare_node(node)
             if (node.image.size,node.image.sha256,node.image.raw_sd) != (len(raw),b.digest(raw),self.descriptors[False]):
                 b.fail('CONFIG_MANIFEST','four final byte/security snapshots must remain bound')
+        if self.original.intent.prepared_launch is not None:
+            compiler = self.original._compiler_record
+            if (self.launch_manifest_bytes is None or self.launch_output_paths is None
+                    or not self.launch_output_paths and (compiler is None or compiler.exit_code == 0)):
+                b.fail('CONFIG_MANIFEST', 'compiler outputs and protected launch manifest are not complete')
+            for relative in sorted(self.launch_output_paths | {self.original.intent.prepared_launch.manifest_path}):
+                node = self.original.nodes[relative]
+                self.original._compare_node(node)
+                if node.image.raw_sd != self.final_descriptors[False] or node.image.links != 1 or node.image.attributes & 0x400:
+                    b.fail('CONFIG_MANIFEST', 'prepared launch output must remain protected regular single-link data')
+                if relative == self.original.intent.prepared_launch.manifest_path:
+                    if (node.image.size, node.image.sha256) != (len(self.launch_manifest_bytes), b.digest(self.launch_manifest_bytes)):
+                        b.fail('CONFIG_MANIFEST', 'protected launch manifest bytes changed')
+            compiler = self.original._compiler_record
+            for relative, node in compiler.capture_nodes:
+                if node.image.directory:
+                    self.original._compare_node(node)
+                    if (node.image.raw_sd != self.final_descriptors[True] or node.image.links != 1
+                            or node.image.attributes & 0x400):
+                        b.fail('CONFIG_MANIFEST', 'compiler-created package directory is not final protected regular data')
+            if self.expected_namespace != self._expected_namespace:
+                b.fail('CONFIG_MANIFEST', 'closed prepared namespace changed after compiler capture')
+            for target, facts in self.vendor_target_facts.items():
+                node = self.original.nodes[target]
+                if ((node.image.size, node.image.sha256) != (facts['target_size'], facts['target_sha256'])
+                        or node.image.raw_sd != self.final_descriptors[False]
+                        or b.digest(node.image.raw_sd) != facts['target_security_sha256']
+                        or node.image.links != 1 or node.image.attributes & 0x400):
+                    b.fail('CONFIG_MANIFEST', 'regular vendor copy identity/content/security drifted')
         for node in self.original.nodes.values():
             if node.image.directory:
                 expected={ntpath.basename(n.path) for n in self.original.nodes.values() if ntpath.dirname(n.path)==node.path}
@@ -573,6 +623,111 @@ class _Configuration:
         node.image, node.label = image, label
         self.pending_ack = self.original._configuration_ack = None
 
+    def seal_launch_outputs(self, outputs, *, allow_empty=False):
+        launch = self.original.intent.prepared_launch
+        if launch is None or self.launch_output_paths is not None:
+            b.fail('CONFIG_MANIFEST', 'one original prepared-launch capture is required')
+        record = self.original._compiler_record
+        if (record is None or record is not self.original._original_compiler_record
+                or record.owner is not self.owner or self.original.installer_compiler_state != 'EXIT_KNOWN'
+                or not record.capture_complete or record.capture_nodes is None
+                or record.capture_file_paths is None or record.capture_bindings is None):
+            b.fail('CONFIG_MANIFEST', 'same-original terminal compiler capture is required before sealing')
+        if (type(record.capture_file_paths) is not tuple
+                or type(record.capture_nodes) is not tuple or type(record.capture_bindings) is not tuple
+                or type(record.namespace_before_capture) is not frozenset
+                or type(record.exit_code) is not int or record.exit_code == 259):
+            b.fail('CONFIG_MANIFEST', 'original compiler capture phase/storage is malformed')
+        bindings = record.capture_bindings
+        captured_paths = tuple(path for path, _node in record.capture_nodes)
+        rows = frozenset(record.capture_file_paths)
+        directories = frozenset((launch.output_dir + '/comsol_mcp',
+                                 launch.output_dir + '/comsol_mcp/worker_java'))
+        class_prefix = launch.output_dir + '/comsol_mcp/worker_java/'
+        if (len(captured_paths) != len(set(captured_paths))
+                or len(record.capture_file_paths) != len(rows)
+                or set(captured_paths) != set(rows) | (set(captured_paths) & directories)
+                or not set(captured_paths) - set(rows) <= directories
+                or (not rows and not allow_empty)
+                or record.exit_code == 0 and not rows
+                or launch.manifest_path in self.original.nodes
+                or record.namespace_before_capture is None
+                or set(captured_paths) & set(record.namespace_before_capture)
+                or set(self.original.nodes) != set(record.namespace_before_capture) | set(captured_paths)
+                or len(bindings) != len(record.capture_nodes)):
+            b.fail('CONFIG_MANIFEST', 'captured output namespace is not one closed compiler result')
+        if any(path not in directories and (not path.startswith(class_prefix)
+                or not re.fullmatch(r'PersistentComsolWorker(?:\$[A-Za-z0-9_$]+)?\.class', path[len(class_prefix):]))
+                for path in captured_paths):
+            b.fail('CONFIG_MANIFEST', 'compiler capture escaped the fixed package/class namespace')
+        if captured_paths and not directories <= set(captured_paths):
+            b.fail('CONFIG_MANIFEST', 'compiler package capture lacks both original package directories')
+        if record.exit_code == 0 and launch.output_dir + '/comsol_mcp/worker_java/PersistentComsolWorker.class' not in rows:
+            b.fail('CONFIG_MANIFEST', 'successful compiler capture lacks the fixed Worker main class')
+        for (path, node), (bound_path, bound_node, handle, image) in zip(record.capture_nodes, bindings):
+            if (path != bound_path or node is not bound_node or path != node.relative
+                    or self.original.nodes.get(path) is not node or node.path != self.intent.destination(path)
+                    or node.handle is not handle or type(handle) is not b._Handle
+                    or handle.owner is not self.owner or handle.closed or handle.state != 'ACQUIRED'
+                    or node.image is not image or image is None or image.directory != (path not in rows)
+                    or path not in directories | rows
+                    or self.backend.image(handle, node.path, image.directory) != image):
+                b.fail('CONFIG_MANIFEST', 'compiler capture node/handle/image was replaced or drifted before seal')
+        self.launch_output_paths = rows
+        self.expected_namespace = frozenset((*self.expected_namespace, *captured_paths))
+        self._expected_namespace = self.expected_namespace
+        self._sealed_launch_output_paths = self.launch_output_paths
+        self._sealed_launch_capture = tuple(bindings)
+
+    def _launch_capture_is_exact(self):
+        record = self.original._compiler_record
+        if (record is None or record is not self.original._original_compiler_record
+                or record.capture_bindings is None or record.capture_nodes is None
+                or len(record.capture_bindings) != len(self._sealed_launch_capture)
+                or len(record.capture_nodes) != len(self._sealed_launch_capture)):
+            return False
+        for current, current_node, sealed in zip(record.capture_bindings, record.capture_nodes,
+                                                  self._sealed_launch_capture):
+            if (len(current) != 4 or len(sealed) != 4
+                    or any(left is not right for left, right in zip(current[1:], sealed[1:]))
+                    or current[0] != sealed[0] or current_node[0] != sealed[0]
+                    or current_node[1] is not sealed[1]):
+                return False
+            path, node, handle, image = sealed
+            if (record.capture_nodes is None or self.original.nodes.get(path) is not node
+                    or node.handle is not handle or node.image is not image):
+                return False
+        return True
+
+    def seal_launch_manifest(self, manifest_raw):
+        if (self.original.intent.prepared_launch is None or self.launch_output_paths is None
+                or self.launch_manifest_bytes is not None or type(manifest_raw) is not bytes
+                or not 1 <= len(manifest_raw) <= b.MAX_PLAN):
+            b.fail('CONFIG_MANIFEST', 'one bounded immutable launch manifest follows complete compiler capture')
+        self.launch_manifest_bytes = manifest_raw
+        self._sealed_launch_manifest_bytes = manifest_raw
+
+    def seal_vendor_copies(self):
+        launch = self.original.intent.prepared_launch
+        if (launch is None or self._vendor_target_facts_seal is not None
+                or set(self.vendor_target_facts) != set(launch.vendor_targets)
+                or self.final_descriptors is None):
+            b.fail('CONFIG_MANIFEST', 'complete finite original vendor copy map is required')
+        for relative, facts in self.vendor_target_facts.items():
+            node = self.original.nodes.get(relative)
+            if node is None or node.handle is None or node.image is None:
+                b.fail('CONFIG_MANIFEST', 'original regular vendor target node is required')
+            image = self.backend.image(node.handle, node.path, False)
+            if (image != node.image or image.directory or image.raw_sd != self.final_descriptors[False]
+                    or image.attributes & 0x400 or image.links != 1
+                    or (image.size, image.sha256) != (facts['target_size'], facts['target_sha256'])):
+                b.fail('CONFIG_MANIFEST', 'final readback of protected regular vendor target differs')
+            facts['target_size'] = image.size
+            facts['target_sha256'] = image.sha256
+            facts['target_file_id'] = [str(image.identity[0]), str(image.identity[1])]
+            facts['target_security_sha256'] = b.digest(image.raw_sd)
+        self._vendor_target_facts_seal = b.digest(b.canonical(self.vendor_target_facts))
+
     def compile(self, sid):
         self.check_original(self.original)
         if type(sid) is not str or not re.fullmatch(r'S-1-5-80-(\d+-){4}\d+', sid):
@@ -591,13 +746,23 @@ class _Configuration:
             storage_id='windows-volume:'+root['volume_id'], directory_descriptor_hex=self.final_descriptors[True].hex(),
             file_descriptor_hex=self.final_descriptors[False].hex(),
             private_directory_descriptor_hex=self.descriptors[True].hex(), root_holder_descriptor_hex=image.raw_sd.hex()))
+        prepared_launch_expected = self.intent.prepared_launch is not None
+        trusted_document = documents[CONFIG_PATHS[0]]
+        if prepared_launch_expected:
+            from ._windows_worker_bootstrap import manifest_reference
+            if "prepared_launch" in trusted_document:
+                b.fail("CONFIG_PREPARED_LAUNCH", "prepared manifest reference is installer-derived, never template supplied")
+            trusted_document["prepared_launch"] = manifest_reference()
+        elif "prepared_launch" in trusted_document:
+            b.fail("CONFIG_PREPARED_LAUNCH", "V1/V2 cannot carry a prepared launch reference")
         if self.recipe['schema'] == SCHEMA_V4:
             # B is frozen once, after the original root/SID/SD observations. R
             # and H derive from these SAME bytes, never the discarded projection.
             trusted_raw = b.canonical(documents[CONFIG_PATHS[0]])
             profile = _validate_documents(documents, recipe=self.recipe, prefix=self.intent.prefix,
                 name=self.intent.service_name, files=self.intent.files, argv=self.intent.argv,
-                root=root, final=True, trusted_payload=trusted_raw)
+                root=root, final=True, trusted_payload=trusted_raw,
+                prepared_launch_expected=prepared_launch_expected)
             provider = documents[CONFIG_PATHS[1]]
             host = profile.host_resource_profile
             index = _typed_stop_grant(self.recipe, provider, host.project_id)
@@ -614,7 +779,8 @@ class _Configuration:
                 (path, b.canonical(documents[path])) for path in CONFIG_PATHS[1:]))
         else:
             _validate_documents(documents, recipe=self.recipe, prefix=self.intent.prefix, name=self.intent.service_name,
-                files=self.intent.files, argv=self.intent.argv, root=root, final=True)
+                files=self.intent.files, argv=self.intent.argv, root=root, final=True,
+                prepared_launch_expected=prepared_launch_expected)
             frozen = tuple((p, b.canonical(documents[p])) for p in CONFIG_PATHS)
         if any(not 0 < len(raw) <= b.MAX_PLAN for _, raw in frozen):
             b.fail("CONFIG_BYTES", "final configuration bytes exceed bound")
@@ -653,6 +819,101 @@ def _service(original):
         b.fail("SCM_READBACK", "base SCM config changed during DACL setup")
     original.service_image = actual
     original.service_sid = api.lookup_service_sid(p.service_name)
+
+
+def _copy_prepared_vendor(original, config):
+    from . import _windows_worker_bootstrap as worker_bootstrap
+    recipe = original.intent.prepared_launch
+    if recipe is None:
+        return
+    for row in recipe.vendor_files:
+        original._check_sources_anchors()
+        source, source_image = original.vendor_sources[row.source]
+        if (source_image.size, source_image.sha256) != (row.size, row.sha256):
+            b.fail('PREPARED_VENDOR_SOURCE', 'original pinned vendor source differs from V3 recipe')
+        relative, path = row.target, original.intent.destination(row.target)
+        node = b._Node(path, relative, None)
+        original.nodes[relative] = node  # exact target is retained before the exclusive birth
+        if row.role == 'server_config':
+            raw = original.backend.read(source, source_image.size)
+            if original.backend.image(source, ntpath.join(recipe.vendor_source_root, *row.source.split('/')), False) != source_image:
+                b.fail('PREPARED_VENDOR_SOURCE', 'original WebBridge config source drifted during pinned read')
+            transformed = worker_bootstrap.loopback_server_config(raw)
+            config.native.create_bytes(node, transformed, config.descriptors[False])
+            expected_size, expected_hash = len(transformed), b.digest(transformed)
+        else:
+            node.handle = original.backend.create_file(path, config.descriptors[False], source, row.size)
+            expected_size, expected_hash = row.size, row.sha256
+        image = original.backend.image(node.handle, path, False)
+        if (image.size, image.sha256) != (expected_size, expected_hash) or image.attributes & 0x400 or image.links != 1:
+            b.fail('PREPARED_VENDOR_COPY', 'regular target copy/readback differs from its exact original source mapping')
+        node.image = image
+        config.finish_node(node, False, (expected_size, expected_hash))
+        source_path = ntpath.join(recipe.vendor_source_root, *row.source.split('/'))
+        config.vendor_target_facts[row.target] = {
+            'target_size': image.size, 'target_sha256': image.sha256,
+            'target_file_id': [str(image.identity[0]), str(image.identity[1])],
+            'source_file_id': [str(source_image.identity[0]), str(source_image.identity[1])],
+            'source_security_sha256': b.digest(source_image.raw_sd),
+            'target_security_sha256': b.digest(image.raw_sd),
+            'source_path': source_path,
+            'copy_equal': image.size == source_image.size and image.sha256 == source_image.sha256,
+            'fixed_transform': 'webbridge-loopback-v1' if row.role == 'server_config' else None,
+        }
+
+
+def _install_prepared_worker(original, config):
+    from . import _windows_worker_bootstrap as worker_bootstrap
+    recipe = original.intent.prepared_launch
+    if recipe is None:
+        return
+    original._check_sources_anchors()
+    windows_root, system_root = original.backend.system_roots()
+    argv = worker_bootstrap.compiler_argv(recipe, original.intent.prefix)
+    environment = worker_bootstrap.compiler_environment(recipe, original.intent.prefix, windows_root, system_root)
+    cwd = original.intent.destination(recipe.installer_cwd)
+    expected = {original.intent.destination(recipe.output_dir): 'directory', cwd: 'directory',
+                argv[0]: 'file', argv[-1]: 'file'}
+    expected.update({ntpath.join(original.intent.prefix, *path.split('/')): 'file'
+                     for path in recipe.classpath})
+    for path, kind in expected.items():
+        relative = path[len(original.intent.prefix) + 1:].replace('\\', '/')
+        node = original.nodes.get(relative)
+        if node is None or node.image.directory != (kind == 'directory'):
+            b.fail('PREPARED_COMPILER_INPUT', 'fixed compiler path is not an original owned node')
+    output_node = original.nodes[recipe.output_dir]
+    if original.backend.names(output_node.path):
+        b.fail('PREPARED_OUTPUT', 'original protected compiler output directory must be newly empty')
+    source_image = original.sources[recipe.worker_source][1]
+    classpath_rows = [{"path": path, "size": original.nodes[path].image.size,
+                       "sha256": original.nodes[path].image.sha256} for path in recipe.classpath]
+    record = worker_bootstrap.CompilerRecord(original.owner, recipe, argv, environment, cwd)
+    record.source_sha256 = source_image.sha256
+    record.classpath_sha256 = b.digest(b.canonical(classpath_rows))
+    record.namespace_before_capture = frozenset(original.nodes)
+    original.backend.start_fixed_compiler(original, record)
+    if original.installer_compiler_state != 'EXIT_KNOWN':
+        b.fail('COMPILER_EXIT_UNKNOWN', 'original fixed compiler did not reach its observed terminal state')
+    original.backend.close_fixed_compiler(record, original)
+    outputs = worker_bootstrap.capture_compiler_outputs(original, config, record)
+    compiler_facts = record.public_manifest_record()
+    profile_raw = dict(config.resolved.files)[CONFIG_PATHS[0]]
+    manifest = worker_bootstrap.manifest_document(plan_sha256=original.intent.sha256,
+        recipe=recipe, prefix=original.intent.prefix, profile_sha256=b.digest(profile_raw),
+        config_files=config.resolved.files, compiler_record=compiler_facts, outputs=outputs,
+        vendor_target_facts=config.vendor_target_facts, original=original)
+    manifest_raw = b.canonical(manifest)
+    config.seal_launch_manifest(manifest_raw)
+    relative = recipe.manifest_path
+    node = b._Node(original.intent.destination(relative), relative, None)
+    original.nodes[relative] = node  # protected manifest output registered before CreateFile
+    config.native.create_bytes(node, manifest_raw, config.final_descriptors[False])
+    config.finish_node(node, False, (len(manifest_raw), b.digest(manifest_raw)))
+    config.finish_descriptor(node)
+    original.backend.complete_fixed_compiler(record, original)
+    config.compare_generated_manifest()
+    if record.exit_code != 0:
+        raise b.BootstrapError('COMPILER_FAILED', 'fixed original javac retired with a nonzero exit code', owner=original)
 
 
 def apply_configuration(original):
@@ -694,10 +955,13 @@ def apply_configuration(original):
             original.nodes[item.path] = node
             node.handle = original.backend.create_file(node.path, config.descriptors[False], original.sources[item.path][0], item.size)
             config.finish_node(node, False, (item.size, item.sha256))
+        _copy_prepared_vendor(original, config)
         _service(original)
         config.bind_service_security()
         for node in original.nodes.values():
             config.finish_descriptor(node)
+        if original.intent.prepared_launch is not None:
+            config.seal_vendor_copies()
         config.resolved = config.compile(original.service_sid)  # all four frozen before first config write
         config._original_resolved = config.resolved
         config._resolved_bytes = config.resolved.files
@@ -708,6 +972,7 @@ def apply_configuration(original):
             original.nodes[relative] = node
             config.native.create_bytes(node, raw, config.descriptors[False])
             config.finish_node(node, False, (len(raw), b.digest(raw)))
+        _install_prepared_worker(original, config)
         original._compare()
         original.state = 'INSTALLED_STOPPED_START_BLOCKED'
         return {**original.preview(), 'trusted_profile_materialization': 'STATIC_FOUR_FILES_ONLY',
@@ -715,6 +980,13 @@ def apply_configuration(original):
     except BaseException as exc:
         if config.pending_ack is not None and original._configuration_ack is config.pending_ack:
             original.state = 'CONFIGURATION_ACK_PENDING'
+        elif not original.owner.uncertain and original.installer_compiler_state in {
+                'NEVER_STARTED', 'FAILED_NO_CHILD', 'RETIRED'}:
+            try:
+                original._compare()
+                original.state = 'PARTIAL_KNOWN'
+            except BaseException:
+                original.state, original.owner.uncertain = 'UNKNOWN', True
         else:
             original.state, original.owner.uncertain = 'UNKNOWN', True
         raise b.BootstrapError(getattr(exc, 'code', 'CONFIG_APPLY_UNKNOWN'), str(exc), owner=original) from exc
