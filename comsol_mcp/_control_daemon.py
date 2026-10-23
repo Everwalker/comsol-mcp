@@ -13615,16 +13615,26 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
         from ._windows_t037_broker import WindowsScmError
         raise WindowsScmError("SCM_BOOTSTRAP_SERVICE_REQUIRED", "bootstrap requests require the explicit SCM entrypoint")
     home = Path(home)
-    home.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(home, 0o700)
-    singleton = ProcessLock(home / "control.lock")
+    scm_publisher = None
+    if _scm_runtime is not None:
+        from ._windows_scm_publisher import prepare_home
+        scm_publisher = prepare_home(home, _scm_runtime)
+        singleton = scm_publisher._lock
+    else:
+        home.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(home, 0o700)
+        singleton = ProcessLock(home / "control.lock")
     try:
         from ._state_backup import assert_no_pending_restore
         assert_no_pending_restore(home)
     except Exception:
-        singleton.close()
+        if scm_publisher is not None:
+            scm_publisher.abort_before_publication()
+        else:
+            singleton.close()
         raise
-    token = secrets.token_urlsafe(32)
+    token = (scm_publisher.transport_secret() if scm_publisher is not None
+             else secrets.token_urlsafe(32))
     selected_provider_config = (host_provider_config if host_provider_config is not None
                                 else os.environ.get("COMSOL_MCP_HOST_PROVIDER_CONFIG"))
     selected_disk_config = (disk_resource_config if disk_resource_config is not None
@@ -13645,13 +13655,18 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
     try:
         daemon = ControlDaemon(home, **daemon_options)
     except Exception:
-        singleton.close()
+        if scm_publisher is not None:
+            scm_publisher.abort_before_publication()
+        else:
+            singleton.close()
         raise
     try:
+        if scm_publisher is not None:
+            scm_publisher.bind_original(daemon, _scm_profile_source_sha256)
         if _owner_observer is not None:
             _owner_observer(daemon)
         return _serve_control_listener(home, daemon, token, _scm_runtime,
-                                       _scm_bootstrap_request, _scm_profile_source_sha256)
+                                       _scm_bootstrap_request, _scm_profile_source_sha256, scm_publisher)
     finally:
         # Existing close drains accepted execution lanes and preserves UNKNOWN
         # ownership. SCM STOP is not a solver cancellation or a host RESTORE.
@@ -13668,13 +13683,21 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
                                               "accepted bootstrap is still pending after daemon drain")
                     accepted.result()  # Preserve the actual late exception.
             finally:
-                singleton.close()
+                scm_publisher.finish_after_daemon()
 
 
-def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, profile_source_sha256):
+def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, profile_source_sha256,
+                            scm_publisher=None):
     if _scm_runtime is not None:
         from ._windows_t037 import WindowsT037ProfileV2
         from ._windows_t037_broker import ScmServiceRuntime, WindowsScmError
+        from ._windows_scm_publisher import _Publisher
+        if (type(scm_publisher) is not _Publisher
+                or scm_publisher._runtime is not _scm_runtime
+                or scm_publisher._daemon is not daemon or scm_publisher._pyhome != home
+                or not secrets.compare_digest(token, scm_publisher.transport_secret())):
+            raise WindowsScmError("SCM_ORIGINAL_PUBLISHER_REQUIRED",
+                                  "SCM listener requires its original source publisher")
         profile = daemon._windows_t037_profile
         if (type(_scm_runtime) is not ScmServiceRuntime
                 or type(profile) is not WindowsT037ProfileV2
@@ -13708,12 +13731,14 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
                     pass
                 self.send_error(500, "internal control error")
         def log_message(self, *_): pass
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = (scm_publisher.listener(Handler) if scm_publisher is not None
+              else ThreadingHTTPServer(("127.0.0.1", 0), Handler))
     try:
         server.daemon_threads = True
         temporary = home / "control.json.tmp"
         endpoint = {"port": server.server_port, "token": token, "pid": os.getpid()}
-        start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
+        start_epoch_ms = (scm_publisher._namespace.birth if scm_publisher is not None
+                          else process_identity(os.getpid())["start_epoch_ms"])
         if isinstance(start_epoch_ms, int):
             endpoint["process_start_epoch_ms"] = start_epoch_ms
         daemon_identity = {
@@ -13731,9 +13756,12 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
         # This fixed-schema file is credential-free and diagnostic only. The
         # authenticated endpoint/token remains exclusively in control.json.
         _write_control_daemon_identity(home, daemon_identity)
-        temporary.write_text(json.dumps(endpoint))
-        os.chmod(temporary, 0o600)
-        temporary.replace(home / "control.json")
+        if scm_publisher is None:
+            temporary.write_text(json.dumps(endpoint))
+            os.chmod(temporary, 0o600)
+            temporary.replace(home / "control.json")
+        else:
+            scm_publisher.publish(server)
         stop_monitor = None
         monitor_done = threading.Event()
         bootstrap_failure = []
@@ -13741,6 +13769,7 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
             if _scm_runtime is not None:
                 # SCM readiness follows actual daemon and endpoint initialization.
                 # This does not attest child isolation or native policy readiness.
+                scm_publisher.before_running()
                 _scm_runtime.mark_running()
                 daemon._windows_t037_host_control_issuer(_scm_runtime)
                 daemon._retain_t037_scm_runtime(_scm_runtime)
@@ -13807,7 +13836,7 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
                 stop_monitor.join(timeout=1)
     finally:
         if _scm_runtime is not None:
-            server.server_close()
+            scm_publisher.close_listener_and_withdraw()
 
 
 def serve_windows_scm_service(home, *, service_name, windows_t037_profile,

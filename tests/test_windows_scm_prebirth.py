@@ -250,53 +250,48 @@ def test_runtime_is_original_once_nonserializable_and_invalid_after_SCM_return(m
     finally:daemon.close();other.close()
 
 
+
 def test_original_ServiceMain_serve_listener_RUNNING_real_daemon_factory_chain(monkeypatch,tmp_path):
-    profile,wfp,snapshot=effective_group_fixture()
-    monkeypatch.setattr(win,'os',NS(**dict(vars(os),name='nt')))
-    initial=_write_provider(tmp_path/'startup-provider',profile.host_resource_profile,[])
-    provider_path=initial._path;initial.close()
-    monkeypatch.setattr(win,'load_trusted_profile',lambda path:profile)
-    events,sdk=static_sdk(monkeypatch,profile)
-    monkeypatch.setattr(control,'process_identity',lambda pid:{'start_epoch_ms':42})
-    monkeypatch.setattr('comsol_mcp._managed_backend.collect_legacy_registry',lambda:{})
-    observed={};scm=_ScmApi()
-    class Server:
-        server_port=12345
-        def __init__(self,*args):
-            daemon=observed['daemon']
-            assert daemon._windows_t037_scm_runtime is None
+    from tests._scm_publisher_software_fixture import scm_publisher_chain
+    with scm_publisher_chain(monkeypatch,tmp_path) as s:
+        profile=s.profile
+        monkeypatch.setattr(win,'os',NS(**dict(vars(os),name='nt')))
+        events,sdk=static_sdk(monkeypatch,profile)
+        observed={}
+        def during_listener_init(server):
+            daemon=s.daemons[0]
+            assert s.runtime._state=='START_PENDING' and daemon._windows_t037_scm_runtime is None
             factory=daemon._new_t037_session_factory('project','scm-listener-session')
             observed['factory']=factory
             assert factory._scm_binding is None
             with pytest.raises(ExecutionContractError):factory.preflight()
-        def serve_forever(self):
-            daemon=observed['daemon'];factory=daemon._new_t037_session_factory('project','scm-listener-session')
-            runtime=observed['runtime']
+            assert factory._api is None and factory._job is None and not resume._pending
+        s.on_init=during_listener_init
+        def while_running(server):
+            daemon=s.daemons[0];factory=daemon._new_t037_session_factory('project','scm-listener-session')
+            assert factory is observed['factory']
+            runtime=s.runtime
             assert runtime._state=='RUNNING' and daemon._windows_t037_scm_runtime is runtime
             assert admission._require_factory_runtime(factory)[0] is runtime
             with pytest.raises(ExecutionContractError) as error:factory.preflight()
             assert error.value.details['reasons']==['FINITE_FILESYSTEM_MIC_TARGET_PRODUCER_UNAVAILABLE']
             assert factory._api is None and factory._job is None and not resume._pending
             observed['reason']=error.value.details
-            assert scm.handler(broker.SERVICE_CONTROL_STOP,0,None,None)==0
-        def shutdown(self):pass
-        def server_close(self):pass
-    monkeypatch.setattr(control,'ThreadingHTTPServer',Server)
-    def service_main(runtime):
-        observed['runtime']=runtime
-        assert runtime._state=='START_PENDING'
-        control.serve(tmp_path/'served-home',host_provider_config=provider_path,
-            windows_t037_profile='SOFTWARE_PINNED_PROFILE',_scm_runtime=runtime,
-            _scm_profile_source_sha256=profile.source_sha256,
-            _owner_observer=lambda daemon:observed.update(daemon=daemon))
-    service=broker.WindowsScmServiceBroker._for_software_test(
-        profile.service_name,service_main,api=scm,token=broker._SCM_TEST_API_TOKEN)
-    service.run()
-    assert [s.current_state for s in scm.status]==[
-        broker.SERVICE_START_PENDING,broker.SERVICE_RUNNING,broker.SERVICE_STOP_PENDING,broker.SERVICE_STOPPED]
-    with pytest.raises(ExecutionContractError):admission._require_factory_runtime(observed['factory'])
-    record(tmp_path,case='full_ServiceMain_serve_daemon_factory',states=[s.current_state for s in scm.status],
-           static_failure=observed['reason'],same_original_runtime=True,no_job_child_resume=True,events=events)
+            assert s.scm.handler(broker.SERVICE_CONTROL_STOP,0,None,None)==0
+        s.action=while_running
+        def service_main(runtime):
+            assert runtime is s.runtime and runtime._state=='START_PENDING'
+            control.serve(s.home,host_provider_config=s.provider_path,
+                windows_t037_profile=s.profile_path,_scm_runtime=runtime,
+                _scm_profile_source_sha256=profile.source_sha256)
+        s.software_broker(profile.service_name,service_main).run()
+        assert [row.current_state for row in s.status_rows]==[
+            broker.SERVICE_START_PENDING,broker.SERVICE_RUNNING,broker.SERVICE_STOP_PENDING,broker.SERVICE_STOPPED]
+        with pytest.raises(ExecutionContractError):admission._require_factory_runtime(observed['factory'])
+        assert s.constructor_calls==s.servers[0].closed_count==1 and s.close_calls==1
+        assert s.owners[0]._stream.closed and not resume._pending
+        record(tmp_path,case='full_ServiceMain_serve_daemon_factory',states=s.scm.status,
+               static_failure=observed['reason'],same_original_runtime=True,no_job_child_resume=True,events=events)
 
 
 @pytest.mark.parametrize('fault',[None,'configure_false','readback_drift'])

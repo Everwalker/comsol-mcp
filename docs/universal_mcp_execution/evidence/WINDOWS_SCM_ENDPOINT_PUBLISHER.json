@@ -1,0 +1,306 @@
+{
+ "schema": "comsol-mcp.windows-scm-endpoint-publisher-source/1",
+ "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_WITH_1788_INTEGRATION",
+ "baseline_commit": "830690db5a46a364d5a32b6f54fffcca4c8db6b2",
+ "write_scope": {
+  "new_production": [
+   "comsol_mcp/_windows_scm_publisher.py",
+   "comsol_mcp/_windows_scm_publisher_native.py"
+  ],
+  "new_tests": [
+   "tests/test_windows_scm_publisher.py",
+   "tests/test_windows_scm_publisher_native.py"
+  ],
+  "new_doc": "docs/universal_mcp_execution/SCM_ENDPOINT_PUBLISHER.md",
+  "compact": "docs/universal_mcp_execution/evidence/WINDOWS_SCM_ENDPOINT_PUBLISHER.json",
+  "private": "_state/universal-windows-scm-publisher",
+  "shared_Controller": "UNTOUCHED_BY_THIS_UNIT"
+ },
+ "controller_integration": "PRIVATE_PATCH_ONLY_AGAINST_EXACT830690_MAIN_REBASE_AFTER_PRIMARY_LEASE_RELEASE",
+ "interface": [
+  "prepare_home(home,original_runtime)",
+  "bind_original(original_daemon,source_sha256)",
+  "listener(handler)",
+  "publish(original_listener)",
+  "before_running()",
+  "close_listener_and_withdraw()",
+  "release_singleton()",
+  "recover_publish_ack()/recover_withdraw_ack() only original known effects",
+  "abort_before_publication()/finish_after_daemon() original lifecycle"
+ ],
+ "implementation": {
+  "singleton": "ONE original ProcessLock.__new__ then original __init__; not __enter__; original instance rooted before effect",
+  "borrow": "Same actual stream/fd/borrowed CRT HANDLE and identity/SD/MIC; borrowed HANDLE is never CloseHandle-owned",
+  "state": "Existing canonical SYSTEM/protected home; exact observed service SID bounded dataModify; zero/one LookupAccountSidW SidTypeUser, noninheriting reader",
+  "publish": "Exclusive original relative stage; explicit final DACL+Medium NW LABEL at create; bounded full write/flush/readback; same-volume handle-relative replace; known closes before RUNNING",
+  "withdraw": "Listener closed first; own final identity/bytes/SD/LABEL compare; original DELETE then close/named absence; original singleton last",
+  "unknown": "Original calls/functions/buffers/outputs/closers/owner remain rooted. No possibly-effective SDK/close retry, borrowed close, new owner, force/POSIX/truncate, old PID control or bearer restoration",
+  "tcb": "Finite SYSTEM/admin/service namespace/source contract; not a global file/DLL/generation theorem"
+ },
+ "software": {
+  "tests": 282,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "new_controls": 111,
+  "affected_existing": 171,
+  "by_file": {
+   "tests.test_windows_scm_publisher_native": 35,
+   "tests.test_windows_scm_publisher": 76,
+   "tests.test_windows_scm_endpoint": 146,
+   "tests.test_control_client": 19,
+   "tests.test_host_scoped_provider": 6
+  },
+  "deduplicated_once": true,
+  "historical_counts_added": false,
+  "full_flow": "Original production ServiceMain code under software SCM API -> prepare -> original one ProcessLock -> actual privately patched Controller.serve/ControlDaemon -> native-SDK seam stage/replace -> production RUNNING/sourcebind -> accepted raw consumer -> production request/Handler/daemon health+dispatch under HTTP seam -> listener close -> own withdraw -> singleton close",
+  "seams": [
+   "SOFTWARE SCM SDK callbacks/status",
+   "SOFTWARE Win64 exports with real ctypes output storage",
+   "SOFTWARE trusted-profile loader fixture/discovery registry",
+   "SOFTWARE server socket and urllib transport bridge",
+   "Real original local ProcessLock and macOS fd/provider fixtures in private/tmp"
+  ],
+  "unknown_test_cleanup": "Intentionally ambiguous SOFTWARE assertions retain roots/no replay. Fixture teardown only closes its real test-owned macOS stream; not production/native cleanup evidence"
+ },
+ "binding": {
+  "original_regular_git_inputs": 694,
+  "candidate_inputs": 699,
+  "overlays": 6,
+  "public_new_files": 5,
+  "private_Controller_overlay": 1,
+  "actual_import_records": 64,
+  "actual_source_loader_exec_events": 56,
+  "actual_module_exec_events": 64,
+  "generated_nonfile_code_events": 433,
+  "source_bytes_before_after": "ALL_UNCHANGED",
+  "outside_imports_or_execution": 0,
+  "unexpected_effect_attempts": 0,
+  "import_versus_loader": "Imports are actual module origins, loader rows are actual exec_module calls, module frames additionally observe pytest rewrite loaders; no missing loader events invented",
+  "frozen_source": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/source-before.json",
+   "bytes": 345521,
+   "sha256": "6cee05e6cafa585611378d9d206d0930870a34ccdd08c2b73af5b23d5cfb1964"
+  },
+  "imports": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/imports.json",
+   "bytes": 43196,
+   "sha256": "638e07203414d7328928d23db8e5efbecb507e0f725784d58c3a43cf4194d5fb"
+  },
+  "loaders": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/source-loader-executions.json",
+   "bytes": 48421,
+   "sha256": "491a88b8795e770df955b46542086bd1aadc71a0ac26e941ff812313e83c2f1d"
+  },
+  "module_executions": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/module-executions.json",
+   "bytes": 62780,
+   "sha256": "9aa8047a34474d03ddb32015d080d6cacd0971e7d51f2876349689fc48c7fca7"
+  }
+ },
+ "original_failures_preserved": [
+  {
+   "label": "initial-r1",
+   "result": "29PASS_1SETUP_ERROR",
+   "cause": "fixture used nonexistent provider.config_path; corrected explicit actual provider file path"
+  },
+  {
+   "label": "candidate-r5",
+   "result": "97PASS_1FAIL",
+   "cause": "negative fixture violated existing HostResourceProfile logon SID/account consistency before reaching publisher; corrected both fields, retained publisher rejection"
+  }
+ ],
+ "history": [
+  {
+   "label": "initial-r1",
+   "tests": 30,
+   "failures": 0,
+   "errors": 1,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/initial-r1/junit.xml",
+    "bytes": 6200,
+    "sha256": "b166d8d097acb271b8278481ac4c0224eed2ad56f95ad29b2d5fa13b71685e42"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/initial-r1/source-before.json",
+    "bytes": 345092,
+    "sha256": "2848d4b2b57f2b931094dc459acb340370ffb412121e01ab1f03b18b6dd96376"
+   }
+  },
+  {
+   "label": "candidate-r2",
+   "tests": 30,
+   "failures": 0,
+   "errors": 0,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r2/junit.xml",
+    "bytes": 5843,
+    "sha256": "97c2e187b25455034680933d1fd9578de9cd380958c8f37ce7bd0acf5afcf3b2"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r2/source-before.json",
+    "bytes": 345092,
+    "sha256": "15df443733bdb096c75202c7ebaaa6bbb303a7633c2c7f02ea53eb5c93b84d97"
+   }
+  },
+  {
+   "label": "candidate-r3",
+   "tests": 59,
+   "failures": 0,
+   "errors": 0,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r3/junit.xml",
+    "bytes": 10200,
+    "sha256": "92faa4dc97ba4c9c776d8068942d1712eaea9c1da8b8f9a4990d055492c3a58e"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r3/source-before.json",
+    "bytes": 345092,
+    "sha256": "d441afb20d33c2187d509d19277d2e89cbdade00bbf8eb6975bc6e4c6a40943b"
+   }
+  },
+  {
+   "label": "candidate-r4",
+   "tests": 83,
+   "failures": 0,
+   "errors": 0,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r4/junit.xml",
+    "bytes": 13984,
+    "sha256": "876099d4034c5f0fcd4b498dec74d7970083316a6e98b96508d4b5ebc337ea86"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r4/source-before.json",
+    "bytes": 345092,
+    "sha256": "b094fc0bb7d6036a086546921c10dbe8b053f8cf328d36a5fe2c9395648a3a76"
+   }
+  },
+  {
+   "label": "candidate-r5",
+   "tests": 98,
+   "failures": 1,
+   "errors": 0,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r5/junit.xml",
+    "bytes": 17744,
+    "sha256": "3336f1315ae1ce1ccb1cd12a9a0514b919fb5e5db18e9ec623a14d88a52553f5"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r5/source-before.json",
+    "bytes": 345092,
+    "sha256": "c9d0e34d4a627c9b8301d9836dd2324d92386846be28d7f0aa412e22b1a084c5"
+   }
+  },
+  {
+   "label": "candidate-r6",
+   "tests": 102,
+   "failures": 0,
+   "errors": 0,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r6/junit.xml",
+    "bytes": 16942,
+    "sha256": "0f9b9730e770cf18a3b4ce5080e12a5e876414998d43bf4750c0ef91492b3a59"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/candidate-r6/source-before.json",
+    "bytes": 345092,
+    "sha256": "f773d954e0da4217c76c9e4209c7a58f420484f5bb971608c493e765ca40739f"
+   }
+  },
+  {
+   "label": "final-r1",
+   "tests": 279,
+   "failures": 0,
+   "errors": 0,
+   "skipped": 0,
+   "binding_pass": true,
+   "raw": {
+    "path": "_state/universal-windows-scm-publisher/final-r1/junit.xml",
+    "bytes": 44575,
+    "sha256": "5e5f988922cde9b6a10f483d847c948305905a46385651f080204f24143f68ea"
+   },
+   "source": {
+    "path": "_state/universal-windows-scm-publisher/final-r1/source-before.json",
+    "bytes": 345521,
+    "sha256": "7ac040e7e748473abe31bed9a5b612c272b03ce9dec39d3ae70b42507276a27c"
+   }
+  }
+ ],
+ "scope": {
+  "IMPLEMENTED": "SOURCE_NEW_HELPERS",
+  "SOFTWARE": "PASS_282_IN_EXACT_FROZEN_CANDIDATE",
+  "SDK_OBSERVATION": "NOT_RUN",
+  "NATIVE_SCM_HTTP_WINDOWS": "NOT_RUN",
+  "SYSTEM_FINAL_SD_LABEL_CREATION": "UNQUALIFIED",
+  "CROSS_USER_AND_RESTRICTED_SERVICE_ACCESS": "UNQUALIFIED",
+  "host_changes_services_grants_profiles_COMSOL_JVM": "NOT_RUN",
+  "Resume_native_issuer": "UNCHANGED_NOT_AUTHORIZED",
+  "Controller_merge_publication_Main_acceptance": "PENDING",
+  "user_goal": "REMAINS_ACTIVE"
+ },
+ "refs": {
+  "manifest": {
+   "path": "_state/universal-windows-scm-publisher/HASH_MANIFEST.json",
+   "bytes": 22586,
+   "sha256": "8310a2f9e17298a1a0f17c8007178722afc9d1f5ff86f75ea1edcf49313b959e"
+  },
+  "mechanical": {
+   "path": "_state/universal-windows-scm-publisher/MECHANICAL_CHECK.json",
+   "bytes": 2764,
+   "sha256": "4ef336119bb8e2d0013f99f1345b12dd33822f70be9391f0ba4102ec37bf728a"
+  },
+  "junit": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/junit.xml",
+   "bytes": 45048,
+   "sha256": "b0a3bb01758b52cfe047cf770021831c446779bcbd190ffe95222f36da3c0642"
+  },
+  "result": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/result.json",
+   "bytes": 897,
+   "sha256": "0efa22c78a6a9c5215db28f51e0c6cb5d4b1e5457ed9647250880c211ed14fad"
+  },
+  "command": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/command.json",
+   "bytes": 3113,
+   "sha256": "3512474e05c92a94522a32c99d497c20197f472be41653363e6786908dbe8f92"
+  },
+  "Controller_AST": {
+   "path": "_state/universal-windows-scm-publisher/CONTROLLER_AST_CHECK.json",
+   "bytes": 799,
+   "sha256": "9fffaeff4a85198e05b37a227eb66227b820306772329adf085716f5ce47e67a"
+  },
+  "private_patch": {
+   "path": "_state/universal-windows-scm-publisher/controller-830690.patch",
+   "bytes": 6340,
+   "sha256": "f7766b0b82a6ca0babb720fef5790a91bd6aae2cef65b3a6f33113d652846848"
+  },
+  "review_delta": {
+   "path": "_state/universal-windows-scm-publisher/candidate-source-and-private-hook.patch",
+   "bytes": 106935,
+   "sha256": "35b73ab9b0ac116b1c159245570270a03dab322c6c05faad997184734e513d50"
+  },
+  "boundary": {
+   "path": "_state/universal-windows-scm-publisher/final-r2/boundary.json",
+   "bytes": 234,
+   "sha256": "c3a3b37b143603909f336400656799a222c893c060a3a665354f40d0689eb5c0"
+  }
+ },
+ "current_integration": {
+  "compact": "docs/universal_mcp_execution/evidence/WINDOWS_SCM_PUBLISHER_INTEGRATION.json",
+  "Main_review": "_state/universal-main-review/20261023-publisher-publication/MAIN_REVIEW.json",
+  "native": "NOT_RUN_UNQUALIFIED",
+  "historical282": "Original observations retained below; current1788 result is separate."
+ }
+}

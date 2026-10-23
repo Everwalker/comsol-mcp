@@ -265,66 +265,29 @@ def test_windows_t037_internal_request_uses_existing_control_queue_and_rejects_p
         daemon.close()
 
 
+
 def test_production_scm_entrypoint_composes_actual_serve_and_drains_on_stop(tmp_path, monkeypatch):
-    from comsol_mcp import _control_daemon as control
-    from comsol_mcp import _windows_t037 as t037
-    from tests.test_windows_host_change import _profile
-    profile = t037.WindowsT037ProfileV2(
-        host_resource_profile=_profile(), source_sha256='e' * 64,
-        source_identity={'device': 1, 'inode': 2}, security_semantics='SOFTWARE_FIXTURE_ONLY')
-    monkeypatch.setattr(t037, 'load_trusted_profile', lambda _path: profile)
-    api = _ScmApi()
-    errors, events = [], []
-    stopped = threading.Event()
-    entered = threading.Event()
-    class Daemon:
-        def __init__(self, home, **options):
-            assert options['windows_t037_profile'] == 'pinned-profile'
-            self._windows_t037_profile = profile
-            events.append('daemon-created')
-        def _windows_t037_host_control_issuer(self, runtime):
-            assert runtime.is_active
-            events.append('trusted-issuer')
-        def _retain_t037_scm_runtime(self, runtime):
-            assert runtime.is_active  # Stub daemon boundary only; actual retention has dedicated full-function coverage.
-        def close(self):
-            events.append('drained-close')
-    class Server:
-        server_port = 12345
-        def __init__(self, *_):
-            events.append('listener-bound')
-        def serve_forever(self):
-            entered.set()
-            assert stopped.wait(3)
-        def shutdown(self):
-            events.append('listener-shutdown')
-            stopped.set()
-        def server_close(self):
-            events.append('listener-close')
-    monkeypatch.setattr(control, 'ControlDaemon', Daemon)
-    monkeypatch.setattr(control, 'ThreadingHTTPServer', Server)
-    monkeypatch.setattr(control, 'process_identity', lambda _pid: {'start_epoch_ms': 42})
-    from comsol_mcp import _windows_t037_broker as module
-    monkeypatch.setattr(module, 'WindowsScmServiceBroker',
-                        lambda name, callback: WindowsScmServiceBroker._for_software_test(
-                            name, callback, api=api, token=_SCM_TEST_API_TOKEN))
-    def run():
-        try:
-            control.main(['--home', str(tmp_path/'home'), '--windows-t037-profile', 'pinned-profile',
-                          '--windows-scm-service-name', 'ComsolHost'])
-        except BaseException as exc:
-            errors.append(exc)
-    thread = threading.Thread(target=run)
-    thread.start()
-    assert entered.wait(2)
-    assert [row.current_state for row in api.status] == [SERVICE_START_PENDING, SERVICE_RUNNING]
-    assert api.handler(SERVICE_CONTROL_STOP, 0, None, None) == ERROR_SUCCESS
-    thread.join(4)
-    assert not thread.is_alive()
-    assert errors == []
-    assert events == ['daemon-created', 'listener-bound', 'trusted-issuer', 'listener-shutdown',
-                      'listener-close', 'drained-close']
-    assert api.status[-1].current_state == SERVICE_STOPPED
+    from tests._scm_publisher_software_fixture import scm_publisher_chain
+    with scm_publisher_chain(monkeypatch, tmp_path) as s:
+        errors = []
+        def run():
+            try:s.cd.main(s.main_args())
+            except BaseException as exc:errors.append(exc)
+        thread = threading.Thread(target=run)
+        thread.start()
+        assert s.entered.wait(2), errors
+        assert s.scm.status == [SERVICE_START_PENDING, SERVICE_RUNNING]
+        assert s.scm.handler(SERVICE_CONTROL_STOP, 0, None, None) == ERROR_SUCCESS
+        thread.join(4)
+        assert not thread.is_alive() and errors == []
+        assert s.events == ['daemon-created', 'listener-bound', 'trusted-issuer',
+                            'listener-shutdown', 'listener-close', 'drained-close']
+        assert s.status_rows[-1].current_state == SERVICE_STOPPED
+        assert s.daemons[0]._close_complete and s.close_calls == 1
+        assert s.constructor_calls == s.servers[0].closed_count == 1
+        assert len(s.runtimes) == 1 and s.daemons[0]._windows_t037_scm_runtime is s.runtime
+        assert s.model.events.count('rename') == s.model.events.count('delete') == 1
+        assert s.owners[0]._stream.closed
 
 
 def test_production_scm_entrypoint_denies_profile_mismatch_before_daemon_or_dispatch(tmp_path, monkeypatch):
@@ -349,91 +312,121 @@ def test_production_scm_entrypoint_denies_profile_mismatch_before_daemon_or_disp
     assert missing.value.code == 'SCM_PROFILE_REQUIRED'
 
 
+
 def test_production_scm_listener_init_failure_closes_daemon_without_running(tmp_path, monkeypatch):
-    from comsol_mcp import _control_daemon as control
-    from comsol_mcp import _windows_t037 as t037
-    from tests.test_windows_host_change import _profile
-    profile = t037.WindowsT037ProfileV2(
-        host_resource_profile=_profile(), source_sha256='e' * 64,
-        source_identity={'device': 1, 'inode': 2}, security_semantics='SOFTWARE_FIXTURE_ONLY')
-    monkeypatch.setattr(t037, 'load_trusted_profile', lambda _path: profile)
-    api, events = _ScmApi(), []
-    class Daemon:
-        def __init__(self, _home, **_options):
-            self._windows_t037_profile = profile
-            events.append('daemon-created')
-        def close(self):
-            events.append('daemon-closed')
-    def fail_listener(*_args):
-        raise OSError('synthetic listener creation failure')
-    monkeypatch.setattr(control, 'ControlDaemon', Daemon)
-    monkeypatch.setattr(control, 'ThreadingHTTPServer', fail_listener)
-    monkeypatch.setattr('comsol_mcp._windows_t037_broker.WindowsScmServiceBroker',
-                        lambda name, callback: WindowsScmServiceBroker._for_software_test(
-                            name, callback, api=api, token=_SCM_TEST_API_TOKEN))
-    with pytest.raises(WindowsScmError) as failed:
-        control.serve_windows_scm_service(tmp_path/'home', service_name='ComsolHost',
-                                         windows_t037_profile='pinned-profile')
-    assert failed.value.code == 'SCM_SERVICE_RUNTIME_FAILED'
-    assert [row.current_state for row in api.status] == [SERVICE_START_PENDING, SERVICE_STOPPED]
-    assert events == ['daemon-created', 'daemon-closed']
-    # The singleton must also have been released; acquire its actual lock again.
-    lock = control.ProcessLock(tmp_path/'home'/'control.lock')
-    lock.close()
+    from tests._scm_publisher_software_fixture import scm_publisher_chain
+    from comsol_mcp import _windows_scm_publisher as publisher
+    from comsol_mcp import _windows_scm_publisher_native as native
+    from comsol_mcp._execution_contract import ExecutionContractError
+    with scm_publisher_chain(monkeypatch, tmp_path) as s:
+        def fail_after_constructor_entered(server):
+            assert server is s.servers[0] and server.socket.fileno() >= 0
+            raise OSError('synthetic listener creation return lost after original entry')
+        s.on_init = fail_after_constructor_entered
+        with pytest.raises(WindowsScmError) as failed:
+            s.cd.main(s.main_args())
+        assert failed.value.code == 'SCM_SERVICE_RUNTIME_FAILED'
+        assert s.scm.status == [SERVICE_START_PENDING, SERVICE_STOPPED]
+        assert s.events == ['daemon-created', 'listener-bound', 'drained-close']
+        assert s.daemons[0]._close_complete and s.close_calls == 1
+        owner = s.owners[0]
+        assert publisher._ROOTS[id(owner)] is owner
+        assert owner._held_unknown and owner._server is s.servers[0]
+        assert owner._server_created is None and owner._namespace._borrowed[0] is owner._stream
+        assert not owner._stream.closed and s.constructor_calls == 1
+        assert s.servers[0].closed_count == s.servers[0].shutdowns == 0
+        assert not {'rename', 'write', 'delete'} & set(s.model.events)
+        before = (list(s.sdk.calls), list(s.sdk.native_effects), list(s.model.events))
+        with pytest.raises(native.PublisherError):owner.listener(object)
+        with pytest.raises(native.PublisherError):owner.finish_after_daemon()
+        assert (s.sdk.calls, s.sdk.native_effects, s.model.events) == before
+        assert s.constructor_calls == 1 and not owner._stream.closed
+        # ENTERED is UNKNOWN: keep the original listener/lock, no invented release.
+        with pytest.raises(ExecutionContractError) as busy:
+            s.cd.ProcessLock(s.home/'control.lock')
+        assert busy.value.code == 'ENGINE_BUSY'
+        assert publisher._ROOTS[id(owner)] is owner and not owner._stream.closed
+
+
+def test_production_scm_listener_preconstructor_binding_failure_releases_original_lock(tmp_path, monkeypatch):
+    from tests._scm_publisher_software_fixture import scm_publisher_chain
+    from comsol_mcp import _windows_scm_publisher as publisher
+    from comsol_mcp import _windows_scm_publisher_native as native
+    with scm_publisher_chain(monkeypatch, tmp_path) as s:
+        # Original binding validation rejects BEFORE __new__ / _ServerInit entry.
+        monkeypatch.setattr(publisher, '_ServerInit', lambda *args: pytest.fail('constructor entered'))
+        with pytest.raises(WindowsScmError) as failed:s.cd.main(s.main_args())
+        assert failed.value.code == 'SCM_SERVICE_RUNTIME_FAILED'
+        assert s.scm.status == [SERVICE_START_PENDING, SERVICE_STOPPED]
+        assert s.events == ['daemon-created', 'drained-close']
+        assert s.constructor_calls == 0 and s.servers == [] and s.close_calls == 1
+        owner = s.owners[0]
+        assert owner._server is None and not owner._held_unknown
+        assert owner._namespace.owner.retired and owner._stream.closed
+        assert not publisher._ROOTS and not native._OWNERS
+        assert s.sdk.native_effects and not s.model.active
+        assert not {'rename', 'write', 'delete'} & set(s.model.events)
+        # Known no-effect original cleanup, observed by real singleton reacquisition.
+        lock = s.cd.ProcessLock(s.home/'control.lock')
+        lock.close()
+        assert lock.handle.closed
 
 
 @pytest.mark.parametrize('bootstrap_state',['pending','failed','late_failed','still_pending'])
+
 def test_service_bootstrap_observation_retains_pending_handle_on_stop_and_reports_failures(
         tmp_path,monkeypatch,bootstrap_state):
-    from comsol_mcp import _control_daemon as control
-    from comsol_mcp import _windows_t037 as t037
+    from tests._scm_publisher_software_fixture import scm_publisher_chain, bootstrap_group_plan
     from comsol_mcp import _windows_t037_bootstrap as bootstrap
-    from tests.test_windows_t037_bootstrap import _document,_raw
-    profile,plan,document=_document()
-    monkeypatch.setattr(t037,'load_trusted_profile',lambda _path:profile)
-    monkeypatch.setattr(bootstrap,'read_private_bootstrap',lambda _path:_raw(document))
-    future=Future()
-    if bootstrap_state=='failed':future.set_exception(RuntimeError('synthetic host bootstrap failure'))
-    api=_ScmApi();entered=threading.Event();stopped=threading.Event();closed=[];errors=[];daemons=[]
-    class Daemon:
-        def __init__(self,_home,**_options):
-            self._windows_t037_profile=profile;daemons.append(self)
-        def _windows_t037_host_control_issuer(self,runtime):assert runtime.is_active
-        def _retain_t037_scm_runtime(self,runtime):assert runtime.is_active  # Stub daemon; no factory/admission claimed.
-        def _submit_scm_host_control(self,runtime,**request):
-            assert runtime.is_active and request['plan']==plan and request['authorization_ref']=='apply-once'
+    from tests.test_windows_t037_bootstrap import _raw
+    with scm_publisher_chain(monkeypatch,tmp_path) as s:
+        # Complete, source-bound intent replaces the old single-filter fixture;
+        # only the explicit submit seam below returns a synthetic accepted Future.
+        profile=s.profile;plan=bootstrap_group_plan(profile)
+        document={'schema':bootstrap.SCHEMA,'service_name':profile.service_name,
+                  'profile_source_sha256':profile.source_sha256,'host_profile_sha256':profile.sha256,
+                  'project_id':profile.host_resource_profile.project_id,'phase':'APPLY',
+                  'authorization_ref':'apply-once','plan':{'payload_json':plan.payload_json,'sha256':plan.sha256},
+                  'receipt':None}
+        assert bootstrap.parse_bootstrap(_raw(document),profile).plan==plan
+        def read_request(path):
+            assert path=='explicit-request'
+            return _raw(document)
+        monkeypatch.setattr(bootstrap,'read_private_bootstrap',read_request)
+        future=Future();closed=[];errors=[];submissions=[]
+        if bootstrap_state=='failed':future.set_exception(RuntimeError('synthetic host bootstrap failure'))
+        # Deliberately synthetic accepted handle at ONLY this existing submit seam.
+        # The original issuer/provider/runtime validation above still executes.
+        def submit(daemon,runtime,**request):
+            assert daemon is s.daemons[0] and runtime is s.runtime and runtime.is_active
+            assert request==dict(phase='APPLY',plan=plan,authorization_ref='apply-once',receipt=None)
+            assert daemon._windows_t037_scm_runtime is runtime
+            submissions.append(request)
             return future
-        def close(self):
-            assert self._scm_bootstrap_future is future
-            assert not future.cancelled()
+        monkeypatch.setattr(s.cd.ControlDaemon,'_submit_scm_host_control',submit)
+        def before_original_close(daemon):
+            assert daemon._scm_bootstrap_future is future and not future.cancelled()
             if bootstrap_state in {'pending','late_failed','still_pending'}:
-                assert not future.done() # STOP observation has not inferred or canceled the host effect.
+                assert not future.done() # STOP observation has not inferred/canceled the effect.
                 if bootstrap_state=='pending':future.set_result('software-drained-terminal')
                 elif bootstrap_state=='late_failed':future.set_exception(RuntimeError('late drain failure'))
             closed.append(True)
-    class Server:
-        server_port=12345
-        def __init__(self,*_):pass
-        def serve_forever(self):entered.set();assert stopped.wait(3)
-        def shutdown(self):stopped.set()
-        def server_close(self):pass
-    monkeypatch.setattr(control,'ControlDaemon',Daemon)
-    monkeypatch.setattr(control,'ThreadingHTTPServer',Server)
-    monkeypatch.setattr(control,'process_identity',lambda _pid:{'start_epoch_ms':42})
-    monkeypatch.setattr('comsol_mcp._windows_t037_broker.WindowsScmServiceBroker',
-                        lambda name,callback:WindowsScmServiceBroker._for_software_test(
-                            name,callback,api=api,token=_SCM_TEST_API_TOKEN))
-    def run():
-        try:
-            control.main(['--home',str(tmp_path/'home'),'--windows-t037-profile','pinned-profile',
-                          '--windows-scm-service-name','ComsolHost','--windows-scm-bootstrap-request','explicit-request'])
-        except BaseException as exc:errors.append(exc)
-    thread=threading.Thread(target=run);thread.start();assert entered.wait(2)
-    if bootstrap_state!='failed':assert api.handler(SERVICE_CONTROL_STOP,0,None,None)==0
-    thread.join(4);assert not thread.is_alive() and closed==[True]
-    assert not future.cancelled()
-    if bootstrap_state!='pending':
-        assert len(errors)==1 and errors[0].code=='SCM_SERVICE_RUNTIME_FAILED'
-        assert api.status[-1].service_specific_exit_code==1
-    else:assert errors==[]
-    assert api.status[-1].current_state==SERVICE_STOPPED
+        s.on_close=before_original_close
+        def run():
+            try:s.cd.main(s.main_args('--windows-scm-bootstrap-request','explicit-request'))
+            except BaseException as exc:errors.append(exc)
+        thread=threading.Thread(target=run);thread.start()
+        assert s.entered.wait(2),errors
+        if bootstrap_state!='failed':assert s.scm.handler(SERVICE_CONTROL_STOP,0,None,None)==0
+        thread.join(4)
+        assert not thread.is_alive() and closed==[True] and s.close_calls==1
+        assert s.daemons[0]._close_complete and s.daemons[0]._scm_bootstrap_future is future
+        assert len(submissions)==1 and not future.cancelled()
+        if bootstrap_state!='pending':
+            assert len(errors)==1 and errors[0].code=='SCM_SERVICE_RUNTIME_FAILED'
+            assert s.status_rows[-1].service_specific_exit_code==1
+        else:assert errors==[]
+        assert s.status_rows[-1].current_state==SERVICE_STOPPED
+        assert s.constructor_calls==s.servers[0].closed_count==1 and s.servers[0].shutdowns==1
+        assert s.model.events.count('rename')==s.model.events.count('delete')==1
+        assert s.owners[0]._stream.closed

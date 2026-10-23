@@ -2,10 +2,10 @@
   "schema_version": 1,
   "baseline_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
   "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
-  "state_revision": 150,
+  "state_revision": 151,
   "phase": "M2_GENERIC_CORE_REPAIR_BATCH_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Publish accepted typed R6 source/software, then accepted publisher1788 exact private Controller hook; same Primary AppC lock rework and Lorentz Mac PREP V2 continue. R3 exact four-file transport requires pending human approval. No native/fullrestore/finalReviewer acceptance.",
+  "next_action": "Finish publisher local allowlisted commit and request direct human approval for the two concrete public commits. Continue same Primary AppC lock/normal-loader rework and Lorentz Mac PREP V2. R3 transport approval separately pending. No native/fullrestore/finalReviewer PASS.",
   "active_job_refs": [
     {
       "scope": "M2A_ORIGINAL_SYNTHETIC_SERVER_FENCED_HISTORICAL_REFS",
@@ -471,7 +471,7 @@
   ],
   "completed_groups": [],
   "scope_decision": "SCOPE_RESET.md",
-  "updated_utc": "2026-10-23T07:35:42.653370+00:00",
+  "updated_utc": "2026-10-23T07:41:58.449760+00:00",
   "native_execution_claimed": true,
   "recovery_checkpoint": {
     "scope": "workpack recovery repair, synthetic workpack tests, pinned source and candidate restoration, new-state initialization only",
@@ -838,6 +838,13 @@
         "bytes": 464,
         "sha256": "77e3158aeda26d7f4d0f948c3326e71c9feeeb8b1a4d97bc6f55d88e38cf4d60"
       }
+    },
+    "publication_approval_current": {
+      "status": "AUTO_REVIEW_REJECTED_REQUIRES_DIRECT_HUMAN_APPROVAL",
+      "typed_commit": "fa624c00fb42508d0d6749dde9f4774fbd90bfe7",
+      "remote_last_verified": "570e87e5c996c67e2132d0721635d65e760ddeb2",
+      "rejections": 2,
+      "reason": "Public source/evidence disclosure rejected despite current AGENTS148 readback and ADMIN/public repo check. Preserve commits, no alternate egress."
     }
   },
   "remaining_core_findings": [
@@ -2165,7 +2172,15 @@
         "bytes": 8906,
         "sha256": "ff02d0806bab3727067706a3c059c2a634eac5bff2c718fc47043b60a1bddb5f"
       },
-      "historical_failed_current_union": "Original1780PASS7FAIL remainsunchanged; new1788run is separatewithtestmigration+new1preconstructorcontrol; no retrospectivepass."
+      "historical_failed_current_union": "Original1780PASS7FAIL remainsunchanged; new1788run is separatewithtestmigration+new1preconstructorcontrol; no retrospectivepass.",
+      "main_1788_acceptance": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_LOCAL_COMMIT_PENDING",
+        "review": "_state/universal-main-review/20261023-publisher-publication/MAIN_REVIEW.json",
+        "mechanical": "_state/universal-windows-scm-publisher-integration/legacy-migration/union-r1/INPUT_MECHANICAL_CHECK.json",
+        "Controller_sha256": "c0e6c679294c0255ecf0e21f7a9587adb90b14358329ee450c54b6336281cc5d",
+        "passed": 1788,
+        "native": "NOT_RUN_UNQUALIFIED"
+      }
     },
     "scm_config_materialization_current": {
       "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE753_PUBLISHED_FETCH_VERIFIED",
