@@ -1,0 +1,210 @@
+{
+  "schema": "MAC-R4-scoped-native-publication-candidate/1",
+  "status": "MAIN_ACCEPTED_HISTORICAL_R4_LIMITED_NATIVE_LINEAGE",
+  "derived_only": "Saved evidence only; no new native, process, resource, cleanup, PREP or Git operation.",
+  "runtime": {
+    "source_commit": "035b3b9622fecf888d10a9eb890a9d460e521660",
+    "wheel_sha256": "e28a7aaf51dcb507bd28e8f528eb59e7a7cbc3a7f50890601924ab9e3c2dde12",
+    "engine_version": "COMSOL 6.4.0.293",
+    "platform_scope": "Historical macOS ARM R4 installation; not current source or Windows requalification.",
+    "client_continuation_sha256": "ec0a2ca9a695c3cc80ea7578b769b6cb7f33469f00ab29e2d259d9842aa6e013"
+  },
+  "independent_Main_readbacks": {
+    "continued_native": {
+      "reference": "_state/universal-main-review/20261023-core-r4-core-worker-prep/MAIN_CONT2_ACTUAL_NATIVE_READBACK.json",
+      "bytes": 4184,
+      "sha256": "dbba1dc4a0a2b0593e145b0a55525a171f9452a524e95ff0e4eb627ebcb8ab6f"
+    },
+    "original_build_null_and_known_refusal": {
+      "reference": "_state/universal-main-review/20261023-core-r4-core-worker-prep/MAIN_R3_ACTUAL_PARTIAL_AND_REFUSAL_READBACK.json",
+      "bytes": 6098,
+      "sha256": "746281be01d7e6c5e182c16b0c72d71c271fe9d20bd81c61b0f5066785ac9b35"
+    },
+    "null_scope_clarification": {
+      "reference": "_state/universal-main-review/20261023-core-r4-core-worker-prep/MAIN_R3_NULL_NATIVE_SCOPE_CLARIFICATION.json",
+      "bytes": 802,
+      "sha256": "40ac96d98e1949ac68b34c97e7d6ab1fe3ad40d913772d38e18bffa95449ce24"
+    }
+  },
+  "original_lineage": {
+    "project_id": "41e981ea-8f5e-404f-987e-5d77d1f8e3aa",
+    "session_id": "session-e2da2d23b1084abb88a73e21724196b9",
+    "model_at_continuation": "mcp1 generation1 revision2",
+    "worker_instance_id": "cf1b8f5e-8a3c-4c53-b0e7-4c61d2a8879e",
+    "worker_epoch_before": 2,
+    "original_model_build": "SUCCEEDED; executed true, one original project task invocation.",
+    "original_task_null": "SUCCEEDED; existing readback key contains null inside wrapper. No replay.",
+    "task_java_invocations_original": 2,
+    "task_java_invocations_continuation": 0
+  },
+  "known_failed_request_preserved": {
+    "job_id": "c781d202-c7a1-40e5-bde9-e1db6d1132a9",
+    "operation_id": "f8561185-4ade-4c16-9d14-833e94a4b89b",
+    "status": "FAILED",
+    "error_code": "INVALID_REQUEST",
+    "reason": "Study identity was nested in arguments; rejected before session context/native dispatch.",
+    "actual_study_from_that_failed_request": 0,
+    "original_driver_exit": 2,
+    "request_pin": {
+      "reference": "original-study-request.json",
+      "bytes": 853,
+      "sha256": "85d41775a54d78e2d0c0a8efbfbc5f8b9cddb4c787f31eda646e82460204b661"
+    },
+    "response_pin": {
+      "reference": "original-study-response.json",
+      "bytes": 1223,
+      "sha256": "fd4c92b315a1865850896280e00ca87cdd0d486c5244cd20e644fe75213ebe47"
+    },
+    "history": "Original failed request/key/job/STATE and PREP/software failures remain immutable; corrected request was distinct. Earlier Core R2 remains NOT_PASSED, with its lost exception leaf unrecovered; older UNKNOWN resources untouched."
+  },
+  "continued_finite_observations": {
+    "metadata_preflight": {
+      "SUCCEEDED": 10,
+      "FAILED": 1,
+      "complete_page": true
+    },
+    "actual_public_request_counts": {
+      "session.inspect": 3,
+      "result.evaluate": 2,
+      "result.at_points": 4,
+      "job.list": 1,
+      "project.permissions": 1,
+      "project.inspect": 1,
+      "model.load": 1,
+      "session.disconnect": 1,
+      "model.save": 1,
+      "session.stop": 1,
+      "study.run": 1
+    },
+    "total_public_requests": 17,
+    "new_Root_Server_Worker_model_create_build_null_ACK": 0,
+    "corrected_study_job": "09b6d448-426b-4e0b-88e0-19db3baca268",
+    "corrected_study_applied_count": 1,
+    "numeric_points": {
+      "count": 4,
+      "default_and_explicit_unit": "K",
+      "minimum_K": 349.9999999999981,
+      "maximum_K": 349.9999999999981
+    },
+    "Eval": {
+      "observations": 2,
+      "elements_each": 136,
+      "same_Worker_reopen_max_abs_difference": 0.0
+    },
+    "six_result_protocols": "Each confirmed result_budget.status PASS, publish_allowed true, cleanup verified_removed true, cleanup_failed false.",
+    "solution_artifact": {
+      "sha256": "743422aa9b53de57a7216c59432de7859b30781f4b3474edf3c53d0f3978b4d0",
+      "bytes": 570594,
+      "include_solution": true,
+      "same_Worker_reopen": true
+    },
+    "new_Worker_reopen": "NOT_RUN; this was one load on the same original Worker."
+  },
+  "original_native_retirement": {
+    "worker": {
+      "admission_fence": "RETIRED",
+      "birth_identity_matched_before_close": true,
+      "child_exit_confirmed": true,
+      "child_reaped": true,
+      "disconnect_rpc_dispatched": true,
+      "exact_popen_handle": true,
+      "process_identity": {
+        "pid": 71659,
+        "start_epoch_ms": 1792756556001
+      },
+      "status": "RETIRED",
+      "worker_close_started": true,
+      "worker_epoch": 3,
+      "worker_instance_id": "cf1b8f5e-8a3c-4c53-b0e7-4c61d2a8879e"
+    },
+    "server": {
+      "birth": "start_epoch_ms:1792756520544",
+      "child_reaped": true,
+      "exit_confirmed": true,
+      "listener_absent": true,
+      "pid": 71290,
+      "returncode": 143,
+      "server_stopped": true
+    },
+    "final": {
+      "state": "STOPPED",
+      "worker_binding": null,
+      "runtime_live": false
+    },
+    "authority": "Original production ManagedServerHandle/Popen/Worker ownership and birth guards; saved IDs/JSON are diagnostic references, never reconstructed authority.",
+    "task_daemon": "Task daemon/state retained; whole-daemon retirement not performed or claimed."
+  },
+  "evidence_binding": {
+    "local_raw_files": 41,
+    "local_raw_bytes": 1002848,
+    "all_raw_index": {
+      "reference": "RAW_FILE_PINS.json",
+      "bytes": 14127,
+      "sha256": "ffbd34a36fd4688ec469e74307130e3b23bd6ddbfc05e2e219b8d959848f5bed"
+    },
+    "executor_receipt": {
+      "reference": "ACTUAL_NATIVE_RECEIPT.json",
+      "bytes": 9854,
+      "sha256": "3690a117465ab04dba2da9d6234a694fc1c6f7034e54490fc42617cbcb2b1aab"
+    },
+    "original_54_inputs_unchanged": true,
+    "source_runtime_input_pins": {
+      "reference": "SOURCE_INPUTS.json",
+      "bytes": 17276,
+      "sha256": "e98dda8dc0701f139bd45ba91aecb719cda175ea3f419d12865bae3bf24a509c"
+    },
+    "software_failure_history_pins": {
+      "reference": "HISTORY_INPUTS.json",
+      "bytes": 7198,
+      "sha256": "42b5f6422b3ad200d8244db5cdd143e9bee473a2df737f93f88c8607385d6316"
+    },
+    "driver": {
+      "launch_chunk": "8e0f05",
+      "original_exec_session": 30070,
+      "completion_chunk": "919b83",
+      "exit_code": 0,
+      "retries": 0
+    },
+    "exitcode_scope": "Driver exit0 is control flow; measurement, protocol, artifact and retirement evidence were separately read by Main."
+  },
+  "fixture_proposal": {
+    "java": {
+      "reference": "tests/fixtures/native/M2aRepairedConduction.java",
+      "bytes": 14706,
+      "sha256": "ced4aaa98d1801a0a6d855c8aef80e33a53155ae8f9ee6947d31fdc57d62d841"
+    },
+    "inputs": {
+      "reference": "tests/fixtures/native/M2aRepairedConduction.inputs.json",
+      "bytes": 1932,
+      "sha256": "222e5382a71a31d298a0068cd720177b4c31fbb56c1f3e54e567541efa90f6fb"
+    },
+    "shared_copy": "AUTHORIZED_BYTE_EXACT_SHARED_COPY_COMPLETED"
+  },
+  "not_verified": {
+    "fresh_Worker_independent_reopen": "NOT_RUN",
+    "Windows_6_3": "NOT_RUN",
+    "heat_flux": "NOT_RUN",
+    "mesh_sensitivity": "NOT_RUN",
+    "ErrorTable": "NOT_RUN",
+    "configure_plot_render": "NOT_RUN_IN_THIS_NATIVE_LINEAGE",
+    "physical_acceptance_current_candidate_T037_aggregate_cap_whole_MCP_Frozen427_heldoutReviewer_Goal": "NOT_QUALIFIED"
+  },
+  "public_content_scope": "Counts, IDs, hashes and finite observations only; raw numeric arrays, private stderr, token/control/login data, native filesystem paths and commercial/model binary payloads excluded.",
+  "publication_metadata": {
+    "Main_publication_review": {
+      "reference": "_state/universal-main-review/20261023-mac-r4-core-native-publication/MAIN_REVIEW.json",
+      "bytes": 2911,
+      "sha256": "219eb5a89e38aef27dbc911191c88c6532cf61983dfefcf51707b8d8284a2d63"
+    },
+    "independent_mechanical_review": {
+      "reference": "_state/universal-m2-core-successor-r4-20261022T205551Z/core-known-refusal-continuation-prep-20261023-r2/ACTUAL_NATIVE_MECHANICAL_REVIEW.json",
+      "bytes": 8176,
+      "sha256": "1170f76b0a6098fa94565e0fd64b1cef0488f79fdaf5f6b949fb9d78ea0769d9"
+    },
+    "accepted_original_summary": {
+      "bytes": 7901,
+      "sha256": "5029d1bb77f5804a4404db112e61d8bb3c152d1df3d17d1a38ed70e3c823edf7"
+    },
+    "change_scope": "Publication references and authorized byte-exact shared fixture-copy metadata only. Historical native observations/limits and original private summary unchanged."
+  }
+}

@@ -1481,7 +1481,8 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         "_call_storage", "_native_create", "_create_arguments", "_native_closer",
         "_close_mode", "_original_poll", "_original_wait", "_original_terminate",
         "_original_times", "_original_profile", "_original_factory", "_original_job",
-        "_original_role", "_parent_binding", "_image_api", "_image_entry", "_image_binding", "_outputs", "_owner"})
+        "_original_role", "_parent_binding", "_image_api", "_image_entry", "_image_binding", "_outputs", "_owner",
+        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer"})
 
     def __setattr__(self, name, value):
         if name in self._FIXED and hasattr(self, name):
@@ -1524,13 +1525,14 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         self._ownership_lock = __import__('threading').RLock()
         self._launch_profile_sha256, self._launch_role, self._resume_epoch = profile.sha256, role, 0
         self._creation_parameters = (create_arguments[1], tuple(args), call_storage[2].value)
-        self._creation_parameter_digests = {
+        from types import MappingProxyType
+        self._creation_parameter_digests = MappingProxyType({
             "classification": "ACTUAL_CREATEPROCESS_PARAMETERS_NOT_REMOTE_READBACK",
             "argv_sha256": hashlib.sha256(json.dumps(list(args), ensure_ascii=False,
                 separators=(",", ":")).encode("utf-8")).hexdigest(),
             "command_line_sha256": hashlib.sha256(call_storage[2].value.encode("utf-16-le")).hexdigest(),
             "application_name_sha256": hashlib.sha256(create_arguments[1].encode("utf-16-le")).hexdigest(),
-        }
+        })
         if not hasattr(api, "_retained_children"):
             api._retained_children = {}
         api._retained_children[id(self)] = self  # Before any possibly effective SDK call.
@@ -2278,7 +2280,9 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                 _refuse(ERROR_POLICY_UNVERIFIED, "pinned image file changed during child observations")
             if session_factory is not None and profile.wrapper_schema == PROFILE_SCHEMA_V4:
                 from ._windows_t037_targets import _require_held_finite_a
-                _require_held_finite_a(session_factory)  # Same reader after observations; not a B/Resume producer.
+                _require_held_finite_a(session_factory)  # Same original reader, still not Resume authority.
+                from ._windows_t037_b_observation import observe_original_child_b
+                observe_original_child_b(retained_child, factory=session_factory)
             from ._windows_t037_resume import issue_native_resume, resume_native_child
             capability = issue_native_resume(retained_child, profile, child_binding,
                                              self._last_child_dacl_observation)
@@ -2336,6 +2340,9 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                         release_failures.append((entry.label, error))
             if native_parent is not None:
                 release("native_parent", native_parent.close)
+            if retained_child is not None and hasattr(retained_child, "_connected_b_observer"):
+                from ._windows_t037_b_observation import settle_original_child_b
+                release("connected_B", settle_original_child_b, retained_child, pending_error)
             if release_failures:
                 diagnostics = tuple({"stage": label, "exception_type": type(error).__name__}
                                     for label, error in release_failures)

@@ -1,6 +1,8 @@
 # 当前进度 — 2026-10-23
 
-当前主线快照（续跑 r165）：Gate/held-A最终canonical2534已Main限定源码/软件验收，原独立反例修复后1PASS、Hume997源码/195绑定/51回收无差异；4生产+6测试及紧凑证据已精确合入，准备按持续授权发布。Mac历史R2Core失败/原Server25367正常退役分别保留；新R3setup真实核对通过，两次45秒Main ACK已被source接受，随后study派发处驱动exit2/uncertaintrue，原Server/Worker/请求保留，由同Lorentz只读诊断，不重放、不自动清理。Gate同步后同Primary继续接通原child B观测；fullrestore/required原生矩阵/最终fresh Reviewer均未通过，整体IN_PROGRESS。
+当前主线快照（续跑 r170）：新connected B已Main限定源码/软件验收，999冻结源码实际2577PASS、197绑定/51回收，Hume无不符，5文件已精确合入。历史R4/新Core_c47同原Worker续跑实际17公开请求成功，4点约350K/136值重开完全一致、6预算/cleanup证据完整；Main与Hume核原Worker退役2→3、原Server71290同birth/reap/listenerabsence/exit143及finalSTOPPED，daemon/state保留。原失败/key/STATE及旧UNKNOWN不改。Native紧凑摘要及Java/inputs两份可重建fixture已合入，准备精确11文件普通发布。随后推进原冻结T044七项/current-source新Worker与原AppC目标选择器资格PREP；未放行新Windows效果。整体IN_PROGRESS，fullrestore/required矩阵/最终fresh Reviewer未通过。
+
+以下为分阶段历史记录；当前状态以首段、CURRENT_HANDOFF 与 RESUME r168 为准。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。
