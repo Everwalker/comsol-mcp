@@ -8,7 +8,7 @@ from comsol_mcp._windows_t037_native import DWORD,BOOL,HANDLE,WORD,BYTE
 from tests.test_windows_child_acl import _observer
 
 
-def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override=None):
+def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override=None,acl_descriptor=None):
     observed_profile,acl_api,acl_launch,acl_events=_observer()
     from dataclasses import replace
     from comsol_mcp._windows_job_limits import JobLimitsV1, EXTENDED_LIMIT
@@ -17,8 +17,17 @@ def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override
                         wrapper_schema=win.PROFILE_SCHEMA_V3)
     else:
         profile=profile_override
-        if profile.job_limits is None or profile.wrapper_schema != win.PROFILE_SCHEMA_V3:
+        if profile.job_limits is None or profile.wrapper_schema not in (win.PROFILE_SCHEMA_V3, win.PROFILE_SCHEMA_V4):
             raise AssertionError("profile_override must already carry the native test Job contract")
+    if acl_descriptor is not None:
+        from comsol_mcp._windows_t037_native import canonical_security_descriptor_sha256
+        digest=canonical_security_descriptor_sha256(acl_descriptor)
+        assert all(g.security_descriptor_sha256==digest for g in profile.windows_policy.acl_grants
+                   if g.principal_sid==profile.appcontainer_sid)
+        def descriptor(handle):
+            acl_events.append('descriptor')
+            yield 99,acl_descriptor,digest  # Explicit software SDK bytes; production DACL gate remains real.
+        acl_api.descriptor=descriptor
     events=[];state={'alive':True,'cleanup_fail':cleanup_fail,'acl':None,'assigned':False}
     job_data={'bytes':bytes(EXTENDED_LIMIT())}
     class PI(C.Structure):

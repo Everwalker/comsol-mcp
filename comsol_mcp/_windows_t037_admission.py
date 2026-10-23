@@ -69,15 +69,14 @@ def _bind_session_factory(daemon, factory, key):
     from ._windows_t037 import T037SessionProcessFactory
     binding=getattr(daemon,'_windows_t037_scm_binding',None)
     runtime,_daemon,profile,_provider=_require_daemon_binding(binding)
-    with runtime._lock:
-        _require_daemon_binding(binding)
-        if (_daemon is not daemon or type(factory) is not T037SessionProcessFactory
-                or factory.profile is not profile or key[1]!=factory.session_id
-                or daemon._session_t037_process_factories.get(key) is not factory or factory._closed
-                or getattr(factory,'_scm_binding',None) is not None):
-            _refuse('SCM_FACTORY_BINDING_MISMATCH','registered original factory is required before static SDK reads')
-        from ._windows_appcontainer_gate import _register_factory
-        _register_factory(factory,(binding,daemon,key,factory))
+    _require_daemon_binding(binding)
+    if (_daemon is not daemon or type(factory) is not T037SessionProcessFactory
+            or factory.profile is not profile or key[1]!=factory.session_id
+            or daemon._session_t037_process_factories.get(key) is not factory or factory._closed
+            or getattr(factory,'_scm_binding',None) is not None):
+        _refuse('SCM_FACTORY_BINDING_MISMATCH','registered original factory is required before static SDK reads')
+    from ._windows_appcontainer_gate import _register_factory
+    _register_factory(factory,(binding,daemon,key,factory))
 
 
 def _require_factory_runtime(factory):
@@ -98,6 +97,22 @@ def _require_factory_runtime(factory):
 def _factory_birth_scope(factory):
     from ._windows_appcontainer_gate import _factory_activity_scope
     with _factory_activity_scope(factory):yield
+
+
+@contextmanager
+def _factory_static_a_scope(factory):
+    """Normal V4 factory only: hold original finite A until launch/cleanup returns."""
+    from ._windows_t037 import PROFILE_SCHEMA_V4
+    if factory.profile.wrapper_schema != PROFILE_SCHEMA_V4:
+        yield
+        return
+    runtime,daemon,profile,provider=_require_factory_runtime(factory)
+    from ._windows_appcontainer_gate import _check_factory_activity
+    from ._windows_t037_targets import _held_finite_target_scope
+    participant=_check_factory_activity(factory)
+    with _held_finite_target_scope(profile,factory,daemon):
+        participant.capture_observers()  # Original new reader, acquired on this reserved thread.
+        yield
 
 
 def _observe_static_inputs(profile, owner):
@@ -196,7 +211,14 @@ def require_static_prebirth(profile, *, owner):
     provider._assert_stable()  # Actual pinned startup provider; never a JSON approval.
     from ._windows_t037 import PROFILE_SCHEMA_V4
     if profile.wrapper_schema == PROFILE_SCHEMA_V4:
-        from ._windows_t037_targets import finite_target_scope
+        from ._windows_t037_targets import finite_target_scope, _HELD, _require_held_finite_a
+        if id(owner) in _HELD:
+            held=_require_held_finite_a(owner)
+            _observe_static_inputs(profile,owner)
+            owner._profile_participant.capture_observers()
+            _require_factory_runtime(owner);provider._assert_stable()
+            held.check_current()
+            return
         with finite_target_scope(profile,owner,daemon):
             _observe_static_inputs(profile,owner)
             _require_factory_runtime(owner)

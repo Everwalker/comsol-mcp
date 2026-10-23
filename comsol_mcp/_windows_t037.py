@@ -1055,8 +1055,8 @@ class T037SessionProcessFactory:
     """Popen-compatible callable that refuses fallback and shares one Job.
 
     Static A uses the original in-process SCM lifetime and actual SDK inputs.
-    Its finite filesystem/MIC target is still unavailable, so preflight
-    refuses. Child B and purpose-bound C/Resume authority remain separate;
+    V4 finite A stays pinned for the whole synchronous launch/cleanup.
+    Legacy missing targets still refuse. Child B and purpose-bound C/Resume remain separate;
     no observation value or caller receipt can unlock them.
     """
 
@@ -1108,8 +1108,8 @@ class T037SessionProcessFactory:
         return CanonicalSocket(intent.bind_address, port)
 
     def __call__(self, command: Sequence[str], **options: Any):
-        from ._windows_t037_admission import _factory_birth_scope, _require_factory_runtime
-        with _factory_birth_scope(self):
+        from ._windows_t037_admission import _factory_birth_scope, _require_factory_runtime, _factory_static_a_scope
+        with _factory_birth_scope(self), _factory_static_a_scope(self):
             self.preflight()
             _require_factory_runtime(self)
             if os.name != "nt":
@@ -1119,6 +1119,7 @@ class T037SessionProcessFactory:
             self._api = api
             _record_factory_api(self, api)
             role = self._infer_role(command)
+            _require_factory_runtime(self)
             if self._job is None:
                 # The existing producer alone creates/configures/readbacks a
                 # genuinely fresh empty Job; no unborn child is required at A.
@@ -2221,6 +2222,9 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     C.cast(environment, C.c_void_p) if environment is not None else None,
                     cwd, C.byref(startup), C.byref(process_info)),
                 seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+            if session_factory is not None and profile.wrapper_schema == PROFILE_SCHEMA_V4:
+                from ._windows_t037_targets import _require_held_finite_a
+                _require_held_finite_a(session_factory)  # Original pins, immediately before CREATE.
             created = retained_child.create_original()
             process_handle, thread_handle = retained_child._handle, retained_child._thread_handle
             self._check(created, "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
@@ -2272,6 +2276,9 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     or not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
                                                                          image_fingerprint[1]), expected_hash)):
                 _refuse(ERROR_POLICY_UNVERIFIED, "pinned image file changed during child observations")
+            if session_factory is not None and profile.wrapper_schema == PROFILE_SCHEMA_V4:
+                from ._windows_t037_targets import _require_held_finite_a
+                _require_held_finite_a(session_factory)  # Same reader after observations; not a B/Resume producer.
             from ._windows_t037_resume import issue_native_resume, resume_native_child
             capability = issue_native_resume(retained_child, profile, child_binding,
                                              self._last_child_dacl_observation)

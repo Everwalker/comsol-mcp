@@ -1,0 +1,116 @@
+{
+  "schema": "R4_R2_failed_Core_and_known_Stop_derived_compact/1",
+  "status": "R2_CORE_NOT_PASSED; ORIGINAL_SERVER_NORMAL_RETIREMENT_MAIN_ACCEPTED",
+  "derived_utc": "2026-10-23T11:41:02.523215+00:00",
+  "scope": "Only existing saved nonsecret artifacts, no new runtime/resource observations; historical R4 commit035b3b9622fecf888d10a9eb890a9d460e521660 wheel e28a7aaf51dcb507bd28e8f528eb59e7a7cbc3a7f50890601924ab9e3c2dde12.",
+  "R2_Core": {
+    "Main_readback": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261023-core-r4-core-worker-prep/MAIN_R2_CORE_FAILURE_READBACK.json",
+      "bytes": 3527,
+      "sha256": "c760e4d5a689152d50740d445b69758307b08e9ed114d76d726bcfcaafc4e655"
+    },
+    "original_program": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/core-regression-prep-20261023-r2-5e8c3a9d04f2/proposed_core_route.py",
+      "bytes": 42516,
+      "sha256": "9ac0847e54dd25ecb6fe8f8d7f90626f1676e84d1b1435351c5de047770e0c36"
+    },
+    "source_failure": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/core-regression-prep-20261023-r2-5e8c3a9d04f2/future-evidence/core-FAILURE_RETAINED.json",
+      "bytes": 2195,
+      "sha256": "76124452efd17106d2f7f2894d4931906e6e6cbbb400f34e1d84d1bec5cd38f1"
+    },
+    "start_response": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/core-regression-prep-20261023-r2-5e8c3a9d04f2/future-evidence/start-response.json",
+      "bytes": 2848,
+      "sha256": "5c12fb36a0a04293cd399d7ff6b2a5db83e44c90b56925e9932147513b4f8539"
+    },
+    "original_driver_session_id": 60591,
+    "tool_chunks": {
+      "launch": "00b43e",
+      "Server_ACK": "d9af0e",
+      "Worker_facts": "209a12",
+      "late_Worker_ACK_and_exit": "e72c5b"
+    },
+    "exit_code": 2,
+    "Worker_ACK": "NOT_PRESENT; no accepted original source ACK",
+    "timing": {
+      "facts_mtime_utc": "2026-10-23T10:39:41.633214+00:00",
+      "Main_decision_file_utc": "2026-10-23T10:40:21.044849+00:00",
+      "failure_file_utc": "2026-10-23T10:40:26.719031+00:00",
+      "interpretation": "Window ended about45s after facts; Main wrote decision before sending ACK, leaving insufficient tool-call latency. Source ACK never completed. Exact ExceptionGroup leaf was not saved; deadline reason is timing/source-path inference, not recovered original exception."
+    },
+    "state_at_failure": {
+      "project_id": "29f71752-3bf2-486b-98a8-0bffacbceb72",
+      "session_id": "session-5c1cf06f941b49668afe7e007b10bd69",
+      "Server_PID_metadata_only": 25367,
+      "Server_birth": "start_epoch_ms:1792751978142",
+      "connect_submitted": false,
+      "uncertain": false,
+      "phase": "ORIGINAL_SERVER_RETAINED",
+      "normal_stop_submitted": false
+    },
+    "counts": {
+      "Server_start": 1,
+      "Worker_connect": 0,
+      "task_Java": 0,
+      "model": 0,
+      "study": 0,
+      "results": 0,
+      "save_reopen": 0
+    },
+    "exception": "Original ExceptionGroup inner leaf NOT_PRESERVED_NOT_RECOVERED; timing/source interpretation is inference, not recovered exact cause.",
+    "all_R2_raw": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/core-regression-prep-20261023-r2-5e8c3a9d04f2/future-evidence",
+    "raw_policy": "All originals retained in place, not rewritten/relabelled or replayed."
+  },
+  "known_Stop": {
+    "Main_readback": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261023-core-r4-core-worker-prep/MAIN_R2_ACTUAL_ORIGINAL_SERVER_RETIREMENT_READBACK.json",
+      "bytes": 9309,
+      "sha256": "e856eb9ad9c142a026e5eca1ccd4ac824c2f013f3938047aeb173dc1405d9292"
+    },
+    "STOP_RESULT": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/only-known-server-stop-prep-20261023-r2/future-evidence/STOP_RESULT.json",
+      "bytes": 1810,
+      "sha256": "1d9906aa4a7fa4e64d97164d4272c7bea4f3e85da444e015dca6bab3ad4c68a3"
+    },
+    "original_tool": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/only-known-server-stop-prep-20261023-r2/actual-stop-launch-20261023-r1/STOP_TOOL_RESULT.json",
+      "bytes": 126,
+      "sha256": "7261d019248d1a41400b9a1f57297cf2918ff57304d85fe00eefa97bfc94d2cc"
+    },
+    "original_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/only-known-server-stop-prep-20261023-r2/actual-stop-launch-20261023-r1/ACTUAL_STOP_RECEIPT.json",
+      "bytes": 6817,
+      "sha256": "1e84db00ff669be6da5f03096e72d305d572717b11c48826cd2f008090ddb26e"
+    },
+    "raw17_pins": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-successor-r4-20261022T205551Z/only-known-server-stop-prep-20261023-r2/actual-stop-launch-20261023-r1/RAW_PINS.json",
+      "bytes": 3067,
+      "sha256": "05ceb972f3dffee81ef926c8e3370b6ed819b2bee9f5bc6f5435e33ec1b1a3c0"
+    },
+    "tool_chunk": "f19711",
+    "tool_exit": 0,
+    "raw_files": 17,
+    "raw_bytes": 70745,
+    "actual_original_proof": {
+      "birth": "start_epoch_ms:1792751978142",
+      "child_reaped": true,
+      "exit_confirmed": true,
+      "listener_absent": true,
+      "pid": 25367,
+      "returncode": 143,
+      "server_stopped": true
+    },
+    "final": "STOPPED/workerNone/runtimeLivefalse",
+    "complete_pre_stop_job_page": "6jobs, has_morefalse, allSUCCEEDED, original successful start present",
+    "authority": "Original production ManagedServerHandle/Popen/birth/listener/noWorker/noUnknown gates. JSON/driverexit is not native owner."
+  },
+  "still_not_claimed": [
+    "Core R2 PASS",
+    "recovered old inner exception",
+    "whole-daemon retirement",
+    "old UNKNOWN retirement",
+    "wholeGoal/currentSource/T037/resource hardcap acceptance"
+  ],
+  "R3": "Known original Server retirement prerequisite accepted; separate new nonce/root authorized for PREP only. Setup/Core/resource/Worker/Java effects remain NOT_RUN; no internal Root created or inspected."
+}

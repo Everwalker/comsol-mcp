@@ -144,6 +144,8 @@ def test_sdk_blocked_preflight_is_counted_metadata_responsive_and_daemon_close_w
 
 
 def test_factory_close_waits_for_whole_birth_and_never_holds_global_control_condition(monkeypatch,tmp_path):
+    # Keep the historical node ID; the reservation contract replaces waiting
+    # retirement with bounded BUSY, followed by explicit close after settlement.
     daemon,factory=daemon_factory(tmp_path,monkeypatch);sdk=_JobBoundary(factory,monkeypatch)
     calls=[]
     try:
@@ -152,11 +154,13 @@ def test_factory_close_waits_for_whole_birth_and_never_holds_global_control_cond
             try:
                 assert sdk.entered.wait(1)
                 closer=_async_call(factory.close,name='original-factory-close');calls.append(closer)
-                assert not closer[1].wait(.1) and not factory._closed
+                assert closer[1].wait(.5) and not factory._closed
+                assert len(closer[3])==1 and isinstance(closer[3][0],ExecutionContractError)
                 query=_async_call(lambda:daemon.dispatch({'operation':'session_health','arguments':{},'execution':{}}),name='close-race-query');calls.append(query)
                 assert query[1].wait(.5) and not query[3] and query[2][0]['success'] is True
             finally:sdk.release.set();_join(*calls)
-            assert isinstance(first[3][0],_SoftwareBirthEnd) and not closer[3]
+            assert isinstance(first[3][0],_SoftwareBirthEnd)
+            factory.close()
             assert factory._closed and factory._profile_participant.close_returned and daemon._worker_admission_inflight==0
             assert gate._pause_terminal_profile(runtime).check()
     finally:daemon.close()

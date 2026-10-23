@@ -39,6 +39,7 @@ def software_only(monkeypatch):
     monkeypatch.setattr(socket, 'create_connection', denied)
     monkeypatch.setattr(targets, '_ORIGINS', {})
     monkeypatch.setattr(targets, '_READS', {})
+    monkeypatch.setattr(targets, '_HELD', {})
     monkeypatch.setattr(targets, '_LOADER_APIS', {})
     monkeypatch.setattr(mic, '_retained', {})
 
@@ -66,7 +67,7 @@ def wfp_sd(subject):
     return sd(extra=(subject,0x20080),system_mask=0xF07FF)
 
 
-def case(*, service_leaf_write=False):
+def case(*, service_leaf_write=False, child_acl=False):
     original, plan = network_profile_and_plan()
     contents = {i.path: (i.role+'-software-bytes').encode() for i in original.launch_images}
     host = replace(original, root=replace(original.root, path=r'C:\Projects\workspace',
@@ -77,7 +78,9 @@ def case(*, service_leaf_write=False):
             resources.PathGrant(r'C:\Projects\workspace\data',('READ','WRITE')),
             resources.PathGrant(r'C:\Projects\workspace\temp',('READ','WRITE'))),
         windows_isolation=replace(original.windows_isolation,service_start_name='LocalSystem',service_logon_sid='S-1-5-18',acl_grants=tuple(
-            replace(g,path=r'C:\Projects\workspace') for g in original.windows_isolation.acl_grants)))
+            replace(g,path=r'C:\Projects\workspace',security_descriptor_sha256=
+                native.canonical_security_descriptor_sha256(sd()) if child_acl else g.security_descriptor_sha256)
+            for g in original.windows_isolation.acl_grants)))
     raw = sd().hex(); files = []
     for path, roles in ((r'C:\COMSOL\install', ['installation_rx']), (r'C:\COMSOL\code', ['code_rx']),
             (r'C:\COMSOL\config', ['config_rx']), (r'C:\COMSOL\runtime', ['runtime_rx']),
@@ -135,9 +138,9 @@ class PathSdk:
         self.k=NS(); self.a=NS(); self.nt=NS()
         for name, fn in (('CreateFileW',self.root),('CloseHandle',self.close),('GetFileInformationByHandle',self.file),
                 ('GetFileInformationByHandleEx',self.full),('ReadFile',self.read),('LocalFree',self.free),
-                ('VirtualQuery',self.region),('GetFileType',lambda h:1)):
+                ('VirtualQuery',self.region),('GetFileType',lambda h:1),('SetFilePointerEx',self.rewind)):
             setattr(self.k,name,Function(fn))
-        for name in ('WriteFile','FlushFileBuffers','SetFilePointerEx','SetFileInformationByHandle','GetFileAttributesW','DeviceIoControl'):
+        for name in ('WriteFile','FlushFileBuffers','SetFileInformationByHandle','GetFileAttributesW','DeviceIoControl'):
             setattr(self.k,name,Function(lambda *a:pytest.fail('unexpected mutable/unused path export')))
         for name,fn in (('GetSecurityInfo',self.security),('GetSecurityDescriptorLength',self.length),
                 ('GetSecurityDescriptorControl',self.control),('GetSecurityDescriptorSacl',self.sacl)):
@@ -201,6 +204,10 @@ class PathSdk:
         if self.fault=='truncated' and data:data=b''
         C.memmove(buffer,data,len(data));C.cast(count,C.POINTER(C.c_uint32))[0]=len(data)
         self.positions[getattr(handle,'value',handle)]+=len(data);return 1
+    def rewind(self,handle,offset,output,method):
+        assert (offset,output,method)==(0,None,0)
+        self.positions[getattr(handle,'value',handle)]=0
+        return 1
     def security(self,handle,kind,flags,owner,group_,dacl,sacl,output):
         path,row,attrs=self.row(handle); assert kind==1 and flags in (5,7,0x10)
         holder=self.api._finite_pending_sd if flags in (5,7) else self.api.pending
@@ -427,8 +434,8 @@ def test_real_reader_error_boundaries_original_owner_unknown_no_native_retry(mon
 
 
 @contextmanager
-def full_chain(monkeypatch,tmp_path,*,service_leaf_write=False,catalog_sdk=False):
-    document,p,contents,wfp,snapshot=case(service_leaf_write=service_leaf_write)
+def full_chain(monkeypatch,tmp_path,*,service_leaf_write=False,catalog_sdk=False,child_acl=False):
+    document,p,contents,wfp,snapshot=case(service_leaf_write=service_leaf_write,child_acl=child_acl)
     daemon=control.ControlDaemon(tmp_path/'control',registry={})
     daemon._windows_t037_profile=p
     factory=daemon._new_t037_session_factory(p.host_resource_profile.project_id,'finite-session')

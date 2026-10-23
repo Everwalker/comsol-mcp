@@ -135,6 +135,8 @@ def test_actual_close_waits_for_admitted_birth_before_resource_retirement(monkey
 
 
 def test_second_birth_waiting_original_runtime_does_not_hold_global_control_gate(monkeypatch,tmp_path):
+    # Historical node ID retained; a reservation now refuses a second birth
+    # immediately instead of queueing it for another SDK call.
     daemon,factory=daemon_factory(tmp_path,monkeypatch)
     sdk=_JobBoundary(factory,monkeypatch);waiting=threading.Event();calls=[]
     original=broker._require_original_runtime
@@ -149,7 +151,8 @@ def test_second_birth_waiting_original_runtime_does_not_hold_global_control_gate
             try:
                 assert sdk.entered.wait(1)
                 second=_async_call(sdk.launch,name='second-birth');calls.append(second)
-                assert waiting.wait(1) and not second[1].is_set()
+                assert waiting.wait(1) and second[1].wait(.5)
+                assert len(second[3])==1 and isinstance(second[3][0],ExecutionContractError)
                 query=_async_call(lambda:daemon.dispatch({'operation':'registry_list','arguments':{},'execution':{}}),name='second-birth-query')
                 calls.append(query)
                 assert query[1].wait(0.5),'runtime waiter blocked unrelated public dispatch'
@@ -157,8 +160,8 @@ def test_second_birth_waiting_original_runtime_does_not_hold_global_control_gate
                 assert sdk.calls==['create_job_boundary'] and daemon._worker_admission_inflight==1
             finally:
                 sdk.release.set();_join(*calls)
-            assert all(len(call[3])==1 and isinstance(call[3][0],_SoftwareBirthEnd) for call in (first,second))
-            assert sdk.calls==['create_job_boundary']*2 and daemon._worker_admission_inflight==0
+            assert len(first[3])==1 and isinstance(first[3][0],_SoftwareBirthEnd)
+            assert sdk.calls==['create_job_boundary'] and daemon._worker_admission_inflight==0
             record(tmp_path,case='second_original_runtime_waiter',job_calls=sdk.calls,inflight_after=0)
     finally:daemon.close()
 

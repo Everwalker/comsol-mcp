@@ -45,6 +45,8 @@ _LEAVES = frozenset(('data_leaf', 'temp_leaf'))
 _ORIGINS = {}  # Weak identity associations made only after a fresh loader SDK read.
 _READS = {}  # Strong roots for original readonly APIs, retained on UNKNOWN.
 _LOADER_APIS = {}  # Actual startup reader APIs retained before their first SDK open.
+_HELD = {}  # Original same-thread A scopes, retained on unresolved cleanup; never a Resume capability.
+_HELD_SEAL = object()
 
 
 def _fail(reason, message, **details):
@@ -268,6 +270,10 @@ class _TargetPathApi(_PathApi):
     """Existing relative path pinning, with fixed single-effect root closers."""
     def _resource_closer(self):
         return _once_close(self.k.CloseHandle)
+
+    def rewind(self, handle):
+        # Existing original readonly HANDLE; never reopen a pathname.
+        self.check(self.k.SetFilePointerEx(handle, 0, None, 0))
 
     def open(self, path, *, directory=False, **options):
         # This inherited path walker calls open only for its ordinary drive
@@ -534,6 +540,7 @@ class NativeTargetReader:
         self.api = _TargetPathApi(); attach_registry(self.api, self.registry)
         self.mic = NativeFileMicApi(self.owner)
         self.pins = []
+        self.contents = []
         self.source_chains = []
         self.retired = False
         _READS[id(self)] = self
@@ -598,6 +605,8 @@ class NativeTargetReader:
                     or self._source_chain(chain, source_subject_sid) != source_chain)):
             _fail('FINITE_TARGET_CHANGED', 'pinned file identity/links/extent/times/security changed')
         self.pins.append((leaf, directory, before, descriptor, mic.before_label, legacy_sd))
+        if content:
+            self.contents.append((leaf, before[1], digest))
         if source_chain is not None:
             self.source_chains.append((chain, source_subject_sid, source_chain))
         return dict(fingerprint=before, descriptor=descriptor, label=mic.before_label,
@@ -605,36 +614,66 @@ class NativeTargetReader:
                     legacy_security_sha256=hashlib.sha256(legacy_sd).hexdigest() if legacy_sd is not None else None,
                     source_chain_sha256=hashlib.sha256(_canonical(source_chain)).hexdigest() if source_chain is not None else None)
 
-    def finish(self):
+    def check_current(self):
         from ._windows_t037_mic import BorrowedFileHandle, observe_file_mandatory_label
         if self.retired:
-            return  # No observation or second close of former/reused HANDLEs.
+            _fail('FINITE_READER_LIFETIME_MISMATCH', 'retired original pins cannot supply a new observation')
         if _READS.get(id(self)) is not self or threading.get_ident() != self.scope.thread_id:
+            _fail('FINITE_READER_LIFETIME_MISMATCH', 'only original reader/thread can check its pinned targets')
+        if (getattr(self.api, 'pending_root', None) or getattr(self.api, 'pending_relative', None)
+                or getattr(self.mic, '_finite_pending_sd', None) is not None or self.mic.pending is not None):
+            _fail('FINITE_NATIVE_ACQUISITION_UNKNOWN', 'original SDK output storage retained; no new read or release')
+        if any(e.state == 'UNKNOWN' for e in self.registry.unresolved()):
+            _fail('FINITE_NATIVE_RESOURCE_UNKNOWN', 'original readonly resources remain unknown; no cleanup retry')
+        for handle, directory, before, descriptor, label, legacy_sd in self.pins:
+            entry = self.registry.find(self.api, handle)
+            if entry is None or entry.state != 'ACQUIRED':
+                _fail('FINITE_HANDLE_OWNER_MISSING', 'original acquired target entry is no longer held')
+            fresh = observe_file_mandatory_label(BorrowedFileHandle(self.owner, self.api, entry), api=self.mic)
+            if (self.api.full_fingerprint(handle, directory=directory) != before
+                    or self._security(handle) != descriptor or fresh.before_label != label
+                    or legacy_sd is not None and self._security(handle, 5) != legacy_sd):
+                _fail('FINITE_TARGET_CHANGED', 'original retained target identity/security/MIC changed')
+            expected = next((row for row in self.contents if row[0] is handle), None)
+            if expected is not None:
+                _, size, digest = expected
+                self.api.rewind(handle)
+                hasher = hashlib.sha256(); remaining = size
+                while remaining:
+                    block = self.api.read_chunk(handle, min(65536, remaining))
+                    if type(block) is not bytes or not block or len(block) > remaining:
+                        _fail('FINITE_CONTENT_CHANGED', 'original pinned content was truncated or oversized')
+                    hasher.update(block); remaining -= len(block)
+                if (self.api.read_chunk(handle, 1) or hasher.hexdigest() != digest
+                        or self.api.full_fingerprint(handle, directory=directory) != before
+                        or self._security(handle) != descriptor):
+                    _fail('FINITE_CONTENT_CHANGED', 'original pinned content/security changed without reopening')
+        for chain, subject, expected in self.source_chains:
+            if self._source_chain(chain, subject) != expected:
+                _fail('FINITE_PROFILE_SOURCE_CHANGED', 'original pinned source path-chain identity/security changed')
+
+    def finish(self):
+        if (threading.get_ident() != self.scope.thread_id
+                or not self.retired and _READS.get(id(self)) is not self):
             _fail('FINITE_READER_LIFETIME_MISMATCH', 'only original reader/thread can finish its pinned targets')
+        if self.retired:
+            return  # Cached known release, never observe former/reused HANDLEs.
+        if getattr(self, '_finish_error', None) is not None:
+            raise self._finish_error  # UNKNOWN release is not automatically entered again.
         try:
-            if (getattr(self.api, 'pending_root', None) or getattr(self.api, 'pending_relative', None)
-                    or getattr(self.mic, '_finite_pending_sd', None) is not None or self.mic.pending is not None):
-                _fail('FINITE_NATIVE_ACQUISITION_UNKNOWN', 'original SDK output storage retained; no new read or release')
-            if any(e.state == 'UNKNOWN' for e in self.registry.unresolved()):
-                _fail('FINITE_NATIVE_RESOURCE_UNKNOWN', 'original readonly resources remain unknown; no cleanup retry')
-            for handle, directory, before, descriptor, label, legacy_sd in self.pins:
-                entry = self.registry.find(self.api, handle)
-                fresh = observe_file_mandatory_label(BorrowedFileHandle(self.owner, self.api, entry), api=self.mic)
-                if (self.api.full_fingerprint(handle, directory=directory) != before
-                        or self._security(handle) != descriptor or fresh.before_label != label
-                        or legacy_sd is not None and self._security(handle, 5) != legacy_sd):
-                    _fail('FINITE_TARGET_CHANGED', 'original retained target changed before static observation finished')
-            for chain, subject, expected in self.source_chains:
-                if self._source_chain(chain, subject) != expected:
-                    _fail('FINITE_PROFILE_SOURCE_CHANGED', 'original pinned source path-chain identity/security changed')
-        finally:
-            pending = (getattr(self.api, 'pending_root', None) or getattr(self.api, 'pending_relative', None)
-                       or getattr(self.mic, '_finite_pending_sd', None) is not None or self.mic.pending is not None)
-            if not pending and not any(e.state == 'UNKNOWN' for e in self.registry.unresolved()):
-                _release_scope(self.registry, self.scope)
-            if not pending and not any(e.seq > self.scope.seq for e in self.registry.unresolved()):
-                _READS.pop(id(self), None)
-                self.retired = True
+            try:
+                self.check_current()
+            finally:
+                pending = (getattr(self.api, 'pending_root', None) or getattr(self.api, 'pending_relative', None)
+                           or getattr(self.mic, '_finite_pending_sd', None) is not None or self.mic.pending is not None)
+                if not pending and not any(e.state == 'UNKNOWN' for e in self.registry.unresolved()):
+                    _release_scope(self.registry, self.scope)
+                if not pending and not any(e.seq > self.scope.seq for e in self.registry.unresolved()):
+                    _READS.pop(id(self), None)
+                    self.retired = True
+        except BaseException as error:
+            self._finish_error = error
+            raise
 
 
 def _label_matches(label, expected):
@@ -699,12 +738,46 @@ def _project_binding(profile, factory, daemon):
     return record
 
 
+class _HeldFiniteA:
+    """Original retained file acquisitions; neither diagnostic data nor B/Resume authority."""
+    def __init__(self, profile, factory, daemon, reader, record, origin, *, seal):
+        if seal is not _HELD_SEAL:
+            _fail('FINITE_A_ORIGINAL_REQUIRED', 'original same-thread target acquisition required')
+        self._seal=seal;self.profile=profile;self.factory=factory;self.daemon=daemon
+        self.reader=reader;self.record=record;self.origin=origin;self.digest=profile.sha256
+        self.binding=factory._scm_binding;self.state='ACQUIRED';self.observations=[]
+        self.primary_error=None;self.cleanup_error=None
+
+    def check_current(self):
+        if (self._seal is not _HELD_SEAL or _HELD.get(id(self.factory)) is not self
+                or getattr(self.factory, '_held_static_a', None) is not self or self.state != 'ACQUIRED'
+                or type(self.reader) is not NativeTargetReader or self.reader.owner is not self.factory
+                or self.reader.retired or self.reader.scope.thread_id != threading.get_ident()
+                or self.factory._scm_binding is not self.binding or self.factory.profile is not self.profile
+                or self.profile.sha256 != self.digest or _ORIGINS.get(id(self.profile)) is not self.origin
+                or _path(self.daemon._windows_t037_profile_path) != _path(self.origin[1])
+                or _project_binding(self.profile, self.factory, self.daemon) != self.record):
+            _fail('FINITE_A_LIFETIME_CHANGED', 'original retained A/profile/project/source/thread binding changed')
+        self.reader.check_current()
+
+
+def _require_held_finite_a(factory):
+    from ._windows_appcontainer_gate import _check_factory_activity
+    _check_factory_activity(factory)  # Shutdown/SCM stop only permits existing never-resumed cleanup.
+    held=_HELD.get(id(factory))
+    if type(held) is not _HeldFiniteA:
+        _fail('FINITE_A_ORIGINAL_REQUIRED', 'normal V4 launch requires its original held finite A')
+    held.check_current()
+    return held
+
+
 @contextmanager
-def finite_target_scope(profile, factory, daemon):
-    """Current finite comparison only; its yield value grants no child rights."""
+def _held_finite_target_scope(profile, factory, daemon):
+    """Internal same-thread pin lifetime, kept through the synchronous factory/cleanup."""
     contract = require_contract(profile)
     from ._windows_owned_resources import registry_for
-    if registry_for(factory).unresolved():
+    if (id(factory) in _HELD or getattr(factory, '_held_static_a', None) is not None
+            or any(r.owner is factory for r in _READS.values()) or registry_for(factory).unresolved()):
         _fail('STATIC_NATIVE_OWNER_UNRESOLVED', 'original finite static resources are unresolved; no reacquisition')
     record = _project_binding(profile, factory, daemon)
     retained = _ORIGINS.get(id(profile))
@@ -712,6 +785,9 @@ def finite_target_scope(profile, factory, daemon):
             or _path(daemon._windows_t037_profile_path) != _path(retained[1])):
         _fail('FINITE_PROFILE_SOURCE_ORIGIN_REQUIRED', 'only the actual loader-retained source for this original profile is accepted')
     reader = NativeTargetReader(factory)
+    held=_HeldFiniteA(profile,factory,daemon,reader,record,retained,seal=_HELD_SEAL)
+    reader._held_a_result=held
+    _HELD[id(factory)]=held;factory._held_static_a=held
     try:
         source = _source_fact(reader, profile, retained[1])
         if source != retained[3]:
@@ -734,11 +810,45 @@ def finite_target_scope(profile, factory, daemon):
                                  'raw_security_sha256': hashlib.sha256(fact['descriptor']).hexdigest()})
         if _project_binding(profile, factory, daemon) != record:
             _fail('FINITE_PROJECT_BINDING_CHANGED', 'registered project record changed during the static read')
-        yield {'scope': 'FINITE_STATIC_COMPARISON_ONLY_NOT_RESUME', 'targets': observations}
+        held.observations=observations
+        yield held
         if _project_binding(profile, factory, daemon) != record:
             _fail('FINITE_PROJECT_BINDING_CHANGED', 'registered project binding changed before completing static A')
+    except BaseException as error:
+        held.primary_error=error
+        # A child/ancillary cleanup UNKNOWN must keep its original A pins too.
+        from ._windows_t037 import NativeSuspendedChildLaunchError
+        api=factory._api
+        unsettled=(api is not None and (any(e.state == 'UNKNOWN' for e in registry_for(api).unresolved())
+            or bool(getattr(api, '_retained_launch_cleanup', ()))
+            or bool(getattr(api, '_unclassified_create_handles', ()))))
+        if isinstance(error, NativeSuspendedChildLaunchError) or unsettled:
+            held.state='UNKNOWN'
+        raise
     finally:
-        reader.finish()
+        if held.state != 'UNKNOWN':
+            try:reader.finish()
+            except BaseException as error:
+                held.cleanup_error=error
+                if not reader.retired:held.state='UNKNOWN'
+                if held.primary_error is None or not reader.retired:
+                    # Preserve primary+cleanup on the original held scope, but
+                    # unresolved resources must retain the old outward UNKNOWN
+                    # refusal rather than publish a known getter/body failure.
+                    raise error from held.primary_error
+            finally:
+                if reader.retired:
+                    held.state='RELEASED';_HELD.pop(id(factory),None)
+                    factory._held_static_a=None
+                else:held.state='UNKNOWN'
+        reader._held_a_result=held  # Original observer retains primary and cleanup failures.
+
+
+@contextmanager
+def finite_target_scope(profile, factory, daemon):
+    """Standalone diagnostic comparison retains no birth or Resume authority."""
+    with _held_finite_target_scope(profile,factory,daemon) as held:
+        yield {'scope': 'FINITE_STATIC_COMPARISON_ONLY_NOT_RESUME', 'targets': held.observations}
 
 
 from ._windows_t037_native import CtypesWindowsPolicyApi

@@ -122,13 +122,23 @@ def _register_factory(factory, binding):
     runtime=binding[0][0];gate=_GATES.get(id(runtime))
     if type(gate) is not _ProfileGate:
         _fail('PROFILE_GATE_ORIGINAL_REQUIRED', 'factory registration requires the original profile coordinator')
-    with runtime._lock:
+    with _runtime_transition(runtime):
+        _active_transition(gate)
+        if gate.activity is not None:
+            _fail('PROFILE_ACTIVITY_BUSY', 'factory enrollment cannot overlap an original reservation')
+    gate.require_active()  # Current provider/file observations never run under the runtime lock.
+    with _runtime_transition(runtime):
         gate.check(live=False)
         if len(gate.participants)>=MAX_PARTICIPANTS:
             _fail('PROFILE_FACTORY_BUDGET_EXHAUSTED', 'bounded original factory participant budget is exhausted')
-        gate.require_active()
+        _active_transition(gate)
+        if gate.activity is not None:
+            _fail('PROFILE_ACTIVITY_BUSY', 'factory enrollment cannot overlap an original reservation')
         if (id(factory) in _FACTORIES or getattr(factory,'_profile_participant',None) is not None
-                or factory._closed or factory._scm_binding is not None):
+                or factory._closed or factory._scm_binding is not None
+                or factory.profile is not gate.profile or binding[1] is not gate.daemon
+                or binding[3] is not factory or binding[2][1] != factory.session_id
+                or gate.daemon._session_t037_process_factories.get(binding[2]) is not factory):
             _fail('PROFILE_FACTORY_ORIGINAL_REQUIRED', 'a fresh original registered factory is required')
         for original in gate.participants.values():
             if original.key==binding[2]:
@@ -165,33 +175,69 @@ def _participant(factory, *, optional=False):
 
 
 @contextmanager
+def _runtime_transition(runtime):
+    if not runtime._lock.acquire(blocking=False):
+        _fail('PROFILE_ACTIVITY_BUSY', 'runtime transitions do not wait for other activity')
+    try:yield
+    finally:runtime._lock.release()
+
+
+def _active_transition(gate):
+    from ._windows_t037_admission import _require_daemon_binding
+    gate.check(live=False)
+    if gate.state != 'ACTIVE':
+        _fail('PROFILE_GATE_PAUSED', 'this original profile lifetime no longer admits activity')
+    _require_daemon_binding(gate.binding)  # Pure original-object/runtime validation, no SDK observation.
+
+
+def _check_factory_activity(factory):
+    from ._windows_t037_admission import _require_factory_runtime
+    participant=_participant(factory);gate=participant.gate
+    with _runtime_transition(gate.runtime):
+        _require_factory_runtime(factory);_active_transition(gate)
+        participant.check(registered=True,acquiring_api=True)
+        if gate.activity != (participant,threading.get_ident()) or gate.depth < 1:
+            _fail('PROFILE_ACTIVITY_ORIGINAL_REQUIRED','same-thread original activity reservation required')
+    return participant
+
+
+@contextmanager
 def _factory_activity_scope(factory):
     from ._windows_t037_admission import _require_factory_runtime
     runtime,daemon,*_=_require_factory_runtime(factory)  # Never wait under the global condition.
     participant=_participant(factory);gate=participant.gate;thread=threading.get_ident()
-    if participant.close_returned:
-        _fail('PROFILE_FACTORY_NOT_ACTIVE', 'an original close return permanently ends this factory activity')
-    if gate.activity is not None and gate.activity[1]==thread:
-        if gate.activity[0] is not participant:
-            _fail('PROFILE_ACTIVITY_REENTRANT', 'nested activity must belong to the same original factory')
-        with runtime._lock:
-            _require_factory_runtime(factory);participant.check(registered=True,acquiring_api=True);gate.require_active()
+    with _runtime_transition(runtime):
+        if participant.close_returned:
+            _fail('PROFILE_FACTORY_NOT_ACTIVE', 'an original close return permanently ends this factory activity')
+        nested=gate.activity is not None and gate.activity[1]==thread
+        if gate.activity is not None and (not nested or gate.activity[0] is not participant
+                                         or participant.close_thread is not None):
+            _fail('PROFILE_ACTIVITY_BUSY','original profile activity is already reserved')
+        if nested:
+            _require_factory_runtime(factory);participant.check(registered=True,acquiring_api=True);_active_transition(gate)
             gate.depth+=1
-            try:yield
-            finally:gate.depth-=1
+    if nested:
+        try:
+            gate.require_active()
+            yield
+        finally:
+            with runtime._lock:gate.depth-=1
         return
     with daemon._dispatch_condition:
         if daemon._closing:
             _fail('PROFILE_GATE_CLOSING', 'closing daemon cannot admit profile activity')
         daemon._worker_admission_inflight+=1
     try:
-        with runtime._lock:
-            _require_factory_runtime(factory);participant.check(registered=True,acquiring_api=True);gate.require_active()
+        with _runtime_transition(runtime):
+            _require_factory_runtime(factory);participant.check(registered=True,acquiring_api=True);_active_transition(gate)
             if gate.activity is not None:
-                _fail('PROFILE_ACTIVITY_UNKNOWN', 'original runtime activity did not settle')
+                _fail('PROFILE_ACTIVITY_BUSY', 'original runtime activity did not settle')
             gate.activity=(participant,thread);gate.depth=1
-            try:yield
-            finally:
+        try:
+            gate.require_active()
+            yield  # Reservation/inflight stay rooted; SDK/waits have no runtime/global lock.
+        finally:
+            with runtime._lock:
                 try:participant.capture_observers()
                 finally:gate.depth=0;gate.activity=None
     finally:
@@ -231,11 +277,16 @@ def _factory_close_scope(factory):
     with daemon._dispatch_condition:
         daemon._worker_admission_inflight+=1  # Cleanup is permitted during shutdown.
     try:
-        with runtime._lock:
+        with _runtime_transition(runtime):
             gate.check(live=False);participant.check()
+            if gate.activity is not None or participant.close_thread is not None:
+                _fail('PROFILE_ACTIVITY_BUSY','close cannot retire or wait on a reserved original activity')
             participant.close_thread=thread
-            try:yield participant
-            finally:participant.close_thread=None
+            gate.activity=(participant,thread);gate.depth=1
+        try:yield participant
+        finally:
+            with runtime._lock:
+                participant.close_thread=None;gate.depth=0;gate.activity=None
     finally:
         with daemon._dispatch_condition:
             daemon._worker_admission_inflight-=1;daemon._dispatch_condition.notify_all()
@@ -259,29 +310,36 @@ class _TerminalPause:
         if seal is not _SEAL:_fail('PROFILE_PAUSE_ORIGINAL_REQUIRED','original coordinator required')
         self._seal=seal;self.gate=gate;self.participants=participants;self.state='PAUSED';self.error=None
 
+    def _check_locked(self):
+        gate=self.gate
+        if (self._seal is not _SEAL or gate.pause is not self or gate.state!='PAUSED'
+                or self.state!='PAUSED' or tuple(gate.participants.values())!=self.participants
+                or gate.activity is not None or gate.depth):
+            _fail('PROFILE_PAUSE_INVALID','original terminal pause lifetime changed')
+        gate.check(live=False)
+        known={id(p.factory):p.factory for p in self.participants}
+        if any(known.get(id(f)) is not f for f in gate.daemon._session_t037_process_factories.values()):
+            _fail('PROFILE_FACTORY_UNREGISTERED','an unregistered factory appeared during profile pause')
+        for participant in self.participants:_require_terminal(participant)
+
     def check(self):
         gate=self.gate
-        with gate.runtime._lock:
-            try:
-                if (self._seal is not _SEAL or gate.pause is not self or gate.state!='PAUSED'
-                        or self.state!='PAUSED' or tuple(gate.participants.values())!=self.participants
-                        or gate.activity is not None or gate.depth):
-                    _fail('PROFILE_PAUSE_INVALID','original terminal pause lifetime changed')
-                gate.check(live=True)
-                known={id(p.factory):p.factory for p in self.participants}
-                if any(known.get(id(f)) is not f for f in gate.daemon._session_t037_process_factories.values()):
-                    _fail('PROFILE_FACTORY_UNREGISTERED','an unregistered factory appeared during profile pause')
-                for participant in self.participants:_require_terminal(participant)
-                return self
-            except BaseException as error:
+        try:
+            with gate.runtime._lock:self._check_locked()
+            gate.check(live=True)  # Original provider/source observation outside the runtime lock.
+            with gate.runtime._lock:self._check_locked()
+            return self
+        except BaseException as error:
+            with gate.runtime._lock:
                 if self.error is None:self.error=error
                 if gate.first_error is None:gate.first_error=error
                 gate.state='UNKNOWN';self.state='INVALID'
-                raise
+            raise
 
     def settle(self):
+        self.check()
         with self.gate.runtime._lock:
-            self.check();self.gate.state='SETTLED';self.state='SETTLED'
+            self._check_locked();self.gate.state='SETTLED';self.state='SETTLED'
 
     def fail(self, error):
         with self.gate.runtime._lock:
@@ -299,9 +357,15 @@ def _pause_terminal_profile(runtime):
     if not runtime._lock.acquire(blocking=False):
         _fail('PROFILE_ACTIVITY_BUSY','profile pause does not wait for in-flight runtime work')
     try:
-        gate.require_active()
+        _active_transition(gate)
         if gate.activity is not None or gate.depth:
             _fail('PROFILE_ACTIVITY_BUSY','profile pause cannot run inside its own factory activity')
+    finally:runtime._lock.release()
+    gate.require_active()
+    with _runtime_transition(runtime):
+        _active_transition(gate)
+        if gate.activity is not None or gate.depth:
+            _fail('PROFILE_ACTIVITY_BUSY','profile pause cannot overlap an original reservation')
         participants=tuple(gate.participants.values())
         known={id(p.factory):p.factory for p in participants}
         if any(known.get(id(f)) is not f for f in gate.daemon._session_t037_process_factories.values()):
@@ -310,4 +374,3 @@ def _pause_terminal_profile(runtime):
         pause=_TerminalPause(gate,participants,seal=_SEAL)
         gate.pause=pause;gate.state='PAUSED'
         return pause
-    finally:runtime._lock.release()
