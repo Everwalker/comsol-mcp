@@ -1,6 +1,6 @@
 # 当前续跑交接 — 2026-10-23
 
-当前主线快照（续跑 r146）：HEAD/origin/main 上次独立fetch一致为 e4daac8f35cadd6fd6776466ef2e964aef43a36f；Stop1676与配置753限定源码/软件已同步。README通用安装/项目/Java/结果恢复指南经Main文档审查，正精确发布；不增加能力或原生PASS。publisher1780 PASS/7 FAIL仍未验收，同Leib按明确接口裁定迁移夹具；Primary AppC API-only与Kier recipe4继续。Mac新只读资源样本128GiB/free-only5.915GiB/swap已用13188.62M，359源/安装hash吻合，尚无新Server/计算，有限下一步由Main决策。R3精确四文件传输待用户授权，无诊断/SDK/GO。完整恢复、原生矩阵和最终Reviewer未通过，整体IN_PROGRESS。
+当前主线快照（续跑 r150）：HEAD/origin/main 上次独立fetch一致为 570e87e5c996c67e2132d0721635d65e760ddeb2；Stop1676、配置753与README已同步。typed R6经Main源码/测试审查及独立机械核对，827 PASS/1原生排除获限定source/software验收，现准备发布；publisher1788机械核对通过，待接入已审查的两处Controller hook后发布。R5及旧7FAIL原件保留。AppC attempt19为340 PASS，但Main发现Delete SDK处于runtime锁内，已退回同Primary修复；Mac PREP V2改内部/private/tmp私有状态目录，无产品放行。R3四文件传输仍待用户精确授权，无诊断/SDK/GO。完整恢复、required原生矩阵与最终独立Reviewer未通过，整体IN_PROGRESS。
 
 
 历史只读原生检查点 r132：目录R2已获Main限定验收及独立机械核对（271引用/114本地文件一致）。实际同一原始Windows子进程Enum DWORD0/count226、VirtualQuery SIZE_T48、Free DWORD0各一次，原owner确认RELEASED。226超过冻结探针64行上限，非空行/SID/UTF16/capability复制NOT_RUN；不能称空目录或absence。OS子进程退出未观察，无重查PID/信号/重放。四配置已决策改SY/BA-only私有源模板，保留state/data/temp service Modify；scoped stop Main反例1FAIL继续同Primary整改。最终Reviewer/完整原生验收仍未开始，整体IN_PROGRESS。

@@ -413,7 +413,11 @@ def test_invalid_approved_inputs_reject_before_any_sdk(mutation):
     elif mutation == 'label_absent': del r['labels']['file']['rid']
     elif mutation == 'label_flags': r['labels']['directory']['flags'] = 8
     elif mutation == 'label_rid': r['labels']['directory']['rid'] = 0x1000
-    elif mutation == 'provider_action': t[m.CONFIG_PATHS[1]]['grants'] = [dict(project_id='x',action='session.stop', authorization_ref_sha256='1'*64,scope_sha256='2'*64,expires_at_utc='2026-01-01T00:00:00Z')]
+    elif mutation == 'provider_action':
+        from comsol_mcp._host_scoped_provider import _GRANT_ACTIONS
+        # Literal session.stop is published; this negative needs an unsupported action.
+        assert 'unsupported.action' not in _GRANT_ACTIONS
+        t[m.CONFIG_PATHS[1]]['grants'] = [dict(project_id='x',action='unsupported.action', authorization_ref_sha256='1'*64,scope_sha256='2'*64,expires_at_utc='2026-01-01T00:00:00Z')]
     elif mutation == 'provider_extra': t[m.CONFIG_PATHS[1]]['trusted'] = True
     elif mutation == 'disk_storage': t[m.CONFIG_PATHS[3]]['profiles'][0]['storage_id'] = 'windows-volume:55'
     elif mutation == 'directory_alias': r['owned_directories'].append('project/DATA')

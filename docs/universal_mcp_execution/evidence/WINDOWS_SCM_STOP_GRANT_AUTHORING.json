@@ -1,0 +1,222 @@
+{
+  "schema": "comsol-mcp.windows-scm-stop-grant-authoring-evidence/1",
+  "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_R6",
+  "base": "e4daac8f35cadd6fd6776466ef2e964aef43a36f",
+  "scope": "Pure recipe4 Stop scope authoring plus Main-approved narrow stale-negative maintenance. No actual grant/ref issuance/install, Windows SDK, host change, old-runtime stop or native acceptance.",
+  "source": [
+    {
+      "path": "comsol_mcp/_windows_scm_config_materialization.py",
+      "bytes": 48457,
+      "sha256": "f8ffe54af04a3a32422da61fa86ebcb48e39036cf2605f45283abab274bf9b82"
+    },
+    {
+      "path": "tests/test_windows_scm_stop_grant_authoring.py",
+      "bytes": 22104,
+      "sha256": "ca61c33ca34361078ce32f21f71c56342eb825c0aebfd885e5b4fb38f0a970ae"
+    },
+    {
+      "path": "tests/test_windows_scm_config_materialization.py",
+      "bytes": 53668,
+      "sha256": "1ef89e5ceae3e766fc14020b67cca6c871b3f077ab1aa3f5726a934e696abae3"
+    },
+    {
+      "path": "docs/universal_mcp_execution/SCM_STOP_GRANT_AUTHORING.md",
+      "bytes": 6609,
+      "sha256": "37f3541ad27aa3c65356d143cf6adc7951b00d827e694edd8df4a58ec6460f9b"
+    }
+  ],
+  "production_unchanged_from_R5": true,
+  "dependency_pins": [
+    {
+      "path": "comsol_mcp/_windows_host_bootstrap.py",
+      "sha256": "fdc0720541e13955fc2d458df395890ee5613afd7955377b8db026dc455b01f0",
+      "bytes": 92611
+    },
+    {
+      "path": "comsol_mcp/_windows_scm_config_native.py",
+      "sha256": "a289d94ac96395a51bd22f2b6951d6086ee303e9e7c123e59afb93fc33251db8",
+      "bytes": 10460
+    },
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "86bb8106bb24986b11511b0fdfa589181d1ae8de416c76cc5e068836a2df65b6",
+      "bytes": 72916
+    },
+    {
+      "path": "comsol_mcp/_managed_stop_origin.py",
+      "sha256": "72cc244eebbd99e7109bbc138f30fdfc144b222c647e99ba8eb3f1d9d8efc336",
+      "bytes": 21980
+    }
+  ],
+  "behavior": [
+    "SCHEMA /3 and explicit SCHEMA_V4 /4. At most one closed marker at provider grants[i].scope_sha256; exact runtime class/windows/originalManagedLifetime/FINAL_TRUSTED_PROFILE; project=final Host.project/action=session.stop; literal refSHA/absolute expiry.",
+    "Original final root/SID/SD -> trusted B canonicalized once -> R=SHA256(B) -> strict production parse(B,R) yields H -> unchanged published provider scope_sha256(H.project_id,session.stop,scope(R,H.sha256,H.host_id,runtime)). No projected digest/authority.",
+    "Replace only approved marker; validate ordinary provider schema; freeze all4 actual bytes before generated config writes. No provider reverse hash. Root/SD/source/normalizer errors retain original owner/nodes, no partial config write or replay.",
+    "Ref/project/expiry preserved; no current-expiry rejection during raw reparse/cleanup. HostScopedProvider.verify_scope checks normalized scope/ref/project/actual expiry/pinned config; runtime Stop/project Authority checks permissions separately."
+  ],
+  "maintenance": {
+    "approved_decision": {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/MAIN_DECISION.json",
+      "bytes": 2760,
+      "sha256": "7f2cc7cf28b4d50107e40e395713381e1a4a550c44527798af61a1086137ca10"
+    },
+    "same_node": "tests/test_windows_scm_config_materialization.py::test_invalid_approved_inputs_reject_before_any_sdk[provider_action]",
+    "change": "Only mutation action session.stop -> unsupported.action, assert absent from published _GRANT_ACTIONS. Same node and old pre-SDK refusal assertions. No skip/xfail or new positive.",
+    "existing_positive_reused": "tests/test_windows_scm_stop_grant_authoring.py::test_recipe3_literal_grants_and_expired_cleanup_remain_literal",
+    "R5_failure_retained": "R5 826PASS/1FAIL/1deselect and pristine baseline1FAIL retained as old version facts; R6 does not relabel them."
+  },
+  "software": {
+    "current": {
+      "passed": 827,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "deselected_nodes": [
+        "tests/test_w26_memory_resources.py::test_current_darwin_observation_is_native_admission_only_when_available"
+      ],
+      "new_positive_added": false,
+      "existing_recipe3_positive_reused": "tests/test_windows_scm_stop_grant_authoring.py::test_recipe3_literal_grants_and_expired_cleanup_remain_literal",
+      "node_set_derivation": {
+        "old753_nodes": 753,
+        "dedicated_new_nodes": 73,
+        "current_published_provider_extra_nodes": [
+          "tests/test_host_scoped_provider.py::test_session_stop_provider_scope_is_closed_windows_original_lifetime_class"
+        ],
+        "total_actual_R6_nodes": 827
+      }
+    },
+    "controls": [
+      "73 dedicated typed controls unchanged: closed-field/place/version/source/runtime/project/action/ref/expiry/duplicate/conflict/reverse-edge negatives before effects; no provisional normalizer call.",
+      "New/existing root final identity and trusted raw-byte dependency; trusted canonicalization once/all4 frozen-before-write; late error zero-write/original-node retention.",
+      "New/existing root x current/expired all4 normal loaders, real provider verifier and pinned source drift; recipe3 literal Stop raw parse/ref/scope/expiry/compared restore.",
+      "SDK/stdio filesystem seams only; genuine parser/normalizer/owner/verifier code. Fixture grant/parsed JSON/ResolvedConfiguration never native authority."
+    ],
+    "history": "BeforeR1 2 unsupported recipe4 failures; R3 63PASS/3 stdio-vs-SDK identity seam failures; R4 69PASS; R5 826PASS/1 stale-negative FAIL. Old raw/results remain frozen, not cumulative."
+  },
+  "execution_binding": {
+    "inputs": 931,
+    "post_imports": 123,
+    "actual_exec_candidate_modules": 123,
+    "loader_counts": {
+      "SourceFileLoader": 105,
+      "pytest_assertion_rewrite": 18
+    },
+    "exec_blobs": 248,
+    "before_after_equal": true,
+    "full_before_map_saved": true,
+    "full_after_map_saved": true,
+    "exact_deselected_nodes_saved": true,
+    "controls": {
+      "global_thread_exec": "PASS",
+      "thread": 6109753344,
+      "mismatched_get_data_bytes_refused_before_exec": "PASS",
+      "actual_control_execs": 1
+    },
+    "limits": "Actual module execution bytes/code audited across Python threads; not every call/native behavior. Ordinary non-Windows regression fixture filesystem checks retain original scope."
+  },
+  "old_R5_metadata_copies": [
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/preserved-r5/docs/universal_mcp_execution/evidence/WINDOWS_SCM_STOP_GRANT_AUTHORING.json",
+      "bytes": 11073,
+      "sha256": "30ccd8d118ccaf256c0bd84a9997ad2ee64df5ebd61772001af9de3095401ea0"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/preserved-r5/_state/universal-windows-scm-stop-grant-authoring/DELIVERY.json",
+      "bytes": 1633,
+      "sha256": "e2d8c7a06108a76b00dde5ba474c4af4588b40748aeeae34da9949460f49c605"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/preserved-r5/_state/universal-windows-scm-stop-grant-authoring/SOURCE_MANIFEST.json",
+      "bytes": 260633,
+      "sha256": "c65f302161353b59e9f95b779283307548908c16e8e7e975dda335d49a0255ae"
+    }
+  ],
+  "old_R5_preservation": "Old931 maps, codeblobs, logs and old test bytes/metadata unchanged; 955 old manifest entries verified before maintenance and again before current-pointer updates. Earlier753/R28 metadata limitations remain unchanged.",
+  "limits": {
+    "Windows_SDK": "NOT_RUN",
+    "host_changes": 0,
+    "grant_or_ref_issuance_installation": 0,
+    "old_runtime_stop": "NOT_RUN",
+    "native_System_Mic_SCM_COMSOL": "NOT_QUALIFIED_NOT_RUN",
+    "Main_acceptance": "SCOPED_SOURCE_SOFTWARE_ONLY",
+    "Git_writes": 0
+  },
+  "artifacts": [
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/SOURCE_MANIFEST.json",
+      "bytes": 83079,
+      "sha256": "c7545c5c92fe2f9ab80a051eb608a6a682aecd3798d65afed7f71ab9c903b798"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/CANDIDATE.json",
+      "bytes": 3813,
+      "sha256": "2cdc30c4140ce570f3f63a9312e5f3f68d673120a950cc9d504ec849fcc77d8e"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/R5_PRESERVATION.json",
+      "bytes": 2248,
+      "sha256": "23ab24ff6f0097bc069401ad3ce367c6fbc890ecf4227b439583c71232ae22a2"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/JUNIT_NODE_SETS.json",
+      "bytes": 1113478,
+      "sha256": "06c54e94358309a6797c982912994a92f5e14ad7843f19bf1516783652c1ed71"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/delta/test_windows_scm_config_materialization.py.patch",
+      "bytes": 1281,
+      "sha256": "c60a5964e0933a2d2f3beb492e4dbe88fb3c0d97013314d54fbae5a65e595113"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/delta/SCM_STOP_GRANT_AUTHORING.md.patch",
+      "bytes": 1993,
+      "sha256": "9a79747efd78a6f214f38531176be38d9c90cca320b6a4423f4cbe2bc606487a"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/junit.xml",
+      "bytes": 408189,
+      "sha256": "8e3e885a3a3c85969214684192b7e908617a776924f2b7ae540a9b478d205bae"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/command.json",
+      "bytes": 916,
+      "sha256": "710d85414bf42e42e25d83a29d66619001eb6439ff8c6394cd44469a454545ac"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/inputs.json",
+      "bytes": 104438,
+      "sha256": "3f87bee39ba08143668c0f640ddb75c45876abea3913ead50fd14ca2c7d63bc3"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/inputs-after.json",
+      "bytes": 104438,
+      "sha256": "3f87bee39ba08143668c0f640ddb75c45876abea3913ead50fd14ca2c7d63bc3"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/imports.json",
+      "bytes": 20718,
+      "sha256": "ef8d4cdf2a2f90db0c866ba5b543e194133f5294790bfa9be1dc2c952e0ae8a5"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/execution-capture.json",
+      "bytes": 153759,
+      "sha256": "099282ba364cb9dbe5c3291f905200570af176f512cdc47e37a13325620345ec"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/execution-binding-summary.json",
+      "bytes": 701,
+      "sha256": "dcbd8af9bec4fa36b66501d8f133c15334a58c9cf4418f04a9bd8480a5e23f7f"
+    },
+    {
+      "path": "_state/universal-windows-scm-stop-grant-authoring/legacy-negative-r6/coherent-r6/collection-roster.json",
+      "bytes": 367879,
+      "sha256": "f80e83e14cdde2306a0b99c9ad257845ef0b3c6d692b1acead77dfbc3a9cc21c"
+    }
+  ],
+  "Main_review": {
+    "path": "_state/universal-main-review/20261023-typed-stop-publication/MAIN_REVIEW.json",
+    "sha256": "4ab26a3451348b72f74b9847a917b4c44addaf991e81641dfad7b3930c40388f",
+    "mechanical_sha256": "39783f7d5fcf56573d9ddf4171f549ad11c323a2f8b70f888196acad2185c631",
+    "historical_producer_compact_sha256": "638fdc916301819f8deac64d0eb1b23bb935d36d2d6a572caff1582082e2826f"
+  }
+}

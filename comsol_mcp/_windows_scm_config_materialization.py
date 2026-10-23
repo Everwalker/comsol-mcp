@@ -17,6 +17,8 @@ from . import _windows_host_bootstrap as b
 from . import _windows_scm_config_native as native
 
 SCHEMA = "comsol-mcp.windows-scm-config-recipe/3"
+SCHEMA_V4 = "comsol-mcp.windows-scm-config-recipe/4"
+STOP_GRANT_SCHEMA = "comsol-mcp.windows-original-managed-stop-grant/1"
 CONFIG_PATHS = ("profiles/trusted-profile.json", "profiles/host-provider.json",
                 "profiles/memory-resource.json", "profiles/disk-resource.json")
 SLOT = "$bootstrap"
@@ -94,7 +96,53 @@ def _state_sd(policy,sid):
     return struct.pack('<BBHIIII',1,0,0x9004,20,20+len(owner),0,20+len(owner)+len(group))+owner+group+acl
 
 
-def _provider_intent(document):
+def _typed_stop_grant(recipe, document, project_id):
+    """Closed recipe/4 authoring selector only; no projected scope is minted."""
+    if recipe['schema'] != SCHEMA_V4:
+        return None
+    from . import _host_scoped_provider as p
+    b._fields(document, {'schema', 'destinations', 'grants'})
+    grants = document['grants']
+    if type(grants) is not list or len(grants) > p.MAX_GRANTS:
+        b.fail('CONFIG_STOP_GRANT', 'bounded approved grant rows required')
+    selected = None
+    for index, row in enumerate(grants):
+        b._fields(row, {'project_id','action','authorization_ref_sha256','scope_sha256','expires_at_utc'})
+        marker = row['scope_sha256']
+        if type(marker) is not dict:
+            continue  # Existing literal grants keep their existing rules.
+        b._fields(marker, {'schema','platform','ownership_mode','source','runtime_id'})
+        runtime = marker['runtime_id']
+        b._fields(runtime, {'id','class'})
+        if (selected is not None or marker['schema'] != STOP_GRANT_SCHEMA
+                or marker['platform'] != 'windows' or marker['ownership_mode'] != 'originalManagedLifetime'
+                or marker['source'] != 'FINAL_TRUSTED_PROFILE'
+                or type(runtime['id']) is not str or not p._IDENTIFIER.fullmatch(runtime['id'])
+                or runtime['class'] != 'comsol_mcp._session_context.SessionRuntimeConfig'
+                or row['project_id'] != project_id or row['action'] != 'session.stop'):
+            b.fail('CONFIG_STOP_GRANT', 'one exact original-managed Stop authoring row required')
+        selected = index
+    if selected is not None:
+        row = grants[selected]
+        identity = tuple(row[k] for k in ('project_id','action','authorization_ref_sha256'))
+        if any(i != selected and tuple(other[k] for k in ('project_id','action','authorization_ref_sha256')) == identity
+               for i, other in enumerate(grants)):
+            b.fail('CONFIG_STOP_GRANT', 'typed row conflicts with another approved grant')
+    permitted = ('templates', CONFIG_PATHS[1], 'grants', selected, 'scope_sha256')
+    def audit(value, trail=()):
+        if type(value) is dict:
+            schema = value.get('schema')
+            if ((type(schema) is str and schema.startswith('comsol-mcp.windows-original-managed-stop-grant'))
+                    or value.get('source') == 'FINAL_TRUSTED_PROFILE') and trail != permitted:
+                b.fail('CONFIG_STOP_GRANT', 'Stop marker outside its one approved scope position')
+            for key, child in value.items(): audit(child, (*trail, key))
+        elif type(value) is list:
+            for i, child in enumerate(value): audit(child, (*trail, i))
+    audit(recipe)
+    return selected
+
+
+def _provider_intent(document, *, typed_stop=None):
     """Filesystem-independent portion only; normal provider load remains required.
 
     Reuse production action/bound constants. Sink ownership/identity and grant
@@ -120,12 +168,14 @@ def _provider_intent(document):
             b.fail("CONFIG_PROVIDER", "duplicate destination")
         seen.add(key)
     seen = set()
-    for row in grants:
+    for index, row in enumerate(grants):
         b._fields(row, {"project_id", "action", "authorization_ref_sha256", "scope_sha256", "expires_at_utc"})
         if (type(row["project_id"]) is not str or not 0 < len(row["project_id"]) <= 128
                 or type(row["action"]) is not str or row["action"] not in p._GRANT_ACTIONS):
             b.fail("CONFIG_PROVIDER", "only published, operator-approved grant actions supported")
-        b._hex(row["authorization_ref_sha256"]); b._hex(row["scope_sha256"])
+        b._hex(row["authorization_ref_sha256"])
+        if index != typed_stop:
+            b._hex(row["scope_sha256"])
         expiry = row["expires_at_utc"]
         try:
             parsed = datetime.strptime(expiry, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -133,7 +183,9 @@ def _provider_intent(document):
                 raise ValueError()
         except (TypeError, ValueError) as exc:
             raise b.BootstrapError("CONFIG_PROVIDER", "canonical bounded approved expiry required") from exc
-        key = tuple(row[k] for k in ("project_id", "action", "authorization_ref_sha256", "scope_sha256"))
+        # The marker is checked as intent, never replaced by a provisional hash.
+        scope_key = b.canonical(row['scope_sha256']) if index == typed_stop else row['scope_sha256']
+        key = (row['project_id'], row['action'], row['authorization_ref_sha256'], scope_key)
         if key in seen:
             b.fail("CONFIG_PROVIDER", "duplicate grant")
         seen.add(key)
@@ -196,12 +248,14 @@ def _project_root(recipe, prefix, directories):
     b.fail('CONFIG_ROOT', 'unsupported/unconfigured project-root mode')
 
 
-def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, final):
+def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, final, trusted_payload=None):
     from ._windows_t037 import parse_profile_v4_document
     from ._w26_memory_resources import parse_memory_profile_document
     from ._windows_t037_network import derive_session_network_intent
     trusted, provider, memory, disk = (documents[p] for p in CONFIG_PATHS)
-    payload = b.canonical(trusted)
+    payload = b.canonical(trusted) if trusted_payload is None else trusted_payload
+    if trusted_payload is not None:
+        trusted = json.loads(payload)  # Parse the exact frozen bytes used for the raw source hash.
     profile = parse_profile_v4_document(trusted, source_sha256=b.digest(payload))
     host = profile.host_resource_profile
     policy = host.windows_isolation
@@ -232,7 +286,7 @@ def _validate_documents(documents, *, recipe, prefix, name, files, argv, root, f
             expected = recipe["labels"]["directory" if target.kind == "directory" else "file"]
             if target.mandatory_label != tuple(expected[k] for k in ("rid", "mask", "flags")):
                 b.fail("CONFIG_LABEL", "finite target LABEL differs from approved node LABEL")
-    _provider_intent(provider)
+    _provider_intent(provider, typed_stop=_typed_stop_grant(recipe, provider, host.project_id))
     parsed_memory = parse_memory_profile_document(memory, actual_host_id=recipe["host"]["machine_fingerprint_sha256"],
         actual_platform="windows", source_sha256=b.digest(b.canonical(memory)))
     parsed_disk = _disk_intent(disk, hostname=recipe["host"]["hostname"], root=root, final=final)
@@ -254,7 +308,7 @@ def validate_recipe(recipe, *, prefix, service_name, files, argv):
     """
     try:
         b._fields(recipe, {"schema", "host", "project_root", "owned_directories", "labels", "templates", "state_policy"})
-        if recipe["schema"] != SCHEMA:
+        if recipe["schema"] not in (SCHEMA, SCHEMA_V4):
             b.fail("CONFIG_RECIPE", "versioned finite recipe required")
         b._fields(recipe["host"], {"hostname", "machine_fingerprint_sha256"})
         hostname = recipe["host"]["hostname"]
@@ -288,8 +342,8 @@ def validate_recipe(recipe, *, prefix, service_name, files, argv):
             native.label_bytes(policy)
         templates = recipe["templates"]
         b._fields(templates, CONFIG_PATHS)
-        # Only these literal positions are sanctioned; no templating language,
-        # computed scope/source hash, arbitrary callback or incoming resolved facts.
+        # Only these slots and recipe/4's closed Stop marker are sanctioned;
+        # no general templating, callback or incoming resolved source facts.
         host = templates[CONFIG_PATHS[0]]["host_resource_profile"]
         policy = host["windows_isolation"]
         required = ((policy, "service_sid", "service_sid"), (host, "root", "project_root"),
@@ -537,9 +591,31 @@ class _Configuration:
             storage_id='windows-volume:'+root['volume_id'], directory_descriptor_hex=self.final_descriptors[True].hex(),
             file_descriptor_hex=self.final_descriptors[False].hex(),
             private_directory_descriptor_hex=self.descriptors[True].hex(), root_holder_descriptor_hex=image.raw_sd.hex()))
-        _validate_documents(documents, recipe=self.recipe, prefix=self.intent.prefix, name=self.intent.service_name,
-            files=self.intent.files, argv=self.intent.argv, root=root, final=True)
-        frozen = tuple((p, b.canonical(documents[p])) for p in CONFIG_PATHS)
+        if self.recipe['schema'] == SCHEMA_V4:
+            # B is frozen once, after the original root/SID/SD observations. R
+            # and H derive from these SAME bytes, never the discarded projection.
+            trusted_raw = b.canonical(documents[CONFIG_PATHS[0]])
+            profile = _validate_documents(documents, recipe=self.recipe, prefix=self.intent.prefix,
+                name=self.intent.service_name, files=self.intent.files, argv=self.intent.argv,
+                root=root, final=True, trusted_payload=trusted_raw)
+            provider = documents[CONFIG_PATHS[1]]
+            host = profile.host_resource_profile
+            index = _typed_stop_grant(self.recipe, provider, host.project_id)
+            if index is not None:
+                from . import _host_scoped_provider as p
+                row = provider['grants'][index]
+                scope = dict(schema=p.MANAGED_STOP_SCOPE_SCHEMA, runtime_id=dict(row['scope_sha256']['runtime_id']),
+                    platform='windows', ownership_mode='originalManagedLifetime',
+                    host_source=dict(t037_source_sha256=profile.source_sha256,
+                        host_resource_profile_sha256=host.sha256, host_id=host.host_id))
+                row['scope_sha256'] = p.scope_sha256(host.project_id, 'session.stop', scope)
+            _provider_intent(provider)  # Final normal provider schema: literal hashes only.
+            frozen = ((CONFIG_PATHS[0], trusted_raw), *(
+                (path, b.canonical(documents[path])) for path in CONFIG_PATHS[1:]))
+        else:
+            _validate_documents(documents, recipe=self.recipe, prefix=self.intent.prefix, name=self.intent.service_name,
+                files=self.intent.files, argv=self.intent.argv, root=root, final=True)
+            frozen = tuple((p, b.canonical(documents[p])) for p in CONFIG_PATHS)
         if any(not 0 < len(raw) <= b.MAX_PLAN for _, raw in frozen):
             b.fail("CONFIG_BYTES", "final configuration bytes exceed bound")
         return ResolvedConfiguration(b.digest(self.recipe_raw), sid, image.identity, frozen)
