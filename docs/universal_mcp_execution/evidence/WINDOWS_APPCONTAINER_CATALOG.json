@@ -1,0 +1,171 @@
+{
+  "SDK_reference": {
+    "bytes": 2132,
+    "path": "_state/universal-windows-appcontainer-catalog/reference/SDK_REFERENCE.json",
+    "sha256": "b3d4c1c8b0e96386955682c400f1b985a100c5ee155a2f7e5835f13b61780005"
+  },
+  "authority": {
+    "Main_acceptance": "PENDING_MAIN_ONLY",
+    "Root_B_C_Resume_launch": "NOT_PRODUCED_NOT_INTEGRATED",
+    "Windows_SDK_calls": 0,
+    "completeness": "UNVERIFIED",
+    "generation": "UNAVAILABLE",
+    "native": "NOT_RUN_NOT_AUTHORIZED",
+    "native_constructor_mock_is_native_evidence": false,
+    "profile_absence": "UNVERIFIED_NEVER_ABSENT_PROVEN",
+    "profile_original_create_ownership": "NOT_PRODUCED",
+    "registration_qualification": "CANDIDATE_DIAGNOSTICS_ONLY",
+    "restore_full_storage": "UNVERIFIED_NOT_IMPLEMENTED",
+    "visibility": "UNVERIFIED"
+  },
+  "baseline": "81c36ea7a61fc83de4d968b9a2b0484da7c3682c",
+  "changed_paths": [
+    "comsol_mcp/_windows_appcontainer_catalog.py",
+    "tests/test_windows_appcontainer_catalog.py",
+    "docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_CATALOG.json",
+    "_state/universal-windows-appcontainer-catalog/**"
+  ],
+  "diff": {
+    "bytes": 48674,
+    "path": "_state/universal-windows-appcontainer-catalog/candidate.patch",
+    "sha256": "e062d44153f9c0a96f1f7d17a846464a5f48665dd376990b768c244322ee90e9"
+  },
+  "implementation": {
+    "SDK_ABI": "Win64 natural alignment; Container88/Capabilities16/Binaries16/SidAttributes16/MemoryInfo48; DWORD32/SIZE_T64; no c_wchar_p automatic dereference",
+    "copy": "Committed readable VirtualQuery spans before every external dereference; fixed outer extent then raw SID bytes/manual UTF16LE name/capability SID+DWORD attributes; bounded counts, bytes and query count.",
+    "free": "Only DWORD0 Enum plus aligned/readable original base permits captured exact NetIso Free once. Malformed contents may clean original valid allocation; invalid base/lost result/opaque/free nonzero remain retained UNKNOWN without requery/refree.",
+    "known_success_ack": "Free0 scalar cached once. Local metadata fault requires original owner ack with no SDK calls or raw-result reread; drift refuses. Empty known output ack has no free authority.",
+    "library_load_request": "Firewallapi.dll/kernel32.dll; LOAD_LIBRARY_SEARCH_SYSTEM32; exact captured original exports and library holders",
+    "native_exports_only": [
+      "NetworkIsolationEnumAppContainers",
+      "NetworkIsolationFreeAppContainers",
+      "VirtualQuery"
+    ],
+    "owned_outputs": "Strong root before original Enum dispatch; exact count/pointer slots, functions, args, raw return and once-normalized unsigned scalar retained. No destructor or reconstructed owner.",
+    "scope": "Catalog rows and exact tuple selection are diagnostics only; no Root/gate/provider integration, profile ownership, OS generation, absence/restore/launch authority.",
+    "unparsed": [
+      "displayName",
+      "description",
+      "binaries pointer and paths",
+      "workingDirectory",
+      "packageFullName"
+    ]
+  },
+  "main_review": {
+    "path": "_state/universal-main-review/20261023-appcontainer-catalog/MAIN_REVIEW.json",
+    "bytes": 3453,
+    "sha256": "1823e294f7466a4f010f7f4f7cde8b4f96144fecfd30694d0861ce95ee7855d4"
+  },
+  "receipt": {
+    "bytes": 10875,
+    "path": "_state/universal-windows-appcontainer-catalog/UNIT_RECEIPT.json",
+    "sha256": "93758f462b540430947c9372c3c50e1c8ee4c2a2bd448773dad78b86d1b2ec52"
+  },
+  "schema": "windows-appcontainer-catalog-evidence/1",
+  "software": {
+    "JUnit": {
+      "bytes": 15584,
+      "path": "_state/universal-windows-appcontainer-catalog/final-software/runtime/junit.xml",
+      "sha256": "dc28830c81cdc21fbfa579aa334f520dee431db36127d02f16cfa323df516fd8"
+    },
+    "actual_imports": {
+      "bytes": 2790,
+      "path": "_state/universal-windows-appcontainer-catalog/final-software/runtime/runtime-imports.json",
+      "sha256": "0927c370baa7ebb856a8432ab06f4f53e496c227aaea22a51eae5c54e02dd284"
+    },
+    "errors": 0,
+    "failures": 0,
+    "initial84": {
+      "by_module": {
+        "tests.test_windows_appcontainer_catalog": 84
+      },
+      "errors": 0,
+      "failures": 0,
+      "junit.xml": {
+        "bytes": 13821,
+        "path": "_state/universal-windows-appcontainer-catalog/attempt-01/software/junit.xml",
+        "sha256": "c44cb1b24e959dac1b5c4640ce612bfe14431f6bd08b31a0e035844b71fbb7fc"
+      },
+      "run.json": {
+        "bytes": 2562,
+        "path": "_state/universal-windows-appcontainer-catalog/attempt-01/software/run.json",
+        "sha256": "f989c89ff5894a557df392df50f3ae0c7352b47cc848418b04efdff8745690bc"
+      },
+      "runtime-imports.json": {
+        "bytes": 2778,
+        "path": "_state/universal-windows-appcontainer-catalog/attempt-01/software/runtime-imports.json",
+        "sha256": "ddf9955488dcfe37205ed2bbe613d77e9dc49be36de8b2389f76f21eb4dc115b"
+      },
+      "skipped": 0,
+      "stderr.log": {
+        "bytes": 0,
+        "path": "_state/universal-windows-appcontainer-catalog/attempt-01/software/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout.log": {
+        "bytes": 179,
+        "path": "_state/universal-windows-appcontainer-catalog/attempt-01/software/stdout.log",
+        "sha256": "cabe2feeb68a1ea765a124bc61004f15a9ecde65cb279c316e71a2ccccb9e2a9"
+      },
+      "tests": 84
+    },
+    "initial_and_final_mirrors_separate": true,
+    "negative3FAIL_preserved": {
+      "by_module": {
+        "_state.universal-windows-appcontainer-catalog.new-negative-before-fix.test_new_negatives": 3
+      },
+      "errors": 0,
+      "failures": 3,
+      "junit.xml": {
+        "bytes": 2239,
+        "path": "_state/universal-windows-appcontainer-catalog/new-negative-before-fix/junit.xml",
+        "sha256": "1d277d9b2c22789c9f32ee79b2f406f91f48b7acb6cb9f9494200c7d8e862241"
+      },
+      "run.json": {
+        "bytes": 1336,
+        "path": "_state/universal-windows-appcontainer-catalog/new-negative-before-fix/run.json",
+        "sha256": "192b2afa486dbb3ec53df957c3b3d734ad85120f7deabc9c9b64ef970b7fa880"
+      },
+      "runtime-imports.json": {
+        "bytes": 2778,
+        "path": "_state/universal-windows-appcontainer-catalog/new-negative-before-fix/runtime-imports.json",
+        "sha256": "c472704a1c98ea58e2f46b9d0d7bda3e98c1e8f91d44251627466c1322f98cde"
+      },
+      "skipped": 0,
+      "stderr.log": {
+        "bytes": 0,
+        "path": "_state/universal-windows-appcontainer-catalog/new-negative-before-fix/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout.log": {
+        "bytes": 1940,
+        "path": "_state/universal-windows-appcontainer-catalog/new-negative-before-fix/stdout.log",
+        "sha256": "a70ffe70ff550dfc2b1a0bdf22f753ccbd953c966400cda52900945f6e44ce30"
+      },
+      "tests": 3
+    },
+    "run": {
+      "bytes": 2589,
+      "path": "_state/universal-windows-appcontainer-catalog/final-software/runtime/run.json",
+      "sha256": "f251a61120ca41927ffa4e84e4f9015803f835f043a0921a07008bee6036a6f9"
+    },
+    "scope": "SOFTWARE_ONLY",
+    "skipped": 0,
+    "tests": 95
+  },
+  "source_closure": {
+    "bytes": 3694830,
+    "path": "_state/universal-windows-appcontainer-catalog/final-source-binding.json",
+    "sha256": "3272e29dfdb3302acbf17fdde95a6c2489a3d8b6be373de04e49d001457e1d73"
+  },
+  "source_sha256": {
+    "comsol_mcp/_windows_appcontainer_catalog.py": "d0ddca5f56eecd2c9eb2232a7582295400672f75cbfec77e6a1035ed5a4a3ef6",
+    "tests/test_windows_appcontainer_catalog.py": "ffc51cb13bf1b5442ee920254ac03bee872ffb2f964fda5f18f1b29886a33048"
+  },
+  "state": "MAIN_ACCEPTED_ISOLATED_SOURCE_SOFTWARE95_DIAGNOSTICS_ONLY",
+  "verification": {
+    "bytes": 592,
+    "path": "_state/universal-windows-appcontainer-catalog/verification.json",
+    "sha256": "cda327579589fc806f41f446baaa9e4bccdfa798288a2750da681a1a76815d51"
+  }
+}

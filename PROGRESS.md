@@ -33,8 +33,10 @@
 
 - Windows有限静态A源码/软件经Main限定验收：固定05da选定622原Git/archive输入+六租约overlay/三Main输入为627文件，1103项PASS（987常规/108有限A/原Main6+1及旧Job1，各只计一次），144实际imports/9004引用核对。Main独立原7反例在冻结候选7PASS，初始5FAIL1PASS/foreign1FAIL及1062旧收据保留。失败或opaque getter不因可读输出free；精确service SID只可写data/temp；foreign WFP行保留且SD未知，own缺失/额外/漂移/cleanup严格，全球可见性/仲裁仍UNVERIFIED。Factory/birth/close/SCM/原issuer/native/effective主体保持。实际SDK静态A/B/C/隔离均未通过，Resume仍拒绝。见[有限A证据](docs/universal_mcp_execution/evidence/WINDOWS_FINITE_A_TARGETS.json)。
 
+- 独立AppContainer NetIso目录观察器经Main限定source/software验收：全部518生产/454测试行已读，固定81c的21,780原Git/archive+两新文件为21,782，95项PASS/2实际项目imports/92引用一致。Win64自然布局、手工UTF16与原DWORD0 Enum/Free/强root/有界可读span/未知不重放/确认后纯记账覆盖；初始84与新增3FAIL另保留。Microsoft primary成员与API约定核对，installed SDK头版本和真实ABI仍未验证。只输出诊断，empty/stale/flags1不产absence/恢复/launch资格；尚未接Root，native实际0调用。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_APPCONTAINER_CATALOG.json)。
+
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：普通同步有限A1103的精确10文件，随后同Luna实施SCM runtime/factory有限profile生命周期与出生围栏；Halley继续AppC持久ProfileEffect强root。真实storage/非创建式缺席未qualified时restore仍拒绝，不新增Delete/SID-only/native。正式stop授权签发、r4有限memory输入与生命周期覆盖缺口保留，native HOLD；最终统一Reviewer仍未开始。
+下一动作：普通同步独立NetIso观察器95的软件阶段（只诊断，absence/generation/restore均未qualified）。Root fresh-loader修复Main原counter独立1PASS，但focused122缺actual import trace，已同Luna以不变源码补洁净运行，旧112/失败保留；Gate1136待集中审查，Kier实施显式SCM attach-only。Main选择未来Windows原ManagedStopOrigin+scoped stop消费，旧实例/拒绝ref不动。最终统一Reviewer尚未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。
