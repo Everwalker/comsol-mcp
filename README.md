@@ -2,580 +2,75 @@
 
 中文 | [English](#english)
 
-**当前状态（2026-10-22）：通用核心开发中，尚未完成统一验收。** 当前目标、证据和
-续跑入口见 [PROGRESS](PROGRESS.md)、[通用核心合同](docs/universal_mcp_execution/MASTER_GOAL.md)
-和 [RESUME](docs/universal_mcp_execution/state/RESUME.json)。下文带日期的旧验收与暂停段落是
-历史记录；当前平台范围见 [TARGETS](docs/universal_mcp_execution/config/TARGETS.json)。
+`comsol-mcp` 是连接 AI 助手与 COMSOL Multiphysics 的通用 MCP 服务。它提供受管理的项目、会话、模型、任务、结果和文件工作流，也保留连接已有 COMSOL Server 并由 Desktop 查看同一服务端模型的入口。它面向具体任务输入和项目级代码；不针对固定科学案例，也不保证 COMSOL 未支持的功能、许可证或物理结论。
 
-`comsol-mcp` 为 COMSOL Multiphysics 提供受管项目、会话、模型与作业接口。
-可以连接已有 Server，或在授权项目中启动独立受管会话。领域动作、通用对象/API 与
-项目 Java 通过同一模型身份、权限、队列和产物系统执行。Desktop 可连接同一 Server
-观察服务端模型；已有的 visible-main 工作流继续可用。
+## 当前状态与适用范围
 
-这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
-你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
+通用核心仍在开发，尚未完成统一验收。按当前目标，待验证的平台包括 Windows x64 + COMSOL 6.3/6.4，以及 macOS ARM64 + COMSOL 6.4；当前公开证据不构成这些组合的完整产品验收。macOS 上的 R4 只证明一个 ARM64 候选包可离线构建、安装，且安装后的 MCP stdio 初始化与 `tools/list` 成功；该次没有启动 COMSOL。查看[当前进度](PROGRESS.md)、[交接记录](docs/universal_mcp_execution/CURRENT_HANDOFF.md)、[目标平台范围](docs/universal_mcp_execution/config/TARGETS.json)和[执行目标](docs/universal_mcp_execution/MASTER_GOAL.md)。
 
-## 历史执行快照（2026-10-05，Full MASTER W01–W26）
+Java 运行条件取决于 COMSOL 安装及目标版本。JDK 11 有特定环境的证据；不能据此承诺任意更高 Java 版本。请在使用前查看对应 COMSOL 版本的系统要求与本机配置。
 
-> 按用户指令，完成 cutoff066 GitHub 同步后暂停项目，先进行本地空间只读审计，重点检查 /private/tmp。原始 W01–W26 范围保持不变；以下有界软件结果不合并为全项目验收。
+## 安装并连接 MCP Host
 
-- **Python 软件回归**：D2 与 current-R 两个独立 source-bound 测试范围分别通过 764/764；它们是分开的候选结果。
-- **结构 JVM 检查**：R048 接受了两个结构 harness 测试；OS 级进程隔离仍为 `NOT_PROVEN`，W23 为 `COMPILE_ONLY`。
-- **Release helper**：64 个聚焦测试全部通过（0 failures/errors/skips）。其中 candidate-only 清理断言仅由 mock 验证；四个 helper 源码/测试文件已通过独立审查及主 Agent 验收；默认模式的 8 个既有回退回归也已通过（mock 软件测试）。
-- **W26 transition**：有界单机合成数据 `0.1.9 → 0.2.0.dev1 → 0.1.9` 转换获接受，独立检查 18/18；未使用真实用户数据，另一次真实非空 candidate-only 卸载已获独立和主 Agent 验收；SQLite 备份仅覆盖控制台账，引用模型和产物文件需单独备份。
-- **W21/reconnect test fixtures**：仅修复测试夹具，生产源码不变；两项重点测试和五模块50项回归通过，独立审查51/51（含一项guard负控）。原失败记录保留，原生/JVM/真实Worker启动未运行。
-- **Artifact queries / verify（cutoff066）**：list/inspect 已接受；verify 六文件合并源码获 Root 与新鲜独立软件验收，双方联合测试分别273/273（0失败/错误/跳过），三个 dev1 ZIP 均实际走注册路线。旧51PASS/6FAIL及修复66PASS证据保留；仅验证声明的软件包内容、依赖与静态标签，producer trust/current full-source/native 仍未证明。详见 [验收报告](docs/full_project_execution/project_session/ARTIFACT_VERIFY_ROOT_ACCEPTANCE002.json)。
-- **Model compare（cutoff065）**：Root与新鲜独立审查接受精确7个源码的有界软件能力；生产回归237/237，独立检查241/241（237项最终生产测试加4项审查控制）。仅比较授权后的两个完整同项目/会话/Worker ModelRef所请求的字段投影，不代表完整模型语义相等，也不代表COMSOL原生/JVM/Worker或科学验收；候选指纹 40e251ad1a25e1e1d619a14b04c018d72cf62f33a1495b933c02538ed7896cfa。早期失败记录保留。
-- **Parameter import/export / preview**：两项001候选均经独立审查要求整改。parameter002 Darwin7/335通过，但独立复审未运行、Windows NOT_IMPLEMENTED/NOT_RUN；preview002暂停，13/21/24分别通过，54回归、冻结与复审未完成。均不代表完整功能接受。
-- **W22 historical source content**：10,102 条历史源码内容及安全 APFS 还原已通过独立与主 Agent 验收；原 tar 字节和完整 Git 历史未恢复，没有科学重放。归档本体保留在本地。
-- **W23 model_create guard**：无路径创建不再因无关持久化工作流路径而提前拒绝；独立与主 Agent 软件验收通过，原生/科学验收仍未运行。此前冻结的 dev1 包不含此修复。
-- **Windows / Intel dev1 archives**：已通过独立与主 Agent 归档验收；目标机安装和 COMSOL 运行仍为 NOT_RUN。
-- **W22 replay archive**：422 个成员的本地归档已获独立与主 Agent 字节/干净解压验收；没有执行新的科学重放，历史源码内容恢复已另行通过内容验收，见对应条目。
-- **P4 offline bundle**：macARM 冻结构件与真实包内 helper 离线安装已获独立和主 Agent 软件范围验收；其他平台和科学验收仍未完成。
-- **Loopback7**：最新实际子进程通过 7/7（0 failures/errors/skips），套接字均已关闭、辅助线程均已结束；独立运行时审查和主 Agent 验收已通过。原始工具回执确认 exit 0，与子进程及 supervisor PASS 一致。此前失败记录保留；本结果仅覆盖合成回环软件测试。
-- Full-project、native、science 和 platform-matrix acceptance 均为 `NOT_ACCEPTED`；final release 为 `NOT_SELECTED`。当前 `pyproject.toml` 已声明 Windows/macOS；已有冻结 `.dev1` 构件保留旧元数据，最终构件仍需在候选冻结后重建。
-- Full profile 的 operation 清单通过 `registry_manifest(profile="full")` 动态发现；本 README 不固定工具数量。
+使用为目标操作系统和架构生成的离线发布包。发布包包含应用 wheel、锁定依赖清单和 wheelhouse；支持离线安装，不需要运行时联网。将包解压到本机专用目录，在其中创建 Python 虚拟环境，并按包内 `locks/requirements.lock` 和 `wheelhouse/` 安装依赖。实际安装使用 pip 的 `--no-index`、`--only-binary=:all:` 和 `--require-hashes`；不要从其他环境复制虚拟环境。R4 的离线安装记录只适用于其 macOS ARM64 候选，不代表其他平台包已经验证。
 
-当前目标和证据入口：[MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md)、[PROGRESS](PROGRESS.md)、[cutoff066 checkpoint](docs/full_project_execution/state/RESUME.json)、[R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json) 和 [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json)。
+以下安装命令模式对应已记录的 macOS ARM64 R4 离线包；尖括号内容须替换为绝对路径，不是可原样执行的命令。解压该目标平台的离线包后，在 Host 将使用的虚拟环境中运行：
 
-## 历史验收快照（2026-09-24，G3.8 / W20）
-
-> 本节反映 G3.8（W20: 物理与数值验证套件，覆盖 COMSOL 6.3 与 6.4 Windows 原生双版本实机验收）的实机 live 验收状态。
-> 权威验收判定为 **PASS**，状态标识为 `EVIDENCE_STRUCTURE_AND_HASHES_OK_NOT_NATIVE_CERTIFICATION`（全量 44 项用例全部 PASS，0 errors，0 pending），严格停止于 W20，未进入 W21。
-
-- **W20 验证接口面与工具**：
-  - 新增 8 项 `validate.*` 领域 operations：`validate.preflight`, `validate.structure`, `validate.expressions`, `validate.boundary_conditions`, `validate.solution`, `validate.conservation`, `validate.convergence`, `validate.report`。
-  - 支持三层独立状态判定（`execution_status`, `numerical_verification_status`, `physical_validation_status`），负控与异常绝不静默升级为 PASS。
-  - Windows 原生 DACL 精确 trustee 匹配与路径前缀剥离，防御子串与空 DACL 越权。
-  - 冻结期望基准 `FrozenOracle`，严格比对稳态 3D 铜块与瞬态正弦热传导解析解。
-  - 双版本实机执行：COMSOL 6.3 与 6.4 原生 Windows 11 Enterprise AMD64 全部 44 项用例 100% 通过。
-  - 工具数量由运行时动态发现生成：W20 验收时为 **86 个 MCP 工具**（含 8 项 W20 validate 工具及其别名）与 **126 个领域 operations**（包含绘图、导出、作业控制 `job_*` 等）。
-  - 支持完整的 MCP `ImageContent(type="image", data=b64, mimeType="image/png")` 多模态图形返回与 TextContent 防膨胀摘要分离。
-- **Gate A (G01–G12) 关键缺陷修复**：
-  - **G01**: 源码恢复自公开锁定提交，实现环境 site-packages、源码、项目数据根、工作目录 cwd 的严格四路径隔离。
-  - **G02**: 统一新产物发布与覆盖保护，移除 staging 缺失即沿用旧图的逻辑，`allow_overwrite` 强制显式布尔授权。
-  - **G03**: 属性恢复在 finally 块中单调升级并记录至 `_ModelState.dirty`，防止基于脏模型继续写入。
-  - **G04**: 产物路径严格收敛于项目根，支持原子安全发布与覆盖保护。
-  - **G05**: 区分数据集引用与实际求解解（solution），不存在解 fail-closed，瞬态多时刻独立渲染。
-  - **G06**: 2D 矩阵保持原生嵌套结构，支持 3 级路径穿透访问，深度 > 3 写前拒绝。
-  - **G07**: 完整 PNG 结构解析与坏块拒绝，失败信封无图且保留执行元数据。
-  - **G08**: 真实 `storage=artifact` wire 预算截断与完整数据分离，malformed envelope 作为负控。
-  - **G09**: 7,219 项文件全量 SHA-256 审计对比与单文件改动负控。
-  - **G10**: `plot.render` / `plot_render` / `operation_call` 三入口完全等价。
-  - **G11**: 保护外部已有 mphserver PID，禁止任何未经授权的跨进程干扰。
-  - **G12**: 模型存盘重开并恢复渲染，交付回执闭环。
-- **W19 (J01–J10) 作业控制、取消、恢复与并发能力**：
-  - **J01**: 作业目录分页、状态过滤与租户隔离，建立 SQLite 索引。
-  - **J02**: 排队作业原子取消，无引擎派发，单调终态。
-  - **J03**: 运行中取消如实报告 `UNSUPPORTED_NATIVE_CANCEL`，严格防止未授权强制终止。
-  - **J04**: 宿主断连与幂等恢复，相同请求直接恢复，冲突安全拒绝。
-  - **J05**: 控制进程重启协调，未决作业进入 `RECONCILING`。
-  - **J06**: 控制读取脱离串行引擎队列，实测 p95 < 1.0s 子秒响应。
-  - **J07**: 单 COMSOL 实例引擎请求严格串行化。
-  - **J08**: RPC 等待超时与排队期限独立策略。
-  - **J09**: SQLite WAL 模式、持久化索引与进程安全。
-  - **J10**: 求解 -> 测温 -> 渲染 -> 网关回传全链路通过。
-- **实机验收与交付状态**：
-  - 实机 live 验收套件（`tests/run_g3_5_acceptance.py`，G01–G12 与 J01–J10 共 22 项用例）**22/22 全部 PASS**（用时 15.31s，exit 0）。
-  - 控制平面单元测试全量 PASS。
-  - 独立离线交付包（`COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`）包含全量独立 Git Bundle（`comsol_mcp_g3_5.bundle`，支持 standalone clone），未执行外部 `git push`。
-  - 云端 Hermes 视觉接收继续保持 `HOST_DELIVERY_UNVERIFIED`。
-
-## 主要特性
-
-- 连接已有的 COMSOL Multiphysics Server
-- 与 COMSOL Desktop 共享同一个服务端模型状态
-- 支持 visible-main 主模型锁，避免误切换或误保存模型
-- 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
-- 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定；可执行领域 operations 由 `registry_manifest(profile="full")` 动态列出，数量以当前运行时清单为准。
-
-## 适用场景
-
-- 需要一边自动化建模，一边在 COMSOL Desktop 中检查模型变化
-- 需要让 AI Agent 修改同一个当前主模型，而不是反复启动批处理任务
-- 需要保留每次迭代的 `.mph` 快照
-- 需要在长时间运行的 COMSOL Server 会话中做参数、几何或求解探索
-
-## 环境要求
-
-- macOS (Apple Silicon / Intel) 或 Windows x64
-- 源码包要求 Python 3.10+；当前离线构件使用 CPython 3.12
-- 本机已安装 COMSOL Multiphysics (6.3 或 6.4)
-- 外部 JDK 11，架构与选定运行时匹配；其他 JDK 版本须单独验证
-- 有效的 COMSOL 许可证
-- 受管 Server，或明确授权连接的已有 `COMSOL Multiphysics Server`
-
-## 安装
-
-对应架构的离线包包含 `README_OFFLINE_INSTALL.txt`、`docs/RELEASE_OPERATIONS.md`、
-哈希锁、SBOM 与许可证清单。按包内说明使用本地 wheelhouse 安装；升级、回退和卸载
-使用同一包内的发布工具。当前构件与目标机验证状态见 PROGRESS。
-
-开发者源码安装：
-
-```powershell
-git clone https://github.com/Everwalker/comsol-mcp.git comsol-mcp
-cd comsol-mcp
-python -m pip install -e .
+```sh
+<absolute-path-to-venv-python> -I -B -m pip install --no-index --only-binary=:all: --disable-pip-version-check --no-input --find-links <absolute-path-to-unpacked-bundle/wheelhouse> --require-hashes --requirement <absolute-path-to-unpacked-bundle/locks/requirements.lock>
 ```
 
-开发环境可安装测试依赖：
+这个锁文件包含应用本身 `comsol-mcp` 和依赖；该 R4 bundle 中应用 wheel `comsol_mcp-0.1.10` 的 SHA-256 为 `e28a7aaf51dcb507bd28e8f528eb59e7a7cbc3a7f50890601924ab9e3c2dde12`。这不是跨平台包的通用哈希。安装后准备 MCP 进程专用的运行状态目录与授权项目根目录，配置实际的 COMSOL 安装路径。Java 编译所用的 `COMSOL_JAVA_HOME` 应指向完整 JDK 根目录，其中应有 `bin/java` 和 `bin/javac`（Windows 对应 `bin\java.exe` 和 `bin\javac.exe`）；不要把含义不明的 COMSOL 聚合目录或仅含运行时的 JRE 当作 JDK。JDK 版本须符合目标 COMSOL 安装要求；本项目的 JDK 11 证据只覆盖特定环境。项目根目录应存在且只包含允许该 MCP 项目访问的文件。实际安装的控制台入口名为 `comsol-mcp`：Unix 类环境通常位于虚拟环境的 `bin/comsol-mcp`，Windows 位于 `Scripts\comsol-mcp.exe`。在 Host 的 MCP 配置中，将 `command` 设为当前操作系统上该入口的绝对路径，`args` 设为空数组，并在 `env` 中传入上述变量。Host 启动进程后，通过其 MCP 连接初始化并读取当前工具/操作 schema；不要从旧 README 或旧运行快照复制固定工具数量或过期签名。
 
-```powershell
-python -m pip install -e ".[dev]"
-```
-
-## 环境变量
-
-根据你的 COMSOL 安装位置设置：
-
-```powershell
-$env:COMSOL_ROOT = "C:\Program Files\COMSOL\COMSOL63\Multiphysics"
-$env:COMSOL_SERVER_MCP_HOME = "$PWD\comsol-server-home"
-$env:COMSOL_PROJECT_ROOT = "$PWD\projects"
-New-Item -ItemType Directory -Force -Path $env:COMSOL_PROJECT_ROOT | Out-Null
-```
-
-`COMSOL_SERVER_MCP_HOME` 用于保存运行状态、日志、输出和快照。该目录默认位于
-仓库下的 `comsol-server-home/`，并已被 `.gitignore` 忽略。
-`COMSOL_PROJECT_ROOT` 是授权项目目录的上级目录；安装在 site-packages 后必须明确配置，
-并与运行时私有目录分开。MCP Host 启动的进程也需要这些配置。
-
-## 启动 MCP Server
-
-推荐直接启动长驻 MCP 进程：
-
-```powershell
-python -m comsol_mcp.mcp_server
-```
-
-也可以使用脚本：
-
-```powershell
-.\scripts\start_comsol_mcp.ps1 -Python python -ComsolRoot "C:\Program Files\COMSOL\COMSOL63\Multiphysics" -McpHome "$PWD\comsol-server-home"
-```
-
-## MCP 配置示例
-
-Claude Desktop 或其他 MCP host 可以参考：
-
-- `examples/claude_desktop_config.json`
-- `.mcp.json`
-
-一个最小配置类似：
+MCP Host 配置形状示例（将路径换成实际路径）：
 
 ```json
 {
   "mcpServers": {
-    "comsol-mcp-server": {
-      "command": "python",
-      "args": ["-m", "comsol_mcp.mcp_server"],
+    "comsol-mcp": {
+      "command": "/absolute/path/to/venv/bin/comsol-mcp",
+      "args": [],
       "env": {
-        "COMSOL_PROJECT_ROOT": "C:/projects/comsol",
-        "COMSOL_SERVER_MCP_HOME": "C:/comsol-mcp-runtime"
+        "COMSOL_ROOT": "/path/to/COMSOL/Multiphysics",
+        "COMSOL_JAVA_HOME": "/absolute/path/to/full-jdk-11-home",
+        "COMSOL_PROJECT_ROOT": "/path/to/authorized/projects",
+        "COMSOL_SERVER_MCP_HOME": "/path/to/private/mcp-runtime"
       }
     }
   }
 }
 ```
 
-## 推荐工作流
+这是 macOS/Unix 风格路径的 MCP Host 配置片段，不是可直接执行的 shell 命令；Windows 请使用 `Scripts\comsol-mcp.exe` 和 Windows 格式的 JDK/项目路径。不同 Host 的配置文件位置各异；请使用其 MCP server 配置方式。不要把令牌、许可证凭据或个人目录写入共享配置或项目文件。
 
-通用受管入口使用 `operation_describe` 查询当前 schema，再通过 `operation_call` 执行：
+## 常规项目工作流
 
-1. `runtime.discover` / `runtime.inspect` 取得实际安装、版本与运行条件。
-2. `project.create` 创建授权项目；`session.start` / `session.connect` 建立受管连接。
-3. `model.create`、`model.load` 或授权的采用操作返回真实 `ModelRef`；保存返回的 revision。
-4. 优先使用领域动作与 `node.*`、`api.describe` / `api.invoke`。未审定签名会说明限制和可用路线。
-5. 将新 Java 放入项目，用 `code.describe_java` / `code.compile_java` / `code.execute_java`
-   执行于指定模型。入口为 `public static run(Model[, Map])`，使用注入的模型；多模型管理走模型入口。
-6. 经结果、绘图、保存和产物接口回读；每次使用返回的模型身份及 revision。
-7. 通过 `job.*` 查询原作业。调用等待超时后先协调原作业，重试沿用原幂等键。
-   会话绑定的 `UNKNOWN` 还需 `session.recover` 核对原 Worker epoch、模型及 revision；
-   `job.reconcile` 观察到请求终态，并不单独解除会话的修改门禁。
+通用操作使用 `operation_describe` 读取当前操作的输入 schema，再以 `operation_call` 提交请求。先确认描述与当前安装版本匹配；新建项目和启动会话可能需要明确授权。典型流程如下：
 
-项目 Java 需要部署时明确启用的 `COMSOL_MCP_TRUSTED_CODE=1` 权限上限，以及对应项目授权。
-该权限不表示 OS 沙箱；实际隔离能力与限制由运行时验证。
+1. 用 `runtime.discover` / `runtime.inspect` 检查可用 COMSOL 安装和运行条件；用 `project.create` 创建授权项目，之后通过 `project.inspect` 核对项目。
+2. 通过 `session.start` 启动该项目的受管会话，或用 `session.connect` 连接已运行的 Server。保留服务返回的项目、会话与模型身份信息。
+3. 创建新模型、加载项目中的模型，或在受支持且已授权时采用现有模型。后续请求绑定返回的 `ModelRef` 和最新 `expected_revision`；不要猜测或复用其他会话的身份。
+4. 先查领域操作和对象/API 描述。可用领域操作时优先使用；对任务所需的其他公开 COMSOL API，先查 `api.describe`，再通过受管 API 入口调用。实际可用性受 COMSOL 版本、许可、接口与授权约束。
+5. 项目 Java 源文件放在授权项目目录内。用 `code.describe_java` 查看入口要求，以 `code.compile_java` 编译，再用 `code.execute_java` 针对指定会话和模型执行。项目代码应操作传入的绑定模型；不要用模型创建/切换代码绕过模型身份边界。Java 代码权限需要 Host/项目显式授权，且不等同于操作系统沙箱。
+6. 用结果操作回读明确指定模型与解的数据；需要图像时使用绘图/渲染操作，并把输出保存在项目授权的产物目录。保存模型时明确目标相对路径与覆盖策略，再回读结果及产物状态。
+7. 长作业通过任务状态接口观察原任务。等待超时或连接中断时，先查询并协调原任务；只有确认原请求未提交时才可另作提交。对执行结果未知的请求，不要重放求解或 Java 操作；按接口要求使用同一请求身份恢复，并在会话恢复后重新核对模型身份、版本和状态。
 
-以下是保留的 visible-main 连接流程：
+此流程描述的是公开接口的正常使用方式，不代表所有功能在每个平台均已完成原生验证。已有受控 Java 实际运行、结果回读、图像生成和模型保存记录；另有恢复结果保持 `UNKNOWN` 或 `PARTIAL_UNRESOLVED` 的记录。不要把一次成功响应推断为整个恢复生命周期通过。执行、数值与物理验证应分别判断；软件返回数值本身不证明物理假设正确。
 
-```mermaid
-flowchart LR
-    User["User / AI Agent"] --> Host["MCP Host"]
-    Host --> MCP["comsol-mcp<br/>persistent MCP process"]
-    MCP --> PortCheck["check_server_port<br/>server_connect"]
-    PortCheck --> Server["COMSOL Multiphysics Server<br/>shared server-side model"]
-    Desktop["COMSOL Desktop<br/>visual client"] --> Server
-    MCP --> Lock["visible-main lock<br/>tag + label + path"]
-    Lock --> Server
-    MCP --> Tools["MCP tools<br/>parameters, geometry, physics,<br/>solver, study, snapshot"]
-    Tools --> Server
-    Server --> Desktop
-    Tools --> Snapshot["save-copy snapshots<br/>current main path preserved"]
-```
+## 连接已有 Server 与 Desktop
 
-1. 手动启动 `COMSOL Multiphysics Server`。
-2. 记录 Server 控制台显示的真实端口。
-3. 启动本项目的 MCP Server，并保持进程运行。
-4. 调用 `start_visible_main_workflow(host, port, path)`。
-5. MCP 连接 Server、加载主 `.mph`，并锁定该 visible-main 模型。
-6. 在 COMSOL Desktop 中连接同一个 Server。
-7. 在 Desktop 中导入或切换到已经加载的服务端模型。
-8. 后续通过 MCP tools 修改模型，并在 Desktop 中观察变化。
+对于已有的 COMSOL Multiphysics Server，可使用当前运行时描述的连接、模型加载和 visible-main 操作。连接前确认目标主机、端口、模型文件和操作授权。Desktop 可以作为同一 Server 模型的可视客户端；MCP 不会自动识别 Desktop 当前窗口，也不会替用户决定应采用哪个模型。旧的 attach-first 工作流和脚本仍作为兼容入口保留，见[历史使用说明](continuation/README.md)及[设计文档](docs/comsol_mcp_design_v1/README.md)。
 
-大型 `.mph` 如果加载时间超过 MCP host 的单次工具调用超时，使用异步入口。
-请把示例路径替换为你本机可访问的 `.mph` 文件：
+## 保留的历史记录
 
-```text
-start_visible_main_workflow_async("localhost", <actual_port>, "C:/path/to/model.mph")
-visible_main_workflow_status("<job_id>")
-```
-
-## 单主模型配置
-
-如果希望始终围绕一个当前主模型工作，并为每次迭代保存快照：
-
-```text
-configure_single_main_workflow(
-  "C:/path/to/model.mph",
-  "comsol-server-home/snapshots",
-  "free_convection"
-)
-```
-
-常用迭代流程：
-
-```text
-verify_visible_main_session()
-run_visible_main_iteration("trial_label", "[{\"name\":\"param1\",\"expression\":\"1.0\"}]", "")
-save_model()
-```
-
-## 工具列表
-
-连接与状态：
-
-- `server_info()`
-- `check_server_port(host="localhost", port=2036)`
-- `server_start(...)`
-- `server_connect(host, port, model_name="")`
-- `server_disconnect(shutdown_server=false)`
-- `workflow_info()`
-- `mcp_tool_audit()`
-
-visible-main 工作流：
-
-- `configure_single_main_workflow(current_main_model_path, snapshot_dir="", snapshot_prefix="", notes="")`
-- `start_visible_main_workflow(host="localhost", port=2036, path="")`
-- `start_visible_main_workflow_async(host="localhost", port=2036, path="")`
-- `visible_main_workflow_status(job_id="")`
-- `load_visible_main_model(path="")`
-- `verify_visible_main_session()`
-- `unlock_visible_main(reason)`
-- `load_current_main_model()`
-
-模型与保存：
-
-- `model_create(name="Server Model")`
-- `model_load(path)`
-- `prune_loaded_models(keep="current")`
-- `save_main_model_snapshot(snapshot_label)`
-- `commit_current_main_model(snapshot_label="")`
-- `save_model(path="")`
-- `model_tree()`
-
-参数、表达式与指标：
-
-- `get_parameters()`
-- `set_parameters(parameters_json)`
-- `evaluate_expressions(expressions_json="[]")`
-- `get_core_metrics()`
-
-几何、网格与求解：
-
-- `ensure_component(component="comp1", dimension=2)`
-- `ensure_geometry(component="comp1", geometry="geom1", dimension=2)`
-- `ensure_mesh(component="comp1", mesh="mesh1")`
-- `create_feature(component, geometry, tag, feature_type, properties_json="[]", run_geometry=false)`
-- `update_feature(component, geometry, tag, properties_json, run_geometry=false)`
-- `delete_feature(component, geometry, tag, run_geometry=false)`
-- `run_feature(collection, tag, component="comp1")`
-- `run_study(study_tag="")`
-- `run_visible_main_iteration(label, parameters_json="[]", study_tag="")`
-
-物理场与变量：
-
-- `list_physics(component="comp1")`
-- `create_physics(component, tag, physics_type, dimension=0, dependent_variables="u")`
-- `remove_physics(component, tag)`
-- `list_physics_features(component, physics_tag)`
-- `create_physics_feature(component, physics_tag, feature_tag, feature_type, properties_json="[]")`
-- `update_physics_feature(component, physics_tag, feature_tag, properties_json)`
-- `remove_physics_feature(component, physics_tag, feature_tag)`
-- `set_physics_selection(component, physics_tag, feature_tag, entities_json)`
-- `manage_variables(component="comp1", action="list", tag="", expressions_json="[]")`
-
-求解器与异步运行：
-
-- `list_solver_config()`
-- `create_solver_config(sol_tag, study_tag)`
-- `list_solver_features(sol_tag)`
-- `configure_solver(sol_tag, feature_tag, properties_json="[]")`
-- `run_study_async(study_tag="")`
-- `run_study_status(job_id="")`
-
-## visible-main 锁机制
-
-`load_visible_main_model()` 成功后，MCP 会记录模型的 tag、label 和 path。
-后续写操作会先检查当前服务端模型是否仍然是这个主模型。
-
-- 安全读工具始终允许执行
-- 安全写工具仅在模型身份匹配时允许执行
-- `model_create()`、`model_load()`、`prune_loaded_models()`、
-  `commit_current_main_model()` 在锁定状态下会被阻止
-
-这个设计用于防止 Desktop 正在查看的主模型被意外切走或覆盖。
-
-## 测试
-
-普通测试不需要 COMSOL Server：
-
-```powershell
-pytest
-```
-
-带真实 COMSOL Server 的集成测试使用 `comsol_server` 标记，默认跳过。
-
-## 项目结构
-
-```text
-comsol_mcp/
-  _server.py            # FastMCP 实例、全局状态、工具分类
-  _state.py             # 状态持久化、日志、路径和端口工具
-  _connection.py        # 连接生命周期与客户端访问
-  _model.py             # 模型采用、清理、visible-main 锁
-  _model_ops.py         # 参数、表达式、指标、树和几何纯辅助函数
-  _physics_ops.py       # 物理场与变量纯辅助函数
-  _solver_ops.py        # 求解器配置纯辅助函数
-  _tools_connection.py  # 连接相关 MCP tools
-  _tools_workflow.py    # 工作流和 visible-main tools
-  _tools_model.py       # 模型创建、加载、清理 tools
-  _tools_params.py      # 参数、表达式、指标 tools
-  _tools_geometry.py    # 组件、几何、网格、特征 tools
-  _tools_physics.py     # 物理场、physics feature、变量 tools
-  _tools_solver.py      # 求解器配置和异步 study tools
-  _tools_snapshot.py    # 迭代、快照和保存 tools
-  mcp_server.py         # 入口与工具注册
-```
-
-## 注意事项
-
-- 本项目不包含 COMSOL 二进制文件或专有模型资源。
-- COMSOL Desktop 连接 Server 后，可能需要手动导入或切换到服务端已加载模型。
-- `server_start()` 只是高级备用入口；推荐手动启动 COMSOL Server 并使用真实端口连接。
-- 保持 MCP 进程长驻，不要用一次性脚本加载模型后立刻退出。
-
-## 联系方式
-
-维护者：蒋铖 <jiang-jc24@mails.tsinghua.edu.cn>
-
-## License
-
-MIT. See `LICENSE`.
-
----
+仓库曾包含多个按日期记录的阶段快照、案例验收和暂停说明。它们用于追溯当时的源码、环境和验收边界，不是当前项目状态，也不能作为当前平台、发布包或通用核心的验收声明。本 README 的[原始已发布版本（历史文档）](https://github.com/Everwalker/comsol-mcp/blob/e4daac8f35cadd6fd6776466ef2e964aef43a36f/README.md)保留原有日期快照；当前状态请以本页顶部链接为准。
 
 ## English
 
-`comsol-mcp` exposes managed projects, sessions, models and jobs for COMSOL Multiphysics.
-Connect to an authorized existing Server or start an isolated managed session.
-Domain actions, generic objects/APIs and project-local Java share model identity,
-permissions, queue and artifact handling. Desktop can observe the same server-side
-model, and the existing visible-main workflow remains available.
+`comsol-mcp` is a general MCP service connecting an AI host to COMSOL Multiphysics. It exposes managed project, session, model, job, result, and artifact workflows, while retaining a path for connecting to an existing COMSOL Server that Desktop can view. Work is driven by task inputs and project-level code, not a fixed set of scientific examples. Availability depends on COMSOL, its license, supported APIs, platform, and explicit authorization; returned values do not certify physical correctness.
 
-The goal is visible automation: watch geometry, parameters, mesh, solve steps
-and saved snapshots evolve in COMSOL Desktop.
+The universal core is still in development and has not passed unified acceptance. The target combinations currently include Windows x64 with COMSOL 6.3/6.4 and macOS ARM64 with COMSOL 6.4. The R4 macOS ARM64 evidence covers offline package build and install plus MCP stdio initialization and tool-schema discovery only; it did not start COMSOL. JDK 11 has evidence in a particular environment, which does not certify arbitrary newer Java versions. See the linked progress, handoff, target matrix, and execution goal above.
 
-Current status (2026-10-22): universal core work is **IN_PROGRESS**, with final independent
-acceptance still pending. Use [PROGRESS](PROGRESS.md) and the
-[current contract](docs/universal_mcp_execution/MASTER_GOAL.md). Dated sections below are historical snapshots.
+Install the offline release built for the target OS and architecture. The verified macOS ARM64 R4 command pattern is shown above; its lock file installs the application wheel together with dependencies from the bundle wheelhouse using `--no-index`, `--only-binary=:all:`, and `--require-hashes`. The recorded application wheel is `comsol_mcp-0.1.10` with SHA-256 `e28a7aaf51dcb507bd28e8f528eb59e7a7cbc3a7f50890601924ab9e3c2dde12`; that hash identifies this candidate only. Configure the MCP host to run the absolute path to the environment's entrypoint (`bin/comsol-mcp` on Unix-like systems or `Scripts\comsol-mcp.exe` on Windows) with an empty argument list. Set `COMSOL_ROOT`, a full JDK home in `COMSOL_JAVA_HOME` containing both `bin/java` and `bin/javac` (Windows `.exe` names), an existing authorized `COMSOL_PROJECT_ROOT`, and a private `COMSOL_SERVER_MCP_HOME` in the host process environment. JDK 11 is evidenced only in a specific environment; verify the target COMSOL version requirements. The JSON above is a macOS/Unix-shaped host configuration, not a shell command. The original dated README remains available at the immutable historical link above. After connecting, inspect the live operation schemas instead of relying on a stale tool list.
 
-### Historical execution snapshot (2026-10-05, Full MASTER W01–W26)
-
-> At the user request, pause project work after cutoff066 GitHub synchronization and perform a read-only local storage audit, especially /private/tmp. Original scope remains incomplete; these separate software results do not establish full-project acceptance.
-
-- **cutoff066:** exact six-file artifact.verify integration passed Root and fresh independent software review; producer and independent joint suites each passed273/273 without failures/errors/skips, including all three real registered dev1 archives. Declared package content only; producer trust, current-full-source artifacts, native and science are unverified/not accepted. Historical failures remain preserved. Parameter002 and preview002 are paused, not fully accepted. See [Root acceptance](docs/full_project_execution/project_session/ARTIFACT_VERIFY_ROOT_ACCEPTANCE002.json).
-
-- **Python:** the D2 and current-R source-bound suites each passed 764/764 in separate candidate runs.
-- **Structural JVM:** R048 accepted two harness tests; OS-level containment is `NOT_PROVEN`, and W23 was `COMPILE_ONLY`.
-- **Release helper:** all 64 focused cases passed; candidate-only cleanup assertions were mock-only, and the four helper source/test files passed independent review and Root acceptance; the eight existing default-mode rollback regressions also passed (mocked software tests).
-- **W26 transition:** the bounded same-machine synthetic-data `0.1.9 → 0.2.0.dev1 → 0.1.9` transition was accepted with 18/18 independent checks. Real user data was not exercised. A separate actual nonempty candidate-only uninstall passed independent and Root review. SQLite backup covers the control ledger; referenced model and artifact files require separate backup.
-- **W22 historical source content:** all10,102 tracked contents and safe APFS reconstruction passed independent and Root acceptance; original tar bytes and full Git history remain unrecovered, no scientific replay. Archive stays local.
-- **W23 model_create guard:** pathless creation skips unrelated persisted workflow-path prechecks; independent and Root software acceptance passed, native/science NOT_RUN. Previously frozen dev1 bundles exclude this fix.
-- **Windows / Intel dev1 archives:** independent and Root archive acceptance passed; target installs and COMSOL runtime remain NOT_RUN.
-- **W22 replay archive:** the local422-member archive passed independent and Root byte/clean-extraction acceptance; no new scientific replay ran, and full historical source-content recovery continues.
-- **P4 offline bundle:** the frozen macARM artifact and actual extracted-helper offline install passed independent and Root software acceptance; other platform and science acceptance remain incomplete.
-- **Loopback7:** the latest actual child passed 7/7 (0 failures/errors/skips), with all sockets closed and helper threads joined; independent runtime review and Root acceptance passed. The original tool receipt confirms exit 0, consistent with the child and supervisor PASS. Earlier failures are preserved. This covers synthetic loopback software only.
-- Full-project, native, science, and platform-matrix acceptance remain `NOT_ACCEPTED`; final release remains `NOT_SELECTED`. The current `pyproject.toml` declares Windows/macOS. Existing frozen `.dev1` artifacts retain their old metadata; the final artifact still needs rebuilding after candidate freeze.
-- The current full-profile operation list is obtained at runtime with `registry_manifest(profile="full")`; no fixed tool count is stated here.
-
-See [MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md), [PROGRESS](PROGRESS.md), the [cutoff066 checkpoint](docs/full_project_execution/state/RESUME.json), [R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json), and the [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json) for the canonical scope and evidence.
-
-### Historical implementation snapshot (2026-09-23, G3.5)
-
-> This section reflects the completed verification status of G3.5 (Gate A fixes G01–G12 + W19 job directory, queued/running cancellation, recovery, and concurrency control J01–J10).
-> Authoritative acceptance verdict is **PASS** (`G3_5_MAC_W19_VERIFIED_SCOPED`), stopped strictly at W19 without advancing to W20–W26.
-
-- **MCP tool surface at this dated G3.5 snapshot:** runtime discovery reported **86 tools**
-  (including core workflow, physics, solver, plotting `plot.render` / `plot_render`, validation `validate.*`, and job control `job_*`); the snapshot also reported **126 domain operations** in DISPATCH.
-- **Gate A (G01–G12) Key Fixes:**
-  - **G01**: Clean recovery from pinned commit, strict 4-path isolation (packages, source, project root, cwd).
-  - **G02**: Unified atomic publish, no reuse of pre-existing targets, explicit boolean overwrite control.
-  - **G03**: Property restoration in `finally`, failures tracked monotonically in `_ModelState.dirty`.
-  - **G04**: Target path containment within project root, atomic publish protection.
-  - **G05**: Explicit solution binding, distinct transient time-step renders, fail-closed on nonexistent solution.
-  - **G06**: 2D matrices preserve nested list structure, 3-level path resolution, rejection of depth > 3.
-  - **G07**: Complete PNG chunk parsing (IHDR/IDAT/IEND), corrupted chunks rejected, failed envelope suppresses image.
-  - **G08**: Real `storage=artifact` wire budget bounds payload (<10KB) without values, disk artifact retains full data.
-  - **G09**: Full 7,219 file SHA-256 tree audit and single-file modification negative control.
-  - **G10**: Strict output equivalence across `plot.render`, `plot_render`, and `operation_call`.
-  - **G11**: Boundary protection of external mphserver processes.
-  - **G12**: Live model save to `.mph` and reload into fresh worker.
-- **W19 (J01–J10) Job Control & Concurrency:**
-  - **J01**: Job catalog with pagination, status filtering, and project tenant isolation.
-  - **J02**: Queued cancellation prevents engine dispatch, idempotent replay.
-  - **J03**: Running cancellation reports `UNSUPPORTED_NATIVE_CANCEL`, protects unmanaged/shared servers from force stop.
-  - **J04**: Host disconnect idempotency with 0 duplicate engine calls.
-  - **J05**: Crash restart reconciliation into `RECONCILING` state.
-  - **J06**: Sub-second responsiveness (p95 < 1.0s) for non-blocking control reads.
-  - **J07**: Strict serialization for engine requests targeting the same COMSOL instance.
-  - **J08**: Decoupled RPC timeout vs. queue expiration policies.
-  - **J09**: SQLite WAL mode, indexing, and process safety.
-  - **J10**: Complete end-to-end chain (solve -> evaluate -> render -> delivery).
-- **Acceptance & Verification:**
-  - Live acceptance suite (`tests/run_g3_5_acceptance.py`, 22 cases) **22/22 PASS** (15.31s).
-  - Control plane unit tests PASS.
-  - Offline delivery package (`COMSOL_MCP_G3_5_DELIVERABLE.tar.gz`) containing standalone Git bundle (`comsol_mcp_g3_5.bundle`). No external `git push` executed.
-  - Cloud Hermes vision delivery remains `HOST_DELIVERY_UNVERIFIED`.
-
-### Features
-
-- Attach to an existing COMSOL Multiphysics Server
-- Share one server-side model with COMSOL Desktop
-- Lock the visible main model to prevent accidental model switching
-- Set parameters, evaluate expressions, edit geometry and physics features, configure solvers, run mesh and studies
-- Save main-model snapshots and handle large `.mph` loads asynchronously
-- Stable MCP tool surface; the default full profile currently registers **112 MCP tools**; executable domain operations are listed dynamically by `registry_manifest(profile="full")`.
-
-### Requirements
-
-- macOS (Apple Silicon / Intel) or Windows x64
-- Python 3.10+ for source installs; current offline bundles target CPython 3.12
-- Local COMSOL Multiphysics installation (6.3 or 6.4)
-- External JDK 11 matching the selected runtime architecture; other versions need separate validation
-- Valid COMSOL license
-- A managed Server or an explicitly authorized existing `COMSOL Multiphysics Server`
-
-### Install
-
-Architecture-specific offline bundles contain `README_OFFLINE_INSTALL.txt`,
-`docs/RELEASE_OPERATIONS.md`, hash locks, SBOM and licenses. Follow those instructions
-for local-wheelhouse installation and the included release tool for lifecycle operations.
-See PROGRESS for the actual build and target-install acceptance scope.
-
-Developer source install:
-
-```powershell
-git clone https://github.com/Everwalker/comsol-mcp.git comsol-mcp
-cd comsol-mcp
-python -m pip install -e .
-```
-
-For development:
-
-```powershell
-python -m pip install -e ".[dev]"
-```
-
-### Configuration
-
-Set environment variables for your COMSOL installation:
-
-```powershell
-$env:COMSOL_ROOT = "C:\Program Files\COMSOL\COMSOL63\Multiphysics"
-$env:COMSOL_SERVER_MCP_HOME = "$PWD\comsol-server-home"
-$env:COMSOL_PROJECT_ROOT = "$PWD\projects"
-New-Item -ItemType Directory -Force -Path $env:COMSOL_PROJECT_ROOT | Out-Null
-```
-
-Start the MCP server:
-
-```powershell
-python -m comsol_mcp.mcp_server
-```
-
-Example MCP host configuration:
-
-```json
-{
-  "mcpServers": {
-    "comsol-mcp-server": {
-      "command": "python",
-      "args": ["-m", "comsol_mcp.mcp_server"],
-      "env": {
-        "COMSOL_PROJECT_ROOT": "C:/projects/comsol",
-        "COMSOL_SERVER_MCP_HOME": "C:/comsol-mcp-runtime"
-      }
-    }
-  }
-}
-```
-
-### Recommended Workflow
-
-Use `operation_describe` for current schemas and `operation_call` for managed actions:
-discover/inspect a runtime, create a project, start/connect a session, then create/load/adopt
-the target model. Keep its actual `ModelRef` and returned revision. Domain actions,
-`node.*`, public API calls and project-local Java share that execution identity.
-Project Java uses the injected `Model` and requires explicit deployment and project
-`trusted_code` grants; the grant does not establish OS sandboxing. Read results and
-artifacts through the managed interfaces, and reconcile the original job after a wait timeout.
-Session-bound `UNKNOWN` jobs also require `session.recover` to verify the original Worker
-epoch, model and revision; request-status reconciliation alone does not release mutation admission.
-Installed packages require an explicit `COMSOL_PROJECT_ROOT` separate from private runtime state.
-
-The retained visible-main workflow is:
-
-1. Start `COMSOL Multiphysics Server` manually.
-2. Note the real listening port from the server console.
-3. Keep `python -m comsol_mcp.mcp_server` running.
-4. Call `start_visible_main_workflow(host, port, path)`.
-5. Connect COMSOL Desktop to the same server.
-6. Import or switch to the already loaded server-side model in Desktop.
-7. Use MCP tools to modify the locked main model and watch Desktop update.
-
-For large `.mph` files, use the async entrypoint and replace the example path
-with a local `.mph` file:
-
-```text
-start_visible_main_workflow_async("localhost", <actual_port>, "C:/path/to/model.mph")
-visible_main_workflow_status("<job_id>")
-```
-
-### Tests
-
-```powershell
-pytest
-```
-
-The default test suite does not require COMSOL. Integration tests that need a
-live COMSOL Server are marked with `comsol_server` and skipped by default.
-
-### Contact
-
-Maintainer: mr jiang <jiang-jc24@mails.tsinghua.edu.cn>
-
-### License
-
-MIT. See `LICENSE`.
+For a normal task, describe an operation before calling it; inspect runtime availability; create and inspect an authorized project; start or connect a managed session; then create/load/adopt a model and carry forward the returned model identity and revision. Use domain operations where they fit, and inspect public API metadata before other API calls. Put new Java under the authorized project, inspect its entrypoint contract, compile it, and execute it against the explicitly bound model. Read back results for the intended solution, render and store requested outputs under the project, and save the model with an explicit destination and overwrite policy. On timeout or interruption, reconcile the original job and session before considering any new request. An unknown result must not be replayed as a new solve. Native recovery remains subject to the documented state and evidence; some recorded outcomes are still `UNKNOWN` or `PARTIAL_UNRESOLVED`.
