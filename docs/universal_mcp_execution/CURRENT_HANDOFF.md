@@ -1,4 +1,4 @@
-# 当前交接 — 2026-10-24（r236）
+# 当前交接 — 2026-10-24（r239）
 
 继续执行 MASTER_GOAL 的通用 MCP，Goal active / IN_PROGRESS，completed_groups=[]。冻结273动作、60测试、427子断言（414核心、13案例）未改；Windows x64 6.3/6.4、适用Mac ARM64 6.4、恢复和最终未预设任务统一验收尚未完成，真实阻塞不报完成。
 
@@ -6,9 +6,9 @@
 
 Primary Halley 01a1632c-2788-73b2-a3d5-5023b2335cb6（同Luna max）在私有 `_state/universal-controller-c-source-20261024` 连续完成非循环C/原APPLY/typed purpose/正常public Controller、Root完整64位volume+128位fileID、原literal-loopback preCONNECT、R3观察器、C2与R4 heldA组合。最新attempt37原public Controller经真实APPLY/coordinator/issuer/preparer/reader/vendor lifecycle函数体软件1PASS/176.06s，仅OS/FS/transport叶inert；正继续C1/C2组合和唯一完整受影响回归。没有最终DELIVERY或Main完整C接受，不能把旧341或新1PASS作原生资格。无shared/Git/SDK/JDK/Java/native效果权限。Main架构与接口决定在 `_state/universal-main-review/20261024-controller-c/`。
 
-Lorentz同Luna R5已冻结、Main接受source70，source slice关闭保上下文；SDK真实bind-only由Main执行并已通过。Schrodinger同Luna现做新packet-r11的IPC有限诊断SOURCE/SOFTWARE；不实际SDK/Windows/Root/PID/shared/Main3/Git。
+Lorentz同Luna R5已冻结接受source70，Main实际bind-only通过；后续一次真实metadataSetup在SDKexit HOLD。现同原Luna在新packet-repair-r6做窄await完成传递SOURCE/SOFTWARE，详下。Schrodinger同Luna现做新packet-r11的IPC有限诊断SOURCE/SOFTWARE；不实际SDK/Windows/Root/PID/shared/Main3/Git。
 
-Kuhn 01a16b0a-4085-7d22-a032-9f9bd8c90943 的R9与Mac R4实际失败范围报告均0P1P2、Main已接受；现继续独立只读审R10实际失败与R5 actualbind-only。不执行测试/SDK/native，不是最终fresh Reviewer。Parfit 01a16922-ddc1-7823-9b8c-36818109816b 的reopen633 R2静态PREP已接受后关闭保上下文。
+Kuhn 01a16b0a-4085-7d22-a032-9f9bd8c90943 的R9与Mac R4实际失败范围报告均0P1P2、Main已接受；R10初审F1/P2经R2报告整改已复核闭合，R5 actualbind-only亦0P1P2，Main均接受限定scope；此slice已关闭保上下文。不执行测试/SDK/native，不是最终fresh Reviewer。Parfit 01a16922-ddc1-7823-9b8c-36818109816b 的reopen633 R2静态PREP已接受后关闭保上下文。
 
 ## Windows R9实际与持续授权
 
@@ -22,9 +22,9 @@ R9实际Root `C:/Users/Everwalker/universal-original-selector-acaf12e6b8f54894a8
 
 官方203仅为ERROR_ENVVAR_NOT_FOUND，不命名变量。R9显式childenv只有SystemRoot/WINDIR/TEMP/TMP且未字母排序。Main R10方案仅该block：同原parent读取且严格校验固定用户LOCALAPPDATA、保留原四项值、规范case-insensitive Unicode排序/双NUL，有限五项诊断；不继承全env、不写全局env、不扩展能力/资源。此方案同时修presence/serialization，未来结果不能唯一归因某变量，更不能回溯证明R8。R10在准备阶段nonce4e39cf6467734064bd4e2743cfc7556c仅数据；随后已按下段执行一次新实验。源码old285各一次+必要新原函数体软件守卫均已冻结验收。决定4548B/SHAff5662c7…。
 
-R10已完成一次新实验：13材料154144B/manifest272608b56cda36c65a1e17e2fc421b758396df21af62b1bab13ca250f4b378e7，308软件PASS；compiler0、READY6ab84e44…、独立PE11776B/SHA57d91103…，仅一GO消费。原parent32700/birth134372968408912088；A38028/birth134372969354924677与B24636/birth134372969356519002均原CreateProcess raw1、原image/argv/AppContainer token/无capabilities/Job728/childpolicy1读回通过，ResumeThread各1。随后首IPC WriteFile完成不确定，FAILURE222B/SHAd29bc81a… UNKNOWN_OWNER_RETAINED，无RESULT/ABA/退休。原preResume读回不证明当前helper活性或exit；全部原resources保留、不查PID/重放/补清理。Main原报告14778B/SHA0218ffa5…，Kuhn限定复核待交。
+R10已完成一次新实验：13材料154144B/manifest272608b56cda36c65a1e17e2fc421b758396df21af62b1bab13ca250f4b378e7，308软件PASS；compiler0、READY6ab84e44…、独立PE11776B/SHA57d91103…，仅一GO消费。原parent32700/birth134372968408912088；A38028/birth134372969354924677与B24636/birth134372969356519002均原CreateProcess raw1、原image/argv/AppContainer token/无capabilities/Job728/childpolicy1读回通过，ResumeThread各1。随后原报告出现无命令标签的IPC WriteFile完成不确定，FAILURE222B/SHAd29bc81a… UNKNOWN_OWNER_RETAINED，无RESULT或确认ABA/退休；不能排除原known-refusal cleanup已进入child退休尝试。原preResume读回不证明当前helper活性或exit；全部原resources保留、不查PID/重放/补清理。Main原报告14778B/SHA0218ffa5…被独立复核发现F1/P2：同一IPC错误也可来自原known-refusal childcleanup的X写，旧“firstO/退休NOT_REACHED”过强。原报告保留，当前Main R2报告16129B/SHA2f3348b78ec314606e82b5e38a8f8d694ded02229fba7573e97af5836f38b2d9修正O/X/阶段/退休入口均未证，既不排除尝试也不证明进入/成功，独立R2已复核newP1/newP2/F1remaining均0，Main接受reporting correction，运行UNKNOWN保持；原实际证据/owners不改、不查询或重跑。
 
-同Luna R11新nonce42868722b2b54fa4b7818c041f8c077c仍只数据。仅observe在写前一次同originalHANDLE GetExitCodeProcess（既有bind），原BOOL/error/DWORD先根于原child；失败或非259不写而保留，259不作全局活性证明。_write原buffer/used/payload先根，单WriteFile后第一调用取LastError并保留raw/used，false/short仍Unknown、不重放/cleanup。无新增helper/ACL/env/caps/资源；原308各一次+必要新原函数体软件守卫，Main冻结验收后才下一次新诊断。决定4532B/SHA487a72ee…；不查R10或任何旧现场。
+同Luna R11新nonce42868722b2b54fa4b7818c041f8c077c仍只数据。因上述P2，原R11方案已修正为统一在_write中对原O/X命令写前一次同originalHANDLE GetExitCodeProcess（既有bind），observe不重复；最多原A1/B1/A2/XA/XB五commands。增加有限原payloadO/X与sys.exception类型/消息上下文诊断，不推导额外authority。原BOOL/error/DWORD先根于原child；失败或非259不写而保留，259不作全局活性证明。_write原buffer/used/payload先根，单WriteFile后第一调用取LastError并保留raw/used，false/short仍Unknown、不重放/cleanup。无新增helper/ACL/env/caps/资源；原308各一次+必要新原函数体软件守卫，Main冻结验收后才下一次新诊断。决定4532B/SHA487a72ee…；不查R10或任何旧现场。
 
 ## Mac M3 R4接受范围、实际Setup失败与R5
 
@@ -36,11 +36,13 @@ Main实际失败1931B/SHA9735d360…与原trace/audit拷贝在 `_state/universal
 
 R4实际失败独立报告33925B/SHA158751f5…为0P1P2，Main59local refpins接受1138B/SHA731e3645…；Setup仍失败。R5现已冻结并Main接受：70唯一软件PASS=原62各一次+8，old完整binder同oracle KeyError真失败保留。仅7normalimports和operatorSHA literal，原19函数/Root类/observer与其他已审源不变；84before_after/76current+8派生metadata，后者不称consumer-tested。Main机械5024B/SHA0a6159a2…、接受1993B/SHA7998ac13…。
 
-真实cold SDK bind-only：Main第一driver漏原helper定义在wire查找已知exit2，失败保留；新驱动仅把冻结helper定义exec进原operator globals，不选择RUN。第二driver exec1d3fa3数字exit0，201filepins、9模块全部初始absent而后原source/origin匹配，返回原stdio/ClientSession/params身份，44code45watch注册；无root.install/stdio/SDKconstructor/loop/Root文件系统。实际result4457B/SHAc42e85db…，Main接受1684B/SHAa8430dbc…。这不是正常SDKteardown或原生/Goal通过。其后才选全新Root `/private/tmp/comsol-m3-math633-424659fd65a3` 与55479B/binding5c8455735bdcb218d3e79a3995c4b5b89077f1654c8b24b18597b901d88ccd0c，old binding仅nonce/private_root变化，201pins/安全/预算不变。新Root尚未查建、metadataSetup尚未放行，CoreNOT_RELEASED；旧d4绝不重用。
+真实cold SDK bind-only：Main第一driver漏原helper定义在wire查找已知exit2，失败保留；新驱动仅把冻结helper定义exec进原operator globals，不选择RUN。第二driver exec1d3fa3数字exit0，201filepins、9模块全部初始absent而后原source/origin匹配，返回原stdio/ClientSession/params身份，44code45watch注册；无root.install/stdio/SDKconstructor/loop/Root文件系统。实际result4457B/SHAc42e85db…，Main接受1684B/SHAa8430dbc…。这不是正常SDKteardown或原生/Goal通过。其后才选全新Root `/private/tmp/comsol-m3-math633-424659fd65a3` 与55479B/binding5c8455735bdcb218d3e79a3995c4b5b89077f1654c8b24b18597b901d88ccd0c，old binding仅nonce/private_root变化，201pins/安全/预算不变。Main随后已一次创建这份全新Root并执行metadataSetup。正常SDK metadata结果返回project719cfb7b-b95a-412d-8041-af24fb857ca5、两Java文本复制，原Server/Worker/study提交0，但SDK退出在BaseSession.__aexit__ line238 StopIteration(True)触发LIVE_OWNER_HOLD。前台原tool session35784（start d2d271/HOLD7a7187）及149原objects保留，没有SDK数字exit或setup-ORIGINAL_STDIO_EXIT，整体Setup不接受、CoreNOT_RELEASED，不重试/查询SDK或PID/重连/close/signal/unpark/接管；旧d4仍不碰。Main实际6591B/SHA456ea37f68c91b7bed8c0d9a607a8ff1fbd2a8d5e0ae14bf8f380b86ee1f9bd7。
+
+Main源码诊断2097B/SHAda60a486…用完整原BaseSession.__aexit__函数体、真实CPython3.12手动send/throw和inertawaitleaf，复现正常返回True的StopIteration在YIELD_VALUE210/line238而旧R5predicate False；即时None完成在END_SEND/233已许可。旧liveVMoffset未序列化、不检查，故仅复现同形可能根因，不把推断写成实际opcode观测。R6 Main决定3577B/SHAedc3c23f…：仅精确注册ownedSession/同原callee已知returned→samecallerframe、pinnedawait continuation/异常表、exactStopIteration.value与原return相同且无UNKNOWN/pendingerror时识别正常VM传递；不得全类白名单、StopAsyncIteration/foreign/missingknownreturn/wrongsite。old70各一次+真实CPython跟踪及负控、原R4cancel/future修补等保持。R6只source/software，无SDK/loop/Root/native或旧35784操作，冻结后Main再集中验收。
 
 ## 已发布源、包与旧资源
 
-分支universal-core；HEAD最后已同步并fresh5blob核验 `04af235883011b1535f365e4f4ef6eea73226967`（parent2b7），5files577899B/publishedr233。回执 `_state/universal-main-review/20261024-diagnostic-m3-r3-publication/REMOTE_READBACK.json`2374B/SHA80f89b49b30d9785075defd635c6acd8e41196a9ea375fa4a71afc1a39a47c21；CLEAN仅该时点。本r236只将两个已独立验收失败scope紧凑摘要+Main3精确5file准备普通非强制同步，不追逐发布自己的回执。持续公开同步排除raw/凭据/运行目录/SDK副本/商业二进制。
+分支universal-core；HEAD最后已同步并fresh5blob核验 `4e686be850217cb68ce555685c331634a5a799d5`（parent04af），5files605025B/publishedr236。回执 `_state/universal-main-review/20261024-r9-r4-failure-publication/REMOTE_READBACK.json`1975B/SHA3c5710d6d4d117bb852fb4f84b79ceba16ff8bccb04903c8af38b4c6626a12f8；CLEAN仅该时点。本r237本地继续，不追逐发布自己的回执。持续公开同步排除raw/凭据/运行目录/SDK副本/商业二进制。
 
 数学源63328640维持复数域聚合后单次after再selector，before/preserve/native getter/预算与拒绝/cleanup保持；328唯一软件PASS含原137各一次。None未证明unit1，不新增literal1门槛，真实单位/维度/T014仍未认证。固定JDK R3 ff1源79PythonPASS与旧Mac14集成/24exit0/22classes是限定历史证据，不能替代Windows/currentC。
 

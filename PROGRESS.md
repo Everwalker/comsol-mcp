@@ -1,5 +1,17 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r239：R10报告P2/F1已完成独立整改复核：R2保留O/X、firstwrite、清理进入/成功未证，独立newP1/newP2/F1remaining均0，Main再接受。仅报告范围闭合，IPC原因/退出/ABA/退休未认证，旧owner与证据保留、没有新增现场查询或实测。R5 bind-only独立0P1P2及Main23pins接受；其后新metadata原35784 SDKexit HOLD仍未关闭/Core未放。原Primary通用完整C、同LorentzR6实际await传递guard、同SchrodingerR11带O/X/原handle写前状态的源码软件继续；Kuhn此slice已关闭保上下文，不是最终Reviewer。当前公开4e686/fresh5blob605025B，纠正compact+Main3精确4file准备普通同步。Goal active/PROGRESS、completed_groups=[]，原427/平台矩阵/restore/heldouts/fresh最终Reviewer未过。
+
+以下r238及更早为历史；当前已复核的R10仍未知O/X与退休入口，不恢复旧first/NOT_REACHED推断。
+
+当前续跑 r238：独立R10实际范围初审发现1P2/F1（31156B/SHAcf2f94e5…），Main亲读原protocol/nativeSDK确认：最终IPC UNKNOWN无O/X标签，可来自观察O，也可来自postResume verify已知Refusal后的原cleanup_known_refusal→retire_child X写；不能叫“首次观察写”、不能排除退休尝试，也不能反推进入或成功。原41条journal/FAILURE/旧Main报告均保留，新增MainR2报告16129B/SHA2f3348b7…将命令/阶段/退休入口标UNVERIFIED，无确认ABA/存储/退休，独立仅报告整改复审待交。R11 source-only已补充统一_write写前原handle状态及O/X/有界异常上下文，不在observe重复query，不改资源/ACL/env/Helper，最多原5commands，仍不查旧UNKNOWN。R5 bind-only独立0P1P2，限真实导入/注册与8 metadata限制；后续metadata原35784 SDKexit HOLD/Core未放、同LorentzR6纯源码修补继续。Primary通用C连续组合回归未验收。公开当前仍4e686be8/fresh5blob605025B，R10本项纠正准备下一验收阶段同步，不重发回执。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未过。
+
+以下r237及更早为历史；R10“first IPC/退休未到”旧表述有本P2，以当前R2与r238为准。
+
+当前续跑 r237：R9+Mac R4独立已验失败scope两compact+Main3精确5file/605025B已普通nonforce发布4e686be850217cb68ce555685c331634a5a799d5（parent04af），fresh fetch逐5blob/worktree相符，回执1975B/SHA3c5710d6…，CLEAN仅读回时点，不追逐重发回执。Main随后按新R5源/绑定/已过coldSDKbind预检，独占执行一次新MacmetadataSetup：元数据结果返回project719cfb7b，Server/Worker/study提交0，但原ClientSessionexit line238 StopIterationTrue触发LIVE_OWNER_HOLD，原前台35784/root424659fd65a3及149原objects保留，未观测SDKexit/整体Setup接受，Core未放。Main用完整原SDK函数体+真实CPython3.12manualsend/throw/inertawaitleaf复现正常True完成在YIELD_VALUE210被旧predicate拒绝；旧liveVM实际offset未序列化/不查询，仅源诊断推断，不解锁旧owner。Main6591B/SHA456ea37f…；同LorentzR6窄原callee-knownreturn→caller awaitcontinuation guard源码修补，old70各一次+真实trace控制，不白名单全类。R10两helper原创建/验证/Resume1后首次IPC UNKNOWN仍保留，同SchrodingerR11 source-only继续；Kuhn R10actual/R5bind限定审查待交。Primary组合回归/fixture校正继续，未完整C验收。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未过。
+
+以下r236及更早为历史；以本段、CURRENT_HANDOFF与RESUME r237为准。
+
 当前续跑 r236：R9与Mac R4两项实际失败范围已独立strong复核0P1P2并由Main接受（136/59个本地refpins相符），仅接受失败范围。R5源码70唯一PASS/old62 eachonce、28refs/86freeze/45source/219evidence通过Main；84before_after仅76current一致+8份派生metadata不作consumer-tested。真实冷SDK bind-only第二独立驱动exit0：201pins/9模块/原对象/44code45watches，未Root/stdio/loop；Main首次驱动遗漏原wire定义的已知exit2保留，新驱动只补冻结helper定义，不改R5源。新Mac Root424659fd65a3/binding5c845573仅数据，尚未Setup/Core。R10源码308通过；实际13材料154144B一致、compiler0/READY/PE/唯一GO后两helper创建/原image-token-Job核验及Resume1各成功，随后首次IPC写不确定，原owner/resources UNKNOWN保留，A/B/A/退役未通过。原Luna R11只做写前原handle状态/WriteFile即时原始值诊断；R9及所有旧UNKNOWN不查询重试接管清理。持续同机同范围授权有效不再问。Primary组合回归继续；Kuhn新R10/R5 bind限定复核待交。两个已独立验收失败scope compact+Main3精确5file准备普通同步；Goal active/PROGRESS、completed_groups=[]、原427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
 
 以下r235及更早为历史；以本段、CURRENT_HANDOFF及RESUME r236为准。
