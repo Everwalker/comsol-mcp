@@ -1,5 +1,9 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r215：R7限定访问失败四文件已发布876812fe（parentff1），fresh fetch逐4blob一致，回执1437B/555874c8…，原终态UNVERIFIED和无进一步远端效果边界不变。本轮Main集中接受fixed633 M4构件与Mac离线元数据软件：独立核679packet/682unique refs、203Git原blob/198manifest/195wheel-installed源一致、三archZIP全成员hash（54/47/56；42/35/42wheels）；wheel3117208B/427695dc…。Mac实际offline install与pipcheck原exit0、normalMCP原wire initialize/initialized/toolslist112schemas、原AnyIO=Popen/exit0、48loaderbytes/getcode、47execpairs/172frames/1937calls已核；两次包装器失败保留，不计native/业务/WindowsIntel安装通过。新compact MATH633_OFFLINE_PACKAGE_SOURCE_SOFTWARE_SCOPED.json+Main3精确4待同步。单位事实14748B/07ba40f0经Main同版本ParamBase/温度文档核对，仅文档/源码gap，未新实现或宣告原生失败；下一步Lorentz绑定633包冻结原M3合同/有限诊断，再由Main另放实际新Root实验。C/Resume/R8PREP继续，Goal IN_PROGRESS/completed_groups=[]。
+
+以下r214及更早为历史；以本段与RESUME r215为准。
+
 当前续跑 r214：Main接受R7限定实际ACL访问失败事实：3指定新路径protectedDACL保原用户FA但无OI/CI，7已存在子路径实为empty D:AI；5报告同用户读取拒绝、GO-consumed303B/journal3872B仅metadata、RESULT/FAILURE未观察。源码+微软官方传播规则支持“移除可继承ACE致子对象emptyDACL”的根因推断，未实测每次传播时序。未重发GO/改ACL/SDKcleanup/PIDquery/接管/重启，原parent/2profiles/Job/helpers实际终态和关闭删除均UNVERIFIED。新公开紧凑证据WINDOWS_SELECTOR_R7_ACL_ACCESS_FAILURE_SCOPED.json及Main3共4files待持续授权普通同步，lastsynced ff1。Lorentz先冻结M3PREP再仅新R8最小owner继承PREP/原257；Schrodinger12targeted软件通过但factory卷策略挡在dispatch前，已明确新internal0700私有fixture续完原负控/回归，原检查不改；Parfit429是provider失败非有效尝试，已发同agent续跑；PrimaryC闭环继续。completed_groups=[]，Goal IN_PROGRESS。
 
 以下r213及更早为历史；以本段与RESUME r214为准。
