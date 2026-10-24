@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_AND_SCOPED_MAC_JDK_DIAGNOSTICS",
+  "utc": "2026-10-24T01:14:51.168188+00:00",
+  "source_base": "63328640c27bf6f8b26bf48481d0b2e8012ee01a",
+  "source_and_tests": [
+    {
+      "path": "comsol_mcp/_windows_os_probe_protocol.py",
+      "bytes": 17161,
+      "sha256": "10074c5a665986bfcb44f3d97b8f34eeba2e276e8caba7cc29af9fecce3bd78d"
+    },
+    {
+      "path": "comsol_mcp/_windows_worker_bootstrap.py",
+      "bytes": 47059,
+      "sha256": "17b585a588066f55c2a22ab4ac99ee6b92b686556c5bc3a9554e579b7f659551"
+    },
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "bytes": 166825,
+      "sha256": "64030589e40b2997c2a56be32cfda42eb1c0f2f654ca82674667f789243e6ad9"
+    },
+    {
+      "path": "tests/test_windows_os_probe_protocol.py",
+      "bytes": 10129,
+      "sha256": "e00ffa1d81ccfb3ddf5556bb02d2e3ff4cb5841a917b7a153de09b9e85bbf15f"
+    },
+    {
+      "path": "tests/test_windows_prepared_launch.py",
+      "bytes": 59109,
+      "sha256": "6ec0992fd5dd99f796aba9a6a5b64552ae88e298136b9cc5f16432d39dbcd21d"
+    }
+  ],
+  "behavior": "Fixed self-contained PersistentComsolWorker$OsQualificationProbe implements one bounded binary frame: READ_HASH extent/digest, CREATE_NEW fixed nonce/index payload, TCP_ECHO literal IP/nonce. It reports raw exception/phase/byte/close facts and grants no permission. Parent qualification/purpose/coordinator wiring remains separate. Normal outer Worker bytes unchanged.",
+  "protocol_bounds": {
+    "request_bytes": 32768,
+    "response_bytes": 65536,
+    "records": 16,
+    "read_default": 1048576,
+    "read_hard": 16777216,
+    "DNS": false,
+    "arbitrary_commands": false
+  },
+  "source_integrity": {
+    "outer_Java_full_original_bytes_after_fragment_removal": true,
+    "bootstrap_exact_change": "one source SHA and two size literals only",
+    "class_namespace_manifest_trust_rules": "UNCHANGED",
+    "normal_worker_main": "UNCHANGED"
+  },
+  "final_Python_software": {
+    "tests": 79,
+    "passed": 79,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "deselected": 0,
+    "original64_preserved_once": true,
+    "new_identity_controls": 15,
+    "source_inputs": 225,
+    "unchanged_equal_Git633": 220,
+    "origins": 65,
+    "returned_source_reads": 65,
+    "loader_returned_pairs": 65,
+    "test_code_filenames": 79,
+    "intentional_denial_selfchecks": 7,
+    "unexpected_denials": 0,
+    "new_JDK_native_effects": 0
+  },
+  "original_Mac_fixed_JDK_diagnostics": {
+    "original_processes": 24,
+    "numeric_wait0": 24,
+    "recorded_original_Python_stdio_close_returned": 24,
+    "complete_class_count": 22,
+    "complete_class_bytes": 147328,
+    "classloading_logs_observed": 20,
+    "observed_vendor_rows": 0,
+    "observed_outer_init_rows": 0,
+    "separate_R2_integration_artifact_controls": 14,
+    "not_cumulative_with79": true
+  },
+  "R3_replay": {
+    "closed_historical_stdout_frames": 11,
+    "parsed": 6,
+    "rejected": 5,
+    "new_JDK": "NOT_RUN"
+  },
+  "retained_history": [
+    "initial73PASS5FAIL",
+    "R2 77PASS1FAIL",
+    "old64PythonPASS source rejected for F1",
+    "oldcodec1genuineconsumerFAIL",
+    "intermediate79PASS testphase/reporting-failure"
+  ],
+  "provenance": {
+    "Main_acceptance": {
+      "path": "_state/universal-main-review/20261024-fixed-jdk-probe/MAIN_R3_SOURCE_ACCEPTANCE.json",
+      "bytes": 5032,
+      "sha256": "0288443db337bc49e2d6f21046a4ef55518438e27b2e9583017a218088931bf8"
+    },
+    "Main_original_raw": {
+      "path": "_state/universal-main-review/20261024-fixed-jdk-probe/MAIN_SOURCE_AND_RECEIPT_VERIFICATION.json",
+      "bytes": 6775,
+      "sha256": "ef6b71a332b2202c7a0046f6f4e4449491b11c9ff27caaf753a75dce1444485a"
+    },
+    "Main_R3_raw": {
+      "path": "_state/universal-main-review/20261024-fixed-jdk-probe/MAIN_R3_PIN_AND_SOFTWARE_VERIFICATION.json",
+      "bytes": 4169,
+      "sha256": "fe80aba3390c0400e608d77c137f91f8e70dcaffe037fbbcad8249ad009a2d03"
+    },
+    "strong_R3_review": {
+      "path": "_state/universal-main-review/20261024-fixed-jdk-probe/R3_SOURCE_REVIEW.json",
+      "bytes": 13234,
+      "sha256": "f5ef0c17180734115830cacfd19da22e35be47070094219a86e4eec291b76597"
+    },
+    "delivery": {
+      "path": "_state/universal-windows-fixed-jdk-probe-20261024/repair-r3/DELIVERY-r3.json",
+      "bytes": 8815,
+      "sha256": "759030f7fc2395816e058f2f387af6cb6f39fc3465b6c1b34b3eba6bc6f26481"
+    },
+    "final_JUnit": {
+      "path": "_state/universal-windows-fixed-jdk-probe-20261024/repair-r3/fixed-bound/receipts/junit.xml",
+      "bytes": 12616,
+      "sha256": "f5e5629b48087f55ab8ee1edc865978b8331139532f36653676f52909ede1a3f"
+    }
+  },
+  "limits": [
+    "No Windows/AppContainer/vendor/COMSOL/C/Resume qualification by this source or diagnostic stage.",
+    "No new JDK/native effects in R3; original source/software failures, report failure and UNKNOWN incidents retained.",
+    "Saved original Python wait/close records are not proof of every JDK raw native handle; no global class-loading absence theorem or all-CodeType claim.",
+    "Frozen60/427, applicable native matrices/restore/heldouts/finalfreshReviewer/Goal remain NOT_PASSED.",
+    "Old ade2/0671 and source3d92/Mac0860 artifacts, current633-only package work retain exact source identities."
+  ],
+  "completed_groups": [],
+  "publication": "EXACT_SOURCE_STAGE_READY_STANDING_AUTHORIZED_ORDINARY_NONFORCE_SYNC"
+}

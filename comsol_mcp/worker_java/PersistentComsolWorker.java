@@ -2503,4 +2503,289 @@ public final class PersistentComsolWorker {
     }
     static final class Parser { final String s; int p; Parser(String s){this.s=s==null?"":s;} Object value(){ws();Object v=raw();ws();if(p!=s.length())throw new IllegalArgumentException("trailing JSON");return v;} Object raw(){ws();if(p>=s.length())throw new IllegalArgumentException("empty JSON");char c=s.charAt(p);if(c=='{')return obj();if(c=='[')return arr();if(c=='\"')return str();if(s.startsWith("true",p)){p+=4;return true;}if(s.startsWith("false",p)){p+=5;return false;}if(s.startsWith("null",p)){p+=4;return null;}return num();} Map<String,Object> obj(){p++;Map<String,Object>m=new LinkedHashMap<>();ws();if(t('}'))return m;while(true){ws();String k=str();ws();need(':');m.put(k,raw());ws();if(t('}'))return m;need(',');}} List<Object> arr(){p++;List<Object>a=new ArrayList<>();ws();if(t(']'))return a;while(true){a.add(raw());ws();if(t(']'))return a;need(',');}} String str(){need('\"');StringBuilder b=new StringBuilder();while(p<s.length()){char c=s.charAt(p++);if(c=='\"')return b.toString();if(c=='\\'){if(p>=s.length())break;char e=s.charAt(p++);if(e=='n')b.append('\n');else if(e=='r')b.append('\r');else if(e=='t')b.append('\t');else if(e=='\"'||e=='\\'||e=='/')b.append(e);else if(e=='u'){if(p+4>s.length())throw new IllegalArgumentException("bad unicode");b.append((char)Integer.parseInt(s.substring(p,p+4),16));p+=4;}else throw new IllegalArgumentException("bad escape");}else b.append(c);}throw new IllegalArgumentException("unterminated string");} Number num(){int q=p;while(p<s.length()&&"-+0123456789.eE".indexOf(s.charAt(p))>=0)p++;String n=s.substring(q,p);try{if(n.contains(".")||n.contains("e")||n.contains("E"))return Double.valueOf(n);return Long.valueOf(n);}catch(Exception e){throw new IllegalArgumentException("bad number");}}void ws(){while(p<s.length()&&Character.isWhitespace(s.charAt(p)))p++;}boolean t(char c){if(p<s.length()&&s.charAt(p)==c){p++;return true;}return false;}void need(char c){if(!t(c))throw new IllegalArgumentException("expected "+c);}}
   }
+
+  /** Fixed one-frame JDK-only diagnostic, never an admission/Resume issuer. */
+  public static final class OsQualificationProbe {
+    private static final int VERSION = 1, REQUEST_LIMIT = 32768, RESPONSE_LIMIT = 65536;
+    private static final int RECORD_LIMIT = 16, PATH_LIMIT = 4096, READ_LIMIT = 16777216;
+    private static final int TIMEOUT_MS = 1000;
+    private static volatile Session retained;
+
+    private static final class ProtocolException extends java.io.IOException {
+      ProtocolException() { super(); }
+    }
+    private static final class Fact {
+      int acquisition, close;
+      String closeException = "";
+    }
+    private static final class Operation {
+      int index, type, maxbytes, port;
+      String path;
+      byte[] address;
+    }
+    private static final class Observation {
+      final Operation operation;
+      final Fact input = new Fact(), output = new Fact(), socket = new Fact();
+      boolean entered, bodyReturned, eof, limit;
+      int phase, echo; // phase matches v1 Python PHASES; echo0unknown/1false/2true.
+      String exception = "";
+      Long readCount, writeCount;
+      byte[] readHash, writeHash, localAddress, remoteAddress;
+      int localPort, remotePort;
+      java.io.InputStream inputObject;
+      java.io.OutputStream outputObject;
+      java.net.Socket socketObject;
+      Observation(Operation op) { operation = op; }
+    }
+    private static final class Session {
+      final String nonce, recipe;
+      final Fact stdinFact = new Fact();
+      final java.util.ArrayList<Operation> operations = new java.util.ArrayList<>();
+      final java.util.ArrayList<Observation> observations = new java.util.ArrayList<>();
+      java.io.DataInputStream input;
+      java.io.OutputStream output;
+      byte[] requestBody, responseFrame;
+      String frameException = "";
+      boolean rejected, outputEntered, outputReturned, flushReturned, closeEntered, closeReturned;
+      String outputException = "", outputCloseException = "";
+      Session(String n, String r) { nonce = n; recipe = r; }
+    }
+
+    private static String exceptionClass(Throwable error) { return error.getClass().getName(); }
+    private static boolean hex(String value, int count) {
+      if (value == null || value.length() != count) return false;
+      for (int i=0;i<count;i++) { char c=value.charAt(i); if (!((c>='0'&&c<='9')||(c>='a'&&c<='f'))) return false; }
+      return true;
+    }
+    private static byte[] bytes(java.io.DataInputStream in, int count, int limit) throws java.io.IOException {
+      if (count < 0 || count > limit) throw new ProtocolException();
+      byte[] raw=new byte[count]; in.readFully(raw); return raw;
+    }
+    private static String utf8(java.io.DataInputStream in, int limit) throws java.io.IOException {
+      byte[] raw=bytes(in,in.readUnsignedShort(),limit);
+      String value=java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+          .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+          .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+          .decode(java.nio.ByteBuffer.wrap(raw)).toString();
+      if (value.indexOf('\0')>=0) throw new ProtocolException();
+      return value;
+    }
+    private static String ascii(java.io.DataInputStream in, int count) throws java.io.IOException {
+      byte[] raw=bytes(in,count,count);
+      for(byte b:raw) if(b<0) throw new ProtocolException();
+      return new String(raw,java.nio.charset.StandardCharsets.US_ASCII);
+    }
+    private static void path(String value) throws java.io.IOException {
+      if (value.length()==0 || value.indexOf('\0')>=0 || value.startsWith("\\") || value.startsWith("//")
+          || value.endsWith("/") || value.endsWith("\\") || !java.nio.file.Paths.get(value).isAbsolute())
+        throw new ProtocolException();
+      for (String part:value.replace('\\','/').split("/",-1))
+        if (part.equals(".") || part.equals("..")) throw new ProtocolException();
+    }
+    private static String createName(Session s, int index) {
+      return "comsol-os-probe-"+s.nonce+"-"+index+".dat";
+    }
+    private static byte[] payload(Session s, int index, boolean echo) {
+      String value=echo ? "OSQP1:"+s.nonce+":"+index+"\n" : "COMSOL-MCP-OS-PROBE/1\n"+s.nonce+"\n"+index+"\n";
+      return value.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+    }
+    private static byte[] digest(byte[] raw) throws java.security.NoSuchAlgorithmException {
+      return java.security.MessageDigest.getInstance("SHA-256").digest(raw);
+    }
+
+    private static void readRequest(Session s) {
+      try {
+        s.input=new java.io.DataInputStream(System.in); s.stdinFact.acquisition=1;
+        int length=s.input.readInt();
+        s.requestBody=bytes(s.input,length,REQUEST_LIMIT-4);
+        if (s.input.read()!=-1) throw new ProtocolException(); // one bounded trailing sentinel, no second frame.
+        java.io.DataInputStream in=new java.io.DataInputStream(new java.io.ByteArrayInputStream(s.requestBody));
+        if (!java.util.Arrays.equals(bytes(in,4,4),new byte[]{'C','Q','0','1'}) || in.readUnsignedShort()!=VERSION)
+          throw new ProtocolException();
+        String nonce=ascii(in,32), recipe=ascii(in,64);
+        if (!hex(nonce,32)||!hex(recipe,64)||!nonce.equals(s.nonce)||!recipe.equals(s.recipe)) throw new ProtocolException();
+        int count=in.readUnsignedShort();
+        if(count<1||count>RECORD_LIMIT) throw new ProtocolException();
+        boolean[] seen=new boolean[RECORD_LIMIT];
+        for(int i=0;i<count;i++) {
+          Operation op=new Operation(); op.index=in.readUnsignedByte(); op.type=in.readUnsignedByte();
+          if(op.index>=RECORD_LIMIT||seen[op.index]||op.type<1||op.type>3) throw new ProtocolException();
+          seen[op.index]=true;
+          byte[] record=bytes(in,in.readInt(),REQUEST_LIMIT-4);
+          java.io.DataInputStream data=new java.io.DataInputStream(new java.io.ByteArrayInputStream(record));
+          if(op.type==1||op.type==2) {
+            op.path=utf8(data,PATH_LIMIT); path(op.path);
+            if(op.type==1) { op.maxbytes=data.readInt(); if(op.maxbytes<1||op.maxbytes>READ_LIMIT) throw new ProtocolException(); }
+            else if(!java.nio.file.Paths.get(op.path).getFileName().toString().equals(createName(s,op.index)))
+              throw new ProtocolException();
+          } else {
+            int size=data.readUnsignedByte(); if(size!=4&&size!=16) throw new ProtocolException();
+            op.address=bytes(data,size,16); op.port=data.readUnsignedShort(); if(op.port==0) throw new ProtocolException();
+          }
+          if(data.available()!=0) throw new ProtocolException();
+          s.operations.add(op);
+        }
+        if(in.available()!=0) throw new ProtocolException();
+      } catch(Throwable error) { s.rejected=true; s.frameException=exceptionClass(error); }
+      finally {
+        if(s.input!=null) {
+          s.stdinFact.close=2;
+          try { s.input.close(); s.stdinFact.close=1; }
+          catch(Throwable error) {
+            s.stdinFact.closeException=exceptionClass(error); s.rejected=true;
+            if(s.frameException.length()==0) s.frameException=s.stdinFact.closeException;
+          }
+        }
+      }
+      // Validate the whole request and close the original input before any operation.
+      if(!s.rejected) for(Operation op:s.operations) s.observations.add(new Observation(op));
+    }
+
+    private static void closeResources(Observation o) {
+      // Socket streams are borrowed views. Closing either would close the same
+      // socket; close the one owning original Socket exactly once instead.
+      if(o.socketObject!=null) {
+        o.socket.close=2;
+        try { o.socketObject.close(); o.socket.close=1; }
+        catch(Throwable error) { o.socket.closeException=exceptionClass(error); }
+      } else {
+        if(o.inputObject!=null) {
+          o.input.close=2;
+          try { o.inputObject.close(); o.input.close=1; }
+          catch(Throwable error) { o.input.closeException=exceptionClass(error); }
+        }
+        if(o.outputObject!=null) {
+          o.output.close=2;
+          try { o.outputObject.close(); o.output.close=1; }
+          catch(Throwable error) { o.output.closeException=exceptionClass(error); }
+        }
+      }
+      if(o.exception.length()==0 && (o.input.close==2||o.output.close==2||o.socket.close==2)) o.phase=8;
+    }
+    private static boolean runOperation(Session s, Observation o) {
+      Operation op=o.operation; o.entered=true; o.phase=2;
+      try {
+        if(op.type==1) {
+          o.input.acquisition=2;
+          o.inputObject=java.nio.file.Files.newInputStream(java.nio.file.Paths.get(op.path),java.nio.file.StandardOpenOption.READ);
+          o.input.acquisition=1; o.phase=3; o.readCount=0L;
+          java.security.MessageDigest hash=java.security.MessageDigest.getInstance("SHA-256");
+          byte[] buffer=new byte[4096];
+          while(o.readCount<op.maxbytes) {
+            int count=o.inputObject.read(buffer,0,(int)Math.min(buffer.length,op.maxbytes-o.readCount));
+            if(count<0) { o.eof=true; break; }
+            if(count==0) throw new ProtocolException();
+            hash.update(buffer,0,count); o.readCount+=count;
+          }
+          o.limit=!o.eof&&o.readCount==op.maxbytes; o.readHash=hash.digest();
+        } else if(op.type==2) {
+          o.output.acquisition=2;
+          o.outputObject=java.nio.file.Files.newOutputStream(java.nio.file.Paths.get(op.path),
+              java.nio.file.StandardOpenOption.CREATE_NEW,java.nio.file.StandardOpenOption.WRITE);
+          o.output.acquisition=1; o.phase=4;
+          byte[] raw=payload(s,op.index,false); o.outputObject.write(raw);
+          o.writeCount=(long)raw.length; o.writeHash=digest(raw); o.phase=5; o.outputObject.flush();
+        } else {
+          o.socket.acquisition=2; o.socketObject=new java.net.Socket(); o.socket.acquisition=1; o.phase=6;
+          java.net.InetAddress address=java.net.InetAddress.getByAddress(op.address); // bytes only, never DNS.
+          o.socketObject.connect(new java.net.InetSocketAddress(address,op.port),TIMEOUT_MS);
+          o.socketObject.setSoTimeout(TIMEOUT_MS);
+          java.net.InetSocketAddress local=(java.net.InetSocketAddress)o.socketObject.getLocalSocketAddress();
+          java.net.InetSocketAddress remote=(java.net.InetSocketAddress)o.socketObject.getRemoteSocketAddress();
+          o.localAddress=local.getAddress().getAddress(); o.localPort=local.getPort();
+          o.remoteAddress=remote.getAddress().getAddress(); o.remotePort=remote.getPort();
+          o.input.acquisition=2; o.inputObject=o.socketObject.getInputStream(); o.input.acquisition=3; o.input.close=3;
+          o.output.acquisition=2; o.outputObject=o.socketObject.getOutputStream(); o.output.acquisition=3; o.output.close=3;
+          byte[] raw=payload(s,op.index,true); o.phase=4; o.outputObject.write(raw);
+          o.writeCount=(long)raw.length; o.writeHash=digest(raw); o.phase=5; o.outputObject.flush();
+          o.phase=7; byte[] reply=new byte[raw.length]; o.readCount=0L;
+          while(o.readCount<reply.length) {
+            int count=o.inputObject.read(reply,o.readCount.intValue(),reply.length-o.readCount.intValue());
+            if(count<0) { o.eof=true; throw new java.io.EOFException(); }
+            if(count==0) throw new ProtocolException();
+            o.readCount+=count;
+          }
+          o.readHash=digest(reply); o.echo=java.util.Arrays.equals(reply,raw)?2:1;
+        }
+        o.bodyReturned=true; o.phase=9;
+      } catch(Throwable error) { o.exception=exceptionClass(error); }
+      finally { closeResources(o); }
+      return o.exception.length()==0&&o.input.close!=2&&o.output.close!=2&&o.socket.close!=2;
+    }
+
+    private static void text(java.io.DataOutputStream out, String value, int limit) throws java.io.IOException {
+      byte[] raw=value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      if(raw.length>limit||value.indexOf('\0')>=0) throw new ProtocolException();
+      out.writeShort(raw.length); out.write(raw);
+    }
+    private static void fact(java.io.DataOutputStream out, Fact f) throws java.io.IOException {
+      out.writeByte(f.acquisition); out.writeByte(f.close); text(out,f.closeException,128);
+    }
+    private static void count(java.io.DataOutputStream out, Long value) throws java.io.IOException {
+      out.writeBoolean(value!=null); if(value!=null) out.writeLong(value);
+    }
+    private static void hash(java.io.DataOutputStream out, byte[] value) throws java.io.IOException {
+      out.writeBoolean(value!=null);
+      if(value!=null) { if(value.length!=32) throw new ProtocolException(); out.write(value); }
+    }
+    private static void endpoint(java.io.DataOutputStream out, byte[] address, int port) throws java.io.IOException {
+      out.writeBoolean(address!=null);
+      if(address!=null) {
+        if((address.length!=4&&address.length!=16)||port<1||port>65535) throw new ProtocolException();
+        out.writeByte(address.length); out.write(address); out.writeShort(port);
+      }
+    }
+    private static byte[] response(Session s) throws java.io.IOException {
+      java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+      java.io.DataOutputStream out=new java.io.DataOutputStream(buffer);
+      out.write(new byte[]{'C','R','0','1'}); out.writeShort(VERSION);
+      out.write(s.nonce.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+      out.write(s.recipe.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+      out.writeByte(s.rejected?1:0); text(out,s.frameException,128); fact(out,s.stdinFact);
+      out.writeByte(0); // self output write/flush/close cannot be attested inside its own prior bytes.
+      out.writeShort(s.observations.size());
+      for(Observation o:s.observations) {
+        java.io.ByteArrayOutputStream raw=new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream row=new java.io.DataOutputStream(raw);
+        row.writeBoolean(o.entered); row.writeByte(o.phase); row.writeBoolean(o.bodyReturned); text(row,o.exception,128);
+        fact(row,o.input); fact(row,o.output); fact(row,o.socket);
+        count(row,o.readCount); count(row,o.writeCount); hash(row,o.readHash); hash(row,o.writeHash);
+        row.writeBoolean(o.eof); row.writeBoolean(o.limit); row.writeByte(o.echo);
+        endpoint(row,o.localAddress,o.localPort); endpoint(row,o.remoteAddress,o.remotePort); row.flush();
+        out.writeByte(o.operation.index); out.writeByte(o.operation.type); out.writeInt(raw.size()); out.write(raw.toByteArray());
+      }
+      out.flush(); if(buffer.size()+4>RESPONSE_LIMIT) throw new ProtocolException();
+      java.io.ByteArrayOutputStream frame=new java.io.ByteArrayOutputStream();
+      java.io.DataOutputStream framed=new java.io.DataOutputStream(frame);
+      framed.writeInt(buffer.size()); framed.write(buffer.toByteArray()); framed.flush(); return frame.toByteArray();
+    }
+
+    public static void main(String[] args) {
+      // This class never accesses an outer constructor/main/static state, vendor
+      // classes, reflection, process creation, arbitrary code or commands.
+      if(args.length!=2||!hex(args[0],32)||!hex(args[1],64)) { System.err.println("OSQ_ARGUMENTS"); System.exit(64); return; }
+      Session s=new Session(args[0],args[1]); retained=s; s.output=System.out;
+      try {
+        readRequest(s);
+        if(!s.rejected) {
+          boolean proceed=true;
+          for(Observation observation:s.observations) {
+            if(proceed) proceed=runOperation(s,observation);
+          }
+        }
+        s.responseFrame=response(s); s.outputEntered=true;
+        s.output.write(s.responseFrame); s.outputReturned=true; s.output.flush(); s.flushReturned=true;
+      } catch(Throwable error) { s.outputException=exceptionClass(error); }
+      finally {
+        s.closeEntered=true;
+        try { s.output.close(); s.closeReturned=true; }
+        catch(Throwable error) { s.outputCloseException=exceptionClass(error); }
+      }
+      if(s.outputException.length()!=0||s.outputCloseException.length()!=0) {
+        // No message/stack/path data. Parent must retain its original process
+        // and partial-output facts; an exit code is not a denial/qualification.
+        System.err.println("OSQ_OUTPUT_UNVERIFIED"); System.exit(74);
+      }
+    }
+  }
 }

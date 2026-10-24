@@ -120,7 +120,7 @@ def _protected_manifest_document():
             "source_file_id": ["1", name], "source_security_sha256": "a" * 64,
             "target_file_id": ["2", name], "target_security_sha256": "b" * 64}
     source_pin = {"source_path": r"C:\Staging\python312\tools\Lib\site-packages\comsol_mcp\worker_java\PersistentComsolWorker.java",
-        "target": prepared.WORKER_SOURCE, "size": 150507,
+        "target": prepared.WORKER_SOURCE, "size": 166825,
         "sha256": prepared.WORKER_SOURCE_SHA256, "source_file_id": ["1", "worker"],
         "source_security_sha256": "a" * 64, "target_file_id": ["2", "worker"],
         "target_security_sha256": "b" * 64}
@@ -401,7 +401,7 @@ def _factory_and_manifest():
             "sha256": raw_hash, "source_file_id": ["1", "2"], "target_file_id": ["3", "4"],
             "source_security_sha256": descriptor_sha, "target_security_sha256": descriptor_sha})
     worker_pin = MappingProxyType({"source_path": r"C:\Staging\python312\tools\Lib\site-packages\comsol_mcp\worker_java\PersistentComsolWorker.java",
-        "target": prepared.WORKER_SOURCE, "size": 150507, "sha256": prepared.WORKER_SOURCE_SHA256,
+        "target": prepared.WORKER_SOURCE, "size": 166825, "sha256": prepared.WORKER_SOURCE_SHA256,
         "source_file_id": ["1", "9"], "source_security_sha256": descriptor_sha,
         "target_file_id": ["2", "10"], "target_security_sha256": descriptor_sha})
     generated = (MappingProxyType({"path": prepared.OUTPUT_DIR + "/comsol_mcp/worker_java/PersistentComsolWorker.class",
@@ -910,7 +910,7 @@ def test_win32_launch_api_restores_constructor_abi_and_reads_only_two_shared_roo
     )
     kernel = NS(**{name: api_function(name) for name in kernel_names})
     advapi = NS(**{name: api_function(name) for name in (
-        "DuplicateTokenEx", "ConvertStringSidToSidW", "CreateProcessAsUserW")})
+        "DuplicateTokenEx", "ConvertStringSidToSidW", "CreateProcessAsUserW", "CreateRestrictedToken", "LookupPrivilegeNameW")})
 
     def bind_readonly_fixture(api):
         api.C, api.W, api.k, api.a = C, windows_types, kernel, advapi

@@ -1,5 +1,25 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r210：Main已接受并精确合入fixed JDK OSprobe R3五文件，准备9files普通同步（五源测+新compact+Main3），lastsynced仍633。响应expected None/None P2经真实旧1FAIL、同源最终79PASS0FES（原64各一次+新15）及同strong限定复审闭合；旧source/73P5F/77P1F/64P被拒和中间79P测试完成后report失败全保留。Main核225source/220Git633未改、65origins/65返回bytes/65loaderenter-return-exit/79testfilenames、7intentionalpreimportdenials0unexpected0newnative；11历史stdout重解6parsed5rejected仅软件。原Java/bootstrap不因R3重跑：另14原JDK整合控制、24原numericwait0/原Pythonstdio关闭、22classes147328B完整hash及20savedlogs属此前Mac固定JDK限定诊断，不与79累加、非每nativeHANDLE证明。Main已读全部newJava/codec，outerJava去fragment全原字节相同，bootstrap仅1hash2size替换、原prepared断言保留；无Windows/vendor/C/Resume资格。
+
+Primary完整非循环C/Controller private源码闭环、Schrodinger原Resume consumer闭环继续；现在可供Main已审R3五文件精确输入，原heldA81P1F仍待组合。Parfit当前先单位只读事实、后固定633源外M4/Mac软件包，不追逐新helper或改标source；构件/native尚未验收。R7问题仍humanPENDING、10本地PREP且无授权/claim/远端效果；所有旧现场保留。completed_groups=[]，Goal IN_PROGRESS，原60/427/适用native矩阵/restore/heldout/最终fresh统一Reviewer未通过。
+
+以下r209及更早内容为历史快照；当前状态以本段与RESUME r210为准。
+
+当前续跑 r209：Main已独立核fixed JDK候选223inputs/218Git6a0不变、旧Java去新增fragment全字节等于基线、R2与final的prod/codec测试相同、最终64Python P与另14JDK整合P、历史73/5和77/1保留。两轮24原JDK raw int wait0/原Pythonstdio close返回、22classes147328B全hash/名称、20保存classload日志未见vendor/outerinit均实际核验；不声称每个原生HANDLE证明。机械核验6775B/ef6b71a3已留档。但独立源码建议发现P2：decode_response两个expected identity均None会跳过关联，Main确认该原接口缺陷；旧5文件候选不接受/不合入。已让同Lorentz新repair-r3仅Python修入口身份校验、真实旧反例→新controls+完整64及保存JDK帧software replay，不重跑JDK或抹旧失败。
+
+Main集中选定最小非循环C生产链：沿原plan.operator_inputs完整digest、SCM request/executor/实际APPLY admission及postresource hook保留原owner；闭合QUALIFY_OS/QUALIFY_VENDOR不依旧C，PROJECT依可适用liveC+freshA/B/LaunchInputs；正常原Worker/vendor路径和真实purpose owner分开。结果/字典/hash不能发C，只有原coordinator完整有限raw观察+已知原资源退休/GateACK才可发liveC；V4 Controller仅在全链成立后用适用liveC取代恒UNVERIFIED诊断门槛，旧拒绝/所有授权/生命周期保留，不fakeVERIFIED。决策MAIN_NONCIRCULAR_C_ARCHITECTURE.json已交同Primary在新private源码完整闭环，先独立recipe/owner/purpose/input，等待Main给Lorentz R3/Schrodinger已审pins再精确合并，不重写其代码；原Controller FAIL到完整链前照留。Parfit并行只读既有weighted单位请求/官方转换API事实供Main决策，未授权新prod/native。R7 human仍PENDING，零远端效果；公开源码仍633、Main3r209仅本地续跑。completed_groups=[]，Goal IN_PROGRESS，native矩阵/427/restore/heldout/最终fresh统一Reviewer未通过。
+
+r209后续明确租约：同Parfit先完成单位只读事实，再在新 `../_state/universal-math633-source-package-20261024` 用固定633源码重建normal ownwheel/复用已锁deps三arch离线bundle、新private MacARM安装/pipcheck/normalMCP initialize/toolslist与installedsource证明；只标准Python build/install/stdio子进程、无业务调用/JDK/Java/COMSOL/Windows/网络/全局改动，不覆盖旧ade2/0671/Mac0860。构件尚未生成/验收；Main后续审包并另冻结实际M3/U06 fixture，当前无native放行。
+
+以下r208及更早内容为历史快照；当前状态以本段与RESUME r209为准。
+
+当前续跑 r208：数学after四文件阶段已普通非强制发布63328640（parent6a0），Mainstate207精确8files/969120B经fresh fetch逐blob读回一致。REMOTE_READBACK为2075B / SHA256 cf63ead6c7c5e83b3aab6736672f6d0b6590ecad3e965d70496919416764b16c；index/worktree CLEAN仅指859206读回时点。本r208为发布后本地续跑，不追逐重发自己的回执。当前accepted源码为633，328软件/原137保留，不升U06/T014/native/Goal PASS。
+
+Main已独立核heldA R4原件223inputs/217Git6a0不变、82uniqueonce=81P1F（原67=66P1F、新15P）、205assert/46raises/全原67不改、86origins/65SourceLoader21rewriter/86返回字节及模块frames、零effect或OS身份查询。限定强源码建议无实质P1/P2；六文件仍未接受/合入，待Resume同方法合并和组合回归，Controller旧UNVERIFIED一FAIL保留。Primary现running只读最小C/Controller接口事实任务；Schrodinger现running在新633投影继续原consumer闭环，本地四只读ACL/mount符号范围已明确。Lorentz fixed JDK五文件已交：报告64Python与R2另14整合控制P，不合称单次78；两轮24原JDK wait0/22classes/20loadinglogs待Main完整原件核验，无Windows/vendor/C资格。Kuhn已转该helper限定只读源码建议；Parfit本数学切片已交。R7 human仍PENDING、无远端claim/操作；所有旧现场保留。completed_groups=[]，Goal IN_PROGRESS，全427/适用原生矩阵/restore/heldout/最终fresh统一验收未完成。
+
+以下r207及更早内容为历史快照；当前状态以本段与RESUME r208为准。
+
 当前续跑 r207：Main集中接受并精确合入通用after计算顺序四文件修复。实际328PASS0FES0deselect，328节点各一次，原137全部保留；216输入前后不变、212与Git6a0及共享基线相同，75origins/69returned loader对/79source实读/2fixture/328testcodefilenames均核验，零effect与origin错误，CodeType NOT_CAPTURED。强模型限定源码建议无实质P1/P2，Main亦核原合同/完整聚合/FA/selector与46个directnative call AST未改。手动sum/positiveM归一化完成后才作原F05 scalar，phase最终rad；before/preserve/原refusal/预算/UNKNOWN保留。旧3真实负控FAIL→同oraclePASS；attempt03十三个新getter-count期望错误保留。原生转换、weighted auxiliary单位请求绑定、T014/U06仍未认证。四文件+新compact+Main3精确8文件待按持续授权普通同步，lastsynced仍6a0。
 
 Windows R4 heldA已交最终81PASS1FAIL，原67=66P1F及新增15P；唯一Controller gate在实际assess_profile恒UNVERIFIED处出生前拒绝，六文件尚未接受/合入。Main复核冻结T037七子断言为CORE_REQUIRED，Windows63/64与MacARM64.6.4必验；不删既有要求、不新增required。Primary只读交最小C/Controller接口方案，禁止fake gate放行。Schrodinger的Resume候选未完成consumer验收；早期10/1失败是setup guard，非consumer反例。Main现明确允许原fixture自有fd上只读fstatfs/acl_get_fd_np/acl_get_entry/acl_free，不改检查、不宽放SDK/写ACL，继续同Luna闭环。Lorentz固定JDK探针租约仍仅新private编译/nested JDK-only/自有文件与localhost，实际回执待交；不代表Windows/C资格。R7仍humanPENDING、零R7远端效果；所有旧R5/R6/UNKNOWN现场保留。completed_groups=[]，Goal IN_PROGRESS；427/平台/restore/heldout/最终fresh统一Reviewer未通过。

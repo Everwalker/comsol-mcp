@@ -21,7 +21,7 @@ RECIPE_SCHEMA = "comsol-mcp.windows-prepared-launch-recipe/1"
 MANIFEST_SCHEMA = "comsol-mcp.windows-prepared-launch-manifest/1"
 MANIFEST_REFERENCE_SCHEMA = "comsol-mcp.windows-prepared-launch-manifest-reference/1"
 WORKER_SOURCE = "python312/tools/Lib/site-packages/comsol_mcp/worker_java/PersistentComsolWorker.java"
-WORKER_SOURCE_SHA256 = "ac626ffa3d505906f0844880eb6a96a3a570fbccb44a83c21be463be29966a37"
+WORKER_SOURCE_SHA256 = "64030589e40b2997c2a56be32cfda42eb1c0f2f654ca82674667f789243e6ad9"
 COMPILER = "jdk11/bin/javac.exe"
 JAVA = "jdk11/bin/java.exe"
 VENDOR_PREFIX = "prepared/vendor/"
@@ -239,7 +239,7 @@ def validate_recipe(value, *, prefix: str, source_root: str, files) -> PreparedL
         b.fail("PREPARED_COMPILER_INPUT", "fixed Worker source and original JDK java/javac inventory required")
     if (compiler.role != "jdk" or java.role != "jdk"):
         b.fail("PREPARED_COMPILER_INPUT", "compiler and Java launcher must be the pinned original JDK files")
-    if source.size != 150507 or source.sha256 != WORKER_SOURCE_SHA256:
+    if source.size != 166825 or source.sha256 != WORKER_SOURCE_SHA256:
         b.fail("PREPARED_COMPILER_INPUT", "fixed Worker source must equal the published source bytes")
     critical_runtime = "ext/graphicsmagick/win64/CORE_RL_magick_.dll"
     if sum(row.source.casefold() == critical_runtime.casefold() and row.role == "runtime"
@@ -554,7 +554,7 @@ def load_protected_manifest(raw: bytes, *, path: str, profile_sha256: str,
     _manifest_fields(source_pin, {"source_path", "target", "size", "sha256", "source_file_id",
                                   "source_security_sha256", "target_file_id", "target_security_sha256"}, "Worker source pin")
     if (_manifest_relative(source_pin["target"]) != WORKER_SOURCE or type(source_pin["size"]) is not int
-            or source_pin["size"] != 150507 or source_pin["sha256"] != WORKER_SOURCE_SHA256
+            or source_pin["size"] != 166825 or source_pin["sha256"] != WORKER_SOURCE_SHA256
             or document["worker_source_sha256"] != WORKER_SOURCE_SHA256):
         raise ValueError("prepared Worker source pin differs from its compiler input")
     _manifest_absolute(source_pin["source_path"])
