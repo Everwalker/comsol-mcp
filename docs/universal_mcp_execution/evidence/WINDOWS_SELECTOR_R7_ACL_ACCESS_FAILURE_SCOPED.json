@@ -1,0 +1,69 @@
+{
+  "schema": "windows-selector-r7-actual-acl-access-failure-scoped/1",
+  "recorded_utc": "2026-10-24T01:42:04.543706+00:00",
+  "status": "ACTUAL_ACCESS_FAILURE_OBSERVED_EXPERIMENT_COMPLETION_UNVERIFIED",
+  "source_base_commit": "3d92b3c736f31e6e3ace99418629c78ab1969169",
+  "frozen_manifest_sha256": "a37052727f558166b3a33b29755ab242cf23f8f80f90c012ab60e2cf11dd42c7",
+  "Main_scope_acceptance": {
+    "path": "_state/universal-main-review/20261024-selector-r7-native/MAIN_ACL_FAILURE_SCOPE.json",
+    "bytes": 8136,
+    "sha256": "93e614e38f0dc4474be6ec7254b651cdf854378e812795d566d2e1f9d28462d5"
+  },
+  "human_permission": "Explicit fullR7 temporary experiment; Main-only operation; original question/answer retained privately",
+  "actual": {
+    "transferred_materials": {
+      "count": 13,
+      "bytes": 152876,
+      "all_remote_hashes_match": true
+    },
+    "StageA": {
+      "compiler_exit_code": 0,
+      "READY_bytes": 5704,
+      "READY_sha256": "5d3d2a6d30d9ef4ec65f02f2c57051f0059e08a61711c49b044d4dac0d9613e6",
+      "original_parent_context": "ordinary original user; no thread impersonation/AppContainer/Job",
+      "source_origins_verified": 8,
+      "compiled_exe_bytes": 11776,
+      "compiled_exe_sha256": "904cda7678a11280cc23d1cf676abc51c782aa2fe8f492f4a1a54b056f7b7187",
+      "compiled_PE_AMD64_independently_read": true
+    },
+    "GO": "exactlyone actualREADY-bound closed-temp-file publication; transport return0; this is not experimentcompletion",
+    "postGO": "five own-report reads accessDENIED; readonlyACLmetadata shows7 own descendants emptyDACL, same originaluser identity; exact3newACLpaths retain userFA without inheritance +2AppCSIDs",
+    "FAILURE_RESULT": "not observed at bounded metadata snapshot",
+    "terminal_child_helper_Job_profile_retirement": "UNVERIFIED; parent numericexit and rawHANDLEclosed not observed"
+  },
+  "inference": {
+    "source_sha256": "962ac597040451100e319bbd3d38c80a7ccff4c4a8eb3e091fc550323c324d86",
+    "cause": "Directory originaluserFA ACE has no inheritance flags; SetNamedSecurityInfo automatic propagation explains lost descendant access. ActualemptyDACL observed; causal SDKpropagation sequence notinstrumented.",
+    "official_primary_sources": [
+      {
+        "title": "Automatic Propagation of Inheritable ACEs",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/secauthz/automatic-propagation-of-inheritable-aces",
+        "fact": "SetNamedSecurityInfo imposes parent inheritance on descendants; removing inherited copies may leave an empty DACL."
+      },
+      {
+        "title": "ACE Inheritance Rules",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/secauthz/ace-inheritance-rules",
+        "fact": "OI+CI inherit effective ACEs to both file and directory descendants; no flags has no inherited child effect."
+      },
+      {
+        "title": "Null DACLs and Empty DACLs",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/secauthz/null-dacls-and-empty-dacls",
+        "fact": "Empty DACL differs from null DACL and grants no data access."
+      }
+    ]
+  },
+  "preservation": "No GO replay/ACLrepair/privilegeenable/SDKcleanup/PIDquery/kill/restart/adoption after ambiguous result; retain originalsource/raw/root/owner refs",
+  "next": "Separate private minimal owner-inheritance sourcePREP and original257 regression; no further Windows effect permission inferred",
+  "not_accepted": [
+    "A/B/A selector success",
+    "all profiles/helpers/Job retirement",
+    "generic restore",
+    "current ff1 product qualification",
+    "SCM/System/C/Resume",
+    "T037/native targetmatrix",
+    "U01-U12/full427",
+    "final independent Reviewer",
+    "MASTER_GOAL completion"
+  ],
+  "raw_publication": "Excluded; compact hashes/pointers only"
+}

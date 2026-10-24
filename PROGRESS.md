@@ -1,5 +1,21 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r214：Main接受R7限定实际ACL访问失败事实：3指定新路径protectedDACL保原用户FA但无OI/CI，7已存在子路径实为empty D:AI；5报告同用户读取拒绝、GO-consumed303B/journal3872B仅metadata、RESULT/FAILURE未观察。源码+微软官方传播规则支持“移除可继承ACE致子对象emptyDACL”的根因推断，未实测每次传播时序。未重发GO/改ACL/SDKcleanup/PIDquery/接管/重启，原parent/2profiles/Job/helpers实际终态和关闭删除均UNVERIFIED。新公开紧凑证据WINDOWS_SELECTOR_R7_ACL_ACCESS_FAILURE_SCOPED.json及Main3共4files待持续授权普通同步，lastsynced ff1。Lorentz先冻结M3PREP再仅新R8最小owner继承PREP/原257；Schrodinger12targeted软件通过但factory卷策略挡在dispatch前，已明确新internal0700私有fixture续完原负控/回归，原检查不改；Parfit429是provider失败非有效尝试，已发同agent续跑；PrimaryC闭环继续。completed_groups=[]，Goal IN_PROGRESS。
+
+以下r213及更早为历史；以本段与RESUME r214为准。
+
+当前续跑 r213：R7唯一GO publisher正常返回0；第一次原文件快照在GO Open访问拒绝，第二次按文件独立保留错误，GO/stdout/stderr/journal/GO-consumed五文件均访问拒绝，readerSID同原parent，FAILURE/RESULT未观察。已落MAIN_POST_GO_UNVERIFIED，资源完成/退出/close/delete均UNVERIFIED，不能报native通过或确定完整失败。不重发GO、不改ACL、不SDKcleanup/接管/PID查询/重启；只做一次有界只读ACL/metadata诊断，其余C/Resume/633构件/PREP继续。
+
+以下r212及更早为历史；当前以本段与RESUME r213为准。
+
+当前续跑 r212：R7已实际完成严格preflight/新root/13材料hash核验与一次StageA，原parent38008/birth134372793105130608，compiler0/11776B AMD64PE独立readback匹配；actualREADY5704B/5d3d2a6d…、8sourceorigins、fixedSDK/runtime、普通user/noThreadToken/noJob由Main核验接受。仅下一步一次原GO，StageB尚未进入；UNKNOWN保原owner、不重试。Main接受和actualraw在私有20261024-selector-r7-native，非ff1/C/Resume/restore/Goal通过。
+
+以下r211及更早为历史；当前以本段与RESUME r212为准。
+
+当前续跑 r211：fixed JDK R3阶段已普通非强制发布 ff1e813e（parent633），精确9files/781902B经fresh fetch逐blob一致；REMOTE_READBACK 2343B/c3035566…，仅该时点index/worktree CLEAN。79软件和另14历史JDK整合边界不变，不升Windows/C/Resume。R7直接human已答“允许这次 R7 完整临时实验”，原question/answer已落私有授权记录；Main独立核13源152876B/manifest a370…/operator pins/no extra，尚未进入远端效果。现在Main唯一operator按原一次性claim先只读预检、独占新root/传输/StageA，实际READY核验后仅一次关闭临时文件GO；UNKNOWN保原owner不重试，旧R5/R6/所有UNKNOWN不动。Primary非循环C、SchrodingerResume继续；Parfit固定633构件、Lorentz新633M3源PREP并行，无业务native放行。completed_groups=[]、Goal IN_PROGRESS，原60/427/平台/恢复/最终fresh统一Reviewer未通过。
+
+以下r210及更早为历史快照；当前以本段和RESUME r211为准。
+
 当前续跑 r210：Main已接受并精确合入fixed JDK OSprobe R3五文件，准备9files普通同步（五源测+新compact+Main3），lastsynced仍633。响应expected None/None P2经真实旧1FAIL、同源最终79PASS0FES（原64各一次+新15）及同strong限定复审闭合；旧source/73P5F/77P1F/64P被拒和中间79P测试完成后report失败全保留。Main核225source/220Git633未改、65origins/65返回bytes/65loaderenter-return-exit/79testfilenames、7intentionalpreimportdenials0unexpected0newnative；11历史stdout重解6parsed5rejected仅软件。原Java/bootstrap不因R3重跑：另14原JDK整合控制、24原numericwait0/原Pythonstdio关闭、22classes147328B完整hash及20savedlogs属此前Mac固定JDK限定诊断，不与79累加、非每nativeHANDLE证明。Main已读全部newJava/codec，outerJava去fragment全原字节相同，bootstrap仅1hash2size替换、原prepared断言保留；无Windows/vendor/C/Resume资格。
 
 Primary完整非循环C/Controller private源码闭环、Schrodinger原Resume consumer闭环继续；现在可供Main已审R3五文件精确输入，原heldA81P1F仍待组合。Parfit当前先单位只读事实、后固定633源外M4/Mac软件包，不追逐新helper或改标source；构件/native尚未验收。R7问题仍humanPENDING、10本地PREP且无授权/claim/远端效果；所有旧现场保留。completed_groups=[]，Goal IN_PROGRESS，原60/427/适用native矩阵/restore/heldout/最终fresh统一Reviewer未通过。
