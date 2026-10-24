@@ -1,5 +1,25 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r220：新增R8最小owner继承已审PREP紧凑证据WINDOWS_SELECTOR_R8_OWNER_INHERITANCE_PREP_SCOPED.json，与Main3精确4文件按持续发布授权待普通同步；只264软件/2行源码与新13材料身份，不发布raw/packet/运行目录或商业件，不报native/C/Resume/Goal通过。R8human具体问题已提交一次仍PENDING，零R8远端效果；原R7保留。M3/Resume各实质P1P2旧候选被拒、同Luna新private修复与reopen模型内容身份范围纠正均见r219/217；SourceC两接口继续。Goal IN_PROGRESS/completed_groups=[]，当前lastsyncedf8，不结束总目标。
+
+以下r219及更早为历史；以本段与RESUME r220为准。
+
+当前续跑 r219：M3旧25软件PREP不接受：限定strong发现P1 UNKNOWN跨出SDKstdio上下文会先关流/可能terminate（Main核MCP1.30原wheel源码）；P2 -I无法导入同目录math_contract，Main用同approvedPython -I-B旧operator --help实际exit1/ModuleNotFound（前效果0）已保留。交同Lorentz新private显式原SDK生命周期/HOLD前不aexit+原Popen/streams refs、闭合rawbytes导入，不取消-I/重建633包；旧counter→同oracle/原25+必要source/隔离help验证再集中复审，native未放。Parfitreopen PREP8326B/d4fb09e5已交静态22pins/16routes；Main纠正自己先前oldtag过度指定：新Worker正常新顶层tag/ModelRef显式映射可接受，保存模型内容/internaltags/解/参数/raw身份仍需一致，solve0，不能新增旧tag相等门槛或改core。具体两Main决策已落盘交同agent续做。R8已审264PREP/具体human问题已提交一次，PENDING且无效果；PrimaryC/SchrodingerResume修复继续。Goal IN_PROGRESS/completed_groups=[]，f8已同步，R7终态UNVERIFIED保留。
+
+以下r218及更早为历史；以本段与RESUME r219为准。
+
+当前续跑 r218：Main已集中接受R8最小owner继承SOURCE/SOFTWARE PREP：NativeSDK仅2行，root/code原USERFA加OICI、exe原FA不变、AppC原3路径权限仍不继承；其他9源/原6testfixtures byteexact R7。旧真实task_acls反例1assertFAIL保留，修后264uniquePASS0FES=原257各一次+7新，20inputs/14真实origins+loader/returned/moduleframes、7preimportdenials0unexpected已核。13新材料152932B/manifestbfa0691c…、Rootf590c957…冻结，12本地operator PREP/noGO/no transportclaim；新human完整实验问题提交pending，R7精确许可不覆盖R8。R7原owner/资源退休UNVERIFIED不动。M3 PREP已交25软件P且Main核48freeze/45beforeafter/19Git633/5origins/4loaderpairs/7ASTpairs/28requestkeys；仅PROCEDURE包里程碑append在测试后，源测不改。尚未接受/放native，限定strong建议进行；无新businessRoot。C/Resume同agent修复、Parfitreopen633PREP继续；Goal IN_PROGRESS/completed_groups=[]。
+
+以下r217及更早为历史；以本段与RESUME r218为准。
+
+当前续跑 r217：强限定Resume源码建议实质1P1+1P2，Main读原consumer/finalizer/registry与4b确认：rawResume1后thread/ancillary close首次UNKNOWN未把attempt RETURNED_ONE锁成UNKNOWN，finally可能继续SDK；原APIowner==API条件被删。旧12direct软件P为partial保留但旧3source不接受/不合入。同Schrodinger新private修补，先真实旧counter再同oracle修复/原12+binding/copy/wrongthread/noeffect/回归，原issuer拒绝；不fake C。Main同时选heldA合并语义：先Resume保留guard；原epoch0分支保留，另仅exact原attempt NO_EFFECT/enteredFalse/已消费epoch仍保留且所有已知exit/原entries关闭/noUNKNOWN/firstreaderfinish与158pins条件全满足才可pure退休，不reset/remint/SDK重试。决定MAIN_REPAIR_DECISION.json，限定strong复审随后按精确新pins重审。Primary完整C两接口、LorentzM3→R8、Parfit同版本reopen PREP继续。f8已同步，R7原终态UNVERIFIED/无新远端效果，Goal IN_PROGRESS/completed_groups=[]。
+
+以下r216及更早为历史；以本段与RESUME r217为准。
+
+当前续跑 r216：fixed633构件/Mac元数据限定证据已普通nonforce发布f8d5d71f（parent876），fresh fetch逐4blob/506674B一致；回执1438B/189a6eb6…，仅该时点CLEAN。本r216本地继续不追逐重发回执。Primary正确停在两个实际源码接口：normalinstaller64+128 fullID vslegacyhostcontrol32+64、failedconnect缺独立本地port；Main读源码/官方Windows/JDK11文档，选窄Windows fullidentity verifier模式保双chain ACL与旧default不变、loopback原Socket先bind0/capture再CONNECT，失败不捏造remote，nonloopback旧语义/外层Worker/R3codec不变。具体MAIN_ROOT_IDENTITY_AND_TCP_INTERFACE_DECISION.json交同Primary source/software连续闭环，无JDK/native放行；原真实失败保留。Schrodinger新internalfixture consumer/限定strong源码建议继续；Lorentz633M3PREP→最小R8继承PREP，Parfit新disjoint同版本新Root已存解reopen PREP（未来solvebudget0）推进。R7原终态UNVERIFIED无进一步效果，Goal IN_PROGRESS/completed_groups=[]，full427/平台/恢复/最终freshReviewer未通过。
+
+以下r215及更早为历史；以本段与RESUME r216为准。
+
 当前续跑 r215：R7限定访问失败四文件已发布876812fe（parentff1），fresh fetch逐4blob一致，回执1437B/555874c8…，原终态UNVERIFIED和无进一步远端效果边界不变。本轮Main集中接受fixed633 M4构件与Mac离线元数据软件：独立核679packet/682unique refs、203Git原blob/198manifest/195wheel-installed源一致、三archZIP全成员hash（54/47/56；42/35/42wheels）；wheel3117208B/427695dc…。Mac实际offline install与pipcheck原exit0、normalMCP原wire initialize/initialized/toolslist112schemas、原AnyIO=Popen/exit0、48loaderbytes/getcode、47execpairs/172frames/1937calls已核；两次包装器失败保留，不计native/业务/WindowsIntel安装通过。新compact MATH633_OFFLINE_PACKAGE_SOURCE_SOFTWARE_SCOPED.json+Main3精确4待同步。单位事实14748B/07ba40f0经Main同版本ParamBase/温度文档核对，仅文档/源码gap，未新实现或宣告原生失败；下一步Lorentz绑定633包冻结原M3合同/有限诊断，再由Main另放实际新Root实验。C/Resume/R8PREP继续，Goal IN_PROGRESS/completed_groups=[]。
 
 以下r214及更早为历史；以本段与RESUME r215为准。
