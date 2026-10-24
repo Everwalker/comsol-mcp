@@ -1,5 +1,17 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r236：R9与Mac R4两项实际失败范围已独立strong复核0P1P2并由Main接受（136/59个本地refpins相符），仅接受失败范围。R5源码70唯一PASS/old62 eachonce、28refs/86freeze/45source/219evidence通过Main；84before_after仅76current一致+8份派生metadata不作consumer-tested。真实冷SDK bind-only第二独立驱动exit0：201pins/9模块/原对象/44code45watches，未Root/stdio/loop；Main首次驱动遗漏原wire定义的已知exit2保留，新驱动只补冻结helper定义，不改R5源。新Mac Root424659fd65a3/binding5c845573仅数据，尚未Setup/Core。R10源码308通过；实际13材料154144B一致、compiler0/READY/PE/唯一GO后两helper创建/原image-token-Job核验及Resume1各成功，随后首次IPC写不确定，原owner/resources UNKNOWN保留，A/B/A/退役未通过。原Luna R11只做写前原handle状态/WriteFile即时原始值诊断；R9及所有旧UNKNOWN不查询重试接管清理。持续同机同范围授权有效不再问。Primary组合回归继续；Kuhn新R10/R5 bind限定复核待交。两个已独立验收失败scope compact+Main3精确5file准备普通同步；Goal active/PROGRESS、completed_groups=[]、原427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r235及更早为历史；以本段、CURRENT_HANDOFF及RESUME r236为准。
+
+当前续跑 r235：直接human已明确“持续覆盖本次及同范围后续诊断”，同机同作用范围的新命名空间经Main源码材料验收后不再重复询问；旧UNKNOWN绝不重放/接管/清理。R9源码软件285通过，实际13材料153310B一致、compiler0/READY与独立AMD64PE通过、唯一closed-file GO被原parent消费；首CreateProcessW raw0/即时203/nullPI，原FAILURE UNKNOWN_OWNER_RETAINED，无A/B/A或退役验收。R8未捕获错误码，不能回溯诊断。Mac R4源码软件62及独立0P1P2已Main接受，但一次真实metadataSetup原operator exit2：SDK懒加载模块KeyError在stdio创建前，原新Root d4已创建保留不可重用，Core未放行。同Lorentz R5补闭合SDK模块正常import；同Schrodinger R10修有界childenv，先源码软件再Main新实测。Primary attempt37正常public Controller经真实APPLY/coordinator/C链软件1PASS checkpoint（inert OS/FS/transport叶），仍待组合回归冻结/验收。Kuhn独立审两项实际失败范围。最后公开仍04af2358/fresh5blob，本r235未新push；Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未过。
+
+以下r234及更早为历史；以本段、CURRENT_HANDOFF与RESUME r235为准。
+
+当前续跑 r234：即时LastError私有诊断源码软件接受摘要+M3R3实质P2静态负面摘要+Main3精确5file已普通nonforce发布04af235883011b1535f365e4f4ef6eea73226967（parent2b7），fresh fetch逐5blob/577899B与冻结及worktree全match，REMOTE_READBACK2374B/80f89b49…；仅读回时点CLEAN，本r234本地继续不追逐重发回执。诊断148软件/原127subset+21不认证真实R8根因或全264，M3R3因1P2不接受/未放SDKmetadataCore；原R8及所有UNKNOWN owner/resources保留。Primary完整C、同Lorentz新M3R4精确正常completionfuture修补与同Schrodinger新R9纯PREP继续，R9未来root/nonce只数据、无新效果许可；Kuhn限定两份复审完成关闭保上下文，非最终Reviewer。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终统一验收未通过。
+
+以下r233及更早为历史；以本段与RESUME r234为准。
+
 当前续跑 r233：R8即时LastError私有诊断已Main集中接受：DELIVERY12925B/f0fca905…，source38961B/df128a46…仅create_child即时错误/原rawresult+PI快照入原child/attempt；148unique实际pytestPASS0FES=原264中127各一次+21新，旧同oracle1assertFAIL/3setup失败保留，不冒充全264。164pins/22before_after_current/13returnedbytes+origins核验；8selfchecks/62pytest symlink请求拒绝均如实限定，无真实SDK。Main接受4993B/09ae0a80…，R8真实code/cause与owner资源仍UNKNOWN不变。同Kuhn M3R3复审52938B/cecc2eaf…确认旧4P1源码窗口修补但实质1P2：normalcancel完成future已cancelled时task_done.set_result的原SDK捕获InvalidStateError会被criticaltrace提前HOLD，53未覆盖；Main亲读确认静态路径，R3不接受/不放SDKmetadataCore。新Main决定5075B/75c6701b…交同Lorentz newR4精确原callback/callsite/groupfuture+正常cancel原task/waiter/delivery事实，旧counter→同oracle/原53保留，不classwide白名单。另Main明确新R9纯SOURCE/SOFTWARE PREP决定3764B/b1d677c1…交同Schrodinger，未来nonceacaf12e6…仅数据，13材料/原264+新21待冻结；R8持久精确grant已一次用过，不授权新root/manifest/原生，无新human问题或effects。Primary完整C继续，三原句柄04:52:08UTC实际均running；Kuhn此slice冻结关闭保上下文。2compacts+Main3精确5file准备持续授权普通同步，当前last2b7尚未新push。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
 
 以下r232及更早为历史；以本段与RESUME r233为准。
