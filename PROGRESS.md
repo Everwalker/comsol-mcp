@@ -1,5 +1,29 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r230：强限定R8实际范围复审67128B/15c5c4e7…无实质P1/P2，Main核87输入pins、11transport/11decoded原件对应并接受失败证据范围，MAIN_FAILED_SCOPE_ACCEPTANCE.json2283B/77cd5dc0…。原CreateProcessW false+NULL/LastError未捕获、UNKNOWN_OWNER_RETAINED、未A/B/A/未退休删除等事实和旧现场保留；不据transport0或NULL输出认证退出/无effect/清理/资格。新WINDOWS_SELECTOR_R8_CREATEPROCESS_UNKNOWN_SCOPED.json4759B/780fbcf7…仅compact+Main3精确4file，按持续授权准备普通同步（本r230尚未push，当前最后d5c；纠正早期git.last_synced字段仍6b9的陈旧值，d5c既有freshreceipt不变）。同Kuhn已继续M3R3精确3b8/bee78限定源码复审，Lorentz新53冻结未接受/无SDK/metadata/Core放行；Primary完整C和SchrodingerR8即时LastError纯诊断原句柄实际running。Goal active/PROGRESS、completed_groups=[]；427/平台/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r229及更早为历史；以本段与RESUME r230为准。
+
+当前续跑 r229：Lorentz新M3R3冻结DELIVERY10618B/3b8a9605…交付，Main机械核验12095B/bee78a15…：53unique pytestPASS0FES=原44各一次+9，62freeze/82evidence/24refs/57before_after_current，19operator函数AST全同、仅lifetime hash字面量改变，10原math/Java/PLAN/env/contract/testfiles byteexact，8原SDK selectedbody line/raw/AST定义按3.12核验。旧4有效断言counter保留；首次taskdone缺closure无效排除，不把setup失败或跨版本Main AST/Help schema假设当consumer失败。18loader/7origins/72selectedASTevents只是源选body+inertleaves；唯一隔离help823b00 exit0不SDK。Lorentz此slice冻结关闭保上下文，同Kuhn在R8实际失败范围审查后续R3限定源码复审，尚不接受/retarget/放SDK/metadata/Core。Primary完整C同agent继续，Schrodinger R8即时LastError纯诊断新private继续；R8实际UNKNOWN保留边界见r228，授权一次已用不扩容、不补清理。d5c最后已同步，R8失败compact待审再同步；Goal active/PROGRESS、completed_groups=[]，427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r228及更早为历史；以本段与RESUME r229为准。
+
+当前续跑 r228：human对精确R8答“持久批准”，已落盘且一次执行完毕至真实UNKNOWN停止点。13材料152932B/manifestbfa0691c…远端全match；compile0、actualREADY5704B/601f0f0f…、独立AMD64 helper11776B/2e798ced…，Main核8origins后唯一关闭文件GO已消费。两profiles S_OK/SIDallocators RELEASED、三新path ACL返回、Job764/8200/active2后首CreateProcessW false+NULL输出，原FAILURE UNKNOWN_OWNER_RETAINED241B/bc792b95…，无RESULT；A/B/A/Bcreate/Resume/retire/Jobclose/delete未到。原parent35896/birth134372888840272789及资源保留；实际liveness/exit/rawclose不认证，不重试/接管/PIDquery/补清理。一次只读ACL快照确认原USER FA继承可读，不证明helperexec或传播时序；LastError旧代码未捕获，错误码/原因UNKNOWN。Main原件MAIN_NATIVE_R8_OUTCOME.json9446B/17989a8a…；同Schrodinger新增私有源码诊断、Kuhn限定实际失败范围复审，C2冻结不动。Primary完整C/C2/R3/R4及Lorentz M3R3继续，无SDK/metadata/Core新放行。d5c最后已同步，R8compact尚待范围审查再按持续授权同步；R5/R6/R7旧未知不动。Goal active/PROGRESS、completed_groups=[]，427/平台/restore/heldouts/fresh最终Reviewer仍未通过。
+
+以下r227及更早为历史；以本段与RESUME r228为准。
+
+当前续跑 r227：本Goalturn为VERIFIED_WAIT：两个原执行句柄Primary01a1632c…/Lorentz01a1644c…由实际resume_agent均确认running，同句柄wait_agent有界30000ms在03:53:23UTC返回观察超时/无终态；未据此重启或换owner。当前checkpoint仅说明完整C/C2组合和M3R3源码实施中，未把局部计数或未冻结文件当验收。本轮无新源码/原生PASS，r226已接受精确C2依赖与d5c已同步事实保留；继续同Luna完整闭环后集中验收。R8既发human问题仍PENDING，无新远端/SDK/metadata/Core效果，旧R7及UNKNOWN资源不动。Goal active、completed_groups=[]，不构成整体impasse；427/平台/restore/heldouts/fresh最终Reviewer仍未通过。
+
+以下r226及更早为历史；以本段与RESUME r227为准。
+
+当前续跑 r226：C2 strong限定复审35523B/15e7f3cd…闭合F3、无新实质P1/P2。Main据原38manual/oldF3真实counter/33原函数/精确pins集中接受source3+test+runner仅为Primary组合依赖，接受MAIN_C2_SOURCE_SOFTWARE_DEPENDENCY_ACCEPTANCE.json5744B/f61f31eb…；已把精确3pins和C1guard/原epoch0+spentNO_EFFECT/原Worker终态+158pins/原B纯knownsettlement/UNKNOWN拒绝边界交同Primary完整C/R4/R3组合。旧sourceissuer无genuineproof仍拒绝，testissuer不作C；源码未共享合入、完整C/HeldA/Controller未通过，不发布半scaffold。Schrodinger/Kuhn此slice完成冻结关闭，保上下文待具体后续。同Lorentz新M3R3剩余shutdownP1整改继续，固定bindings仅静态接受，无SDK/metadata/Core放行。d5c exact4已同步fresh核验，此r226本地不追逐重发回执；R8既发human问题PENDING无新远端效果、R7终态UNVERIFIED保留。Goal active/PROGRESS、completed_groups=[]，原427/平台/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r225及更早为历史；以本段与RESUME r226为准。
+
+当前续跑 r225：M3R2静态负面审查compact+Main3精确4file已普通nonforce发布d5c85ddf（parent6b9），fresh fetch逐4blob/539784B一致，REMOTE_READBACK2321B/85dbee3c…，仅读回时点CLEAN；本r225本地继续不追逐重发自己的回执。C2新冻结delivery70930B/8bf361ce…交38guarded manual PASS/0FES，Main核原37各一次+1、33原testhelper函数byteexact、20candidatepin/25posthash与oldF3原Worker transfer/close后预期1assertFAIL→同oracleTrue，525+525ownfixture只读返回、audit10555零违例；sharedallowlist193match+1历史bootstrap由candidate精确FF1影射，已如实限定非194allmatch/无get_data证明。强限定C2纯见证复审进行，3source未接受未合入；Worker.start未跑/slot接线手工镜像，完整C/HeldA仍待Primary组合。固定633 bindings仅静态声明已Main接受19freeze/201文件/195对原wheel，Root与SDK/metadata/Core零效果，R2操作代码拒绝不被binding洗白；同Lorentz新R3 shutdownP1整改继续。Primary C/两接口继续，R8原human问题PENDING且无新远端效果，R7终态UNVERIFIED保留。Goal active/PROGRESS、completed_groups=[]，原427/平台/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r224及更早为历史；以本段与RESUME r225为准。
+
 当前续跑 r224：同strong M3R2复审27841B/2d060700…：F2 closedbytes修复，但剩余P1——正常shutdown=True后新SDK错误仍可先close/cancel或TaskGroup finally再park。Main亲读锁定stdout_reader/AsyncResource/Memoryclose/TaskGroupexit/task_done及R2trace确认静态路径，非新native失败实测；R244软件仍按原范围有效但整体不接受、不metadata/Core放行。新MAIN_R2_SHUTDOWN_P1_REPAIR_DECISION.json6408B/7f1e3bc3…交同Lorentz先冻结现bindingPREP，再新privateR3：原errorcarrier/pendinggroup/expectedcancel事实在effects/finally前检查，保正常关闭，允许纯bounded锁定SDK原Python body+inertleaves软件反例→同oracle/原44，不SDKimport/native/新approval框架/更改原T014合同。Main已准备新M3_OPERATOR_R2_SHUTDOWN_SOURCE_REVIEW_SCOPED.json仅紧凑负面事实+Main3精确4file按持续授权普通同步；不发布未接受源码/raw/运行件。C/两接口及ResumeF3同Luna继续，R8human原问题PENDING且无新远端效果，R7终态UNVERIFIED不动。最后同步仍6b9（本批尚未push），Goal active/PROGRESS、completed_groups=[]，原427/平台/restore/heldouts/fresh最终Reviewer未通过。
 
 以下r223及更早为历史；以本段与RESUME r224为准。
