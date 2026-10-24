@@ -1,5 +1,21 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r224：同strong M3R2复审27841B/2d060700…：F2 closedbytes修复，但剩余P1——正常shutdown=True后新SDK错误仍可先close/cancel或TaskGroup finally再park。Main亲读锁定stdout_reader/AsyncResource/Memoryclose/TaskGroupexit/task_done及R2trace确认静态路径，非新native失败实测；R244软件仍按原范围有效但整体不接受、不metadata/Core放行。新MAIN_R2_SHUTDOWN_P1_REPAIR_DECISION.json6408B/7f1e3bc3…交同Lorentz先冻结现bindingPREP，再新privateR3：原errorcarrier/pendinggroup/expectedcancel事实在effects/finally前检查，保正常关闭，允许纯bounded锁定SDK原Python body+inertleaves软件反例→同oracle/原44，不SDKimport/native/新approval框架/更改原T014合同。Main已准备新M3_OPERATOR_R2_SHUTDOWN_SOURCE_REVIEW_SCOPED.json仅紧凑负面事实+Main3精确4file按持续授权普通同步；不发布未接受源码/raw/运行件。C/两接口及ResumeF3同Luna继续，R8human原问题PENDING且无新远端效果，R7终态UNVERIFIED不动。最后同步仍6b9（本批尚未push），Goal active/PROGRESS、completed_groups=[]，原427/平台/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r223及更早为历史；以本段与RESUME r224为准。
+
+当前续跑 r223：Main核M3修补R2新44pytest PASS/0FES=原25各一次+19，真实oldbody02同oracle1assertFAIL保留（oldbody01setup失败不冒充反例）；唯一approved同Python -I-B --help实际0/1133B stdout。59freeze/58evidence/24refs、56before=after=current、5sourceLoader对/6origins、8ASTread7pairs、2closedbytes、16原函数/10原files、9已装SDK源均核验，只有run_phase旧函数改变，原有限T014/U06合同不变。Main机械5493B/d7215cf…，同strong限定源码复审进行，R2尚未接受，SDK/metadata/Core/native未放。Main选新prospectiveRoot d4fde9f3f472/固定633安装绑定PREP，按源码与当前security环境为空确认新normal audit-ref默认，无既有verifier关闭；同Lorentz只在新private填原template195installed/Python/vendor/runtimeID与未来commands，零SDK/Popen/Root/resource效果。Primary完整C/两接口、Schrodinger F3 Worker纯见证同agent继续；R8既发精确human问题仍PENDING不重问，无R8effects，R7终态UNVERIFIED不动。6b9最后公开同步不变；Goal active/PROGRESS、completed_groups=[]，427/矩阵/restore/heldouts/最终fresh Reviewer未通过。
+
+以下r222及更早为历史；以本段与RESUME r223为准。
+
+当前续跑 r222：Main核新Resume37个guarded manual消费者节点PASS/0FES（非pytest collection）、359artifact/14fingerprint/24postloadhash、10248audit零违例、510+510原ownfixture只读返回。强限定复审确认旧F1/F2修复，新增F3 P2经Main原代码确认：witness当前APIowner与迟退出后原Workerowner互斥，旧37 successor仍不接受/不合入。具体MAIN_C2_WORKER_OWNER_REPAIR_DECISION.json交同Schrodinger新private修补pure optional retired_worker分支，消费者F2与UNKNOWN拒绝/已消费epoch保留；Primary完整C/heldA组合仍未跑。Parfit reopenR2仅SOURCE/STATIC PREP已Main接受11authored/29输入/16routes，owner adapter声明非实现，真实MPH/raw/save/closure均待填；原topruntime tag不强求相等/深内容未观测仍UNVERIFIED。Parfit/Kuhn此slice已冻结关闭，Primary/Lorentz与同Schrodinger继续；无新native/远端效果。R8既发human问题PENDING不重问，6b9仍最后同步，R7终态UNVERIFIED不动。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r221及更早为历史；以本段与RESUME r222为准。
+
+当前续跑 r221：R8已审PREP紧凑证据+Main3四文件已普通nonforce发布6b9c0685（parentf8），fresh fetch逐4blob/522845B一致，REMOTE_READBACK1475B/44fcb420…；仅该时点CLEAN。本r221为本地发布后续跑，不追逐重发回执。四既有Luna由实际resume_agent均确认running：PrimaryC两接口、SchrodingerResume实质P1P2整改、LorentzM3实质P1P2整改、Parfitreopen内容/新runtimeidentity映射PREP。R8精确human问题仍pending/no远端效果，R7旧owner/资源终态UNVERIFIED保留。当前Goalturn为PROGRESS，未满足真实整体impasse条件；不标complete/blocked，completed_groups=[]。原427/平台/恢复/heldouts/最终fresh统一Reviewer未通过，继续Master通用MCP主线。
+
+以下r220及更早为历史；以本段与RESUME r221为准。
+
 当前续跑 r220：新增R8最小owner继承已审PREP紧凑证据WINDOWS_SELECTOR_R8_OWNER_INHERITANCE_PREP_SCOPED.json，与Main3精确4文件按持续发布授权待普通同步；只264软件/2行源码与新13材料身份，不发布raw/packet/运行目录或商业件，不报native/C/Resume/Goal通过。R8human具体问题已提交一次仍PENDING，零R8远端效果；原R7保留。M3/Resume各实质P1P2旧候选被拒、同Luna新private修复与reopen模型内容身份范围纠正均见r219/217；SourceC两接口继续。Goal IN_PROGRESS/completed_groups=[]，当前lastsyncedf8，不结束总目标。
 
 以下r219及更早为历史；以本段与RESUME r220为准。
