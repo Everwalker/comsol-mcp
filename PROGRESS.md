@@ -1,5 +1,17 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r233：R8即时LastError私有诊断已Main集中接受：DELIVERY12925B/f0fca905…，source38961B/df128a46…仅create_child即时错误/原rawresult+PI快照入原child/attempt；148unique实际pytestPASS0FES=原264中127各一次+21新，旧同oracle1assertFAIL/3setup失败保留，不冒充全264。164pins/22before_after_current/13returnedbytes+origins核验；8selfchecks/62pytest symlink请求拒绝均如实限定，无真实SDK。Main接受4993B/09ae0a80…，R8真实code/cause与owner资源仍UNKNOWN不变。同Kuhn M3R3复审52938B/cecc2eaf…确认旧4P1源码窗口修补但实质1P2：normalcancel完成future已cancelled时task_done.set_result的原SDK捕获InvalidStateError会被criticaltrace提前HOLD，53未覆盖；Main亲读确认静态路径，R3不接受/不放SDKmetadataCore。新Main决定5075B/75c6701b…交同Lorentz newR4精确原callback/callsite/groupfuture+正常cancel原task/waiter/delivery事实，旧counter→同oracle/原53保留，不classwide白名单。另Main明确新R9纯SOURCE/SOFTWARE PREP决定3764B/b1d677c1…交同Schrodinger，未来nonceacaf12e6…仅数据，13材料/原264+新21待冻结；R8持久精确grant已一次用过，不授权新root/manifest/原生，无新human问题或effects。Primary完整C继续，三原句柄04:52:08UTC实际均running；Kuhn此slice冻结关闭保上下文。2compacts+Main3精确5file准备持续授权普通同步，当前last2b7尚未新push。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r232及更早为历史；以本段与RESUME r233为准。
+
+当前续跑 r232：本Goalturn为VERIFIED_WAIT，上一轮r231为实际R8失败范围普通发布2b7eedea/fresh4blob核验的PROGRESS。04:36:52UTC实际resume_agent确认Primary/Kuhn/Schrodinger原三句柄均running，同3targets wait_agent50000ms（exec1291）仅timed_out/status{}无终态，交付路径尚无新冻结；未重启、换owner、重复分派或把超时当停止。继续同Primary完整C/R3/C2/R4、Kuhn M3R3精确3b8/bee78源码复审、Schrodinger R8即时LastError纯软件诊断。M3SDK/metadata/Core未放、R8及所有旧UNKNOWN不追加效果；2b7最后已同步，不重复发布自己的回执。Goal active/completed_groups=[]，不构成整体impasse，427/矩阵/restore/heldouts/fresh最终Reviewer仍未通过。
+
+以下r231及更早为历史；以本段与RESUME r232为准。
+
+当前续跑 r231：R8实际失败compact+Main3精确4file已普通nonforce发布2b7eedeaf0f7ce1371a1d3622bd130a66e295e88（parentd5c），freshfetch逐4blob/573720B与冻结和worktree全match，REMOTE_READBACK2049B/d1a5a85f…；仅读回时点CLEAN，本r231本地续跑不追逐重发自己的回执。原首CreateProcessW false+NULL/LastError未知、原owner资源UNKNOWN保留，不认证child/noeffect/parentexit/retirement/C/Resume。Primary/Kuhn/Schrodinger原句柄当前实际均running；Primarycheckpoint04:20已到组合guarded attempt26（局部旧341只是checkpoint非fullC验收），M3R3精确53/62freeze/82evidence已Main机械核验，仍待同strong源码复审/未SDKmetadataCore放行，R8私有LastError诊断未交冻结。Goal active/PROGRESS、completed_groups=[]，原427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r230及更早为历史；以本段与RESUME r231为准。
+
 当前续跑 r230：强限定R8实际范围复审67128B/15c5c4e7…无实质P1/P2，Main核87输入pins、11transport/11decoded原件对应并接受失败证据范围，MAIN_FAILED_SCOPE_ACCEPTANCE.json2283B/77cd5dc0…。原CreateProcessW false+NULL/LastError未捕获、UNKNOWN_OWNER_RETAINED、未A/B/A/未退休删除等事实和旧现场保留；不据transport0或NULL输出认证退出/无effect/清理/资格。新WINDOWS_SELECTOR_R8_CREATEPROCESS_UNKNOWN_SCOPED.json4759B/780fbcf7…仅compact+Main3精确4file，按持续授权准备普通同步（本r230尚未push，当前最后d5c；纠正早期git.last_synced字段仍6b9的陈旧值，d5c既有freshreceipt不变）。同Kuhn已继续M3R3精确3b8/bee78限定源码复审，Lorentz新53冻结未接受/无SDK/metadata/Core放行；Primary完整C和SchrodingerR8即时LastError纯诊断原句柄实际running。Goal active/PROGRESS、completed_groups=[]；427/平台/restore/heldouts/fresh最终Reviewer未通过。
 
 以下r229及更早为历史；以本段与RESUME r230为准。
