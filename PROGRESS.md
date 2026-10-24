@@ -1,5 +1,27 @@
 # 当前进度 — 2026-10-24
 
+当前续跑 r207：Main集中接受并精确合入通用after计算顺序四文件修复。实际328PASS0FES0deselect，328节点各一次，原137全部保留；216输入前后不变、212与Git6a0及共享基线相同，75origins/69returned loader对/79source实读/2fixture/328testcodefilenames均核验，零effect与origin错误，CodeType NOT_CAPTURED。强模型限定源码建议无实质P1/P2，Main亦核原合同/完整聚合/FA/selector与46个directnative call AST未改。手动sum/positiveM归一化完成后才作原F05 scalar，phase最终rad；before/preserve/原refusal/预算/UNKNOWN保留。旧3真实负控FAIL→同oraclePASS；attempt03十三个新getter-count期望错误保留。原生转换、weighted auxiliary单位请求绑定、T014/U06仍未认证。四文件+新compact+Main3精确8文件待按持续授权普通同步，lastsynced仍6a0。
+
+Windows R4 heldA已交最终81PASS1FAIL，原67=66P1F及新增15P；唯一Controller gate在实际assess_profile恒UNVERIFIED处出生前拒绝，六文件尚未接受/合入。Main复核冻结T037七子断言为CORE_REQUIRED，Windows63/64与MacARM64.6.4必验；不删既有要求、不新增required。Primary只读交最小C/Controller接口方案，禁止fake gate放行。Schrodinger的Resume候选未完成consumer验收；早期10/1失败是setup guard，非consumer反例。Main现明确允许原fixture自有fd上只读fstatfs/acl_get_fd_np/acl_get_entry/acl_free，不改检查、不宽放SDK/写ACL，继续同Luna闭环。Lorentz固定JDK探针租约仍仅新private编译/nested JDK-only/自有文件与localhost，实际回执待交；不代表Windows/C资格。R7仍humanPENDING、零R7远端效果；所有旧R5/R6/UNKNOWN现场保留。completed_groups=[]，Goal IN_PROGRESS；427/平台/restore/heldout/最终fresh统一Reviewer未通过。
+
+以下r206及更早内容为历史快照；当前状态以本段与RESUME r207为准。
+
+当前续跑 r206：Main补充核对加权结果单位的源码/同版本官方文档事实：主feature设置/回读请求unit；另建weighted numerator feature替换最终值时未继承此setter、也未采集分子/分母unit。官方6.4实际文档chunk确认unit属各feature配置，并说明温度offset/differential规则，不能靠盲乘单位推转换；这仍不是原生转换失败的实际证明。事实 `_state/universal-main-review/20261024-weighted-unit-readback/SOURCE_DOC_FACTS.json` 已保存，nativecounter NOT_RUN、未改prod、不新增required/物理定义或缩窄输入。当前Parfit数学修复租约不扩为额外unitgetter；该事实留待U06后续正确原生/语义核验。四条private源码工作与r205合同/授权边界不变，R7问题仍PENDING、零R7远端操作，公开源码仍6a0。completed_groups=[]、Goal IN_PROGRESS；全427/矩阵/restore/最终fresh独立统一验收未完成。
+
+以下r205及更早内容为历史快照；当前状态以本段与RESUME r206为准。
+
+当前续跑 r205：本轮已复核实际HEAD/remote-tracking均6a0，产品两份单位修复源测仍受测pin，只有Main3本地续跑变更；三个既有Agent句柄均确认running，前Goalturn按真实发布/修复/失败隔离证据记PROGRESS。新after顺序事实已完成：3个正常fakeEval counter各一次，当前weightedavg phase=.463647609而aggregate后phase=.927295218（M2）；pointintegral phase=pi而arg(sum)=pi/2；pointintegral abs=2sqrt2而abs(sum)=2。原件均标ORACLE_DIFFERENCE_OBSERVED，3软件PASS只证明差异观察，未新造requiredFAIL。Main读公开before/after schema与F05明确arg(mean(f))意图，确认修复已有supportedafter合同：保留复数经过现有完整手动sum/M归一化，再单次变换，before/preserve/原refusal/原60与427不改。决策 `_state/universal-main-review/20261024-after-transform-order/MAIN_CONTRACT_AND_REPAIR_DECISION.json`（3526B / SHA256 `3a2bda63d37caa4ad24b2e1933da4d54f4864384961e0fc94289c81d98a1fc55`）；Parfit同Luna在新private数学候选闭环，原R2/137与facts包不动，尚未交付/验收新源码。
+
+Windows主线新增Lorentz同源固定JDK OS探针切片：Java静态nested helper+严格有界Python帧，仅READ_HASH/CREATE_NEW/TCP_ECHO实际raw观测，不签C/Resume资格、外层Worker不改。本切片明确允许固定Corretto11新private javac -proc:none与仅nested helper的JDK-only运行、任务自有文件和自有localhost；不运行vendor/ModelUtil/外层Worker，不触碰远端/旧R7/现有服务/全局环境，实际JDK结果待原回执，不能冒称Windows/C通过。Primary heldA/Controller与Schrodinger Resume两线继续。R7许可问题仍PENDING、无远端claim；completed_groups=[]、Goal IN_PROGRESS，C/平台/full427/restore/heldout/finalReviewer仍未通过。
+
+以下r204及更早内容为历史快照；当前状态以本段与RESUME r205为准。
+
+当前续跑 r204：已接受的output-unit R2阶段已普通非强制发布 `6a0c5b526398f5ceb414d9c0b8c6005e6d8b43aa`（parent9492）。Mainstate203精确6files/959065B经fresh fetch逐blob核验一致；回执 `_state/universal-main-review/20261024-output-unit-publication/REMOTE_READBACK.json`（1880B / SHA256 `9307550ae562f2b006909215860370907711f3f6f5ebfb6e219f68ff3cf806ec`）。137软件PASS、F1源码闭合和所有旧失败边界不变；source2字节与受测一致，旧wheel0671/0860不重标。本r204仅本地同步后续跑，不追逐重新发布自己的回执。
+
+当前三条private通用工作：Primary继续原held-A迟退出后退休生产接口和Controller正常prepared夹具（原67=65P2F未接受、全原断言保留）；Schrodinger继续Resume原effect ownership/dispatch reservation/UNKNOWN保留，原issuer仍拒绝，最终组合须纳入6a0新G3bytes；Parfit新租约只读核原已支持explicitafter的数值顺序合同并做3个有限normalfakeEval counter，先区分原合同/独立algebraic oracle/实际观察，未授权prod修补、未扩大原60/427。R2保留旧数字仅为单位封装修复，不代表完整聚合数学已认证。R7完整临时实验问题仍human PENDING，只有10份本地operator预备文件，无R7 SSH/传输/Windows效果；旧R5/R6/所有UNKNOWN现场保留。completed_groups=[]、Goal IN_PROGRESS；C/原生矩阵/full427/restore/heldout/最终freshReviewer未通过。
+
+以下r203及更早内容为历史快照；当前状态以本段与RESUME r204为准。
+
 当前续跑 r203：Main已集中接受output-unit R2源码/软件并精确合入两文件。实际137PASS0FES0deselect=91候选+原46各一次；214输入前后当前一致，212与Git4b/9492不变，73origins/75returned-source/69loader对/137testcodefilenames/2fixture实读，零effect拒绝与来源漂移，CodeType NOT_CAPTURED。最终封装前611个源码顺序call AST完全相同、唯一变化top-level定义为result_evaluate；数值/gettersetter/cleanup/预算未改。强模型限定复审闭合原P2且无新P1/P2，非最终Reviewer。Main接受 `_state/universal-main-review/20261024-output-unit-review/MAIN_R2_SOURCE_SOFTWARE_ACCEPTANCE.json`（4864B / SHA256 `481b0e000f4956ae8eef1fbed5ef73a83c1800db170f806a78d3497655af39aa`）；compact `docs/universal_mcp_execution/evidence/RESULT_OUTPUT_UNIT_SOURCE_SCOPED.json`（4183B / SHA256 `19eaeb3343f3c5740b785b12e5f6141e0d04a6521612267042d9ef9eb790f7c0`）。实际post-phase测度除法后输出null/UNVERIFIED，其余Python afterphase为rad；scalar约定仅中间态，native map/rawobservation/strict证据保留、ArtifactStore未改。R1/86PASS不接受及所有反例/中间失败原件保留。精确6files待普通nonforce同步，lastsynced仍9492；native转换/物理维度/U06/T014未通过、旧wheel不重标。
 
 生命周期原67实际65PASS2FAIL0ES，未接受。Main确认原Worker迟退出并关完原process/thread后缺少held-A退休交接，已给同一Primary Luna新private最小生产lease：只有同一原never-resumed child完整已知终态、同一reader从未finish且零真实entry/SDK/ancillary/Resume未知，才可完成原158ACQUIRED pins一次退休；禁止泛化UNKNOWNreset/PID查询/close重试。另一Controller失败仍须正常prepared夹具接线，全部原断言保留。Schrodinger的Resume ownership/reservation另线继续，同_t037文件未来由Main合并和组合受测。R7完整实验human答案仍PENDING，零R7远端执行；Parfit/Kuhn此阶段完成关闭。completed_groups=[]、Goal IN_PROGRESS；C/full427/平台/restore/heldout/最终fresh独立统一验收未通过。

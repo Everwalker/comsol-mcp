@@ -5632,6 +5632,23 @@ def result_evaluate(
     )
     feat_type = ms.feature_type
 
+    # Native Int*/Av* already aggregate before their result is read. Only
+    # Python point sums and mean normalization need retained components so
+    # explicit after means T(complete aggregate), rather than sum(T(f)) or
+    # T(numerator)/measure. Keep raw none/Eval and all before/preserve paths.
+    defer_after_transform = (
+        requested_transform_order == "after"
+        and complex_mode != "preserve"
+        and (
+            (ms.entity_dim == 0 and (
+                aggregate in ("integral", "average", "std", "rms") or bool(weight_expression)
+            ))
+            or (aggregate == "average" and (
+                bool(weight_expression) or not feat_type.startswith("Av")
+            ))
+        )
+    )
+
     # A raw Eval allocation can be bounded by direct native numeric-count
     # witnesses even when SolutionInfo cannot map that allocation to outer /
     # inner tuples.  Keep that count-only evidence separate from the typed
@@ -5802,6 +5819,8 @@ def result_evaluate(
     phase_after_transform_applied = False
     phase_after_point_sum_applied = False
     phase_after_measure_division_applied = False
+    pre_transform_point_sum_applied = False
+    pre_transform_measure_division_applied = False
     unit_setter_called = False
     result_budget_records: list[dict[str, Any]] = []
     result_budget_guard = None
@@ -6184,8 +6203,15 @@ def result_evaluate(
                 )
             transformed = raw_real
         else:
-            transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
-            phase_after_transform_applied = complex_mode == "phase" and requested_transform_order == "after"
+            transformed = _transform_complex_data(
+                raw_real, raw_imag,
+                "preserve" if defer_after_transform else complex_mode,
+                is_complex=is_complex,
+            )
+            phase_after_transform_applied = (
+                complex_mode == "phase" and requested_transform_order == "after"
+                and not defer_after_transform
+            )
         if ms.entity_dim == 0:
             point_operation = None
             if aggregate in ("integral", "average", "std", "rms") or weight_expression:
@@ -6194,6 +6220,8 @@ def result_evaluate(
                 point_operation = aggregate
             if point_operation is not None:
                 transformed = _point_reduce(transformed, point_operation)
+                if defer_after_transform and point_operation == "sum":
+                    pre_transform_point_sum_applied = True
                 if phase_after_transform_applied and point_operation == "sum":
                     phase_after_point_sum_applied = True
         if solution_binding and solution_binding.get("pair_mapping_complete") is True:
@@ -6218,6 +6246,10 @@ def result_evaluate(
             field_array_is_complex = _field_array_is_complex(
                 is_complex, complex_mode, aggregate
             )
+            # Retained maps are an internal complex representation even for a
+            # confirmed real native field. The native status and the final
+            # published scalar type remain separate facts.
+            internal_field_array_is_complex = defer_after_transform or field_array_is_complex
             if raw_layout.startswith("expression,outer"):
                 field_array_payload = FieldArray(
                     transformed,
@@ -6225,7 +6257,7 @@ def result_evaluate(
                     coords=field_coords,
                     units=field_units,
                     metadata=field_metadata,
-                    is_complex=field_array_is_complex,
+                    is_complex=internal_field_array_is_complex,
                 )
             else:
                 # One-outer engine reads retain a scoped solnum axis.  Map it
@@ -6242,7 +6274,7 @@ def result_evaluate(
                     coords=field_coords,
                     units=field_units,
                     metadata=field_metadata,
-                    is_complex=field_array_is_complex,
+                    is_complex=internal_field_array_is_complex,
                 )
 
             if field_array_payload is not None:
@@ -6590,10 +6622,14 @@ def result_evaluate(
                         num_transformed = num_real
                     else:
                         num_transformed = _transform_complex_data(
-                            num_real, num_imag, complex_mode, is_complex=num_status
+                            num_real, num_imag,
+                            "preserve" if defer_after_transform else complex_mode,
+                            is_complex=num_status,
                         )
                     if ms.entity_dim == 0:
                         num_transformed = _point_reduce(num_transformed, "sum")
+                        if defer_after_transform:
+                            pre_transform_point_sum_applied = True
                         if phase_after_transform_applied:
                             phase_after_point_sum_applied = True
                     if solution_binding:
@@ -6604,7 +6640,7 @@ def result_evaluate(
                             num_expressions=len(expressions),
                             layout=num_layout,
                             selected_outer=(solution_binding.get("outer_indices") or [None])[0],
-                            is_complex=num_status,
+                            is_complex=True if defer_after_transform else num_status,
                         ).values
                     else:
                         transformed = num_transformed
@@ -6649,8 +6685,10 @@ def result_evaluate(
                     }
 
             def _divide_by_measure(value: Any) -> Any:
-                nonlocal phase_after_measure_division_applied
+                nonlocal phase_after_measure_division_applied, pre_transform_measure_division_applied
                 divided = _nested_divide(value, denominator_measure)
+                if defer_after_transform:
+                    pre_transform_measure_division_applied = True
                 if phase_after_transform_applied:
                     phase_after_measure_division_applied = True
                 return divided
@@ -6883,6 +6921,11 @@ def result_evaluate(
                 if num_cleanup["created"] and not num_cleanup["removed"]:
                     _remove_ephemeral(numerical_list, num_tag, num_cleanup, [])
 
+        if defer_after_transform:
+            from ._complex_transform import transform_preserved_data
+            transformed = transform_preserved_data(transformed, complex_mode)
+            phase_after_transform_applied = complex_mode == "phase"
+
         # SolutionSpec index filtering (T021 / F04).  The aggregate/statistics
         # branches above replace ``transformed`` with the evaluated mean,
         # centered variance, or RMS.  Apply selectors to a FieldArray rebuilt
@@ -6935,7 +6978,7 @@ def result_evaluate(
         output_expression_units = {str(expression): output_unit for expression in expressions}
         value_unit_derivation = {
             "source": "PYTHON_MATH_ATAN2",
-            "scope": "final_values; phase convention describes only the scalar intermediate",
+            "scope": "final_values; scalar phase follows the complete existing aggregate",
             "output_unit": output_unit,
             "status": ("UNVERIFIED_POST_PHASE_MEASURE_DIVISION"
                        if phase_after_measure_division_applied else "DERIVED_PYTHON_PHASE_RADIANS"),
@@ -6945,12 +6988,19 @@ def result_evaluate(
                 "output_unit": "rad",
                 "phase_convention": {"interval": "[-pi, pi]", "zero_magnitude_value": 0.0},
             },
+            "preprocessing": {
+                "point_sum_applied": pre_transform_point_sum_applied,
+                "measure_division_applied": pre_transform_measure_division_applied,
+                "denominator_source": denominator_source if pre_transform_measure_division_applied else None,
+            },
             "postprocessing": {
                 "point_sum_applied": phase_after_point_sum_applied,
                 "measure_division_applied": phase_after_measure_division_applied,
                 "denominator_source": denominator_source if phase_after_measure_division_applied else None,
             },
-            "final_range_guarantee": None,
+            "final_range_guarantee": (
+                "[-pi, pi]" if not phase_after_point_sum_applied and not phase_after_measure_division_applied else None
+            ),
             "native_unit_conversion": "UNVERIFIED",
             "physical_dimensionality": "UNVERIFIED",
         }

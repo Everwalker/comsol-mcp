@@ -91,27 +91,30 @@ def test_normal_after_phase_value_units_all_surfaces(tmp_path: Path, surface: st
     _assert_derivation(metadata)
 
 
-def _assert_derivation(result, *, postdivide=False, point_sum=False):
+def _assert_derivation(result, *, predivide=False, pre_point_sum=False):
     evidence = result["value_unit_derivation"]
     assert evidence["source"] == "PYTHON_MATH_ATAN2"
-    assert evidence["output_unit"] == (None if postdivide else "rad")
-    assert evidence["status"] == ("UNVERIFIED_POST_PHASE_MEASURE_DIVISION" if postdivide
-                                  else "DERIVED_PYTHON_PHASE_RADIANS")
+    assert evidence["output_unit"] == "rad"
+    assert evidence["status"] == "DERIVED_PYTHON_PHASE_RADIANS"
     assert evidence["complex_transform_order"] == "after"
     assert "phase_convention" not in evidence
     scalar = evidence["scalar_intermediate"]
     assert scalar["source"] == "PYTHON_MATH_ATAN2" and scalar["output_unit"] == "rad"
     assert scalar["phase_convention"] == {"interval": "[-pi, pi]", "zero_magnitude_value": 0.0}
-    assert evidence["final_range_guarantee"] is None
+    assert evidence["final_range_guarantee"] == "[-pi, pi]"
     post = evidence["postprocessing"]
-    assert post["measure_division_applied"] is postdivide
-    assert post["point_sum_applied"] is point_sum
-    if postdivide:
-        assert post["denominator_source"]
+    assert post["measure_division_applied"] is False
+    assert post["point_sum_applied"] is False
+    assert post["denominator_source"] is None
+    pre = evidence["preprocessing"]
+    assert pre["measure_division_applied"] is predivide
+    assert pre["point_sum_applied"] is pre_point_sum
+    if predivide:
+        assert pre["denominator_source"]
         if "denominator_source" in result:
-            assert post["denominator_source"] == result["denominator_source"]
+            assert pre["denominator_source"] == result["denominator_source"]
     else:
-        assert post["denominator_source"] is None
+        assert pre["denominator_source"] is None
     assert evidence["native_unit_conversion"] == "UNVERIFIED"
     assert evidence["physical_dimensionality"] == "UNVERIFIED"
     observation = result["expression_unit_observation"]
@@ -234,17 +237,16 @@ def test_allowed_after_aggregates_rebuild_final_values_with_separate_unit_maps(t
     if weight is not None:
         spec["weight_expression"] = weight
     result = dispatch("result.evaluate", worker, "Model", {"spec": spec})
-    # Preserve the existing weighted-after numeric order, including its division;
-    # this metadata fix does not certify its physical/statistical interpretation.
-    expected = math.atan2(4, 3) / (2 if weight and aggregate == "average" else 1)
+    # Main confirmed after means scalar transform after the complete aggregate.
+    expected = math.atan2(4, 3)
     assert all(math.isclose(v, expected) for v in _numbers(result["values"]))
     assert result["field_array"]["values"] == result["values"]
     assert result["field_array"]["shape"][2] == 1
-    final_unit = None if weight and aggregate == "average" else "rad"
+    final_unit = "rad"
     assert result["expression_units"] == {EXPRESSION: final_unit}
     assert result["native_expression_units"] == {EXPRESSION: "K"}
     assert result["field_array"]["units"]["expression"] == {EXPRESSION: final_unit}
-    _assert_derivation(result, postdivide=final_unit is None)
+    _assert_derivation(result, predivide=bool(weight and aggregate == "average"))
 
 
 @pytest.mark.parametrize("aggregate", ["std", "rms", "minimum", "maximum"])
@@ -433,7 +435,7 @@ def _post_phase_tree(tmp_path, branch, *, measure=2.0, binding=True, points=2):
         spec["weight_expression"] = "unfamiliar_positive_weight"
     else:
         spec["entity_dim"] = 0
-    expected = (math.atan2(4, 3) if branch == "weighted" else points * math.pi) / measure
+    expected = math.atan2(4, 3) if branch == "weighted" else math.pi
     return tree, worker, created, spec, expected
 
 
@@ -449,8 +451,8 @@ def test_post_phase_measure_division_unit_counter(tmp_path, branch):
                       "denominator": result["denominator_measure"],
                       "output_units": result["expression_units"],
                       "native_units": result["native_expression_units"]}))
-    assert result["expression_units"] == {EXPRESSION: None}
-    _assert_derivation(result, postdivide=True, point_sum=branch == "point")
+    assert result["expression_units"] == {EXPRESSION: "rad"}
+    _assert_derivation(result, predivide=True, pre_point_sum=branch == "point")
 
 
 @pytest.mark.parametrize("branch", ["weighted", "point"])
@@ -470,10 +472,10 @@ def test_post_phase_division_unknown_units_propagate_all_surfaces(tmp_path, bran
         if fmt == "csv":
             with path.open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
-            assert rows and {row["unit"] for row in rows} == {""}
+            assert rows and {row["unit"] for row in rows} == {"rad"}
             assert all(float(row["real"]) == pytest.approx(expected) for row in rows)
-            # The existing CSV unknown-unit encoding is blank, never native K
-            # or a fabricated rad/M; JSON carries the explicit unknown status.
+            # Division precedes Python atan2; final radians are derived from
+            # that scalar operation, never from native K or a guessed rad/M.
             assert created[0].calls.count(("getStringArray", ("unit",))) == 1
             assert not tree.numerical_list.items
             return
@@ -488,13 +490,13 @@ def test_post_phase_division_unknown_units_propagate_all_surfaces(tmp_path, bran
         else:
             values = result["values"]
     assert all(math.isclose(v, expected) for v in _numbers(values))
-    assert result["expression_units"] == {EXPRESSION: None}
+    assert result["expression_units"] == {EXPRESSION: "rad"}
     assert result["native_expression_units"] == {EXPRESSION: "K"}
-    _assert_derivation(result, postdivide=True, point_sum=branch == "point")
+    _assert_derivation(result, predivide=True, pre_point_sum=branch == "point")
     field = result.get("field_array")
     if binding:
-        assert field["units"]["expression"] == {EXPRESSION: None}
-        assert field["metadata"]["expression_units"] == {EXPRESSION: None}
+        assert field["units"]["expression"] == {EXPRESSION: "rad"}
+        assert field["metadata"]["expression_units"] == {EXPRESSION: "rad"}
         assert field["metadata"]["native_expression_units"] == {EXPRESSION: "K"}
         assert field["metadata"]["unit_readback_status"] == "VERIFIED"
         assert field["metadata"]["unit_readback_scope"] == "native_numerical_feature_property"
@@ -513,12 +515,12 @@ def test_native_tokens_and_measure_one_do_not_certify_post_division_unit(tmp_pat
     _unit_leaf(tree, raw)
     result = dispatch("result.evaluate", worker, "Model", {"spec": spec})
     assert all(math.isclose(v, expected) for v in _numbers(result["values"]))
-    assert result["expression_units"] == {EXPRESSION: None}
+    assert result["expression_units"] == {EXPRESSION: "rad"}
     assert result["native_expression_units"] == {EXPRESSION: native}
     assert result["expression_unit_observation"]["raw_property"]["items"] == [
         {"kind": "null"} if raw == [None] else {"kind": "string", "value": raw[0]}
     ]
-    _assert_derivation(result, postdivide=True, point_sum=branch == "point")
+    _assert_derivation(result, predivide=True, pre_point_sum=branch == "point")
 
 
 @pytest.mark.parametrize("weighted", [False, True])
@@ -528,10 +530,10 @@ def test_existing_point_sum_can_exceed_scalar_atan2_range_without_rewrapping(tmp
     if weighted:
         spec["weight_expression"] = "another_weight_spelling"
     result = dispatch("result.evaluate", worker, "Model", {"spec": spec})
-    assert set(_numbers(result["values"])) == {3 * math.pi}
+    assert set(_numbers(result["values"])) == {math.pi}
     assert result["expression_units"] == {EXPRESSION: "rad"}
     assert result["field_array"]["units"]["expression"] == {EXPRESSION: "rad"}
-    _assert_derivation(result, point_sum=True)
+    _assert_derivation(result, pre_point_sum=True)
 
 
 def test_post_division_cleanup_failure_stays_unknown_and_no_auto_artifact(tmp_path):
@@ -542,8 +544,8 @@ def test_post_division_cleanup_failure_stays_unknown_and_no_auto_artifact(tmp_pa
     assert result["status"]["execution_state_unknown"] and not result["status"]["ok"]
     assert "artifact" not in result
     assert all(math.isclose(v, expected) for v in _numbers(result["values"]))
-    assert result["expression_units"] == {EXPRESSION: None}
-    _assert_derivation(result, postdivide=True)
+    assert result["expression_units"] == {EXPRESSION: "rad"}
+    _assert_derivation(result, predivide=True)
 
 
 @pytest.mark.parametrize("binding", [True, False])
@@ -569,7 +571,7 @@ def test_each_expression_remains_unknown_after_measure_division(tmp_path, bindin
     tree.numerical_list.factory = factory
     _unit_leaf(tree, [None, "1"])
     spec["expressions"] = names
-    expected = dict(zip(names, [math.atan2(4, 3) / 2, math.pi / 4]))
+    expected = dict(zip(names, [math.atan2(4, 3), math.pi / 2]))
     if surface.startswith("export_"):
         fmt = surface.removeprefix("export_")
         path = tmp_path / f"multi_unknown.{fmt}"
@@ -580,7 +582,7 @@ def test_each_expression_remains_unknown_after_measure_division(tmp_path, bindin
             with path.open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
             assert {row["expr"] for row in rows} == set(names)
-            assert {row["unit"] for row in rows} == {""}
+            assert {row["unit"] for row in rows} == {"rad"}
             for row in rows:
                 assert float(row["real"]) == pytest.approx(expected[row["expr"]])
             return
@@ -591,11 +593,11 @@ def test_each_expression_remains_unknown_after_measure_division(tmp_path, bindin
         values = result["values"]
     for index, name in enumerate(names):
         assert all(v == pytest.approx(expected[name]) for v in _numbers(values[index]))
-    assert result["expression_units"] == dict.fromkeys(names, None)
+    assert result["expression_units"] == dict.fromkeys(names, "rad")
     assert result["native_expression_units"] == dict(zip(names, [None, "1"]))
     if binding:
-        assert result["field_array"]["units"]["expression"] == dict.fromkeys(names, None)
+        assert result["field_array"]["units"]["expression"] == dict.fromkeys(names, "rad")
     else:
         assert result["field_array"] is None
     assert created[0].calls.count(("getStringArray", ("unit",))) == 1
-    _assert_derivation(result, postdivide=True)
+    _assert_derivation(result, predivide=True)

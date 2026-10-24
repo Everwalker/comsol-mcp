@@ -9,7 +9,7 @@ Provides strict complex transformations:
 from __future__ import annotations
 
 import math
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError
 
@@ -137,3 +137,24 @@ def transform_complex_data(
         ]
 
     raise ExecutionContractError("COMPLEX_DATA_ERROR", f"real component has unsupported type {type(real_data).__name__}")
+
+
+def transform_preserved_data(values: Any, mode: str) -> Any:
+    """Transform validated complex leaves after Python aggregation is complete.
+
+    The leaves originate from ``transform_complex_data(..., 'preserve')``;
+    point reduction and measure division keep both components. Missing or
+    malformed components must not be reconstructed from a native status flag.
+    """
+    if mode not in COMPLEX_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
+    if isinstance(values, Mapping):
+        if set(values) != {"real", "imag"} or any(
+            isinstance(values[key], bool) or not isinstance(values[key], (int, float))
+            for key in ("real", "imag")
+        ):
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "aggregate lacks validated real/imag components")
+        return transform_complex_value(values["real"], values["imag"], mode)
+    if isinstance(values, Sequence) and not isinstance(values, (str, bytes, bytearray)):
+        return [transform_preserved_data(value, mode) for value in values]
+    raise ExecutionContractError("COMPLEX_DATA_ERROR", "aggregate lacks preserved complex leaves")

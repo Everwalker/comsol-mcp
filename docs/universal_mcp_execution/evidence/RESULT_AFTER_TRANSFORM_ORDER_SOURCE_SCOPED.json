@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_ONLY",
+  "utc": "2026-10-24T00:38:12.861974+00:00",
+  "source_base": "6a0c5b526398f5ceb414d9c0b8c6005e6d8b43aa",
+  "source_and_tests": [
+    {
+      "bytes": 6914,
+      "path": "comsol_mcp/_complex_transform.py",
+      "sha256": "7e380f32e5bf498d4d10fcad8190fe1c069787eebed9f8932b47700b2ef8f614"
+    },
+    {
+      "bytes": 466010,
+      "path": "comsol_mcp/_g3_results.py",
+      "sha256": "ab01129fc1cd4417a1d8b5ed6d37b138118d3f56b21e9a524298a18503ffe751"
+    },
+    {
+      "bytes": 22854,
+      "path": "tests/test_after_transform_order.py",
+      "sha256": "256e6c1f4c751e3198f2013da7e3df498cbecdc901953b1ff2cc9c66ed3b1ef8"
+    },
+    {
+      "bytes": 29230,
+      "path": "tests/test_g3_output_unit_semantics.py",
+      "sha256": "fe98e57ccd0516b795b20ec1cf85966454f22d6798423b190fb771cdcf025f96"
+    }
+  ],
+  "problem": "Explicit after applied phase/abs before an existing manual point sum or mean normalization in supported routes. Three normal fakeEval counterexamples demonstrated the contract difference.",
+  "resulting_behavior": "Both components survive the existing aggregate and measure division. The original F05 scalar transform runs once for each final tuple before selectors; before/preserve/native aggregation and original nonlinear-after refusals remain unchanged.",
+  "corrected_examples": [
+    {
+      "operation": "weighted average after phase",
+      "numerator": [
+        3,
+        4
+      ],
+      "measure": 2,
+      "previous": 0.4636476090008061,
+      "expected": 0.9272952180016122
+    },
+    {
+      "operation": "point integral after phase",
+      "points": [
+        [
+          1,
+          1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "previous": 3.141592653589793,
+      "expected": 1.5707963267948966
+    },
+    {
+      "operation": "point integral after abs",
+      "points": [
+        [
+          1,
+          1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "previous": 2.8284271247461903,
+      "expected": 2
+    }
+  ],
+  "final_software": {
+    "tests": 328,
+    "passed": 328,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "deselected": 0,
+    "selected_executed_unique_once": true,
+    "prior137_nodes_preserved_once": true,
+    "composition": "159 new order controls + 91 prior authored unit/packaging + 46 unchanged previous affected + 30 unchanged core numeric + 2 unchanged strict-weighted negatives",
+    "source_members": 216,
+    "unchanged_inputs_equal_Git_base": 212,
+    "module_origins": 75,
+    "returned_loader_pairs": 69,
+    "returned_source_reads": 79,
+    "fixture_reads": 2,
+    "test_code_filenames": 328,
+    "forbidden_effect_attempts": [],
+    "origin_errors": [],
+    "all_CodeType": "NOT_CAPTURED"
+  },
+  "provenance": {
+    "Main_acceptance": {
+      "path": "_state/universal-main-review/20261024-after-transform-order/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+      "bytes": 4863,
+      "sha256": "3b167ce307af3a53b29bddc7a77209ecf8e1d91cc4067f448104e83a60dce395"
+    },
+    "Main_mechanical": {
+      "path": "_state/universal-main-review/20261024-after-transform-order/MAIN_PIN_AND_SOFTWARE_VERIFICATION.json",
+      "bytes": 2520,
+      "sha256": "31bbb15ef1f1a49f0768e5fc410d50fa4e8b5202bee0b07c61f59db6d93f1eba"
+    },
+    "strong_limited_source_advice": {
+      "path": "_state/universal-main-review/20261024-after-transform-order/INDEPENDENT_SOURCE_REVIEW.json",
+      "bytes": 29531,
+      "sha256": "3cd328dca390bede01d997b2b9855be9473f32f2f94b4490bc0fc1c09b923023"
+    },
+    "delivery": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-after-transform-order-repair-20261024/DELIVERY.json",
+      "bytes": 19049,
+      "sha256": "a835d289a236a6dcdc77430494c8b85c30b7d5c0e1d2839730e54959165229bc"
+    },
+    "final_junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-after-transform-order-repair-20261024/attempt-04/junit.xml",
+      "bytes": 50303,
+      "sha256": "b43f61d58a3ddd8c5ea21b8b288711ddf4fc06412a84ad6e72472d8b112bce39"
+    },
+    "final_result": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-after-transform-order-repair-20261024/attempt-04/result.json",
+      "bytes": 192767,
+      "sha256": "f733066f2345f697627f0398439f374e0eaaa23d7b3c479ecf8d00053cf12474"
+    }
+  },
+  "retained_failures": [
+    "old6a0 three contract-oracle failures",
+    "attempt03 thirteen newly authored getter-count expectations",
+    "all earlier native/source/unit failures and UNKNOWN ownership incidents"
+  ],
+  "limits": [
+    "Software fakeEval/FieldArray/ArtifactStore only; native conversion and physical dimensionality UNVERIFIED.",
+    "Weighted numerator/measure requested-unit binding source/doc uncertainty remains separately recorded.",
+    "No native SDK/JDK/Java/COMSOL/Windows/SSH/network/build operation for this stage.",
+    "No T014/U06/full427/platform/restore/heldout/finalReviewer/Goal PASS; old packages retain original source identities."
+  ],
+  "frozen_criteria_60_427": "UNCHANGED",
+  "completed_groups": [],
+  "publication": "EXACT_SOURCE_STAGE_READY_FOR_STANDING_AUTHORIZED_ORDINARY_NONFORCE_SYNC"
+}
