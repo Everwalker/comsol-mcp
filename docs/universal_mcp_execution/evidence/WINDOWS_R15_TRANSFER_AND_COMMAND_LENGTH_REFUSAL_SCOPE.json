@@ -1,0 +1,36 @@
+{
+  "schema": "universal-Windows-R15-transfer-and-command-length-failed-scope/1",
+  "utc": "2026-10-25T23:39:54.402260+00:00",
+  "status": "MAIN_ACCEPTED_ACTUAL_A1_SUCCESS_A2_LENGTH_REFUSAL_NO_B",
+  "source_prep": {
+    "original_probe_bytes": 17130,
+    "original_probe_sha256": "e1cfc648af5e19d74b54a52f1cb0981a30714226e358185019e656b799902127",
+    "new_materials": 3,
+    "material_bytes": 17841,
+    "new_local_checks": 12,
+    "preimport_denials": 7,
+    "prior77_18_R14checks": "INHERITED_NOT_RERUN_NOT_ADDED",
+    "Main_source_acceptance_sha256": "3e5c939b20c0e89a3120b89d76bb53052695aafbd7b8f6a43b949ec487c68f89"
+  },
+  "actual": {
+    "A1_SFTP_original_wait": 0,
+    "A1_leading_slash_absolute_path": "ACCEPTED_ON_THIS_NEW_EXCLUSIVE_NAMESPACE",
+    "A2_SSH_original_wait": 1,
+    "A2_stdout_bytes": 0,
+    "A2_stderr_bytes": 14,
+    "A2_stderr_sha256": "4b0c98b7f272346919e122d79fde750f7a07c6a0bc0eb80f055f9a17d1931872",
+    "A2_stderr_cp936": "命令行太长。\r\n",
+    "A2_EncodedCommand_characters": 9704,
+    "READY_payload": false,
+    "B": "NOT_RELEASED_NOT_RUN",
+    "retry_oldRoot_query_cleanup": "NONE"
+  },
+  "primary_documented_basis": [
+    "https://learn.microsoft.com/en-US/troubleshoot/windows-client/shell-experience/command-line-string-limitation",
+    "https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh-server-configuration"
+  ],
+  "inference": "The actual length error and greater-than8191 remote command are consistent with documented cmd.exe ceiling; initial Windows OpenSSH default is cmd.exe. Current actual DefaultShell was not queried. No native/Python/WinDLL/context/root-cause qualification or global-process-absence claim.",
+  "Main_actual_failed_scope_acceptance_sha256": "4e306e7533926817dd2640bfad7f26882c34f62a66a37347f8a057832a6593ba",
+  "next": "Fresh R16 source/operator PREP, same finite read-only effects and3materials; shorten lexical/data PS and add local complete-command budget, exact Main review before a future oneA1/A2. Old R15 spent, no replay or security/shell setting changes.",
+  "overall": "NativeC/B/Resume/platform/full427/heldouts/finalReviewer/Goal remain NOT_PASSED."
+}

@@ -1,4 +1,16 @@
-# 当前进度 — 2026-10-25
+# 当前进度 — 2026-10-26
+
+当前续跑 r262：当前source9bd/0.1.10的实际coldSDK bind及metadata Setup已Main接受（bind1add4c90…；Setup2526B/b94dbf09…），原SDK Popen0/AnyIO[0,0]/38close，21describe+4metadata全部success/text=structured；Core未放、实际旧free门槛不变。M4全新sibling布局的唯一正常transition已Main接受3130B/e7b0b70b…：195→199→195同版本构件切换/回滚、19原capture=18×0+1×预期73、真实fullbackup/fullrestore与两新synthetic操作/UNKNOWN语义、模型byteSHA保护；恢复UNKNOWN不转成功/safe_retryfalse。R1布局拒绝及两private verifier错误全保留，normalpipeline未重跑；crash82/wholeprefix卸载/native reopen未运行。WindowsR15 actual A1 known0确认新namespace的 /C:/ SFTP修复，A2 known1原GBK“命令行太长。”，9704字符EncodedCommand；Main接受失败scope2772B/4e306e75…，B未放、R15spent不重试/查旧Root。与cmd8191上限一致，实际DefaultShell未查，不归因native/权限。新R16同范围短命令SOURCEPREP（01a1756c…）继续；非Framework新Python有限获取（01a1756d…）已放，旧Framework目标仍BLOCKED_UNKNOWN。以上3份compact+Main3拟普通同步，raw model/archive/ledger/venv/商业材料不上传。最后公开30d/r259仍已验证；全427/平台/native恢复/两未预设族/最终fresh Reviewer/Goal未过，active/PROGRESS。
+
+以下r261及更早为历史，以当前RESUME r262为准。
+
+当前续跑 r261：当前source9bd/0.1.10安装的实际coldSDK bind-only已Main接受（2202B/1add4c90…）：原493579 exit0，独立backend exec-52db734b completed0；49freeze/205pins/9cold/44code45watch/原identity与0denial。单独放一次R10 metadata Setup（lease4889B/c086e137…，dispatch01a17557…），21describe/4metadata/2Java纯文本copy；Root0cb7由原operator独占创建，未自动放Core。人类确认Windows SSH已恢复，原Schrodinger在全新R15做source/data/operators准备（01a17555…），保留SFTP /C:/修复，尚未放A1/A2/B；R14已spent不重试/不查旧资源。M4正常transition首次流程明确失败于venv在tool源码root内的安全拒绝，安装未开始；原Halley turn随后provider429，已恢复同Luna整理实际失败与sibling布局建议（01a17556…），不改门槛、不覆盖失败、不重跑原Root。最后公开30d8d42a/r259 fresh5blob仍有效。MacCore实际Main R9free581255168<2147483648门槛保持，不自动采样/降标/清理旧owner。全427/平台/restore/两未预设族/最终fresh强Reviewer仍未通过，Goal active/PROGRESS。
+
+以下r260及更早为历史，以CURRENT_HANDOFF及RESUME r261为准。
+
+当前续跑 r260：30d8d42a1addb228e3bf069a4c15ccf59c0f22db（parent9bd）普通非强制同步及fresh逐5blob已通过，Mainstate259精确5file723765B；HEAD/origin/main/FETCH_HEAD一致，REMOTE_READBACK2592B/6c8a1073…，CLEAN仅该读回时点。仅两M4限定compact+Main3，无wheel/zip/raw/venv/cache/凭据/商业二进制上传；本r260只本地续跑，不仅为回执重复发表。实际candidate仍source9bd/0.1.10、wheel484adf8d…、202source/199package，normalall3build+oneMacofflineinstall/doctor接受不提升MCP协议/native或Framework安全卸载。Primary transition/lifecycle与Lorentz currentMacM3两SOURCE PREP继续；均无实际pipeline/SDK/Root/Core效果放行。MacCore实际Main R9freegate与WindowsR14timeout保持，不重测至过/重放/清理旧owner。Goal active/PROGRESS，全427/矩阵/restore/heldout/fresh最终Reviewer未通过。
+
+以下r259及更早为历史，以CURRENT_HANDOFF及RESUME r260为准。
 
 当前续跑 r259：current9bd完整离线wheel/三平台包及唯一MacARM正常隔离安装已Main接受4212B/ffaef6a6…。DELIVERY10331B/25e09e8f…；wheel3162901B/484adf8d…，sourceManifest bafdd368…，source9bd/版本0.1.10。Main核207Git/export、202source/199package-source-wheel-install、205wheel/204RECORD、3包154nonselfrows、126输入37refs、6outer4direct known0；backend3820B/c9013901…交叉核3actualcommands0。doctor被动import/registration和pipcheck PASS；childEPERM1、parentacceptedfalse；175正常pyc排除。safeuninstall实际BLOCKED_UNKNOWN Framework prerequisite，非MCP协议/native/M4全通过。producer Corefree误归为user-reported，Main明确实际来源为Main R9预检且保留原件；privateobserver只认证已观察known0，不认证未来constructor-lost-return。新Primary transition SOURCEPREP01a172bd与Lorentz currentMacM3 SOURCEPREP01a172bf已派，均无实际pipeline/SDK/Root效果放行。MacCore固定free门槛defer、WindowsR14timeout保持，不poll至过/重试/清理旧owner。两M4compact+Main3精确5拟持续同步；上次公开9bd/r256fresh4receipt1ce19127…有效。Goal active/PROGRESS，全427/平台/restore/heldouts/fresh最终Reviewer未过。
 
