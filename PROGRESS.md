@@ -1,4 +1,20 @@
-# 当前进度 — 2026-10-24
+# 当前进度 — 2026-10-25
+
+当前续跑 r243：R11实际失败scope独立Ohm复核0P1/P2、Main核131refs后接受（1204B/f6208510…），不把UNKNOWN改PASS。原X/A/seq0写前BOOL1/DWORD0xC0000142、保存122、复合Refusal、42行journal的窄解释与所有旧owner保留不变。R6 source85/强0/真实冷bind0/metadata原SDKexit0与R11 source385/实际READY/失败scope已整理为两份必要紧凑证据；只加Main3共精确5file准备持续授权普通nonforce同步，尚未新push。完整C Main机械已核246inputs/444uniquePASS/178实际bindings/36copy/原family rosters和Java外层，非copy输入与current shared差异0、captured ff1base与current shared差异0，可避免回滚别阶段；强Kuhn源码审查仍待结论，未整合共享。Primary补机械时provider429真实终止，非候选失败；Main完成剩余机械，无测试重跑。Lorentz新R7同字节材料PREP、Schrodinger新R12单bit headless源码软件PREP继续，不放native；R6 Core原cell缺失UNKNOWN不重放。最后公开仍dae0abd1/fresh4blob。Goal active/PROGRESS、completed_groups=[]，273/60/427/平台/restore/heldouts/fresh最终Reviewer统一验收未通过。
+
+以下r242及更早为历史，以本段、CURRENT_HANDOFF与RESUME r243为准。
+
+当前续跑 r242（2026-10-25）：上一turn已完成R6 source85/强0/冷bind0/实际metadata原SDKexit0与R11 source385/实际StageA验收并落盘r241，属于PROGRESS。随后Core原functions cell1480只交running后主provider429；本turn同cellwait明确missing、原PTY/exit/执行记录未交，core证据快照为空不作没运行证明，不重放/查询/接管/清理R6原命名空间。独立全新R7仅同字节材料PREP交同Lorentz。R11唯一GO和一次12原快照已冻结：42行journal，postResume复合Refusal处理中的X/A/seq0写前原HANDLE820查询BOOL1/DWORD0xC0000142，保存error122不作API失败；DLL_INIT_FAILED映射不识别具体DLL。原owner保留，未ABA/退休/清理，Main报告交独立Ohm复核。新R12仅headless单bit CREATE_NO_WINDOW源码软件PREP交同Schrodinger，无native放行。通用完整C冻结已到齐：16prod20tests/246inputs、444uniquePASS0FES，178实际source/loader/frame绑定，原指定Darwin native1未跑；Kuhn强独立source审查，Primary补只读mechanical，尚未Main整体源码接受/共享整合。最后公开仍dae0abd1/fresh4blob；本r242本地续跑。Goal active/PROGRESS、completed_groups=[]，原273/60/427/矩阵/restore/heldouts/fresh最终Reviewer统一验收未通过。
+
+以下r241及更早为历史，以本段、CURRENT_HANDOFF与RESUME r242为准。
+
+当前续跑 r241：Mac R6窄await完成修补已Main接受85唯一软件PASS（旧70各一次+15）、独立源码0P1P2；真实cold SDK bind-only通过201pins/9正常导入。全新Root d059ea3d1607的metadata Setup正常返回21describe/项目与权限和runtime元数据/两份Java文本，同一原SDK Popen及AnyIO两次wait均0，原前台91297已exit0。仅接受本次metadata与已知SDK退出，Core尚未放行；旧35784 HOLD/4246 Root不查不关闭。Windows R11源码385PASS已Main接受，实际StageA13材料159229B、compiler0、8origins及独立AMD64 PE11776B核验通过，原READY SHA64cd2127…；Main放行同Schrodinger唯一closed-file GO及一次原始快照，执行中未作StageB结果认证。Primary通用完整C已到组合回归冻结准备checkpoint，待最终DELIVERY与Main/独立源码验收。持续同机同scope诊断及阶段普通同步授权沿用，不重复询问、不扩大范围。公开仍dae0abd1/fresh4blob626211B；本r241本地续跑。Goal active/PROGRESS、completed_groups=[]，273/60/427、平台矩阵、restore、未预设任务和最终fresh Reviewer统一验收未通过。
+
+以下r240及更早为历史，以本段、CURRENT_HANDOFF与RESUME r241为准。
+
+当前续跑 r240：R10报告P2/F1整改闭合后的纠正compact+Main3精确4file/626211B已普通nonforce发布dae0abd161ceea46a38e9eb5aec629bc1aa93467（parent4e686），fresh fetch逐4blob/HEAD/parent/worktree与冻结相符，回执1785B/SHAf826af18…；仅读回时点CLEAN，本地继续不追逐重发回执。reporting通过不改变真实O/X/清理入口或成功/活性退出/ABA/退休未证。持续同机同scope授权已落盘不重复询问，原R9/R10及所有旧UNKNOWN不查不重放不接管不补清理。Mac R5元数据已返回但原SDKexit HOLD35784/Root424659fd65a3保留，Core未放，不查询重连close/unpark。同Primary通用完整C组合回归、同LorentzR6真实await传递窄guard、同SchrodingerR11原O/X写前状态/即时写返回诊断继续源码软件闭环，尚无新DELIVERY，不把checkpoint当整体验收。Kuhn有限复核完成关闭保上下文，未启动最终fresh Reviewer/heldouts。Goal active/PROGRESS、completed_groups=[]，原273/60/427及平台矩阵/restore/未预设任务统一验收未通过。
+
+以下r239及更早为历史，以本段、CURRENT_HANDOFF和RESUME r240为准。
 
 当前续跑 r239：R10报告P2/F1已完成独立整改复核：R2保留O/X、firstwrite、清理进入/成功未证，独立newP1/newP2/F1remaining均0，Main再接受。仅报告范围闭合，IPC原因/退出/ABA/退休未认证，旧owner与证据保留、没有新增现场查询或实测。R5 bind-only独立0P1P2及Main23pins接受；其后新metadata原35784 SDKexit HOLD仍未关闭/Core未放。原Primary通用完整C、同LorentzR6实际await传递guard、同SchrodingerR11带O/X/原handle写前状态的源码软件继续；Kuhn此slice已关闭保上下文，不是最终Reviewer。当前公开4e686/fresh5blob605025B，纠正compact+Main3精确4file准备普通同步。Goal active/PROGRESS、completed_groups=[]，原427/平台矩阵/restore/heldouts/fresh最终Reviewer未过。
 
