@@ -29,6 +29,7 @@ def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False,profile_override
             yield 99,acl_descriptor,digest  # Explicit software SDK bytes; production DACL gate remains real.
         acl_api.descriptor=descriptor
     events=[];state={'alive':True,'cleanup_fail':cleanup_fail,'acl':None,'assigned':False}
+    state['_software_acl_api']=acl_api  # Explicit original SDK fixture export table, no production authority.
     job_data={'bytes':bytes(EXTENDED_LIMIT())}
     from comsol_mcp import _windows_t037_child_evidence as evidence
     import struct

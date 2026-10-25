@@ -1,18 +1,24 @@
-# 当前交接 — 2026-10-25（r246）
+# 当前交接 — 2026-10-25（r251）
 
 MASTER_GOAL 继续执行，Goal active / IN_PROGRESS，completed_groups=[]。冻结273动作/60测试/427子断言（414核心、13案例）保持；Windows x64 6.3/6.4、适用Mac ARM6.4、restore、两个未预设任务族与最终fresh强Reviewer统一验收均未通过。案例不作主线。Main负责设计、验收、Main3与Git，原Luna连续实现/修复；SDK/fixture/metadata/失败证据/发表各自限定，不作整体完成。
 
-## 当前主线：完整C实质P1修复
+## 当前主线：完整C R2源码及37文件整合已接受，准备同步
 
-旧冻结 `_state/universal-controller-c-source-20261024/delivery-coherent-c2-r1/HANDOFF.json` 4943B/SHA0737f397980d450abb4962fe06f5e6093f9d23e8968235042ff6ee7bd2d158b1，attempt51/source，16prod20tests/36copy，246冻结输入，444unique pytestPASS0FES。178原source/loader/moduleframe绑定；只有原指定Darwin native ACL节点NOT_RUN。真实原Controller/APPLY/协调/issuer/完整B生产函数在inert SDK/FS/transport叶上执行。它是私有未接受候选，未整合共享源码；绿色软件结果不消除源码缺陷。
+当前候选 `_state/universal-controller-c-live-revalidation-20261025-r2/delivery-live-revalidation-r2/HANDOFF.json`6612B/cc6db1514aaf63aadf421038b9a1029c16274bc4cf02bcdc700379ea34d2c681，source attempt-05/source；16prod21tests/37copy，247输入，446uniquePASS0FES=原444eachonce+新2。仅原Darwin native ACL节点NOT_RUN，179实际origin/returnedsource/moduleframe绑定，135SourceFileLoader+44pytestrewriter；CodeTypes未捕获，0禁止effects。真实原Controller/APPLY/协调/issuer/完整B/原reader在inertSDK/FS/transport叶上执行，非native资格。shared精确37复制已完成并经Main实际接受；Kuhn影响复审及Main集中源码接受完成，只接受source/software/integration、native未资格。
 
-Kuhn强源码报告 `_state/universal-main-review/20261025-controller-c/INDEPENDENT_SOURCE_REVIEW.json` 56880B/ea70ec14ac0c35b58a1ccc68b04ccc8accc374640d538bab7c044e8e3ba4bc73，1P1/F1：OriginalLiveC.check 的source/provider重验 e.check(live=True) 在sticky锁存之外；原trustedloader CloseHandle UNKNOWN保留API/entries，但liveC.validation_error仍None，下次正常PROJECT可重新进入SDK。Main实读callchain确认。
+旧51候选 HANDOFF4943B/0737f397…/444PASS 因Kuhn原报告56880B/ea70ec14…的1P1/F1未接受，原件不改：liveC source/provider重验在sticky错误锁存之外，原trustedloader closer UNKNOWN保留API/entries，C未锁存导致下正常PROJECT可新SDK。Main确认并以3635B/26730035…决定交同Primary修复。当前相对旧51仅OriginalLiveC.check变化+新增tests/test_windows_t037_live_c_revalidation.py；其余旧输入及测试字节保持。pure scope/copy/wrongruntime先拒绝不毒化正常原C；原C自己的重验首错锁存，后pure/live/normalPROJECT在SDK前抛同原错误。不重试closer/清理、不remint/重置epoch，不改过去APPLY SUCCEEDED。
 
-同Primary Halley（01a1632c-2788-73b2-a3d5-5023b2335cb6，Luna max）按 MAIN_P1_LIVE_C_REVALIDATION_REPAIR_DECISION.json 3635B/267300359b8310f0deb9e8b0f101c76c95125fb726a4ee3fcbd7205695527143 连续修复：真实完整APPLY之后、captured原CloseHandle叶故障的旧体同oracle assertion FAIL→新体通过；原C首错/原API/未决entries保持，后续pure/live/publicPROJECT均在新SDK前拒绝；纯wrongruntime/copy拒绝不毒化正常C。不重试旧closer、不重置epoch/remintC、不改过去APPLY SUCCEEDED。须旧444eachonce+新控冻结，再同Kuhn影响复审与Main集中验收才复制白名单。provider429与Main辅助schema误判不计产品失败。当前Primary运行中，Kuhn已关闭保上下文；非最终Reviewer。
+Main机械 `_state/universal-main-review/20261025-controller-c-r2/MAIN_PIN_SOFTWARE_PROJECTION_VERIFICATION.json`1962B/503a482735f084af5eab2fbe557138e9055ec59a057fda0993c87fa3d1573244：64嵌套声明pins、247before/after/current、446节点及XML/旧444subset、37copy/210noncopy投影、当前shared base叶、C2 delta/Java同bytes核验。新test在旧counter与修复byteequal，counter其余246inputs精确旧51。Main一次readschema helper ce7f43把list当dict的setup错误由e18d8c纠正，未动产品/重跑测试。
+
+Main另直接核原XML `_state/universal-main-review/20261025-controller-c-r2/MAIN_RAW_COUNTER_VERIFICATION.json`5071B/1821194066488052172ea734970154ee2aaf2cfce62b8392c2484d46f6b769c4：false及lost-return两旧体真实call assertionFAIL，原APPLY SUCCEEDED/首CloseHandleUNKNOWN后各27835extra SDK exports、1newPROJECTfactory及success；修复两case均0extraSDK/0新factory/同原firsterror/cause/UNKNOWNentries保留。原attempt01/02fixture失败、attempt03真实2FAIL、attempt04窄2PASS、attempt05联合446PASS各留原件，不累计。
+
+同Kuhn强影响复审已交 `_state/universal-main-review/20261025-controller-c-r2/INDEPENDENT_SOURCE_REREVIEW.json`29022B/9a37675f0c5cfff777dd43a68496b343d2a0fa3a796f0d7825c44e4a5bcc24a2：原F1闭合、newP1/P2均0；Main47review实际inputs/source pins核验及changedcheck/原始oracle集中审查后，接受 MAIN_C_R2_SOURCE_SOFTWARE_ACCEPTANCE.json。Provider/admission分支仅静态commontry覆盖，不称额外两类实测；旧51报告仍历史未接受。同Primary Halley（01a1632c-2788-73b2-a3d5-5023b2335cb6，Luna max）已完成exact37files16prod21test，DELIVERY3828B/ea7874a76f91686f87a4790cd429b391e867120dfe8b0e57cb2da0cad66bc73b。Main独立核当前247等于tested/37source-targetequal/非copy210不变/17原文件备份sha与20absentmarker/Main3r250原sha/HEAD-index不变/Git仅37+原Main3，接受 `_state/universal-main-review/20261025-controller-c-r2/MAIN_C_R2_INTEGRATION_ACCEPTANCE.json`1740B/44f0d5ab57449c9666eaf2ac8d244d20814834b56cfc3c53528519d87ac1d10e。整合只有字节精确copy，未重跑绿测试/compile/import/package/native。producer原receipt字段误命名已保留原件并只纠正指针，无source/copy/Git/Main3影响。下一普通同步37源测+compact/Main3精确41file；不认证nativeC/B/Resume/Windows或Goal。Kuhn不是最终fresh Reviewer、不选heldout。
 
 完整Java168013B/fce172630e5ef108e06f2c5411d162eb6837cf98581a872f667859a631fb7d0c 已一次既有Corretto11 javac原wait0，官方COMSOL64完整apiplugins25JAR、-proc:none/-J-Xmx512m，22class hash/header major55核验。Main_COMPILE_ACCEPTANCE.json 1931B/fc3718149b85504c10d5fc87aa15f3790598cb9532964f231b274a3a4e4e1f14，只编译scope；未运行JavaMain/Probe/Worker/Server/模型，不认证C/Windows版本，不采纳为Windows prepared class manifest。Lovelace关闭。
 
 ## Mac：R7元数据接受，Core ACK HOLD；R8传输待验收
+
+当前R9 ACK-stop修复已冻结 `_state/universal-mac-m3-math633-prep-20261025-r9-ack-stop-repair/DELIVERY.json`12045B/dd39376c320697fac3b7b512b147e1f8597c2f57cc10db2cae3144025b0d7e0d：原四counter真正assertFAIL保留未重跑，commonvalidator最小2行后43软件PASS、wholegeneratednullentry独立PASS0tools；helper14同bytes继承不累计，21materials/45sreader/PLAN/policy不改。provider429是真实turnterminal环境失败，同owner从原counterexit1处恢复，非产品/有效无进展尝试。Locke影响强复审在跑，原R8仍历史未接受，当前R9未Main接受/未实际TTY/SDK/Core。
 
 R6源码85uniquePASS=原70eachonce+15，强源码0P1/P2/Main接受。R7的21份材料逐字节同R6；真实coldbind201pins/9正常冷导入/44code45watch exit0。全新R7 Root `/private/tmp/comsol-m3-math633-1090e17b14c6`，binding cad0836c3550eab51662b0ba85bff05e233267e379c52dbfd2d69b108bfbc971。
 
@@ -22,11 +28,13 @@ R7 metadata原前台c3e05e/session82519→f95f1e exit0，同原SDK Popen0/AnyIOw
 
 Lorentz（01a1644c-17c5-7af0-a0e9-29e64bf8f45a，Luna max）R8 SOURCE/PREP已冻结后关闭待Main：`_state/universal-mac-m3-math633-prep-20261025-r8-ack-transport/DELIVERY.json`11477B/f61b1649def2503aa1b56f4aa2fc5f5f69f49c8a26f522e082a40d4f60158d71。21同bytes、原45s逐byte reader/PLAN/security/budgets均不改；新透明functions编排在同一程序按Main固定经验资源policy立即处理实际原PTY输出，每Server/Worker各ACKonce，首次结果立即保存，HOLD/unknown/malformed/重复即停、无重放。JS32/helper14/entry1分别synthetic绿，不相加认证native。真实TTY rehearsal、bind、metadata、Core全部NOT_RUN/未放行；新业务Root/nonce/project未分配。
 
-Locke（01a171d9-68de-7541-9bb7-fcabccb425fd）当前独立强源码审查仅此新传输，不是最终fresh Reviewer。Main顺序：集中源码验收→真实无SDK45sTTY rehearsal→新coldbind/metadata接受→另立有限Core lease。经验floor total16GiB/Serverfree2GiB/Workerfree1GiB/三盘各8GiB仅本有限任务准入选择，不是reserve/hardcap/capacity theorem；inactive/swap不求和。
+Locke（01a171d9-68de-7541-9bb7-fcabccb425fd）独立强源码审查已交0P1/1P2，仅此新传输、不是最终Reviewer。报告50322B/7b2fa9bef4639ebed6dc67637331825825522226e8d342b60e7b26c571ccb532，Main88pins核验及实际源码确认P2：后续工具回复两字段session_id/exit_code都缺失时通用validator放过，可能继续ACK/poll；现有UNKNOWN停止规则未闭合。没有实际native事件，R8不接受。Main3359B/6cf75a1c4e9b3d93b5163f47c1f52225b447b71a4143a7fd6c45d6131991a5c7决定 `_state/universal-main-review/20261025-math633-r9-ack-stop-repair/MAIN_R9_ACK_STOP_REPAIR_DECISION.json` 交同Lorentz新R9 ACK-stop SOURCE/PREP（dispatch01a171e5-b2b8-7930-aa09-f755fbbc9188）；只修通用envelope guard及必要tests/新packet literal，旧R8/21同byte/45sreader/经验policy/helper/PLAN不改。真旧R8body同oraclecall断言失败→新体无任何后续ACK/poll，原32各一次+新控；helper14同byte继承不重跑/相加，generatednullentry受影响一次。Locke关闭保上下文待新冻结影响复审；Main集中接受后才真实无SDK45sTTY rehearsal→新coldbind/metadata接受→另立有限Core lease。当前无TTY/SDK/native释放。经验floor total16GiB/Serverfree2GiB/Workerfree1GiB/三盘各8GiB仅本有限任务准入选择，不是reserve/hardcap/capacity theorem；inactive/swap不求和。
 
 R5原HOLD35784/Root424659fd65a3与149对象；R6 lostCore cell1480/Rootd059ea3d1607（未得到原PTY/exit）；R4 Rootd4fde9f3f472已创建失败；均保持原owner，不查询/重放/接管/清理。R6本地core*空不证明未运行。新结果不改变旧UNKNOWN。
 
 ## Windows：R12仍失败，R13只读自己环境PREP
+
+R13 SOURCE/SOFTWARE现已冻结 `_state/universal-windows-session-context-prep-20261025-r13/DELIVERY.json`6942B/a28988f3fa913b397384e0e6178962b5b3e97a1fdc97892d2aca354a4268df50，77uniquePASS0FES，源码17130B/e1cfc648…；3plainmaterials17841B。Main完整读source/关键inertSDK测试/guard及官方UOI/SD文档、核84声明pins/81inventory/4before-after-current/2returnedsource+origins、原76subseteachonce/新77/原call-OSError反例后已接受SOURCE/PREP2656B/1af843db8a4fb74f92cae395665c242feb13d4c4952a6af5d8d4bddb085994a9。真实远端/WinDLL/owncontext仍NOT_RUN/未释放。新 Main_R13_OPERATOR_PREP_DECISION.json3983B/b104731cb8ae2c36667fc8005d9812ec2ea5938d8c574065dae59b7022b952aa 交同Schrodinger仅冻结小operators：未来一次SFTPexclusive新root+3材料17841B，后一次只读material/runtimehash preflight；Main实核后才另立一次固定Python-I-B读取自身上下文lease，无GO框架、无新增权限/对象/设置变更。当前operatorPREP不SSH/远端mkdir。只新普通Python自己Session/currentstation/desktop，0ownednative acquisition/0AppC/helper/Job/ACL/registry变更；不据未来新进程数据反推旧parent/child上下文或DLL根因。
 
 直接human“持续覆盖本次及同范围后续诊断”持续有效，原授权与问题在R9 HUMAN_EFFECT_AUTHORIZATION.json，统一指针 `_state/universal-main-review/SCOPED_PERSISTENT_WINDOWS_DIAGNOSTIC_AUTHORIZATION.json`1517B/06faee26ac46a5d4f8e85c69edd4599031fd03f5d1dd4cb1058a4912fdf06b0f。仅同目标/everwalker@192.168.100.2/同有限effects/全新独占命名空间、每次Main验收后继续，不再问已批范围；JSON/PID/hash不是原owner或runtimeissuer。
 
@@ -42,10 +50,10 @@ R12只create_child加CREATE_NO_WINDOW：0x80404→0x08080404；402uniquePASS0FES
 
 ## 同步与其余未完成项
 
-最新已独立核验公开commit f02e7c22649af37fabc2719e0cb045956fb8fc8e，parentdae0abd161ceea46a38e9eb5aec629bc1aa93467；Mainstate243、两compact+Main3精确5file643419B。REMOTE_READBACK2211B/1d74556add1c748f792a405aeb67f0f16cd86b226798af5065f7e37e4e1878ab，freshfetch逐blob相符，CLEAN仅该时点。
+最新已独立核验公开commit d4529b197dcd998f2535d7a3f6ed1f61a8036cea，parentf02e7c22649af37fabc2719e0cb045956fb8fc8e；Mainstate246、三compact+Main3精确6file658345B。原普通push830733/session84303→8d044c exit0，freshfetch c288c8 exit0，HEAD/origin/main/FETCH_HEAD一致，逐6blob/parent/worktree与冻结相同。REMOTE_READBACK2423B/6e3ffb3addcb3e38888fa49b2100f66195b53e918ef1e05a00ae9141295ba6a2，位置 `_state/universal-main-review/20261025-c-negative-r7-r12-scoped-publication/REMOTE_READBACK.json`。CLEAN仅该readback时点，本r251为local continuation，不重复发布回执。
 
-本r246准备普通nonforce发布精确6files：Main3加 COHERENT_C_SOURCE_P1_AND_JAVA_COMPILE_SCOPE.json、MAC_R7_METADATA_ACK_INPUT_HOLD_SCOPE.json、WINDOWS_SELECTOR_R12_HEADLESS_FAILED_SCOPE.json。仅已验限定结果/负面证据与进度，不包含未接受C源码、原始材料、SDK源码副本、class/JAR商业二进制或凭据。冻结白名单→核index/parent/blob→普通push→freshfetch逐blob/ref验证。仅receipt/dirty续跑不触发重复发表。
+此阶段仅 COHERENT_C_SOURCE_P1_AND_JAVA_COMPILE_SCOPE.json、MAC_R7_METADATA_ACK_INPUT_HOLD_SCOPE.json、WINDOWS_SELECTOR_R12_HEADLESS_FAILED_SCOPE.json 和Main3；不含未接受C源码、原始材料、SDK源码副本、商业class/JAR或凭据。发表不消除P1/UNKNOWN或通过Goal。今后新验收实质阶段仍按持续授权普通nonforce同步并独立freshreadback。
 
 固定633软件package、原T014六断言/五complex模式/default preserve/raw units/1e-8、有限19eval/2Java/1study/1save/5exports预算保持。U06仅诊断，None单位不改写1。Parfit reopen633 R2静态PREP的真实MPH/五raw/五exports/已知先前关闭/新owner绑定仍缺；M4最终候选、restore、Windows两版本与适用Mac矩阵未过。
 
-最终候选未冻结，最终fresh强Reviewer未启动、未选heldouts。最终须独立选择两类未预设小任务（新物理/PDE及陌生现有模型），经正常安装MCP+公开文档+项目代码在原平台合同统一验收；核心更改后重测受影响任务，实质整改复审，不由fixture/包/metadata/诊断替代。当前有实际并行进展，不报完成/暂停/整体blocked。完整r245交接在 `_state/universal-main-review/20261025-checkpoint-r246/BEFORE_CURRENT_HANDOFF.md`，RESUME保留历史。
+最终候选未冻结，最终fresh强Reviewer未启动、未选heldouts。最终须独立选择两类未预设小任务（新物理/PDE及陌生现有模型），经正常安装MCP+公开文档+项目代码在原平台合同统一验收；核心更改后重测受影响任务，实质整改复审，不由fixture/包/metadata/诊断替代。当前有实际并行进展，不报完成/暂停/整体blocked。完整r250交接在 `_state/universal-main-review/20261025-checkpoint-r251/BEFORE_CURRENT_HANDOFF.md`，RESUME保留历史。

@@ -741,7 +741,9 @@ class ControlDaemon:
             executor = record["executor"]
             from ._windows_owned_resources import registry_for
             from ._windows_service_sid import original_preflights_terminal
-            if executor is not None and not registry_for(executor.api).unresolved() and original_preflights_terminal(executor.api):
+            from ._windows_t037_qualification import retirement_known
+            if (executor is not None and not registry_for(executor.api).unresolved()
+                    and original_preflights_terminal(executor.api) and retirement_known(record)):
                 self._retained_host_control_executors.pop(record["key"], None)
             return result
 
@@ -770,6 +772,8 @@ class ControlDaemon:
             self._retained_host_control_executors[actual_key] = record
             self._retained_host_control_executors.pop(record["key"], None)
             record["key"] = actual_key
+            from ._windows_t037_qualification import bind_admission as bind_qualification
+            bind_qualification(executor, admission)
         executor._on_original_host_admission = bind_admission
 
         def retain_appcontainer_effect(actual_executor, admission, action, subject):
@@ -807,6 +811,8 @@ class ControlDaemon:
             raise ExecutionContractError("HOST_CONTROL_EXECUTOR_BINDING_MISMATCH",
                                          "native executor did not retain the exact daemon/profile/provider binding")
         if request.phase == "APPLY":
+            from ._windows_t037_qualification import enroll_executor
+            enroll_executor(self, request, record, executor)
             return executor.apply(request.plan, approval=request.approval)
         if request.phase == "RESTORE":
             return executor.restore(request.plan, request.receipt,
@@ -5690,13 +5696,15 @@ class ControlDaemon:
             # refuse before the durable job and before the launcher creates
             # private directories or calls a process API when its policy is
             # not natively verified.
-            self._require_t037_policy("session.start")
+            self._require_t037_policy("session.start", runtime_id=runtime_id)
             t037_factory = self._new_t037_session_factory(project_id, session_id)
-            try:
-                t037_factory.preflight()
-            except BaseException:
-                self._discard_empty_t037_session_factory((project_id, session_id))
-                raise
+            from ._windows_t037 import PROFILE_SCHEMA_V4
+            if self._windows_t037_profile.wrapper_schema != PROFILE_SCHEMA_V4:
+                try:
+                    t037_factory.preflight()
+                except BaseException:
+                    self._discard_empty_t037_session_factory((project_id, session_id))
+                    raise
         from ._execution_contract import canonical_request_hash
         semantic_arguments = {"runtime_id": runtime_id, "options": {}, "resources": {}}
         request_hash = canonical_request_hash(
@@ -5765,6 +5773,22 @@ class ControlDaemon:
                 startup_observation_persist_error_type = type(exc).__name__
                 raise
 
+        if t037_factory is not None and self._windows_t037_profile.wrapper_schema == PROFILE_SCHEMA_V4:
+            try:
+                project = self.project_authority.get_project(project_id)
+                project_root = Path(project["workspace"]).resolve(strict=True)
+                runtime = self._resolve_session_runtime(runtime_id, project_id, session_id, project_root)
+                self._session_runtime_configs[key] = runtime
+                from ._windows_t037_qualification import bind_project_factory
+                bind_project_factory(self, t037_factory, record, runtime)
+                t037_factory.preflight()
+            except ExecutionContractError as exc:
+                return self._finish_session_start(record, self._exception(exc), "FAILED")
+            except Exception as exc:
+                return self._finish_session_start(record, self._error(
+                    "T037_POLICY_UNVERIFIED", "original PROJECT preflight did not complete",
+                    cause_type=type(exc).__name__, safe_retry=False), "FAILED")
+
         with self._session_connect_lock:
             if self._closing:
                 return self._finish_session_start(record, self._error(
@@ -5785,8 +5809,10 @@ class ControlDaemon:
                     ), "FAILED")
                 project = self.project_authority.get_project(project_id)
                 project_root = Path(project["workspace"]).resolve(strict=True)
-                runtime = self._resolve_session_runtime(runtime_id, project_id, session_id, project_root)
-                self._session_runtime_configs[key] = runtime
+                runtime = self._session_runtime_configs.get(key)
+                if runtime is None:
+                    runtime = self._resolve_session_runtime(runtime_id, project_id, session_id, project_root)
+                    self._session_runtime_configs[key] = runtime
                 lifecycle = self.session_lifecycle.save(new_lifecycle_record(
                     project_id=project_id, session_id=session_id, state="STARTING",
                     runtime_id=runtime.runtime_id, endpoint=None,
@@ -12051,12 +12077,16 @@ class ControlDaemon:
             "TRUSTED_CODE": "trusted_code", "HOST_CONTROL": "host_control",
         }.get(str(effect).upper())
 
-    def _require_t037_policy(self, operation: str) -> None:
+    def _require_t037_policy(self, operation: str, *, runtime_id: str | None = None) -> None:
         """Reject T037-bound work unless fresh native policy is fully verified."""
         profile = self._windows_t037_profile
         if profile is None:
             return
-        from ._windows_t037 import ERROR_POLICY_UNVERIFIED, WindowsT037Observer
+        from ._windows_t037 import ERROR_POLICY_UNVERIFIED, WindowsT037Observer, PROFILE_SCHEMA_V4
+        if profile.wrapper_schema == PROFILE_SCHEMA_V4:
+            from ._windows_t037_qualification_run import require_live_c
+            require_live_c(self, runtime_id=runtime_id, live=True)
+            return
         from ._windows_policy_owner import new_policy_owner
         # One independent policy owner, never rebound to a launch/session.
         with self._session_connect_lock:

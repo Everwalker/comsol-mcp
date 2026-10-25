@@ -197,7 +197,7 @@ def apply(executor,plan,approval):
                 'profile_sha256':executor.profile.sha256,'applied_receipt':{**body,'receipt_sha256':receipt_sha},
                 'receipt_sha256':receipt_sha,'effective_policy_state':'UNVERIFIED','t037_state':'NOT_VERIFIED','safe_retry':False,
                 'evidence_classification':'SOFTWARE_ONLY' if executor.software_only else 'WINDOWS_NATIVE_READBACK_ONLY'}
-        accepted,state=executor.store.finish(admission.operation_id,status='SUCCEEDED',result=result)
+        accepted,state=executor._finish_apply(admission,result)
         if not accepted or state!='SUCCEEDED':fail('HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN','service config readback terminal receipt not durable')
         return receipt
     except BaseException as error:

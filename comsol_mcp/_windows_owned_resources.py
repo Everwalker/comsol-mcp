@@ -25,6 +25,7 @@ class _OwnedResource:
         self._seal=seal;self.registry=registry;self.adapter=adapter;self.handle=handle
         self.value=None if capture_raw else _value(handle);self.closer=closer;self.mode=mode;self.label=label;self.seq=seq
         self.domain=domain;self.keepalive=keepalive;self.state='ACQUIRED';self.error=None;self.thread_id=threading.get_ident()
+        self._resume_dispatch_reservation=None
     def release_owned(self,owner,*,retry=False):
         r=self.registry
         with r._lock:
@@ -32,6 +33,30 @@ class _OwnedResource:
                 _fail('resource release requires the original registry owner')
             if self.state=='RELEASED':return
             if r._entries.get(self.seq) is not self:_fail('resource is not held by its original registry')
+            reservation=getattr(r,'_resume_dispatch_reservation',None)
+            entry_reservation=self._resume_dispatch_reservation
+            if reservation is not None or entry_reservation is not None:
+                from ._windows_t037_resume import _OriginalResumeAttempt
+                if (reservation is not None and type(reservation) is not _OriginalResumeAttempt
+                        or entry_reservation is not None and type(entry_reservation) is not _OriginalResumeAttempt):
+                    _fail('original resource has an unclassified Resume dispatch reservation')
+                if (reservation is not None and entry_reservation is not None
+                        and reservation is not entry_reservation):
+                    _fail('original resource Resume dispatch reservations disagree')
+                active=entry_reservation if entry_reservation is not None else reservation
+                if (active.registry is not r or active.api is not r.owner
+                        or getattr(r,'_resume_dispatch_reservation',None) is not active):
+                    _fail('original resource Resume dispatch reservation binding changed')
+                is_reserved=any(self is item for item in active.reserved_entries)
+                if entry_reservation is active and not is_reserved:
+                    _fail('original resource entry has an unexpected Resume dispatch reservation')
+                if is_reserved and entry_reservation is not active:
+                    _fail('original reserved resource entry lost its Resume dispatch reservation')
+                if is_reserved:
+                    if active.blocks_registry_release(self):
+                        raise active.defer_registry_release(self)
+                elif not active.authorize_factory_finalizer_release(self):
+                    raise active.defer_registry_release(self)
             if self.state=='UNKNOWN' and not retry:
                 raise self.error
             try:
@@ -53,12 +78,17 @@ class NativeOwnedRegistry:
     def __init__(self,owner,*,seal):
         if seal is not _SEAL:_fail('registry requires its original native API owner')
         self.owner=owner;self._seal=seal;self._entries={};self._seq=0;self._lock=threading.RLock()
+        self._resume_dispatch_reservation=None;self._resume_finalizer_reservation=None
     def scope(self):
         with self._lock:return _ResourceScope(self,self._seq,seal=_SEAL)
     def acquire(self,adapter,handle,closer,*,mode='CHECKED',label='native_resource',keepalive=(),domain='native',value_reader=None):
         if mode not in {'BOOL','LOCALFREE','VOID','CHECKED','DWORD0'} or not callable(closer):_fail('unsupported native release binding')
         value=_value(handle) if value_reader is None else None
         with self._lock:
+            if self._resume_dispatch_reservation is not None:
+                raise ExecutionContractError('NATIVE_CHILD_DISPATCH_RESERVED',
+                    'native acquisition registry is reserved by an original child Resume attempt',
+                    safe_retry=False,stage='pre_dispatch')
             for entry in self._entries.values():
                 if value is not None and entry.adapter is adapter and entry.value==value and entry.domain==domain:
                     return entry

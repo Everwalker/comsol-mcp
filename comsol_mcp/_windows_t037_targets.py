@@ -266,6 +266,35 @@ def _once_close(function):
 from ._windows_parameter_publish import _API as _PathApi
 
 
+_RELATIVE_CALL_SEAL=object()
+_RELATIVE_CALLS=weakref.WeakValueDictionary()
+
+
+class _OriginalRelativeOpen:
+    """Actual original noncreating NT call/storage, not an absence DTO."""
+    def __init__(self,api,function,kept,leaf,*,seal):
+        if seal is not _RELATIVE_CALL_SEAL:
+            _fail('FINITE_PATH_OPEN_INVALID','original noncreating call producer required')
+        self.api,self.function,self.kept,self.leaf=api,function,kept,leaf
+        self.output,self.io,self.attributes=kept[:3]
+        self.entered=False;self.returned=False;self.raw_status=None;self.error=None;self._seal=seal
+        _RELATIVE_CALLS[id(self)]=self
+
+    def known_absent(self,api,leaf):
+        parent=self.kept[-1]
+        from ._windows_owned_resources import registry_for
+        registry=registry_for(api)
+        pin=registry.find(api,parent)
+        return (self._seal is _RELATIVE_CALL_SEAL and _RELATIVE_CALLS.get(id(self)) is self
+            and getattr(api,'_last_relative_open',None) is self and self.api is api and self.leaf==leaf
+            and self.function is api.nt.NtCreateFile and self.entered and self.returned
+            and type(self.raw_status) is int and self.raw_status==-1073741772  # STATUS_OBJECT_NAME_NOT_FOUND
+            and not self.output.value and self.attributes.RootDirectory==getattr(parent, 'value', parent)
+            and pin is not None and pin.registry is registry and pin.state=='ACQUIRED'
+            and not any(e.state=='UNKNOWN' for e in registry.unresolved())
+            and getattr(api,'pending_relative',None) is None)
+
+
 class _TargetPathApi(_PathApi):
     """Existing relative path pinning, with fixed single-effect root closers."""
     def _resource_closer(self):
@@ -321,11 +350,15 @@ class _TargetPathApi(_PathApi):
         function = self.nt.NtCreateFile; closer = self._resource_closer(); registry = registry_for(self)
         kept = (output, io, attributes, name, buffer, function, closer, parent_handle)
         self.pending_relative = kept
+        call=_OriginalRelativeOpen(self,function,kept,leaf,seal=_RELATIVE_CALL_SEAL)
+        self._last_relative_open=call  # Root exact output/call/buffers before SDK entry.
         entry = None
         try:
             try:
+                call.entered=True
                 status = function(C.byref(output), access, C.byref(attributes), C.byref(io), None,
                     0x80, 3 if directory else 1, 1, (1 if directory else 0x40)|0x20|0x200000, None, 0)
+                call.raw_status=status;call.returned=True
             finally:
                 if output.value:
                     entry = registry.acquire(self, output, closer, mode='BOOL', label='finite_relative',
@@ -343,6 +376,7 @@ class _TargetPathApi(_PathApi):
             self.pending_relative = None
             return output
         except BaseException as error:
+            call.error=error
             if entry is not None:
                 entry.state, entry.error = 'UNKNOWN', error
                 self.pending_relative = None  # exact output and fixed SDK are retained by that entry
@@ -747,6 +781,142 @@ class _HeldFiniteA:
         self.reader=reader;self.record=record;self.origin=origin;self.digest=profile.sha256
         self.binding=factory._scm_binding;self.state='ACQUIRED';self.observations=[]
         self.primary_error=None;self.cleanup_error=None
+        self._deferred_binding=None;self._deferred_finish_entered=False
+
+    def _retain_failed_child(self, error):
+        """Retain the actual failed dependency and original pin entries, not a DTO."""
+        from ._windows_t037 import NativeSuspendedChildLaunchError, _RetainedSuspendedChild
+        if type(error) is not NativeSuspendedChildLaunchError:
+            return
+        child=error._process;factory=self.factory;reader=self.reader
+        if (type(child) is not _RetainedSuspendedChild or child._original_factory is not factory
+                or child._api is not factory._api or child._original_profile is not self.profile
+                or child._original_job is not factory._job or factory._job is None):
+            return
+        entries=tuple((e,e.adapter,e.handle,e.value,e.closer,e.mode,e.label,e.seq,e.domain,
+                       e.thread_id,e.keepalive) for e in reader.registry.unresolved())
+        self._deferred_binding=(error,child,factory._api,factory._job,reader,reader.scope,
+            reader.scope.seq,reader.scope.thread_id,reader.api,reader.mic,entries)
+
+    def _finish_after_original_child_exit(self, factory):
+        """First finish only, after this original never-resumed dependency retired.
+
+        All admission below is pure retained-object validation. The only SDK
+        entry is the original reader.finish after every condition passes. An
+        interrupted finish is sticky; it never authorizes a second close.
+        """
+        from ._windows_t037 import (T037SessionProcessFactory, NativeSuspendedChildLaunchError,
+            _RetainedSuspendedChild, _NATIVE_SUSPENDED_CHILD_SEAL)
+        from ._java_worker import PersistentJavaWorker
+        from ._windows_owned_resources import registry_for
+        from ._windows_job_limits import _original_job_close_call
+        from ._windows_t037_primary import require_no_preparation
+        binding=self._deferred_binding;reader=self.reader
+        if self._deferred_finish_entered:
+            if self.cleanup_error is not None:
+                raise self.cleanup_error  # Same first failure, never enter finish or a closer again.
+            _fail('FINITE_A_FINISH_UNKNOWN', 'original deferred finish was already entered')
+        if (type(binding) is not tuple or len(binding)!=11
+                or self._seal is not _HELD_SEAL or type(factory) is not T037SessionProcessFactory
+                or factory is not self.factory or _HELD.get(id(factory)) is not self
+                or getattr(factory,'_held_static_a',None) is not self or self.state!='UNKNOWN'
+                or self._deferred_finish_entered or self.cleanup_error is not None
+                or type(reader) is not NativeTargetReader or reader.retired
+                or _READS.get(id(reader)) is not reader or reader.owner is not factory
+                or reader._held_a_result is not self or getattr(reader,'_finish_error',None) is not None
+                or factory._scm_binding is not self.binding or factory.profile is not self.profile
+                or self.profile.sha256!=self.digest or _ORIGINS.get(id(self.profile)) is not self.origin
+                or self.origin[0]() is not self.profile
+                or self.daemon._windows_t037_profile is not self.profile
+                or _path(self.daemon._windows_t037_profile_path)!=_path(self.origin[1])
+                or self.binding[1] is not self.daemon or self.binding[3] is not factory
+                or self.daemon._session_t037_process_factories.get(self.binding[2]) is not factory):
+            _fail('FINITE_A_DEFERRED_RETIREMENT_UNVERIFIED', 'original failed A/reader/source lifetime is not eligible')
+        error,child,api,job,original_reader,scope,seq,thread,path_api,mic,entries=binding
+        if (self.primary_error is not error or type(error) is not NativeSuspendedChildLaunchError
+                or error._seal is not _NATIVE_SUSPENDED_CHILD_SEAL or error._process is not child
+                or type(child) is not _RetainedSuspendedChild or child._api is not api
+                or api is not factory._api or factory._job is not job or factory._closed
+                or child._original_factory is not factory or child._original_profile is not self.profile
+                or child._original_job is not job or original_reader is not reader
+                or reader.scope is not scope or scope.seq!=seq or scope.thread_id!=thread
+                or thread!=threading.get_ident() or reader.registry is not registry_for(factory)
+                or scope.registry is not reader.registry or reader.api is not path_api or reader.mic is not mic
+                or registry_for(path_api) is not reader.registry or registry_for(mic) is not reader.registry
+                or not child._closed or not child._creation_confirmed or type(child.returncode) is not int
+                or child._resume_attempted or child._resume_confirmed or child._returned
+                or child._retirement_error is not None or child._release_request is not None
+                or child._release_attempts!={'process','thread'}
+                or child._process_entry is None or child._process_entry.state!='RELEASED'
+                or child._thread_entry is None or child._thread_entry.state!='RELEASED'):
+            _fail('FINITE_A_DEPENDENCY_NOT_TERMINAL', 'original never-resumed child/storage/entry retirement is not confirmed')
+        owner=child._owner
+        if (type(owner) is not PersistentJavaWorker or owner._original_process_factory is not factory
+                or owner._process_factory is not factory or owner._process is not None
+                or owner._fixed_process is not None or owner._fixed_launch_owner is not None
+                or owner._startup_unknown is not None or owner._retirement_unknown is not None):
+            _fail('FINITE_A_DEPENDENCY_OWNER_CHANGED', 'original Worker has not completed its own child retirement')
+        attempt=getattr(child,'_resume_attempt',None)
+        if attempt is not None and getattr(attempt,'state',None)!='NO_EFFECT':
+            _fail('FINITE_A_DEPENDENCY_NOT_TERMINAL','active/UNKNOWN Resume cannot retire original reader pins')
+        if attempt is None and child._resume_epoch!=0:
+            _fail('FINITE_A_DEPENDENCY_NOT_TERMINAL','original no-attempt branch requires its unchanged epoch0')
+        child._check_original()  # Storage/closer/entry checks only; never query released HANDLEs.
+        require_no_preparation(factory);require_no_preparation(api)
+        if any(getattr(api,name,None) for name in ('_retained_children','_retained_launch_cleanup',
+                '_unclassified_create_handles','_retained_parent_bindings','_retained_child_tokens',
+                '_birth_preparations')):
+            _fail('FINITE_A_ANCILLARY_UNKNOWN', 'original launch still retains ancillary ownership')
+        for original_api in (path_api,mic,api):
+            if any(getattr(original_api,name,None) is not None for name in
+                    ('pending_root','pending_relative','_finite_pending_sd','pending')):
+                _fail('FINITE_A_ANCILLARY_UNKNOWN', 'original native output storage remains pending')
+        call=_original_job_close_call(api,job,expected=getattr(factory,'_job_close_call',None))
+        if (call.phase!='PRE_SDK' or call.entry.state!='ACQUIRED' or call.entry.error is not None
+                or registry_for(api).unresolved()!=(call.entry,)):
+            _fail('FINITE_A_ANCILLARY_UNKNOWN', 'only the original untouched acquired Job may remain')
+        current=reader.registry.unresolved()
+        if not entries or len(current)!=len(entries) or any(current[i] is not row[0] for i,row in enumerate(entries)):
+            _fail('FINITE_A_PIN_SCOPE_CHANGED', 'original complete pinned resource range changed')
+        for e,adapter,handle,value,closer,mode,label,number,domain,tid,kept in entries:
+            if (e.registry is not reader.registry or e.adapter is not adapter or adapter is not path_api
+                    or e.handle is not handle or e.value!=value or e.closer is not closer
+                    or e.mode!=mode or mode!='BOOL' or e.label!=label
+                    or label not in {'finite_root','finite_relative'} or e.seq!=number or number<=seq
+                    or e.domain!=domain or domain!='native' or e.thread_id!=tid or tid!=thread
+                    or e.keepalive is not kept or not kept or kept[0].value!=value
+                    or e.state!='ACQUIRED' or e.error is not None):
+                _fail('FINITE_A_PIN_SCOPE_CHANGED', 'original pin entry/output/closer binding is not wholly acquired')
+        if attempt is not None:
+            # Only this original known-closed parent/child/context may settle
+            # the not-yet-closed diagnostic. Never clear a B UNKNOWN flag.
+            from ._windows_t037_b_observation import _OriginalBObserver, settle_original_child_b
+            observer=getattr(child,'_connected_b_observer',None)
+            if observer is not None:
+                parent=child._parent_binding
+                if (type(observer) is not _OriginalBObserver or observer is not attempt.connected_b
+                        or observer.process is not child or observer.factory is not factory
+                        or observer.launch_api is not api or observer.profile is not self.profile
+                        or observer.parent is not parent or not parent.closed
+                        or observer.registry is not registry_for(api)
+                        or observer.parent_context!=(parent.launch_api,parent.query,parent.pid,
+                            getattr(parent.handle,'value',parent.handle),parent.birth,
+                            getattr(parent,'_resource_owner',None))):
+                    _fail('FINITE_A_DEPENDENCY_OWNER_CHANGED','original B/parent context changed before known settlement')
+                settle_original_child_b(child,observer.launch_error)
+            from ._windows_t037_resume import original_no_effect_attempt_witness
+            if not original_no_effect_attempt_witness(child,retired_worker=owner):
+                _fail('FINITE_A_DEPENDENCY_NOT_TERMINAL','spent original NO_EFFECT/retiredWorker witness is unavailable')
+        self._deferred_finish_entered=True
+        try:
+            reader.finish()  # Its first invocation; state remains UNKNOWN until confirmed release.
+            if (not reader.retired or _READS.get(id(reader)) is not None
+                    or reader.registry.unresolved() or any(row[0].state!='RELEASED' for row in entries)):
+                _fail('FINITE_A_FINISH_UNKNOWN', 'original reader finish did not confirm every pin retirement')
+        except BaseException as error:
+            self.cleanup_error=error
+            raise
+        self.state='RELEASED';_HELD.pop(id(factory));factory._held_static_a=None
 
     def check_current(self):
         if (self._seal is not _HELD_SEAL or _HELD.get(id(self.factory)) is not self
@@ -816,6 +986,7 @@ def _held_finite_target_scope(profile, factory, daemon):
             _fail('FINITE_PROJECT_BINDING_CHANGED', 'registered project binding changed before completing static A')
     except BaseException as error:
         held.primary_error=error
+        held._retain_failed_child(error)
         # A child/ancillary cleanup UNKNOWN must keep its original A pins too.
         from ._windows_t037 import NativeSuspendedChildLaunchError
         api=factory._api
@@ -842,6 +1013,15 @@ def _held_finite_target_scope(profile, factory, daemon):
                     factory._held_static_a=None
                 else:held.state='UNKNOWN'
         reader._held_a_result=held  # Original observer retains primary and cleanup failures.
+
+
+def _finish_deferred_finite_a(factory):
+    held=_HELD.get(id(factory))
+    if held is None and getattr(factory,'_held_static_a',None) is None:
+        return
+    if type(held) is not _HeldFiniteA:
+        _fail('FINITE_A_ORIGINAL_REQUIRED', 'only the original retained A may retire its pins')
+    _HeldFiniteA._finish_after_original_child_exit(held,factory)
 
 
 @contextmanager

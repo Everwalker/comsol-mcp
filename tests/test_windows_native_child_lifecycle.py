@@ -5,6 +5,7 @@ stop functions execute. Issuer/Resume substitutes are explicit software-only
 branches. No native child, subprocess, RPC, COMSOL or host policy is exercised.
 """
 from pathlib import Path
+from contextlib import ExitStack
 from types import SimpleNamespace
 import ctypes as C
 import gc
@@ -19,7 +20,8 @@ from comsol_mcp import _windows_t037 as win, _windows_t037_resume as resume
 from comsol_mcp import _java_worker as java, _session_server as server
 from comsol_mcp._session_context import CanonicalSocket
 from comsol_mcp._windows_owned_resources import registry_for
-from tests.test_windows_fixed_listeners import worker_start
+from tests._prepared_launch_software_fixture import worker_start, enter_test
+from tests.test_windows_t037_targets import software_only
 from tests.test_session_server import _startup_runtime
 
 REAL_ISSUER = resume.issue_native_resume
@@ -35,6 +37,13 @@ def no_real_native_or_external_effect(monkeypatch):
     monkeypatch.setattr(subprocess, 'Popen', denied)
     monkeypatch.setattr(subprocess, 'run', denied)
     monkeypatch.setattr(socket, 'create_connection', denied)
+
+
+@pytest.fixture(autouse=True)
+def prepared_consumer_scope():
+    with ExitStack() as stack:
+        enter_test(stack)
+        yield
 
 
 def record(tmp_path, child, api, **facts):
@@ -53,8 +62,8 @@ def record(tmp_path, child, api, **facts):
     (tmp_path/'consumer-case.json').write_text(json.dumps(value,indent=2)+'\n')
 
 
-def worker_case(monkeypatch, tmp_path):
-    factory,worker,processes,commands,compiled,health,listeners=worker_start(monkeypatch,tmp_path)
+def worker_case(monkeypatch, tmp_path, *, controller=False):
+    factory,worker,processes,commands,compiled,health,listeners=worker_start(monkeypatch,tmp_path,controller=controller)
     return factory,worker,processes,factory._api._software_child_model
 
 
@@ -222,25 +231,16 @@ def test_full_worker_late_exit_never_retries_possibly_effective_close_or_retirem
            termination_attempts=termination_attempts)
 
 
-def server_case(monkeypatch, tmp_path):
-    factory,_worker,processes,model=worker_case(monkeypatch,tmp_path/'sdk')
+def server_case(monkeypatch, tmp_path, *, controller=False):
+    factory,_worker,processes,model=worker_case(monkeypatch,tmp_path/'sdk',controller=controller)
     api=factory._api;state=api._software_sdk
-    api._hash_image_handle=lambda *a:factory.profile.server_image_sha256
-    def launch(self,command,**options):
-        state['image_path']=command[0]
-        child=api.create_suspended_appcontainer_child(command,options,profile=self.profile,
-            job=self._job,role='server',session_factory=self)
-        state['producer_finished']=True;processes.append(child)
-        Path(command[command.index('-portfile')+1]).write_text(str(factory.network_intent.server_listen_port))
-        return child
-    monkeypatch.setattr(win.T037SessionProcessFactory,'__call__',launch)
-    control=dict(listener_remains=False,wrong_start_birth=False)
+    observations=dict(listener_remains=False,wrong_start_birth=False)
     def listeners(port):
-        return [(456,CanonicalSocket('127.0.0.1',port))] if model['alive'] or control['listener_remains'] else []
-    launcher=server.OwnedServerLauncher(process_factory=factory,platform_name='darwin',
-        process_identity_reader=lambda pid:dict(alive=model['alive'],start_epoch_ms=123457 if control['wrong_start_birth'] else 123456),
+        return [(456,CanonicalSocket('127.0.0.1',port))] if model['alive'] or observations['listener_remains'] else []
+    launcher=server.OwnedServerLauncher(process_factory=factory,platform_name='win32',
+        process_identity_reader=lambda pid:dict(alive=model['alive'],start_epoch_ms=123457 if observations['wrong_start_birth'] else 123456),
         listener_reader=listeners,ready_timeout_s=0.03,poll_interval_s=0.001)
-    return factory,api,model,processes,launcher,_startup_runtime(tmp_path/'server-runtime'),control
+    return factory,api,model,processes,launcher,api._prepared_fixture.runtime(),observations
 
 
 def test_full_worker_start_retire_owns_same_child_and_releases_terminal_original_once(monkeypatch,tmp_path):
@@ -430,19 +430,9 @@ def test_server_post_resume_unknown_handoff_cannot_enter_suspended_recovery_or_n
 
 
 def test_full_public_controller_normal_resumed_server_stop_keeps_original_owner_contract(monkeypatch,tmp_path):
-    from tests.test_session_server_control import _make_daemon,_start,_stop
-    factory,api,model,processes,launcher,runtime,control=server_case(monkeypatch,tmp_path/'sdk-case')
-    originals=[]
-    class ActualSessionLauncher:
-        def start(self,runtime,project_id,session_id,**kwargs):
-            exact=win.T037SessionProcessFactory(factory.profile,session_id,api=api)
-            exact._job=factory._job
-            monkeypatch.setattr(exact,'preflight',lambda:None)  # SOFTWARE continuation, original gate separately tested.
-            originals.append(exact)
-            return launcher.start(runtime,project_id,session_id,process_factory=exact,**kwargs)
-        def stop(self,*args,**kwargs):return launcher.stop(*args,**kwargs)
-        def verify(self,*args,**kwargs):return launcher.verify(*args,**kwargs)
-    daemon,project,*_=_make_daemon(tmp_path/'controller',monkeypatch,server_launcher=ActualSessionLauncher())
+    from tests.test_session_server_control import _start,_stop
+    factory,api,model,processes,launcher,runtime,control=server_case(monkeypatch,tmp_path/'sdk-case',controller=True)
+    daemon,project,originals=api._prepared_fixture.public_controller(launcher)
     try:
         started=_start(daemon,project)
         (tmp_path/'public-start.json').write_text(json.dumps(started,indent=2)+'\n')

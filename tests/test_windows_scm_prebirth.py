@@ -4,7 +4,7 @@ OS APIs/listener are explicit software boundaries. The unavailable finite
 filesystem/MIC target is never made PASS. Separate topology controls explicitly
 continue past A in test memory to exercise the existing original Job producer.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -51,7 +51,7 @@ def record(tmp_path, **facts):
 
 
 @contextmanager
-def running_factory_chain(daemon, factory, tmp_path, monkeypatch, *, profile_path='SOFTWARE_PINNED_PROFILE'):
+def running_factory_chain(daemon, factory, tmp_path, monkeypatch, *, profile_path='SOFTWARE_PINNED_PROFILE', callback_hold_seconds=10):
     """Original broker/ServiceMain runtime, retained by the exact real daemon.
 
     Only the SCM export boundary is synthetic. A remains unavailable; callers
@@ -89,7 +89,7 @@ def running_factory_chain(daemon, factory, tmp_path, monkeypatch, *, profile_pat
             key=next(k for k,v in daemon._session_t037_process_factories.items() if v is factory)
             admission._bind_session_factory(daemon,factory,key)
             ready.set()
-            if not release.wait(10):raise TimeoutError('software SCM fixture did not release')
+            if not release.wait(callback_hold_seconds):raise TimeoutError('software SCM fixture did not release')
         service=broker.WindowsScmServiceBroker._for_software_test(
             profile.service_name,service_main,api=scm,token=broker._SCM_TEST_API_TOKEN)
         def run():
@@ -336,8 +336,19 @@ def test_existing_original_Job_producer_follows_explicit_software_A_continuation
     finally:daemon.close()
 
 
+@pytest.fixture
+def prepared_job_consumer_scope():
+    # These six existing consumers import worker_case as a function; importing
+    # it does not activate the defining module's autouse ExitStack fixture.
+    # Wire that same original lifetime explicitly, without bypassing any gate.
+    from tests._prepared_launch_software_fixture import enter_test
+    with ExitStack() as stack:
+        enter_test(stack)
+        yield
+
+
 @pytest.mark.parametrize('fault',[None,'foreign_pid','not_member','unreturned','terminated','capacity'])
-def test_subsequent_same_Job_requires_actual_original_returned_child_and_capacity(monkeypatch,tmp_path,fault):
+def test_subsequent_same_Job_requires_actual_original_returned_child_and_capacity(monkeypatch,tmp_path,fault,prepared_job_consumer_scope):
     from tests.test_windows_native_child_lifecycle import worker_case
     factory,worker,processes,model=worker_case(monkeypatch,tmp_path)
     assert worker.start()['status']=='HEALTHY'

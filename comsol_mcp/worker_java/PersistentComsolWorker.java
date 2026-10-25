@@ -2686,13 +2686,29 @@ public final class PersistentComsolWorker {
           byte[] raw=payload(s,op.index,false); o.outputObject.write(raw);
           o.writeCount=(long)raw.length; o.writeHash=digest(raw); o.phase=5; o.outputObject.flush();
         } else {
-          o.socket.acquisition=2; o.socketObject=new java.net.Socket(); o.socket.acquisition=1; o.phase=6;
+          o.socket.acquisition=2; o.socketObject=new java.net.Socket(); o.socket.acquisition=1;
           java.net.InetAddress address=java.net.InetAddress.getByAddress(op.address); // bytes only, never DNS.
+          boolean loopback=address.isLoopbackAddress();
+          if(loopback) {
+            byte[] loopbackBytes=new byte[address.getAddress().length]; loopbackBytes[loopbackBytes.length-1]=1;
+            if(loopbackBytes.length==4) loopbackBytes[0]=127;
+            java.net.InetAddress bindAddress=java.net.InetAddress.getByAddress(loopbackBytes);
+            o.socketObject.bind(new java.net.InetSocketAddress(bindAddress,0));
+            java.net.InetSocketAddress bound=(java.net.InetSocketAddress)o.socketObject.getLocalSocketAddress();
+            if(bound==null||bound.getAddress()==null||bound.getPort()<1||bound.getPort()>65535
+                ||!java.util.Arrays.equals(bound.getAddress().getAddress(),loopbackBytes)) throw new ProtocolException();
+            o.localAddress=bound.getAddress().getAddress(); o.localPort=bound.getPort();
+          }
+          o.phase=6;
           o.socketObject.connect(new java.net.InetSocketAddress(address,op.port),TIMEOUT_MS);
+          o.phase=7; // CONNECT spans only the one original connect call.
           o.socketObject.setSoTimeout(TIMEOUT_MS);
           java.net.InetSocketAddress local=(java.net.InetSocketAddress)o.socketObject.getLocalSocketAddress();
           java.net.InetSocketAddress remote=(java.net.InetSocketAddress)o.socketObject.getRemoteSocketAddress();
-          o.localAddress=local.getAddress().getAddress(); o.localPort=local.getPort();
+          if(loopback) {
+            if(local==null||local.getAddress()==null||local.getPort()!=o.localPort
+                ||!java.util.Arrays.equals(local.getAddress().getAddress(),o.localAddress)) throw new ProtocolException();
+          } else { o.localAddress=local.getAddress().getAddress(); o.localPort=local.getPort(); }
           o.remoteAddress=remote.getAddress().getAddress(); o.remotePort=remote.getPort();
           o.input.acquisition=2; o.inputObject=o.socketObject.getInputStream(); o.input.acquisition=3; o.input.close=3;
           o.output.acquisition=2; o.outputObject=o.socketObject.getOutputStream(); o.output.acquisition=3; o.output.close=3;

@@ -719,10 +719,26 @@ def _windows_volume_has_persistent_acls(api, path: Path) -> tuple[bool, int]:
     return bool(flags.value & 0x00000008), int(serial.value)  # FILE_PERSISTENT_ACLS
 
 
+_HOST_CONTROL_FULL_IDENTITY = object()
+
+
+def _verify_windows_host_control_root(path: str | os.PathLike[str]) -> dict[str, Any]:
+    """Complete installer identity for the normal host-control root only.
+
+    Provider/source/stdio callers retain their original legacy identity domain.
+    This private selector changes identity encoding, never ACL admission.
+    """
+    return _verify_windows_private_path(Path(path), directory=True, expected_identity=None,
+                                       _identity_mode=_HOST_CONTROL_FULL_IDENTITY)
+
+
 def _verify_windows_private_path(path: Path, *, directory: bool,
                                  expected_identity: Mapping[str, Any] | None,
                                  _retained_callback=None, _original_owner_callback=None,
-                                 _internal_stdio_observer=None) -> dict[str, Any]:
+                                 _internal_stdio_observer=None, _identity_mode=None) -> dict[str, Any]:
+    if (_identity_mode is not None and (_identity_mode is not _HOST_CONTROL_FULL_IDENTITY
+            or directory is not True or _retained_callback is not None or _internal_stdio_observer is not None)):
+        raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "full root identity requires the private directory-only route")
     try:
         from ._windows_parameter_publish import PublishError, _API
         api = _API()
@@ -746,7 +762,8 @@ def _verify_windows_private_path(path: Path, *, directory: bool,
             return _verify_windows_private_path_owned(api, path, directory=directory,
                                                      expected_identity=expected_identity,
                                                      _retained_callback=_retained_callback,
-                                                     _internal_stdio_observer=_internal_stdio_observer)
+                                                     _internal_stdio_observer=_internal_stdio_observer,
+                                                     _identity_mode=_identity_mode)
         except BaseException as error:
             primary = error
             actual_owner.remember(error)
@@ -756,7 +773,7 @@ def _verify_windows_private_path(path: Path, *, directory: bool,
             finish_original(api, primary)
 
 
-def _windows_original_full_getter(api):
+def _windows_original_full_getter(api, *, _retain_outputs=False):
     """Freeze the original readonly SDK getter; reuse native production ABI."""
     from ._windows_parameter_publish import _FullIdInfo, _BasicInfo, _StandardInfo
     from ._windows_host_preflight_owner import hold_original, scalar
@@ -764,6 +781,8 @@ def _windows_original_full_getter(api):
     getter = owner.function("GetFileInformationByHandleEx", api.k)
     def read(handle, *, directory):
         full, basic, standard = _FullIdInfo(), _BasicInfo(), _StandardInfo()
+        if _retain_outputs:
+            owner.hold(handle, full, basic, standard)
         for kind, output in ((18, full), (0, basic), (1, standard)):
             if not scalar(getter(handle, kind, ctypes.byref(output), ctypes.sizeof(output)), "BOOL"):
                 raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "original full identity SDK query failed")
@@ -778,7 +797,7 @@ def _windows_original_full_getter(api):
 
 
 def _verify_windows_private_path_owned(api, path, *, directory, expected_identity, _retained_callback=None,
-                                      _internal_stdio_observer=None):
+                                      _internal_stdio_observer=None, _identity_mode=None):
     from ._windows_parameter_publish import PublishError
     persistent_acls, expected_volume = _windows_volume_has_persistent_acls(api, path)
     if not persistent_acls:
@@ -791,7 +810,9 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                    if _retained_callback is not None else api.open_security_path(path, directory=directory))
         if not handles:
             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows path did not produce pinned handles")
-        full_getter = _windows_original_full_getter(api) if _internal_stdio_observer is not None else None
+        full_identity = _identity_mode is _HOST_CONTROL_FULL_IDENTITY
+        full_getter = (_windows_original_full_getter(api, _retain_outputs=full_identity)
+                       if full_identity or _internal_stdio_observer is not None else None)
         original_full = []
         descriptors: list[dict[str, Any]] = []
         identities: list[dict[str, int]] = []
@@ -806,7 +827,8 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                                                       **({"pinned_ancestor_traversal": True} if index < len(handles) - 1 else {}))
             if full_getter is not None:
                 original_full.append(full_getter(handle, directory=is_directory))
-            identities.append({"device": int(volume), "inode": int(file_index)})
+            identity_pair = original_full[-1][0] if full_identity else (int(volume), int(file_index))
+            identities.append({"device": identity_pair[0], "inode": identity_pair[1]})
             descriptors.append({"identity": identities[-1], "descriptor_sha256": digest, "owner": owner})
         # Re-open by pinned component traversal while the first chain remains
         # live. This detects name substitution between startup identity checks.
@@ -825,7 +847,8 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                                                           **({"pinned_ancestor_traversal": True} if index < len(second) - 1 else {}))
                 if full_getter is not None:
                     second_full.append(full_getter(handle, directory=is_directory))
-                second_ids.append({"identity": {"device": int(volume), "inode": int(file_index)},
+                identity_pair = second_full[-1][0] if full_identity else (int(volume), int(file_index))
+                second_ids.append({"identity": {"device": identity_pair[0], "inode": identity_pair[1]},
                                    "descriptor_sha256": digest, "owner": owner})
             if second_ids != descriptors or full_getter is not None and second_full != original_full:
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows private path chain changed during ACL verification")
@@ -840,6 +863,7 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                     "path_chain": descriptors}
         if _internal_stdio_observer is not None:
             _internal_stdio_observer(api, handles[-1], full_getter)
+        if full_identity or _internal_stdio_observer is not None:
             # Original chains remain live: no metadata change or descriptor
             # substitution may occur across the borrowed-fd observer.
             for chain, before in ((handles, original_full), (second, second_full)):

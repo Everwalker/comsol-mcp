@@ -209,7 +209,7 @@ def apply(executor, plan, approval):
                   'restore_state': 'API_ONLY_DELETE_AVAILABLE_POSTIMAGE_UNVERIFIED', 'generation_state': 'UNAVAILABLE',
                   'capabilities_state': 'NOT_READ_BACK', 'safe_retry': False,
                   'evidence_classification': 'SOFTWARE_ONLY' if executor.software_only else 'WINDOWS_NATIVE_CREATE_RETURN_ONLY'}
-        accepted, state = executor.store.finish(admission.operation_id, status='SUCCEEDED', result=result)
+        accepted, state = executor._finish_apply(admission, result)
         if not accepted or state != 'SUCCEEDED':
             fail('HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN', 'AppContainer CREATE result was not durably recorded')
         profile_effect.record_store_success(admission, executor.store, accepted, state, receipt)

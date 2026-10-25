@@ -67,6 +67,8 @@ class LaunchInputs:
     classpath: tuple[str, ...]
     private_token: str | None = field(default=None, repr=False, compare=False)
     _seal: object = field(default=None, repr=False, compare=False)
+    purpose_owner: Any = field(default=None, repr=False, compare=False)
+    probe_input: Any = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):
         if self._seal is not _INPUT_SEAL:
@@ -75,6 +77,27 @@ class LaunchInputs:
             _fail("launch input role/executable/argv is malformed")
         if set(self.environment) != _ROLE_KEYS[self.role]:
             _fail("launch environment keys differ from the fixed role contract")
+        if self.purpose_owner is None and self.probe_input is not None:
+            _fail("probe bytes alone cannot create a launch purpose")
+        if self.purpose_owner is not None:
+            from ._windows_t037_qualification import require_purpose, Purpose
+            owner = require_purpose(self.factory)
+            if owner is not self.purpose_owner:
+                _fail("launch inputs carry a foreign original purpose")
+            if owner.purpose is Purpose.QUALIFY_OS:
+                from ._windows_t037_qualification import OriginalProbeInput
+                from . import _windows_os_probe_protocol as probe
+                if (type(self.probe_input) is not OriginalProbeInput
+                        or self.probe_input.owner is not owner or self.probe_input.check() is not self.probe_input
+                        or self.role != "worker" or self.classpath or self.text is not False
+                        or self.argv != (self.executable, "-cp", _manifest(self.factory).prepared_classes_root,
+                                         probe.MAIN_CLASS, owner.nonce, owner.operation.recipe.sha256)
+                        or self.stdio != self.probe_input.stdio or self.private_token != self.probe_input.private_token):
+                    _fail("OS launch must retain its original fixed probe/input/stdio without vendor classpath")
+            elif self.probe_input is not None:
+                _fail("probe data cannot attach to another original purpose")
+            elif self.role not in owner.operation.recipe.vendor_roles:
+                _fail("vendor role is outside the original approved qualification recipe")
         if self.role == "server" and ("JAVA_HOME" in self.environment or self.private_token is not None):
             _fail("Server must not receive the Worker JDK or private token")
         if self.role == "worker" and (self.private_token is None
@@ -92,6 +115,15 @@ class LaunchInputs:
             separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
 
     def validate_submission(self, factory, command, options, role):
+        original = getattr(factory, "_qualification_purpose", None)
+        if original is not self.purpose_owner:
+            _fail("normal input lost its exact original purpose lifetime")
+        if original is not None:
+            from ._windows_t037_qualification import require_purpose
+            if require_purpose(factory) is not original:
+                _fail("normal input purpose was replaced")
+            if self.probe_input is not None:
+                self.probe_input.check()
         if (factory is not self.factory or factory.profile is not self.profile
                 or role != self.role or tuple(command) != self.argv
                 or options.get("executable", self.executable) != self.executable
@@ -109,6 +141,15 @@ class LaunchInputs:
             _fail("normal producer supplied an unknown process option")
 
     def validate_native_storage(self, child, api):
+        attempt=getattr(child,'_resume_attempt',None)
+        if (self.purpose_owner is not None and attempt is not None
+                and attempt.state in ('INSTALLING','RESERVED','CONSUMED','ENTERED','RETURNED_ONE')):
+            from ._windows_t037_qualification import require_purpose
+            # Only the retained-root/state check here: this path also runs
+            # under the accepted Resume consumer's ownership/issuer locks.
+            # Durable/SDK checks remain at the existing pre-dispatch boundary.
+            if require_purpose(self.factory) is not self.purpose_owner:
+                _fail('original native purpose/SCM lifetime changed')
         if (child._original_factory is not self.factory or child._original_profile is not self.profile
                 or child._original_role != self.role or tuple(child.args) != self.argv
                 or not _same_path(child._creation_parameters[0], self.executable)):
@@ -247,7 +288,7 @@ def build_server_inputs(factory, runtime, directories, argv, *, stdio):
     creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
     return LaunchInputs(factory, factory.profile, "server", tuple(argv), argv[0], cwd,
         MappingProxyType(environment), block, tuple(stdio), creationflags, False, False, manifest.vendor_source_root,
-        _bindings(manifest), (), None, _INPUT_SEAL)
+        _bindings(manifest), (), None, _INPUT_SEAL, getattr(factory, "_qualification_purpose", None))
 
 
 def build_worker_inputs(factory, paths, *, state_dir, temp_dir, preferences, endpoint,
@@ -293,7 +334,7 @@ def build_worker_inputs(factory, paths, *, state_dir, temp_dir, preferences, end
     environment_block = _environment_block(environment)
     return LaunchInputs(factory, factory.profile, "worker", tuple(argv), executable, cwd,
         MappingProxyType(environment), environment_block, tuple(stdio), 0, True, True, manifest.vendor_source_root,
-        _bindings(manifest), tuple(map(str, classpath)), token, _INPUT_SEAL)
+        _bindings(manifest), tuple(map(str, classpath)), token, _INPUT_SEAL, getattr(factory, "_qualification_purpose", None))
 
 
 def activate_launch_inputs(factory, inputs: LaunchInputs):
@@ -329,6 +370,8 @@ def consume_launch_inputs(factory, command, options, role):
         _fail("prepared T037 launch requires its active original same-thread producer slot")
     inputs = slot["inputs"]
     inputs.validate_submission(factory, command, options, role)
+    if inputs.probe_input is not None:
+        inputs.probe_input.io_owner.note_submission(inputs)
     slot["consumed"] = True
     return inputs
 
@@ -437,3 +480,41 @@ def verify_role_cwd(manifest: prepared.PreparedLaunchManifest, role: str) -> str
     if any(target.iterdir()):
         _fail("prepared role working directory must remain empty")
     return path
+
+
+def build_os_probe_inputs(factory, paths, *, frame: bytes, stdio: tuple):
+    """Fixed Main-reviewed JDK-only main, under the original admitted OS purpose."""
+    from ._windows_t037_qualification import bind_probe_input, Purpose, require_purpose
+    from . import _windows_os_probe_protocol as probe
+    owner = require_purpose(factory, purpose=Purpose.QUALIFY_OS, live=True)
+    manifest = _manifest(factory)
+    owner.operation.recipe.require_manifest(manifest)
+    required_class = prepared.OUTPUT_DIR + "/comsol_mcp/worker_java/PersistentComsolWorker$OsQualificationProbe.class"
+    if not any(row["path"] == required_class for row in manifest.generated_classes):
+        _fail("normal compiler manifest does not contain the fixed protected OS probe class")
+    java_pin = manifest.jdk_files["java"]
+    executable = os.fspath(paths.executable("java"))
+    if not _same_path(executable, java_pin["source_path"]):
+        _fail("OS probe must use the original approved java.exe source")
+    verify_regular_file(executable, size=java_pin["size"], sha256=java_pin["sha256"])
+    classes = verify_manifest_classes(manifest)
+    if not _same_path(classes, manifest.prepared_classes_root):
+        _fail("OS probe classpath must equal the complete original protected class directory")
+    from ._windows_t037_targets import require_contract
+    leaves = [t.path for t in require_contract(factory.profile).files if "temp_leaf" in t.roles]
+    if len(leaves) != 1: _fail("OS probe requires one exact approved finite temporary leaf")
+    windows_root, system_root = _os_roots(factory)
+    jdk_root = ntpath.dirname(ntpath.dirname(executable))
+    environment = {"SystemRoot": windows_root, "WINDIR": windows_root,
+        "SystemDrive": ntpath.splitdrive(windows_root)[0],
+        "PATH": ";".join((ntpath.dirname(executable), system_root, windows_root)),
+        "JAVA_HOME": jdk_root, "TEMP": leaves[0], "TMP": leaves[0],
+        "COMSOL_MCP_WORKER_TOKEN": ""}
+    cwd = verify_role_cwd(manifest, "worker")
+    pinned = bind_probe_input(factory, frame, stdio)
+    environment["COMSOL_MCP_WORKER_TOKEN"] = pinned.private_token
+    argv = (executable, "-cp", classes, probe.MAIN_CLASS, owner.nonce, owner.operation.recipe.sha256)
+    return LaunchInputs(factory, factory.profile, "worker", argv, executable, cwd,
+        MappingProxyType(environment), _environment_block(environment), stdio, 0, True, False,
+        manifest.vendor_source_root, _bindings(manifest), (), pinned.private_token,
+        _INPUT_SEAL, owner, pinned)

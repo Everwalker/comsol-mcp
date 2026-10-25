@@ -90,13 +90,21 @@ def _require_factory_runtime(factory):
             or factory._closed or key[1]!=factory.session_id
             or daemon._session_t037_process_factories.get(key) is not factory):
         _refuse('SCM_FACTORY_BINDING_MISMATCH','original factory/daemon registration changed')
+    from ._windows_t037_qualification import require_purpose,_PURPOSES
+    if id(factory) in _PURPOSES or getattr(factory,'_qualification_purpose',None) is not None:
+        require_purpose(factory)
     return runtime,daemon,profile,provider
 
 
 @contextmanager
 def _factory_birth_scope(factory):
     from ._windows_appcontainer_gate import _factory_activity_scope
-    with _factory_activity_scope(factory):yield
+    with _factory_activity_scope(factory):
+        from ._windows_t037_qualification import require_purpose,OriginalProjectOwner,_PURPOSES
+        if id(factory) in _PURPOSES or getattr(factory,'_qualification_purpose',None) is not None:
+            owner=require_purpose(factory)
+            if type(owner) is OriginalProjectOwner:owner.require_birth()
+        yield
 
 
 @contextmanager

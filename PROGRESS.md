@@ -1,5 +1,25 @@
 # 当前进度 — 2026-10-25
 
+当前续跑 r251：C R2精确37已整合（16prod21tests），Main当前source-target37/整247测过投影/210非copy/17原文件backup+20absentmarkers/Main3r250原sha/HEAD-index无变/Git仅37+Main3全核验，整合接受1740B/44f0d5ab…。源码阶段446uniquePASS/原444eachonce+2、Kuhn F1closed0newP1P2和Main接受保留，整合未引入新字节故不重跑测试/compile/native。新compact3594B/b515434d…+37源码测试+Main3精确41准备普通同步；无native C/B/Resume资格。R9原provider429已同owner恢复，最终12045B/dd39376c…冻结43PASS+nullentry零工具（原4counter实际assertFAIL未重跑/helper14同byte继承），同Locke影响复审在跑、无真实TTY/SDK/Core释放。R13 77uniquePASS/4snapshot/2返回源码origin/81inventory Main84refs+源码ABI审查接受2656B/1af843db…，同Schrodinger只新operators PREP（3983B/b104731c…）：未来SFTPexclusive新root+3材料17841B、只读hash preflight，Main实际接受后另放owncontextonce；当前无SSH/WinDLL/远端新Root。全部旧UNKNOWN保持，Goal active/PROGRESS，全427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r250及更早为历史，以CURRENT_HANDOFF及RESUME r251为准。
+
+当前续跑 r250：同Kuhn C R2影响复审29022B/9a37675f…确认原F1在该冻结source/software闭合、newP1/P2均0；Main47reviewpins/changedcheck/原counter核验后集中接受C源码阶段（MAIN_C_R2_SOURCE_SOFTWARE_ACCEPTANCE.json，非native资格）。当前446uniquePASS、原444eachonce+2/247inputs/179bindings、oldsameoracle2callFAIL→fixed2PASS；下一同Primary只精确37files16prod21test备份/复制/整247投影byteeq，未合入/未发表源。Schrodinger R13PREP6942B/a28988f3…冻结77PASS/3材料17841B，Main源码/ABI验收前无SSH/native。LorentzR9本轮provider429实际terminal，非产品失败；同agent已从现有21copy/旧counter已返exit1处恢复，不盲重跑、不放TTY/SDK/Core。公开仍d4529b19/fresh6blob；所有旧UNKNOWN不动，Goal active/PROGRESS，全427/矩阵/restore/heldouts/fresh最终Reviewer未过。
+
+以下r249及更早为历史，以CURRENT_HANDOFF及RESUME r250为准。
+
+当前续跑 r249：同Primary私有C R2冻结HANDOFF6612B/cc6db151…；原444eachonce+新增2联合446uniquePASS0FES，247输入前后/当前一致、179实际source/loader/moduleframe绑定、0禁止效果。Main64递归声明pin/37copy投影/210noncopy与当前shared/原base叶核验通过1962B/503a4827…。源码相对旧51仅OriginalLiveC.check首错锁存+新增1测试文件；原counter source246精确旧体、同新test byteequal。Main原XML直核两旧体call assertionFAIL：原closer UNKNOWN保留但各27835extraSDK/1newPROJECTsuccess，修复各0extraSDK/0新factory/同原error及cause/UNKNOWNentries；原APPLY仍SUCCEEDED，5071B/18211940…。同Kuhn影响强复审已派发，Main尚未source接受/复制；Primary冻结后关闭保上下文。Lorentz R9 ACK-stop P2修复/Schrodinger R13只读PREP继续，真实TTY/SDK/Core/Windows新动作均未放；旧UNKNOWN不动。当前公开d4529b19不变，不重复发表回执，Goal active/PROGRESS，全427/矩阵/restore/heldouts/fresh最终Reviewer未过。
+
+以下r248及更早为历史，以CURRENT_HANDOFF及RESUME r249为准。
+
+当前续跑 r248：Locke独立R8 source/PREP报告50322B/7b2fa9be…为0P1/1P2，Main88pins亲核并读commonvalidator43-50及firstguard143-144确认：后续ACK/poll回复同时missing session_id/exit_code会继续parse并可能第二ACK/再poll，违反既有UNKNOWN停止规则。只有静态反例，未执行真实TTY/SDK/native。Main最小修复决定3359B/6cf75a1c…交同Lorentz newR9 ACK-stop SOURCE/PREP，原R8/21materials/45sreader/policy/helper/PLAN均不改；真oldbody同oracle失败→新体无后续、原32eachonce+新控，后同Locke影响复审/Main才放无SDK真实TTY。Primary C1P1修复与Schrodinger R13只读PREP继续。R8当前不接受，无真实TTY/Core许可。公开d4529b19 exact6/freshblob不变，local continuation不追逐重发回执；Goal active/PROGRESS，全427/矩阵/restore/heldouts/fresh最终Reviewer未通过。
+
+以下r247及更早为历史，以CURRENT_HANDOFF及RESUME r248为准。
+
+当前续跑 r247：精确6files/658345B已普通nonforce发布d4529b197dcd998f2535d7a3f6ed1f61a8036cea（parentf02e7c22），freshfetch HEAD/origin/main/FETCH_HEAD一致、逐6blob与冻结/committed/worktree相同，REMOTE_READBACK2423B/SHA6e3ffb3addcb3e38888fa49b2100f66195b53e918ef1e05a00ae9141295ba6a2；CLEAN仅readback时点。发布只含已验负面/限定结果与进度，不含未接受C源码。后续r247为本地续跑，不追逐重发回执。Primary C P1修复、Locke R8只源码review、Schrodinger R13只读PREP继续；没有新增SDK/Win/TTY/旧owner操作。Goal active/PROGRESS，427/平台矩阵/restore/heldouts/fresh最终Reviewer仍未过。
+
+以下r246及更早为历史，以CURRENT_HANDOFF及RESUME r247为准。
+
 当前续跑 r246：r245 Main3/checkpoint完整核验。C原444PASS候选因强源码1P1/F1仍不接受/不整合，同Primary连续修复并须真旧体counter→同oracle/旧444各一次+新控→Kuhn影响复审/Main验收。完整Java一次原javac wait0/22class只编译scope、R7元数据原SDKexit0但Core ACK HOLD、R12实际NO_WINDOW仍0xC0000142失败scope三compact已Main接受，连Main3精确6file准备普通nonforce同步。Mac R8同21bytes/原45s读循环不改，DELIVERY11477B/SHAf61b1649…已冻结；新强Locke只审传输source，JS32/helper14/entry1分列synthetic，真实TTY/SDK/bind/meta/Core均NOT_RUN，Lorentz关闭待验收。Schrodinger R13只做自己当前进程Session/windowstation/desktop只读PREP，未放远端；未假定Session0/具体DLL/原因。旧R5/R6/R7及全部WindowsUNKNOWN不查不重放不接管不清理。公开核验仍f02e7c22，后续发布须独立freshfetch逐blob核验。Goal active/PROGRESS，273/60/427、平台矩阵、restore、未预设任务族和最终fresh强Reviewer未通过，completed_groups=[]。完整上版handoff保存checkpoint-r246/BEFORE_CURRENT_HANDOFF.md。
 
 以下r245及更早为历史，以CURRENT_HANDOFF及RESUME r246当前字段为准。

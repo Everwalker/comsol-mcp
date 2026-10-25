@@ -114,14 +114,14 @@ def _current_windows_binding(profile: Any) -> dict[str, Any]:
         _error("HOST_CHANGE_WINDOWS_REQUIRED", "native host mutation is available only on Windows")
     policy = profile.windows_isolation
     from ._windows_t037 import windows_host_fingerprint, WindowsT037Error
-    from ._host_scoped_provider import verify_private_path_security
+    from ._host_scoped_provider import _verify_windows_host_control_root
     from ._windows_t037 import _Win32ReadOnlyApi
     try:
         fingerprint = windows_host_fingerprint()
         host_id = socket.gethostname()
         if fingerprint != policy.host_fingerprint_sha256 or host_id.casefold() != profile.host_id.casefold():
             _error("HOST_CHANGE_HOST_MISMATCH", "trusted Windows profile names a different host or machine identity")
-        root = verify_private_path_security(profile.root.path, directory=True)
+        root = _verify_windows_host_control_root(profile.root.path)
         identity = root.get("identity")
         if (root.get("security_semantics") != "windows-read-control-owner-dacl-persistent-acls"
                 or not isinstance(identity, Mapping)
@@ -763,6 +763,11 @@ class WindowsHostChangeExecutor:
         if callback is not None: callback(self, accepted_admission)
         return accepted_admission
 
+    def _finish_apply(self, admission: _ExecutionAdmission, result):
+        from ._windows_t037_qualification import before_apply_finish
+        before_apply_finish(self, admission)
+        return self.store.finish(admission.operation_id, status="SUCCEEDED", result=result)
+
     def _start(self, admission: _ExecutionAdmission) -> None:
         if self.store.host_control_admission_state(admission.admission_id) != "ADMITTED":
             _error("HOST_CHANGE_ADMISSION_STATE_UNKNOWN",
@@ -916,8 +921,7 @@ class WindowsHostChangeExecutor:
                       "safe_retry": False,
                       "evidence_classification": "SOFTWARE_ONLY" if self.software_only
                           else "WINDOWS_NATIVE_READBACK_ONLY"}
-            accepted, authoritative = self.store.finish(
-                admission.operation_id, status="SUCCEEDED", result=result)
+            accepted, authoritative = self._finish_apply(admission, result)
             if not accepted or authoritative != "SUCCEEDED":
                 _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
                        "all WFP resources were read back but the durable terminal receipt is unknown",
@@ -1020,8 +1024,7 @@ class WindowsHostChangeExecutor:
                       "safe_retry": False,
                       "evidence_classification": "SOFTWARE_ONLY" if self.software_only
                           else "WINDOWS_NATIVE_READBACK_ONLY"}
-            accepted, authoritative = self.store.finish(
-                admission.operation_id, status="SUCCEEDED", result=result)
+            accepted, authoritative = self._finish_apply(admission, result)
             if not accepted or authoritative != "SUCCEEDED":
                 _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
                        "all WFP resources were absent on readback but terminal persistence is unknown",
@@ -1038,6 +1041,8 @@ class WindowsHostChangeExecutor:
                             "step_index": active_index})
 
     def apply(self, plan: Any, *, approval: resources.HostChangeApproval) -> resources.AppliedHostChangeReceipt:
+        from ._windows_t037_qualification import prepare_apply
+        prepare_apply(self, plan)
         from . import _windows_appcontainer as appcontainer
         if appcontainer.is_leaf(plan.as_dict()["change_manifest"]):
             return appcontainer.apply(self, plan, approval)
@@ -1084,8 +1089,7 @@ class WindowsHostChangeExecutor:
                       "t037_state": "NOT_VERIFIED", "safe_retry": False,
                       "evidence_classification": ("SOFTWARE_ONLY" if self.software_only
                                                    else "WINDOWS_NATIVE_READBACK_ONLY")}
-            accepted, authoritative = self.store.finish(admission.operation_id,
-                                                        status="SUCCEEDED", result=result)
+            accepted, authoritative = self._finish_apply(admission, result)
             if not accepted or authoritative != "SUCCEEDED":
                 _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
                        "filter was read back but its durable terminal receipt could not be committed",
@@ -1177,8 +1181,7 @@ class WindowsHostChangeExecutor:
                       "safe_retry": False,
                       "evidence_classification": ("SOFTWARE_ONLY" if self.software_only
                                                    else "WINDOWS_NATIVE_READBACK_ONLY")}
-            accepted, authoritative = self.store.finish(admission.operation_id,
-                                                        status="SUCCEEDED", result=result)
+            accepted, authoritative = self._finish_apply(admission, result)
             if not accepted or authoritative != "SUCCEEDED":
                 _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
                        "filter deletion was read back but its durable terminal receipt could not be committed",

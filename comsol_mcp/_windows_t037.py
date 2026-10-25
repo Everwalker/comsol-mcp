@@ -23,6 +23,7 @@ import platform
 import re
 import subprocess
 import sys
+import threading
 from typing import Any, Callable, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError
@@ -1326,10 +1327,17 @@ class T037SessionProcessFactory:
         return (self,api,call,tuple(observations),participant.observers)
 
     def _close_owned_resources(self) -> None:
+        for process in tuple(getattr(self._api, "_retained_children", {}).values()) if self._api is not None else ():
+            attempt = getattr(process, "_resume_attempt", None)
+            if attempt is not None and getattr(attempt, "state", None) not in {"NO_EFFECT", "HANDED_OFF"}:
+                _refuse("NATIVE_CHILD_OWNER_REQUIRED",
+                    "original factory close is reserved by an active/unknown child Resume attempt")
         from ._windows_t037_primary import require_no_preparation
         require_no_preparation(self)
         if self._api is not None: require_no_preparation(self._api)
         from ._windows_owned_resources import registry_for
+        from ._windows_t037_targets import _finish_deferred_finite_a
+        _finish_deferred_finite_a(self)
         if registry_for(self).unresolved():
             _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "factory-owned prebirth native observations remain unresolved")
         if self._api is not None:
@@ -1569,7 +1577,8 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         "_close_mode", "_original_poll", "_original_wait", "_original_terminate",
         "_original_times", "_original_profile", "_original_factory", "_original_job",
         "_original_role", "_parent_binding", "_image_api", "_image_entry", "_image_binding", "_outputs", "_owner",
-        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer", "_launch_inputs", "_birth_preparation"})
+        "_creation_parameters", "_creation_parameter_digests", "_connected_b_observer", "_launch_inputs", "_birth_preparation",
+        "_resume_attempt"})
 
     def __setattr__(self, name, value):
         if name in self._FIXED and hasattr(self, name):
@@ -1611,6 +1620,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         self._entry_bindings, self._release_attempts = {}, set()
         self._release_deferrals = {}
         self._release_request = None
+        self._resume_attempt = None
         self._termination_requested = False
         self._terminate_error = None
         self._retirement_error = None
@@ -1723,8 +1733,11 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
             if type(value) is not int or not 0 < value < ceiling:
                 continue  # Invalid/unclassified output remains in original storage; never close it.
             def close_original(handle, name=name):
-                self._check_original()
                 entry = self._entry_bindings[name][0]
+                attempt = getattr(self, "_resume_attempt", None)
+                if attempt is not None and attempt.blocks_registry_release(entry):
+                    raise attempt.defer_registry_release(entry)
+                self._check_original()
                 request = self._release_request
                 if (type(request) is not tuple or len(request) != 2
                         or request[0] is not entry or request[1] is not self._owner
@@ -1757,7 +1770,23 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
 
     @property
     def never_resumed(self):
-        return self._seal is _NATIVE_SUSPENDED_CHILD_SEAL and self._creation_confirmed and not self._resume_attempted
+        attempt = getattr(self, "_resume_attempt", None)
+        return (self._seal is _NATIVE_SUSPENDED_CHILD_SEAL and self._creation_confirmed
+                and not self._resume_attempted
+                and (attempt is None or getattr(attempt, "state", None) == "NO_EFFECT"))
+
+    def _require_resume_lifecycle_unreserved(self, operation, *, allow_main_thread_release=False):
+        attempt = getattr(self, "_resume_attempt", None)
+        if attempt is None:
+            return
+        if getattr(attempt, "state", None) not in {"NO_EFFECT", "HANDED_OFF"}:
+            if (allow_main_thread_release and attempt.state == "RETURNED_ONE"
+                    and attempt.dispatch_reserved and self._resume_confirmed is True
+                    and threading.get_ident() == attempt.owner_thread_id
+                    and attempt.thread_entry is self._thread_entry):
+                return
+            _refuse("NATIVE_CHILD_OWNER_REQUIRED",
+                f"original child {operation} is blocked by its Resume dispatch reservation/outcome")
 
     def _require_observable(self):
         if self._birth_preparation is not None and self._birth_preparation.state != 'RELEASED':
@@ -1767,23 +1796,28 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
             _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unconfirmed creation cannot be polled/waited/terminated")
 
     def poll(self):
-        if self._closed:
+        with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("poll")
+            if self._closed:
+                return self.returncode
+            self._require_observable()
+            if self.returncode is None:
+                self.returncode = self._original_poll(self._handle)
             return self.returncode
-        self._require_observable()
-        if self.returncode is None:
-            self.returncode = self._original_poll(self._handle)
-        return self.returncode
 
     def wait(self, timeout=None):
-        if self._closed:
+        with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("wait")
+            if self._closed:
+                return self.returncode
+            self._require_observable()
+            if self.returncode is None:
+                self.returncode = self._original_wait(self._handle, timeout, self.args)
             return self.returncode
-        self._require_observable()
-        if self.returncode is None:
-            self.returncode = self._original_wait(self._handle, timeout, self.args)
-        return self.returncode
 
     def terminate(self):
         with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("terminate")
             self._require_observable()
             if self._resume_attempted and not self._returned:
                 _refuse("NATIVE_CHILD_OWNER_REQUIRED", "unreturned Resume outcome cannot use normal termination")
@@ -1801,6 +1835,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
 
     def transfer_owner(self, expected, owner):
         with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("transfer")
             # Moving this same object/slot is not a query, close or retry of an
             # UNKNOWN acquisition. The new holder must still retain/refuse it.
             self._check_original(allow_unknown=True)
@@ -1810,6 +1845,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
 
     def note_resume_attempt(self):
         with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("attempt mutation")
             self._require_observable()
             self._resume_attempted = True
 
@@ -1821,10 +1857,12 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
                 "creation_response_confirmed": self._creation_confirmed,
                 "resume_attempted": self._resume_attempted, "effect_possible": not self._no_effect,
                 "never_resumed": self.never_resumed,
+                "resume_attempt_state": getattr(getattr(self, "_resume_attempt", None), "state", None),
                 "terminal_state": "EXIT_CONFIRMED" if type(self.returncode) is int else "UNKNOWN"}
 
     def cleanup_owned(self, owner, timeout=5):
         with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("cleanup")
             if self._owner is not owner or not self.never_resumed:
                 _refuse("NATIVE_CHILD_OWNER_REQUIRED", "simplified cleanup requires the exact never-resumed owner")
             if self._closed:
@@ -1840,6 +1878,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
     def retire_owned(self, owner, timeout=5):
         """Normal retirement of this same successfully returned resumed child."""
         with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("retirement")
             if (self._owner is not owner or not self._returned
                     or not self._creation_confirmed or not self._resume_confirmed):
                 _refuse("NATIVE_CHILD_OWNER_REQUIRED", "normal retirement requires the original successful returned owner")
@@ -1854,13 +1893,17 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
             return self.returncode
 
     def release_main_thread(self):
-        self._require_observable()
-        if not self._resume_confirmed:
-            _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "main thread release requires confirmed Resume return")
-        self._release_entry(self._thread_entry)
-        self._thread_handle = None
+        with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("main-thread release", allow_main_thread_release=True)
+            self._require_observable()
+            if not self._resume_confirmed:
+                _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "main thread release requires confirmed Resume return")
+            self._release_entry(self._thread_entry, resume_release=True)
+            self._thread_handle = None
 
-    def _release_entry(self, entry):
+    def _release_entry(self, entry, *, resume_release=False):
+        self._require_resume_lifecycle_unreserved("registry release",
+            allow_main_thread_release=resume_release and entry is self._thread_entry)
         self._check_original()
         name = "process" if entry is self._process_entry else "thread"
         retry = (entry.state == "UNKNOWN" and name in self._release_deferrals
@@ -1878,6 +1921,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
 
     def close_owned(self, owner):
         with self._ownership_lock:
+            self._require_resume_lifecycle_unreserved("close")
             if self._owner is not owner:
                 _refuse("NATIVE_CHILD_OWNER_REQUIRED", "only the actual transferred owner may close the child")
             if self._closed:
@@ -1899,6 +1943,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
             self._closed = True
 
     def close(self):
+        self._require_resume_lifecycle_unreserved("close")
         if not self._returned or self._owner is not self._api:
             _refuse("NATIVE_CHILD_OWNER_REQUIRED", "unreturned child close requires its explicit unique owner")
         self.close_owned(self._owner)
@@ -2247,6 +2292,30 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         image_verified = False
         launch_release_failures = []
         success_owner = None
+
+        def resume_unknown_handoff(error, *, stage, entry=None, owner=None, pending=None):
+            from ._windows_t037_resume import mark_original_resume_ownership_unknown
+            attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+            if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                mark_original_resume_ownership_unknown(
+                    retained_child, error, stage=stage, entry=entry, owner=owner)
+            attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+            if retained_child is None or attempt is None:
+                return NativeSuspendedChildLaunchError(
+                    retained_child, error, error, seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+            self._retained_children[id(retained_child)] = retained_child
+            if (isinstance(pending, NativeSuspendedChildLaunchError)
+                    and pending._process is retained_child):
+                pending.resume_attempt = attempt
+                return pending
+            first_error = getattr(attempt, "ownership_error", None) or error
+            handoff = NativeSuspendedChildLaunchError(
+                retained_child, pending or error, first_error,
+                seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+            handoff.original_launch_error = pending if pending is not None else error
+            handoff.resume_attempt = attempt
+            return handoff
+
         try:
             if not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
                                                                    image_fingerprint[1]), expected_hash):
@@ -2435,6 +2504,22 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     seal=_G2_SESSION_LAUNCH_OWNER_SEAL,
                 )
         except BaseException as cause:
+            attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+            if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                handoff = resume_unknown_handoff(
+                    cause, stage="factory_post_resume_owner_handoff", owner=retained_child)
+                raise handoff from cause
+            if attempt is not None and getattr(attempt, "state", None) == "UNKNOWN":
+                self._retained_children[id(retained_child)] = retained_child
+                if (isinstance(cause, NativeSuspendedChildLaunchError)
+                        and cause._process is retained_child):
+                    cause.resume_attempt = attempt
+                    raise
+                handoff = NativeSuspendedChildLaunchError(
+                    retained_child, cause, cause, seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+                handoff.original_launch_error = cause
+                handoff.resume_attempt = attempt
+                raise handoff from cause
             if preparation is not None and preparation.state == 'UNKNOWN':
                 if retained_child is not None and retained_child._call_entered:
                     raise NativeSuspendedChildLaunchError(
@@ -2453,64 +2538,136 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                             retained_child, cause, cleanup_error, seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
             raise
         finally:
-            if preparation is not None:
-                if preparation.state == 'UNKNOWN':
-                    pending = sys.exc_info()[1]
-                    if (isinstance(pending, NativeSuspendedChildLaunchError)
-                            and pending._process is retained_child):
-                        raise pending  # Preserve the actual original child handoff, not a replacement.
-                    raise preparation.error
+            attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+            if attempt is not None and getattr(attempt, "state", None) == "UNKNOWN":
                 pending = sys.exc_info()[1]
+                self._retained_children[id(retained_child)] = retained_child
+                if (isinstance(pending, NativeSuspendedChildLaunchError)
+                        and pending._process is retained_child):
+                    pending.resume_attempt = attempt
+                    raise pending
+                cause = (attempt.call_error or attempt.transfer_error or attempt.ownership_error or pending
+                         or ExecutionContractError("NATIVE_CHILD_RESUME_UNKNOWN",
+                            "original Resume result is unknown; child remains retained",
+                            safe_retry=False, stage="pre_dispatch"))
+                handoff = NativeSuspendedChildLaunchError(
+                    retained_child, cause, cause, seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+                handoff.original_launch_error = pending
+                handoff.resume_attempt = attempt
+                raise handoff from cause
+            finalizer_scope = None
+            if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                from ._windows_t037_resume import original_resume_factory_finalization
                 try:
-                    preparation.close()  # On first unknown close, stop before any other SDK release.
-                except BaseException as primary_error:
-                    if (isinstance(pending, NativeSuspendedChildLaunchError)
-                            and pending._process is retained_child):
-                        raise pending from primary_error  # Preserve both real retained owners/errors.
-                    raise
-            pending_error = sys.exc_info()[1]
-            release_failures = launch_release_failures
-            def release(label, callback, *args, free_result=False):
-                try:
-                    result = callback(*args)
-                    if free_result and result:
-                        raise RuntimeError("native allocation release was not confirmed")
-                except BaseException as error:
-                    release_failures.append((label, error))
-                    # Retain the actual adapter/call target and original handle,
-                    # never a wire/PID reconstruction or a silent retry.
-                    if not hasattr(self, "_retained_launch_cleanup"):
-                        self._retained_launch_cleanup = []
-                    self._retained_launch_cleanup.append((label, callback, args, error))
-            # Keep exact original process/thread acquisitions under their one
-            # child owner. Ancillary scope cleanup cannot release a live child.
-            child_entries = (retained_child._process_entry, retained_child._thread_entry) if retained_child is not None else ()
-            for entry in reversed(registry.unresolved()):
-                if (entry.seq > launch_scope.seq and entry.thread_id == launch_scope.thread_id
-                        and not any(entry is original for original in child_entries)):
+                    finalizer_scope = original_resume_factory_finalization(retained_child)
+                    finalizer_scope.__enter__()
+                except BaseException as finalizer_error:
+                    handoff = resume_unknown_handoff(
+                        finalizer_error, stage="factory_finalizer_authorization", owner=retained_child)
+                    raise handoff from finalizer_error
+            try:
+                if preparation is not None:
+                    if preparation.state == 'UNKNOWN':
+                        pending = sys.exc_info()[1]
+                        if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                            handoff = resume_unknown_handoff(
+                                preparation.error, stage="birth_preparation_already_unknown",
+                                owner=preparation, pending=pending)
+                            raise handoff from preparation.error
+                        if (isinstance(pending, NativeSuspendedChildLaunchError)
+                                and pending._process is retained_child):
+                            raise pending  # Preserve the actual original child handoff, not a replacement.
+                        raise preparation.error
+                    pending = sys.exc_info()[1]
                     try:
-                        entry.release_owned(registry.owner)
+                        preparation.close()  # On first unknown close, stop before any other SDK release.
+                    except BaseException as primary_error:
+                        attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+                        if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                            unknown_entry = next((entry for entry in reversed(preparation.entries)
+                                                  if entry.state == "UNKNOWN"), None)
+                            handoff = resume_unknown_handoff(
+                                primary_error, stage="birth_preparation_release",
+                                entry=unknown_entry, owner=preparation, pending=pending)
+                            raise handoff from primary_error
+                        if (isinstance(pending, NativeSuspendedChildLaunchError)
+                                and pending._process is retained_child):
+                            raise pending from primary_error  # Preserve both real retained owners/errors.
+                        raise
+                pending_error = sys.exc_info()[1]
+                release_failures = launch_release_failures
+                def release(label, callback, *args, free_result=False):
+                    try:
+                        result = callback(*args)
+                        if free_result and result:
+                            raise RuntimeError("native allocation release was not confirmed")
                     except BaseException as error:
-                        release_failures.append((entry.label, error))
-            if native_parent is not None:
-                release("native_parent", native_parent.close)
-            if retained_child is not None and hasattr(retained_child, "_connected_b_observer"):
-                from ._windows_t037_b_observation import settle_original_child_b
-                release("connected_B", settle_original_child_b, retained_child, pending_error)
-            if release_failures:
-                diagnostics = tuple({"stage": label, "exception_type": type(error).__name__}
-                                    for label, error in release_failures)
-                if retained_child is not None and not retained_child._no_effect:
-                    self._retained_children[id(retained_child)] = retained_child
-                    handoff = NativeSuspendedChildLaunchError(retained_child,
-                        pending_error or release_failures[0][1], release_failures[0][1],
-                        seal=_NATIVE_SUSPENDED_CHILD_SEAL)
-                    handoff.original_launch_error = pending_error
-                    handoff.cleanup_failures = diagnostics
-                    handoff.details["ancillary_cleanup_failures"] = diagnostics
-                    raise handoff from release_failures[0][1]
-                _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "native launch ancillary handles remain owned",
-                        ancillary_cleanup_failures=diagnostics)
+                        attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+                        if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                            callback_owner = getattr(callback, "__self__", None)
+                            if callback_owner is None and args:
+                                callback_owner = args[0]
+                            callback_entry = (getattr(native_parent, "_resource_owner", None)
+                                              if label == "native_parent" else None)
+                            handoff = resume_unknown_handoff(
+                                error, stage="factory_" + label + "_release",
+                                entry=callback_entry,
+                                owner=callback_owner if callback_owner is not None else callback,
+                                pending=pending_error)
+                            raise handoff from error
+                        release_failures.append((label, error))
+                        # Retain the actual adapter/call target and original handle,
+                        # never a wire/PID reconstruction or a silent retry.
+                        if not hasattr(self, "_retained_launch_cleanup"):
+                            self._retained_launch_cleanup = []
+                        self._retained_launch_cleanup.append((label, callback, args, error))
+                # Keep exact original process/thread acquisitions under their one
+                # child owner. Ancillary scope cleanup cannot release a live child.
+                child_entries = (retained_child._process_entry, retained_child._thread_entry) if retained_child is not None else ()
+                for entry in reversed(registry.unresolved()):
+                    if (entry.seq > launch_scope.seq and entry.thread_id == launch_scope.thread_id
+                            and not any(entry is original for original in child_entries)):
+                        try:
+                            entry.release_owned(registry.owner)
+                        except BaseException as error:
+                            attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+                            if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                                handoff = resume_unknown_handoff(
+                                    error, stage="factory_ancillary_registry_release",
+                                    entry=entry, owner=entry, pending=pending_error)
+                                raise handoff from error
+                            release_failures.append((entry.label, error))
+                if native_parent is not None:
+                    release("native_parent", native_parent.close)
+                if retained_child is not None and hasattr(retained_child, "_connected_b_observer"):
+                    from ._windows_t037_b_observation import settle_original_child_b
+                    release("connected_B", settle_original_child_b, retained_child, pending_error)
+                if release_failures:
+                    diagnostics = tuple({"stage": label, "exception_type": type(error).__name__}
+                                        for label, error in release_failures)
+                    if retained_child is not None and not retained_child._no_effect:
+                        self._retained_children[id(retained_child)] = retained_child
+                        handoff = NativeSuspendedChildLaunchError(retained_child,
+                            pending_error or release_failures[0][1], release_failures[0][1],
+                            seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+                        handoff.original_launch_error = pending_error
+                        handoff.cleanup_failures = diagnostics
+                        handoff.details["ancillary_cleanup_failures"] = diagnostics
+                        raise handoff from release_failures[0][1]
+                    _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "native launch ancillary handles remain owned",
+                            ancillary_cleanup_failures=diagnostics)
+            finally:
+                if finalizer_scope is not None:
+                    try:
+                        finalizer_scope.__exit__(*sys.exc_info())
+                    except BaseException as finalizer_error:
+                        attempt = getattr(retained_child, "_resume_attempt", None) if retained_child is not None else None
+                        if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                            handoff = resume_unknown_handoff(
+                                finalizer_error, stage="factory_finalizer_scope_exit", owner=retained_child,
+                                pending=sys.exc_info()[1])
+                            raise handoff from finalizer_error
+                        raise
 
         # Publish successful provenance only after all ancillary cleanup has
         # confirmed. A publication fault keeps the same resumed owner UNKNOWN.
@@ -2521,9 +2678,23 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     self._g2_session_launch_owners = {}
                 self._g2_session_launch_owners[id(retained_child)] = success_owner
             retained_child._returned = True
+            attempt = getattr(retained_child, "_resume_attempt", None)
+            if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                from ._windows_t037_resume import finish_original_resume_attempt
+                finish_original_resume_attempt(retained_child)
             return retained_child
         except BaseException as error:
             retained_child._returned = False
+            attempt = getattr(retained_child, "_resume_attempt", None)
+            if attempt is not None and getattr(attempt, "state", None) == "RETURNED_ONE":
+                handoff = resume_unknown_handoff(
+                    error, stage="factory_publication_and_owner_handoff",
+                    owner=success_owner if success_owner is not None else retained_child)
+                if success_owner is not None:
+                    launch_owners = getattr(self, "_g2_session_launch_owners", None)
+                    if type(launch_owners) is dict and launch_owners.get(id(retained_child)) is success_owner:
+                        launch_owners.pop(id(retained_child), None)
+                raise handoff from error
             raise NativeSuspendedChildLaunchError(retained_child, error, error,
                 seal=_NATIVE_SUSPENDED_CHILD_SEAL) from error
 
