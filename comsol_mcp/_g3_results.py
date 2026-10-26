@@ -123,12 +123,21 @@ import json
 import math
 import os
 from pathlib import Path
+from functools import wraps
 from typing import Any, Mapping, Sequence
 import uuid
 
 from ._execution_contract import PreWriteRefusal
 from ._g2_contract import ExecutionContractError, NodePath
-from ._g2_engine import _call, _worker_failure_code
+from ._g2_engine import (
+    _active_unknown_dispatch_attempt,
+    _call,
+    _retain_unknown_dispatch_owner,
+    _worker_failure_code,
+    _worker_failure_unknown,
+    result_unknown_dispatch_scope,
+)
+from ._g2_public_api import _result_unit_evaluator
 from ._artifact_store import ArtifactStore, trusted_project_root
 from ._result_budget import (
     ResultBudgetRefused,
@@ -138,13 +147,15 @@ from ._result_budget import (
 from ._g3_common import (
     allowlist_rejected,
     bound_model,
-    call_probe,
+    call_probe as _common_call_probe,
+    describe_engine_failure,
     error_code_of,
     geometry_length_unit,
     geometry_sdim,
     node_not_found,
     operation_arguments,
     reject_unknown_keys,
+    require_entity_id_array,
     require_bool,
     require_int,
     require_mapping,
@@ -519,6 +530,77 @@ def _check_row_key_collisions(expressions: Sequence[str]) -> None:
 # ---------------------------------------------------------------------------
 # engine helpers
 # ---------------------------------------------------------------------------
+
+
+def call_probe(node: Any, method: str, *args: Any,
+               include_engine_failure_details: bool = False) -> dict[str, Any]:
+    """Keep the shared optional-probe contract while fencing result attempts."""
+    if _active_unknown_dispatch_attempt() is None:
+        return _common_call_probe(
+            node, method, *args,
+            include_engine_failure_details=include_engine_failure_details,
+        )
+    try:
+        return {"ok": True, "value": _call(node, method, *args), "error": None}
+    except Exception as exc:
+        if _worker_failure_unknown(exc):
+            raise
+        if include_engine_failure_details:
+            error = describe_engine_failure(exc, method)
+        else:
+            error = {
+                "code": error_code_of(exc),
+                "message": f"COMSOL {method} probe failed: {type(exc).__name__}",
+                "allowlist_entry_required": method if allowlist_rejected(exc) else None,
+            }
+        return {"ok": False, "value": None, "error": error}
+
+
+class _FencedNativeMethod:
+    """Route a legacy helper's direct Java method invocation through _call."""
+
+    __slots__ = ("receiver", "method")
+
+    def __init__(self, receiver: Any, method: str) -> None:
+        self.receiver = receiver
+        self.method = method
+
+    def __call__(self, *args: Any) -> Any:
+        value = _call(self.receiver, self.method, *args)
+        from ._java_worker import RemoteJava
+
+        if isinstance(value, RemoteJava):
+            _retain_unknown_dispatch_owner(self.receiver, value, args)
+            return _FencedNativeReceiver(value)
+        return value
+
+
+class _FencedNativeReceiver:
+    """Proxy receivers used by legacy readers that invoke Java methods directly."""
+
+    __slots__ = ("receiver",)
+
+    def __init__(self, receiver: Any) -> None:
+        self.receiver = receiver
+
+    def __getattr__(self, name: str) -> Any:
+        value = getattr(self.receiver, name)
+        if callable(value):
+            return _FencedNativeMethod(self.receiver, name)
+        from ._java_worker import RemoteJava
+
+        if isinstance(value, RemoteJava):
+            _retain_unknown_dispatch_owner(self.receiver, value)
+            return _FencedNativeReceiver(value)
+        # Scalars, arrays, maps, and ordinary data objects keep their existing
+        # value semantics. Only an actual SDK receiver can carry the call fence.
+        return value
+
+
+def _fence_native_receiver(receiver: Any) -> Any:
+    if _active_unknown_dispatch_attempt() is None:
+        return receiver
+    return _FencedNativeReceiver(receiver)
 
 
 def _record(node: Any, method: str, *args: Any, errors: list[dict[str, Any]]) -> Any:
@@ -1049,7 +1131,9 @@ def _resolve_dataset_binding(
     """Read the shared dataset graph before using solution/geometry metadata."""
     try:
         from ._dataset_binding import resolve_dataset_binding
-        binding = resolve_dataset_binding(model, dataset_tag, requested_solution=requested_solution)
+        binding = resolve_dataset_binding(
+            _fence_native_receiver(model), dataset_tag, requested_solution=requested_solution
+        )
     except Exception as exc:
         # Every dataset type requires a resolved binding. A derived dataset's
         # ``data`` property may name an upstream dataset, not a solution;
@@ -1183,21 +1267,30 @@ def _coordinate_context(
                                source="single component/geometry of the model")
     if context["component"] and context["geometry"]:
         geometry_node = _call(_call(model, "component", context["component"]), "geom", context["geometry"])
-        context["length_unit"] = geometry_length_unit(geometry_node)
-        context["space_dimension"] = geometry_sdim(geometry_node)
+        length_unit_probe = call_probe(geometry_node, "lengthUnit")
+        context["length_unit"] = (
+            str(length_unit_probe["value"])
+            if length_unit_probe["ok"] and length_unit_probe["value"] is not None else None
+        )
+        space_dimension_probe = call_probe(geometry_node, "getSDim")
+        space_dimension = space_dimension_probe["value"]
+        context["space_dimension"] = (
+            int(space_dimension)
+            if space_dimension_probe["ok"] and isinstance(space_dimension, int)
+            and not isinstance(space_dimension, bool) else None
+        )
         # COMSOL 6.4 exposes the geometry truth through GeomSequence's
         # isAxisymmetric().  Coordinate names and arbitrary boolean
         # properties are not equivalent metadata: treating a failed read as
         # ``False`` would silently omit the 2*pi*r measure factor.  Refuse the
         # evaluation until the real accessor is available and returns a bool.
-        is_axi_getter = getattr(geometry_node, "isAxisymmetric", None)
-        if not callable(is_axi_getter):
+        if not callable(getattr(geometry_node, "isAxisymmetric", None)):
             raise ExecutionContractError(
                 "AXISYMMETRY_STATUS_UNAVAILABLE",
                 "geometry.isAxisymmetric() is required to determine the spatial measure",
             )
         try:
-            is_axi = is_axi_getter()
+            is_axi = _call(geometry_node, "isAxisymmetric")
         except Exception as exc:
             raise ExecutionContractError(
                 "AXISYMMETRY_STATUS_UNAVAILABLE",
@@ -3119,8 +3212,9 @@ def _feature_components(
     def _read_raw(method: str) -> Any:
         if budget_decision is None:
             return _call(feature, method)
+        _retain_unknown_dispatch_owner(feature, budget_decision)
         try:
-            value = guarded_getdata(feature, budget_decision, method=method)
+            value = guarded_getdata(_fence_native_receiver(feature), budget_decision, method=method)
         except ResultBudgetRefused:
             raise
         # Keep the decision auditable without pretending that this records a
@@ -3154,6 +3248,9 @@ def _feature_components(
         except ResultBudgetRefused:
             raise
         except Exception:
+            attempt = _active_unknown_dispatch_attempt()
+            if attempt is not None and attempt.first_unknown is not None:
+                raise attempt.first_unknown
             try:
                 real = _call(feature, "getReal")
                 layout = "expression,solnum"
@@ -3170,6 +3267,9 @@ def _feature_components(
         except ResultBudgetRefused:
             raise
         except Exception:
+            attempt = _active_unknown_dispatch_attempt()
+            if attempt is not None and attempt.first_unknown is not None:
+                raise attempt.first_unknown
             if use_outer_getters and outer is not None and budget_decision is None:
                 raise ExecutionContractError(
                     "COMPLEX_DATA_ERROR",
@@ -3639,19 +3739,28 @@ def _centered_square_expression(
     mean_value: Any,
     *,
     unit: Any = None,
+    scalar_center_is_differential: bool = False,
 ) -> str:
-    """Construct ``|f-mean|^2`` with a dimensionally matched center."""
+    """Construct ``|f-mean|^2`` with an explicitly typed scalar center."""
     if isinstance(mean_value, Mapping):
-        if set(mean_value) < {"real", "imag"}:
+        if not {"real", "imag"} <= set(mean_value):
             raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex mean lacks real/imag components")
         real_literal = _numeric_literal(mean_value["real"], unit=unit)
         imag_literal = _numeric_literal(mean_value["imag"], unit=unit)
+        if unit not in (None, "", "1", "dimensionless"):
+            zero_literal = _numeric_literal(0.0, unit=unit)
+            imag_literal = f"({imag_literal}-{zero_literal})"
         centered = (
             f"(real(({expression}))-{real_literal})"
             f"+i*(imag(({expression}))-{imag_literal})"
         )
     else:
-        centered = f"(({expression})-{_numeric_literal(mean_value, unit=unit)})"
+        scalar_literal = _numeric_literal(mean_value, unit=unit)
+        if (scalar_center_is_differential
+                and unit not in (None, "", "1", "dimensionless")):
+            zero_literal = _numeric_literal(0.0, unit=unit)
+            scalar_literal = f"({scalar_literal}-{zero_literal})"
+        centered = f"(({expression})-{scalar_literal})"
     return f"abs(({centered}))^2"
 
 
@@ -4043,32 +4152,23 @@ def _feature_units(feature: Any, expressions: Sequence[str]) -> dict[str, Any]:
 
 
 def _global_parameter_context_unit_readback(model: Any, expression: str) -> dict[str, Any]:
-    """Retain ParamBase's unit result as a global-context diagnostic only.
+    """Report that no global-context unit probe is used by this adapter.
 
-    ParamBase.evaluateUnit is scoped to the model's global parameter context.
-    A result does not establish the unit of a same-named local field expression
-    as evaluated by a numerical feature over a selected ROI and solution tuple.
-    It therefore never verifies the weighted expression's ROI-context unit.
+    The fixed private conversion path uses actual numerical-feature unit
+    readbacks plus ParamBase.evaluate(String,String); evaluateUnit is not part
+    of that typed capability and is not dispatched here.
     """
-    result: dict[str, Any] = {
+    return {
         "status": "UNAVAILABLE",
         "unit": None,
         "expression": expression,
+        # Keep the established evidence schema consumed by the strict metric
+        # validator. status=UNAVAILABLE and unavailable_reason state that this
+        # diagnostic getter was not invoked by the fixed typed conversion path.
         "source": "Model.param().evaluateUnit(expression)",
         "scope": "global_parameter_context",
+        "unavailable_reason": "evaluateUnit_is_not_in_the_fixed_typed_read_chain",
     }
-    try:
-        parameters = _call(model, "param")
-        value = _call(parameters, "evaluateUnit", expression)
-    except Exception as exc:
-        result["unavailable_reason"] = type(exc).__name__
-        return result
-    if not isinstance(value, str) or not value.strip():
-        result["unavailable_reason"] = "native_unit_evaluator_returned_no_unit"
-        return result
-    result["unit"] = value.strip()
-    result["status"] = "READBACK_ONLY"
-    return result
 
 
 _STRICT_WEIGHT_INTEGRATION_ORDER = 4
@@ -4470,15 +4570,16 @@ def _result_solution_binding(model: Any, solution_tag: Any, *,
             raise ExecutionContractError("NODE_NOT_FOUND", f"solution {solution_tag!r} is not present in model.sol()")
         sol_node = _call(sol_list, "get", solution_tag)
         info = _call(sol_node, "getSolutioninfo")
-        if not callable(getattr(info, "getSolnum", None)):
+        dispatch_info = _fence_native_receiver(info)
+        if not callable(getattr(dispatch_info, "getSolnum", None)):
             return None
         from ._ephemeral_result_ticket import current_scope
         scope = current_scope()
         if scope is None:
-            return SolutionBinding.resolve_solution_info(info,
+            return SolutionBinding.resolve_solution_info(dispatch_info,
                 _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
         with scope.supplemental_solution_info(info) as handled:
-            binding = SolutionBinding.resolve_solution_info(info,
+            binding = SolutionBinding.resolve_solution_info(dispatch_info,
                 _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
             handled.append(binding)
             return binding
@@ -4888,6 +4989,124 @@ def _nested_divide(value: Any, denominator: Any) -> Any:
     raise ExecutionContractError("INVALID_RESULT", f"cannot divide value of type {type(value).__name__}")
 
 
+class _ResultUnitConversionLeaf:
+    __slots__ = ("numerator", "denominator", "expression_index", "component")
+
+    def __init__(self, numerator: float, denominator: float, expression_index: int,
+                 component: str | None) -> None:
+        self.numerator = numerator
+        self.denominator = denominator
+        self.expression_index = expression_index
+        self.component = component
+
+
+def _plan_result_unit_conversion(
+    numerator: Any,
+    denominator: Any,
+    *,
+    expression_count: int,
+    max_cells: int,
+    operation: str,
+) -> tuple[Any, int]:
+    """Validate/budget an aggregate conversion tree before any ParamBase call."""
+    from collections.abc import Sequence as AbstractSequence
+
+    if operation not in {"quotient", "std", "rms"} or expression_count < 1:
+        raise ExecutionContractError("INVALID_REQUEST", "result-unit conversion plan is malformed")
+
+    def sequence(value: Any) -> bool:
+        return isinstance(value, AbstractSequence) and not isinstance(value, (str, bytes, Mapping))
+
+    def number(value: Any, label: str) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ExecutionContractError("INVALID_RESULT", f"{label} is not a real scalar")
+        result = float(value)
+        if not math.isfinite(result):
+            raise ExecutionContractError("INVALID_RESULT", f"{label} is not finite")
+        return result
+
+    leaves = 0
+
+    def walk(left: Any, right: Any, expression_index: int | None,
+             depth: int, component: str | None = None) -> Any:
+        nonlocal leaves
+        if isinstance(left, Mapping):
+            if set(left) != {"real", "imag"} or isinstance(right, Mapping):
+                raise ExecutionContractError("COMPLEX_DATA_ERROR", "result-unit conversion requires a real/imag component map")
+            return {
+                "real": walk(left["real"], right, expression_index, depth, "real"),
+                "imag": walk(left["imag"], right, expression_index, depth, "imag"),
+            }
+        if isinstance(right, Mapping):
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "native denominator/measure must be real")
+
+        if depth == 0:
+            if sequence(left):
+                if len(left) != expression_count:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        f"unit conversion has {len(left)} expression rows, expected {expression_count}",
+                    )
+                if sequence(right):
+                    if len(right) != 1:
+                        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unit conversion denominator must have one expression row")
+                    denominator_row = right[0]
+                else:
+                    denominator_row = right
+                return [walk(item, denominator_row, index, 1, component)
+                        for index, item in enumerate(left)]
+            if expression_count != 1:
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unit conversion lacks the requested expression axis")
+            if sequence(right):
+                if len(right) != 1:
+                    raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unit conversion denominator must have one expression row")
+                right = right[0]
+            expression_index = 0
+            depth = 1
+
+        if sequence(left):
+            if sequence(right):
+                if len(right) == 1 and len(left) != 1:
+                    return [walk(item, right[0], expression_index, depth + 1, component) for item in left]
+                if len(left) != len(right):
+                    raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unit conversion numerator and denominator axes differ")
+                return [walk(item, other, expression_index, depth + 1, component)
+                        for item, other in zip(left, right)]
+            return [walk(item, right, expression_index, depth + 1, component) for item in left]
+
+        if sequence(right):
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unit conversion denominator has an extra axis")
+        if expression_index is None:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unit conversion expression index is missing")
+        n_value = number(left, "native numerator/variance")
+        d_value = number(right, "native denominator/measure")
+        if d_value == 0.0 or (operation in {"std", "rms"} and n_value < 0.0):
+            raise ExecutionContractError("INVALID_RESULT", "native denominator/variance is invalid for unit conversion")
+        leaves += 1
+        if leaves > max_cells:
+            raise ExecutionContractError(
+                "RESULT_BUDGET_EXCEEDED",
+                f"unit conversion requires {leaves} scalar cells, exceeding the pre-dispatch limit {max_cells}",
+                details={"conversion_cells": leaves, "max_cells": max_cells, "sdk_dispatches": 0},
+            )
+        return _ResultUnitConversionLeaf(n_value, d_value, expression_index, component)
+
+    plan = walk(numerator, denominator, None, 0)
+    if leaves == 0:
+        raise ExecutionContractError("INVALID_RESULT", "unit conversion contains no scalar cells")
+    return plan, leaves
+
+
+def _apply_result_unit_conversion_plan(plan: Any, convert: Any) -> Any:
+    if isinstance(plan, _ResultUnitConversionLeaf):
+        return convert(plan)
+    if isinstance(plan, Mapping):
+        return {key: _apply_result_unit_conversion_plan(value, convert) for key, value in plan.items()}
+    if isinstance(plan, list):
+        return [_apply_result_unit_conversion_plan(value, convert) for value in plan]
+    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "unit conversion plan contains an unknown node")
+
+
 def _nested_magnitude_squared(value: Any) -> Any:
     if isinstance(value, Mapping):
         if "real" not in value or "imag" not in value:
@@ -4960,6 +5179,7 @@ def _run_bound_feature(
     num_expressions: int,
     point_feature: bool = False,
     budget_guard: Any | None = None,
+    native_payload_guard: Any | None = None,
     outer_getters: bool = False,
     strict_field_reader: Any | None = None,
 ) -> tuple[Any, Any, bool, str]:
@@ -4979,12 +5199,16 @@ def _run_bound_feature(
                 raise ExecutionContractError("SOLUTION_SELECTION_FAILED", f"could not select outer solution {outer}") from exc
             _call(feature, "run")
             budget_decision = budget_guard(feature, int(outer)) if budget_guard is not None else None
+            if native_payload_guard is not None:
+                native_payload_guard(feature, "before_payload_read", int(outer))
             real, imag, status, layout = _feature_components(
                 feature,
                 budget_decision=budget_decision,
                 outer=int(outer),
                 use_outer_getters=outer_getters,
             )
+            if native_payload_guard is not None:
+                native_payload_guard(feature, "after_payload_read", int(outer))
             if point_feature:
                 real, imag, _ = _normalise_evalpoint_components(
                     real, imag, num_expressions=num_expressions
@@ -5009,14 +5233,23 @@ def _run_bound_feature(
     if binding and binding.get("outer_indices"):
         outer_label = int(binding["outer_indices"][0])
     if strict_field_reader is not None:
-        return strict_field_reader(feature, outer_label, budget_guard)
+        if native_payload_guard is not None:
+            native_payload_guard(feature, "before_payload_read", outer_label)
+        payload = strict_field_reader(feature, outer_label, budget_guard)
+        if native_payload_guard is not None:
+            native_payload_guard(feature, "after_payload_read", outer_label)
+        return payload
     budget_decision = budget_guard(feature, outer_label) if budget_guard is not None else None
+    if native_payload_guard is not None:
+        native_payload_guard(feature, "before_payload_read", outer_label)
     real, imag, status, layout = _feature_components(
         feature,
         budget_decision=budget_decision,
         outer=outer_label,
         use_outer_getters=outer_getters,
     )
+    if native_payload_guard is not None:
+        native_payload_guard(feature, "after_payload_read", outer_label)
     if point_feature:
         real, imag, _ = _normalise_evalpoint_components(
             real, imag, num_expressions=num_expressions
@@ -5312,7 +5545,7 @@ def verify_artifact_chunks(
 # W17 Result Evaluation (result.evaluate & result.at_points)
 # ---------------------------------------------------------------------------
 
-def result_evaluate(
+def _result_evaluate_body(
     worker: Any,
     model_tag: str,
     arguments: Mapping[str, Any],
@@ -5447,7 +5680,6 @@ def result_evaluate(
     initial_dataset_evidence: dict[str, Any] | None = None
     if (isinstance(_w21_initial_output_context, Mapping)
             and _w21_initial_output_context.get("purpose") == "initial_stage_output"):
-        from ._g3_common import call_probe
         type_probe = call_probe(dset_node, "getType", include_engine_failure_details=True)
         frame_probe = call_probe(dset_node, "getString", "frametype",
                                  include_engine_failure_details=True)
@@ -5579,7 +5811,7 @@ def result_evaluate(
             "SOLUTION_AXIS_METADATA_UNAVAILABLE",
             "outer selection requires SolutionInfo.getSolnum(outer, strict) metadata",
         )
-    if solution_binding and not solution_binding.get("pair_mapping_complete") and (
+    if not pair_mapping_complete and (
         solution_spec.get("outer") is not None or solution_spec.get("inner") is not None
     ):
         raise ExecutionContractError(
@@ -5649,24 +5881,50 @@ def result_evaluate(
         )
     )
 
-    # A raw Eval allocation can be bounded by direct native numeric-count
-    # witnesses even when SolutionInfo cannot map that allocation to outer /
-    # inner tuples.  Keep that count-only evidence separate from the typed
-    # SolutionBinding; it must never create axes or a FieldArray.
+    # Raw Eval allocations and singleton stationary measures can be bounded
+    # by direct native numeric-count witnesses even when SolutionInfo cannot
+    # map them to outer/inner tuples. Keep count-only evidence separate from
+    # the typed SolutionBinding; it must never create axes or a FieldArray.
     single_solution_count_observation: dict[str, Any] | None = None
     stationary_count_identity: dict[str, Any] | None = None
-    if aggregate == "none" and feat_type == "Eval" and not pair_mapping_complete:
+    stationary_measure_count_only = bool(
+        not pair_mapping_complete
+        and (aggregate in ("average", "std", "rms") or weight_expression)
+    )
+    count_only_raw_eval = aggregate == "none" and feat_type == "Eval" and not pair_mapping_complete
+    if stationary_measure_count_only or count_only_raw_eval:
         single_solution_count_observation = _single_stored_solution_count_observation(
             model, dataset_binding, solution_tag
         )
-        if not _has_bounded_count_only_witness(single_solution_count_observation):
+        single_attached_stationary = (
+            isinstance(single_solution_count_observation, Mapping)
+            and single_solution_count_observation.get("status")
+            == "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT"
+            and type(single_solution_count_observation.get("numeric_solution_count")) is int
+            and single_solution_count_observation.get("numeric_solution_count") == 1
+            and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
+        )
+        if (
+            not _has_bounded_count_only_witness(single_solution_count_observation)
+            or (stationary_measure_count_only and not single_attached_stationary)
+        ):
             raise PreWriteRefusal(
                 "SOLUTION_AXES_UNVERIFIED",
-                "raw Eval requires complete SolutionBinding metadata or an exact bounded numeric-count witness",
+                (
+                    "an aggregate requiring a spatial measure without complete SolutionBinding metadata "
+                    "requires an exact verified attached-Stationary singleton count"
+                    if stationary_measure_count_only
+                    else "raw Eval requires complete SolutionBinding metadata or an exact bounded numeric-count witness"
+                ),
                 details={
                     "dataset": dataset_tag,
                     "solution": solution_tag,
                     "count_observation_status": single_solution_count_observation.get("status"),
+                    "numeric_solution_count": single_solution_count_observation.get("numeric_solution_count"),
+                    "required_count_scope": (
+                        "verified_attached_stationary_singleton"
+                        if stationary_measure_count_only else "bounded_numeric_count"
+                    ),
                     "reasons": single_solution_count_observation.get("reasons"),
                     "mutation_issued": False,
                     "getdata_called": False,
@@ -5693,6 +5951,7 @@ def result_evaluate(
                 "witness_kind": single_solution_count_observation.get("witness_kind"),
                 "numeric_solution_count": single_solution_count_observation.get("numeric_solution_count"),
                 "solution_axes_pair_mapping_complete": single_solution_count_observation.get("solution_axes_pair_mapping_complete"),
+                "requested_roi_selection": deepcopy(spec.get("selection")),
                 "solver_observation": deepcopy({
                     name: observed.get(name)
                     for name in (
@@ -5738,6 +5997,7 @@ def result_evaluate(
             "witness_kind": current_count.get("witness_kind"),
             "numeric_solution_count": current_count.get("numeric_solution_count"),
             "solution_axes_pair_mapping_complete": current_count.get("solution_axes_pair_mapping_complete"),
+            "requested_roi_selection": deepcopy(spec.get("selection")),
             "solver_observation": deepcopy({
                 name: observed.get(name)
                 for name in (
@@ -5766,19 +6026,151 @@ def result_evaluate(
             if stage == "before_feature_create":
                 raise PreWriteRefusal(
                     "SOLUTION_COUNT_DRIFT",
-                    "dataset-to-solution-to-study stationary count changed before creating the raw Eval feature",
+                    "dataset-to-solution-to-study stationary count or requested ROI selection changed before creating the result feature",
                     details={**details, "mutation_issued": False},
                 )
             raise ExecutionContractError(
                 "SOLUTION_COUNT_DRIFT",
-                "dataset-to-solution-to-study stationary count identity changed around the raw Eval read",
+                "dataset-to-solution-to-study stationary count or requested ROI selection changed around the native result read",
                 details=details,
                 stage="post_dispatch",
             )
 
-    # Catch a count/binding change before even creating the transient feature.
-    # The budget guard repeats this check immediately before getData, and the
-    # post-read check prevents publishing data if the native identity moved.
+    count_only_point_axis_length: int | None = None
+
+    def validate_count_only_components(
+        real: Any,
+        imag: Any,
+        *,
+        status: bool,
+        layout: str,
+        num_expressions: int,
+        role: str,
+    ) -> None:
+        """Validate a count-only native row without assigning solution axes."""
+        nonlocal count_only_point_axis_length
+        if not stationary_measure_count_only:
+            return
+        if (not isinstance(real, Sequence) or isinstance(real, (str, bytes))
+                or len(real) != num_expressions):
+            raise ExecutionContractError(
+                "FIELD_ARRAY_SHAPE_MISMATCH",
+                f"{role} returned no exact expression axis for the count-only singleton read",
+            )
+        if layout not in {"expression,solnum", "expression,solnum,point"}:
+            raise ExecutionContractError(
+                "FIELD_ARRAY_SHAPE_MISMATCH",
+                f"{role} returned ambiguous count-only layout {layout!r}",
+            )
+
+        point_count: int | None = None
+        for expression_index, expression_row in enumerate(real):
+            if (not isinstance(expression_row, Sequence) or isinstance(expression_row, (str, bytes))
+                    or len(expression_row) != 1):
+                raise ExecutionContractError(
+                    "FIELD_ARRAY_SHAPE_MISMATCH",
+                    f"{role} expression {expression_index} does not have exactly one native solution row",
+                )
+            if layout == "expression,solnum,point":
+                point_row = expression_row[0]
+                if not isinstance(point_row, Sequence) or isinstance(point_row, (str, bytes)) or not point_row:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        f"{role} expression {expression_index} has no explicit point axis",
+                    )
+                if point_count is None:
+                    point_count = len(point_row)
+                elif len(point_row) != point_count:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        f"{role} expression rows have different point-axis lengths",
+                    )
+                if ms.entity_dim != 0 and len(point_row) != 1:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        f"{role} spatial aggregate must return one aggregate point, got {len(point_row)}",
+                    )
+                leaves = point_row
+            else:
+                leaves = [expression_row[0]]
+            for value in leaves:
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                        or not math.isfinite(float(value))):
+                    raise ExecutionContractError(
+                        "INVALID_RESULT",
+                        f"{role} contains a non-finite, non-real, or boolean numeric value",
+                    )
+
+        if status:
+            if imag is None:
+                raise ExecutionContractError("COMPLEX_DATA_ERROR", f"{role} complex status has no imaginary component")
+            validate_count_only_components(
+                imag,
+                None,
+                status=False,
+                layout=layout,
+                num_expressions=num_expressions,
+                role=f"{role} imaginary component",
+            )
+        elif imag is not None:
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", f"{role} returned imaginary values with a real status")
+
+        if ms.entity_dim == 0:
+            if point_count is None:
+                raise ExecutionContractError(
+                    "FIELD_ARRAY_SHAPE_MISMATCH",
+                    f"{role} did not retain its native discrete-point axis",
+                )
+            if count_only_point_axis_length is None:
+                count_only_point_axis_length = point_count
+            elif point_count != count_only_point_axis_length:
+                raise ExecutionContractError(
+                    "FIELD_ARRAY_SHAPE_MISMATCH",
+                    f"{role} point-axis length changed across the same count-only selection",
+                )
+
+    def run_stationary_measure_feature(
+        target_feature: Any,
+        *,
+        num_expressions: int,
+        point_feature: bool,
+        role: str,
+        expected_expressions: Sequence[str],
+        budget_guard: Any | None = None,
+        outer_getters: bool = True,
+    ) -> tuple[Any, Any, bool, str]:
+        verify_stationary_count_binding("before_native_read")
+        native_guard = None
+        if native_binding_checks_enabled:
+            _native_result_binding_snapshot(
+                target_feature, role=role, expected_expressions=expected_expressions,
+                stage="before_run", outer=None,
+            )
+
+            def native_guard(native_feature: Any, stage: str, outer: int | None) -> None:
+                _native_result_binding_snapshot(
+                    native_feature, role=role, expected_expressions=expected_expressions,
+                    stage=stage, outer=outer,
+                )
+
+        raw = _run_bound_feature(
+            target_feature,
+            None,
+            num_expressions=num_expressions,
+            point_feature=point_feature,
+            budget_guard=budget_guard,
+            native_payload_guard=native_guard,
+            outer_getters=outer_getters,
+        )
+        verify_stationary_count_binding("after_native_read")
+        validate_count_only_components(
+            raw[0], raw[1], status=raw[2], layout=raw[3],
+            num_expressions=num_expressions, role=role,
+        )
+        return raw
+
+    # Catch a count/binding change before even creating a transient feature.
+    # Count-only aggregate reads repeat this check around every native read.
     verify_stationary_count_binding("before_feature_create")
 
     ephemeral_tag = _unique_tag(tag_list(numerical_list))
@@ -5791,6 +6183,7 @@ def result_evaluate(
         "error": None,
     }
     cleanup_records: list[dict[str, Any]] = [cleanup]
+    _retain_unknown_dispatch_owner(cleanup_records, numerical_list)
 
     def _new_cleanup_record(tag: str, type_id: str) -> dict[str, Any]:
         record = {
@@ -5802,6 +6195,7 @@ def result_evaluate(
             "error": None,
         }
         cleanup_records.append(record)
+        _retain_unknown_dispatch_owner(cleanup_records, record)
         return record
 
     feature = None
@@ -5830,6 +6224,12 @@ def result_evaluate(
     weight_validation_minima: list[dict[str, Any]] = []
     weight_integral_rule_readbacks: dict[str, dict[str, Any]] = {}
     weight_unit_evidence: dict[str, Any] | None = None
+    unit_conversion_evidence: dict[str, Any] | None = None
+    unit_conversion_stages: list[dict[str, Any]] = []
+    unit_conversion_reader: Any = None
+    stationary_native_binding_evidence: list[dict[str, Any]] = []
+    stationary_native_feature_baselines: dict[int, dict[str, Any]] = {}
+    stationary_native_roi_identity: dict[str, Any] | None = None
     denominator_tuple_values: dict[tuple[int, int, int], float] | None = None
     # §3: reported in every outcome, including the failure path, so the response
     # never depends on how far the aggregate block got before an error.
@@ -5842,13 +6242,426 @@ def result_evaluate(
     selection_measure_source = None
     selection_measure_error = None
 
+    count_only_native_binding = bool(
+        not pair_mapping_complete and (stationary_measure_count_only or count_only_raw_eval)
+    )
+    # Every result.evaluate numeric route now verifies the actual feature
+    # binding around payload reads. This evidence does not grant pair axes or
+    # strict-metric status; those continue to use their existing independent
+    # gates.
+    native_binding_checks_enabled = True
+
+    def _native_result_binding_snapshot(
+        target_feature: Any,
+        *,
+        role: str,
+        expected_expressions: Sequence[str],
+        stage: str,
+        outer: int | None,
+    ) -> dict[str, Any]:
+        nonlocal stationary_native_roi_identity
+        data_readback = _call(target_feature, "getString", "data")
+        expression_readback = _call(target_feature, "getStringArray", "expr")
+        if isinstance(expression_readback, str):
+            actual_expressions = [expression_readback]
+        elif (isinstance(expression_readback, Sequence)
+              and not isinstance(expression_readback, (str, bytes, Mapping))
+              and all(isinstance(value, str) for value in expression_readback)):
+            actual_expressions = list(expression_readback)
+        else:
+            raise ExecutionContractError(
+                "NATIVE_RESULT_BINDING_UNVERIFIED",
+                f"{role} native expr readback is not a string array",
+                details={"stage": stage, "role": role, "publish_allowed": False},
+            )
+        if data_readback != dataset_tag or actual_expressions != list(expected_expressions):
+            raise ExecutionContractError(
+                "NATIVE_RESULT_BINDING_MISMATCH",
+                f"{role} actual data/expr readback differs from its verified role binding",
+                details={
+                    "stage": stage, "role": role, "dataset_readback": data_readback,
+                    "dataset_expected": dataset_tag, "expr_readback": actual_expressions,
+                    "expr_expected": list(expected_expressions), "publish_allowed": False,
+                },
+            )
+
+        requested_selection = spec.get("selection")
+        selection_map = requested_selection if isinstance(requested_selection, Mapping) else {}
+        requested_component = selection_map.get("component")
+        requested_geometry = selection_map.get("geometry")
+        if (requested_component and context.get("component")
+                and requested_component != context.get("component")):
+            raise ExecutionContractError(
+                "NATIVE_RESULT_BINDING_MISMATCH",
+                f"{role} selection component differs from the dataset's native component",
+                details={"stage": stage, "role": role, "publish_allowed": False},
+            )
+        if (requested_geometry and context.get("geometry")
+                and requested_geometry != context.get("geometry")):
+            raise ExecutionContractError(
+                "NATIVE_RESULT_BINDING_MISMATCH",
+                f"{role} selection geometry differs from the dataset's native geometry",
+                details={"stage": stage, "role": role, "publish_allowed": False},
+            )
+        component_tag = selection_map.get("component") or context.get("component")
+        geometry_tag = selection_map.get("geometry") or context.get("geometry")
+        entity_dimension = ms.entity_dim
+        if entity_dimension < 0:
+            roi_identity = {
+                "scope": "global", "component": None, "geometry": None,
+                "entity_dimension": entity_dimension, "kind": "global",
+                "named": None, "entities": None, "is_inheriting": None,
+            }
+        else:
+            selection_node = _call(target_feature, "selection")
+            actual_geometry = _call(selection_node, "geom")
+            actual_dimension = _call(selection_node, "dim")
+            actual_named = _call(selection_node, "named")
+            actual_entities = require_entity_id_array(
+                _call(selection_node, "entities"), "NumericalFeature.selection().entities()", allow_empty=True
+            )
+            inheriting = _call(selection_node, "isInheriting")
+            if component_tag is None:
+                component_tags = tag_list(_call(model, "component"))
+                if len(component_tags) == 1:
+                    component_tag = component_tags[0]
+            if geometry_tag is None:
+                geometry_tag = actual_geometry
+            if (not isinstance(component_tag, str) or not component_tag
+                    or not isinstance(geometry_tag, str) or not geometry_tag
+                    or type(actual_dimension) is not int
+                    or actual_dimension != entity_dimension
+                    or actual_geometry != geometry_tag
+                    or inheriting is not False
+                    or not actual_entities):
+                raise ExecutionContractError(
+                    "NATIVE_RESULT_BINDING_UNVERIFIED",
+                    f"{role} actual ROI context/membership readback is incomplete "
+                    f"(component={component_tag!r}, geometry_expected={geometry_tag!r}, "
+                    f"geometry_readback={actual_geometry!r}, dimension_expected={entity_dimension!r}, "
+                    f"dimension_readback={actual_dimension!r}, entity_count={len(actual_entities)}, "
+                    f"is_inheriting={inheriting!r})",
+                    details={
+                        "stage": stage, "role": role, "component": component_tag,
+                        "geometry_expected": geometry_tag, "geometry_readback": actual_geometry,
+                        "entity_dimension_expected": entity_dimension,
+                        "entity_dimension_readback": actual_dimension,
+                        "entity_count": len(actual_entities), "is_inheriting": inheriting,
+                        "publish_allowed": False,
+                    },
+                )
+            if selection_map:
+                declared_dimension = selection_map.get(
+                    "entity_dimension", selection_map.get("entity_dim", selection_map.get("dim"))
+                )
+                if declared_dimension is not None and declared_dimension != actual_dimension:
+                    raise ExecutionContractError(
+                        "NATIVE_RESULT_BINDING_MISMATCH",
+                        f"{role} native ROI dimension differs from the requested selection",
+                        details={"stage": stage, "role": role, "publish_allowed": False},
+                    )
+            selection_kind = selection_map.get("kind")
+            selected_name = selection_map.get("named", selection_map.get("name", selection_map.get("tag")))
+            selected_entities = selection_map.get("entities")
+            all_selected = bool(selection_map.get("all", False)) or selection_kind == "all"
+            if selection_kind is None:
+                if selected_entities is not None:
+                    selection_kind = "explicit"
+                elif selected_name is not None:
+                    selection_kind = "named"
+                else:
+                    all_selected = True
+                    selection_kind = "all"
+            elif selection_kind == "explicit" and selected_entities is None:
+                raise ExecutionContractError("INVALID_SELECTION", "explicit selection has no entities")
+            elif selection_kind == "named" and selected_name is None:
+                selected_name = selection_map.get("tag")
+            if isinstance(requested_selection, Sequence) and not isinstance(requested_selection, (str, bytes, Mapping)):
+                selection_kind, selected_entities, selected_name, all_selected = "explicit", requested_selection, None, False
+            elif requested_selection is None or requested_selection == "all":
+                selection_kind, selected_entities, selected_name, all_selected = "all", None, None, True
+            if selection_kind == "explicit":
+                expected_entities = require_entity_id_array(
+                    selected_entities, "spec.selection.entities", allow_empty=False
+                )
+                if actual_named is not None or actual_entities != expected_entities:
+                    raise ExecutionContractError(
+                        "NATIVE_RESULT_BINDING_MISMATCH",
+                        f"{role} actual ROI membership differs from the explicit request",
+                        details={
+                            "stage": stage, "role": role, "expected_entities": expected_entities,
+                            "actual_entities": actual_entities, "publish_allowed": False,
+                        },
+                    )
+            elif selection_kind == "named":
+                if actual_named != selected_name:
+                    raise ExecutionContractError(
+                        "NATIVE_RESULT_BINDING_MISMATCH",
+                        f"{role} actual named ROI differs from the request",
+                        details={"stage": stage, "role": role, "publish_allowed": False},
+                    )
+            elif selection_kind == "all":
+                if actual_named is not None or all_selected is not True:
+                    raise ExecutionContractError(
+                        "NATIVE_RESULT_BINDING_MISMATCH",
+                        f"{role} actual ROI is not the requested all-entity selection",
+                        details={"stage": stage, "role": role, "publish_allowed": False},
+                    )
+            else:
+                raise ExecutionContractError(
+                    "API_UNSUPPORTED", f"native count-only binding does not support selection kind {selection_kind!r}"
+                )
+            roi_identity = {
+                "scope": "spatial", "component": component_tag, "geometry": actual_geometry,
+                "entity_dimension": actual_dimension, "kind": selection_kind,
+                "named": actual_named, "entities": actual_entities,
+                "is_inheriting": inheriting,
+            }
+        unit_map, unit_observation = _feature_units_and_observation(
+            target_feature,
+            list(expected_expressions),
+            feature_expressions=actual_expressions,
+            requested_units=spec.get("units"),
+            requested_units_present="units" in spec,
+            setter_called=target_feature is feature and unit_setter_called,
+        )
+        snapshot = {
+            "data": data_readback,
+            "expressions": actual_expressions,
+            "roi": roi_identity,
+            "units": unit_map,
+            "unit_observation": unit_observation,
+        }
+        if stationary_native_roi_identity is None:
+            stationary_native_roi_identity = dict(roi_identity)
+        elif roi_identity != stationary_native_roi_identity:
+            raise ExecutionContractError(
+                "NATIVE_RESULT_BINDING_MISMATCH",
+                f"{role} actual ROI differs from the common native ROI used by this result attempt",
+                details={"stage": stage, "role": role, "publish_allowed": False},
+            )
+        feature_key = id(target_feature)
+        baseline = stationary_native_feature_baselines.get(feature_key)
+        if stage == "before_payload_read":
+            # A single native feature can legitimately change expr/units for
+            # each centered-variance tuple. Bind each payload to the latest
+            # actual pre-read snapshot, then compare its immediate readback.
+            stationary_native_feature_baselines[feature_key] = dict(snapshot)
+        elif stage == "after_payload_read":
+            if baseline is None or snapshot != baseline:
+                raise ExecutionContractError(
+                    "NATIVE_RESULT_BINDING_DRIFT",
+                    f"{role} actual data/expr/ROI/unit binding changed around the numeric read",
+                    details={"stage": stage, "role": role, "publish_allowed": False},
+                )
+        stationary_native_binding_evidence.append({
+            "role": role, "stage": stage, "outer": outer,
+            "feature_tag": _call(target_feature, "tag"),
+            "data": data_readback, "expressions": actual_expressions,
+            "roi": dict(roi_identity), "unit_readback": unit_map,
+            "unit_observation": unit_observation,
+            "same_native_feature_pre_post": baseline is not None or stage == "before_payload_read",
+            "status": "VERIFIED_ACTUAL_NATIVE_BINDING",
+        })
+        return snapshot
+
+    def _verify_native_feature_before_run(
+        target_feature: Any, *, role: str, expected_expressions: Sequence[str]
+    ) -> None:
+        if native_binding_checks_enabled:
+            _native_result_binding_snapshot(
+                target_feature, role=role, expected_expressions=expected_expressions,
+                stage="before_run", outer=None,
+            )
+
+    def _native_payload_guard_for(role: str, expected_expressions: Sequence[str]) -> Any | None:
+        if not native_binding_checks_enabled:
+            return None
+
+        def _guard(target_feature: Any, stage: str, outer: int | None) -> None:
+            _native_result_binding_snapshot(
+                target_feature, role=role, expected_expressions=expected_expressions,
+                stage=stage, outer=outer,
+            )
+
+        return _guard
+
+    def _result_resolve_selection_entities(requested: Mapping[str, Any]) -> dict[str, Any]:
+        """Resolve strict ROI membership with result-scope fenced probes."""
+        from ._g3_common import all_entities_of_dimension, validate_selection_spec
+
+        resolved = validate_selection_spec(requested, allowed_kinds={"named", "explicit", "all"})
+        kind = resolved["kind"]
+        if kind == "explicit":
+            entities = list(resolved["entities"])
+            return {
+                "kind": kind, "component": resolved.get("component"),
+                "geometry": resolved.get("geometry"),
+                "entity_dimension": resolved.get("entity_dimension"),
+                "entities": entities, "entity_count": len(entities),
+                "source": "caller_explicit",
+            }
+
+        component = resolved["component"]
+        comp = _call(bound_model(worker, model_tag), "component", component)
+        if kind == "all":
+            entities = all_entities_of_dimension(comp, resolved["entity_dimension"])
+            return {
+                "kind": kind, "component": component, "geometry": resolved["geometry"],
+                "entity_dimension": resolved["entity_dimension"],
+                "entities": entities, "entity_count": len(entities),
+                "source": "measure_tool_all",
+            }
+
+        geometry = resolved.get("geometry")
+        if geometry:
+            geom_node = _call(comp, "geom", geometry)
+            node = _call(geom_node, "selection", resolved["tag"])
+            objects_probe = call_probe(node, "objects")
+            objects = ([str(item) for item in objects_probe["value"]]
+                       if objects_probe["ok"] and objects_probe["value"] else [])
+            if not objects:
+                single_probe = call_probe(node, "object")
+                if single_probe["ok"] and isinstance(single_probe["value"], str) and single_probe["value"]:
+                    objects = [single_probe["value"]]
+            entity_ids: set[int] = set()
+            for object_tag in objects:
+                entity_ids.update(require_entity_id_array(
+                    _call(node, "entities", object_tag), "entities(object)", allow_empty=True
+                ))
+            dimension = resolved.get("entity_dimension")
+            if dimension is None:
+                dimension_probe = call_probe(node, "dim")
+                if (dimension_probe["ok"] and isinstance(dimension_probe["value"], int)
+                        and not isinstance(dimension_probe["value"], bool)):
+                    dimension = int(dimension_probe["value"])
+            return {
+                "kind": kind, "component": component, "geometry": geometry,
+                "selection_tag": resolved["tag"], "entity_dimension": dimension,
+                "objects": objects, "entities": sorted(entity_ids),
+                "entity_count": len(entity_ids), "source": "geom_named_selection",
+            }
+
+        node = _call(comp, "selection", resolved["tag"])
+        dimension_probe = call_probe(node, "dim")
+        dimension = (dimension_probe["value"] if dimension_probe["ok"]
+                     and isinstance(dimension_probe["value"], int)
+                     and not isinstance(dimension_probe["value"], bool)
+                     else resolved.get("entity_dimension"))
+        geometry_probe = call_probe(node, "geom")
+        actual_geometry = (geometry_probe["value"] if geometry_probe["ok"]
+                           and isinstance(geometry_probe["value"], str)
+                           and geometry_probe["value"] else None)
+        entities = require_entity_id_array(
+            _call(node, "entities"), "entities()", allow_empty=True
+        )
+        return {
+            "kind": kind, "component": component, "selection_tag": resolved["tag"],
+            "entity_dimension": dimension, "entities": entities,
+            "entity_count": None, "source": "component_named_selection",
+            "geometry": actual_geometry,
+        }
+
     def _apply_feature_selection(target_feature: Any, role: str) -> None:
         if not strict_selection_enabled:
-            ms.apply_selection(target_feature)
+            selection = ms.selection
+            if ms.entity_dim < -1 or ms.entity_dim > ms.space_dim:
+                raise ExecutionContractError(
+                    "INVALID_SELECTION",
+                    f"entity dimension {ms.entity_dim} is outside the model space dimension {ms.space_dim}",
+                )
+            if isinstance(selection, Mapping):
+                declared_dim = selection.get(
+                    "entity_dim", selection.get("entity_dimension", selection.get("dim"))
+                )
+                if declared_dim is not None and declared_dim != ms.entity_dim:
+                    raise ExecutionContractError(
+                        "INVALID_SELECTION",
+                        f"selection dimension {declared_dim} does not match entity_dim {ms.entity_dim}",
+                    )
+                allowed = {
+                    "kind", "component", "geometry", "tag", "entities", "all",
+                    "named", "name", "entity_dim", "entity_dimension", "dim",
+                }
+                unknown = set(selection) - allowed
+                if unknown:
+                    raise ExecutionContractError(
+                        "INVALID_SELECTION",
+                        f"unsupported selection fields: {', '.join(sorted(unknown))}",
+                    )
+                kind = selection.get("kind")
+                if kind in {"spatial", "objects", "inherited"}:
+                    raise ExecutionContractError(
+                        "API_UNSUPPORTED",
+                        f"selection kind {kind!r} is not supported by numerical feature binding",
+                    )
+                if kind is not None and kind not in {"named", "explicit", "all"}:
+                    raise ExecutionContractError("INVALID_SELECTION", f"unsupported selection kind {kind!r}")
+                entities_value = selection.get("entities")
+                if entities_value is not None:
+                    if (isinstance(entities_value, (str, bytes))
+                            or not isinstance(entities_value, Sequence) or not entities_value
+                            or any(isinstance(value, bool) or not isinstance(value, int)
+                                   or value < 1 for value in entities_value)):
+                        raise ExecutionContractError(
+                            "INVALID_SELECTION", "selection.entities must be a non-empty positive integer array"
+                        )
+                    entities = list(entities_value)
+                else:
+                    entities = None
+                all_selected = bool(selection.get("all", False)) or kind == "all"
+                named = selection.get("named", selection.get("name", selection.get("tag")))
+                if kind == "explicit" and entities is None:
+                    raise ExecutionContractError("INVALID_SELECTION", "selection kind 'explicit' requires entities")
+                if kind == "named" and named is None:
+                    raise ExecutionContractError("INVALID_SELECTION", "selection kind 'named' requires name or tag")
+                if kind == "named" and entities is not None:
+                    raise ExecutionContractError("INVALID_SELECTION", "selection kind 'named' cannot carry entities")
+                if all_selected and (entities is not None or named is not None):
+                    raise ExecutionContractError("INVALID_SELECTION", "selection.all cannot be combined with entities or named")
+            elif selection is None or selection == "all":
+                entities, all_selected, named = None, True, None
+            elif isinstance(selection, Sequence) and not isinstance(selection, (str, bytes)):
+                if (not selection or any(isinstance(value, bool) or not isinstance(value, int)
+                                         or value < 1 for value in selection)):
+                    raise ExecutionContractError(
+                        "INVALID_SELECTION", "selection array must contain positive integer entity ids"
+                    )
+                entities, all_selected, named = list(selection), False, None
+            else:
+                raise ExecutionContractError("INVALID_SELECTION", "selection must be all, named, or explicit entity indices")
+            try:
+                target_selection = _call(target_feature, "selection")
+            except ExecutionContractError as exc:
+                if selection is None and exc.code == "API_UNSUPPORTED":
+                    return
+                raise ExecutionContractError(
+                    "SELECTION_APPLY_FAILED", "numerical feature has no usable selection accessor"
+                ) from exc
+            try:
+                if ms.entity_dim >= 0:
+                    geometry = (selection.get("geometry") if isinstance(selection, Mapping) else None) or context.get("geometry")
+                    if not geometry:
+                        geometry = _call(target_selection, "geom")
+                    if isinstance(geometry, str) and geometry and type(ms.entity_dim) is int:
+                        _call(target_selection, "geom", geometry, ms.entity_dim)
+                if named is not None:
+                    _call(target_selection, "named", named)
+                elif entities is not None:
+                    _call(target_selection, "set", entities)
+                elif all_selected:
+                    _call(target_selection, "all")
+            except ExecutionContractError:
+                raise
+            except Exception as exc:
+                raise ExecutionContractError(
+                    "SELECTION_APPLY_FAILED",
+                    f"selection binding failed: {type(exc).__name__}: {str(exc)[:500]}",
+                ) from exc
             return
-        from ._g3_common import resolve_selection_entities, bind_strict_feature_selection
+        from ._g3_common import bind_strict_feature_selection
         requested = dict(spec["selection"])
-        expected = resolve_selection_entities(worker, model_tag, requested)
+        expected = _result_resolve_selection_entities(requested)
         record = bind_strict_feature_selection(worker, model_tag, target_feature, requested,
             stage="before_numeric_read", expected=expected, apply=True)
         normalized_entities = record["entities"]
@@ -5860,6 +6673,7 @@ def result_evaluate(
     try:
         feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
         cleanup["created"] = True
+        _retain_unknown_dispatch_owner(feature)
 
         _call(feature, "set", "data", dataset_tag)
         _call(feature, "set", "expr", effective_expressions)
@@ -5977,19 +6791,46 @@ def result_evaluate(
                     }
                     return payload["real"], payload.get("imag"), payload_complex, "expression,solnum,point"
 
-        # A numerical feature is scoped to one outer solution.  The helper
-        # selects each real outer label and preserves the feature's documented
-        # local inner axis; EvalPoint additionally normalises its native
-        # expression*point rows.
-        raw_real, raw_imag, is_complex, raw_layout = _run_bound_feature(
-            feature,
-            solution_binding,
-            num_expressions=len(expressions),
-            point_feature=ms.entity_dim == 0,
-            budget_guard=result_budget_guard,
-            outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
-            strict_field_reader=(_strict_field_reader if strict_field_readback else None),
-        )
+        primary_native_guard = None
+        if native_binding_checks_enabled and not stationary_measure_count_only:
+            _native_result_binding_snapshot(
+                feature, role="primary", expected_expressions=effective_expressions,
+                stage="before_run", outer=None,
+            )
+
+            def primary_native_guard(native_feature: Any, stage: str, outer: int | None) -> None:
+                _native_result_binding_snapshot(
+                    native_feature, role="primary", expected_expressions=effective_expressions,
+                    stage=stage, outer=outer,
+                )
+
+        # A mapped feature is scoped to its real SolutionInfo tuple. Count-only
+        # stationary aggregates deliberately pass no incomplete binding: their
+        # exact singleton witness bounds one native row but creates no axes.
+        if stationary_measure_count_only:
+            raw_real, raw_imag, is_complex, raw_layout = run_stationary_measure_feature(
+                feature,
+                num_expressions=len(expressions),
+                point_feature=ms.entity_dim == 0,
+                role="aggregate",
+                expected_expressions=effective_expressions,
+                budget_guard=result_budget_guard,
+                outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
+            )
+        else:
+            # A numerical feature is scoped to one outer solution. The helper
+            # selects each real outer label and preserves its documented local
+            # inner axis; EvalPoint normalises its expression*point rows.
+            raw_real, raw_imag, is_complex, raw_layout = _run_bound_feature(
+                feature,
+                solution_binding,
+                num_expressions=len(expressions),
+                point_feature=ms.entity_dim == 0,
+                budget_guard=result_budget_guard,
+                native_payload_guard=primary_native_guard,
+                outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
+                strict_field_reader=(_strict_field_reader if strict_field_readback else None),
+            )
         if aggregate == "none" and feat_type == "Eval":
             verify_stationary_count_binding("after_native_read")
         expression_units, expression_unit_observation = _feature_units_and_observation(
@@ -6018,6 +6859,7 @@ def result_evaluate(
             weight_cleanup = _new_cleanup_record(weight_tag, minimum_type)
             weight_feature = _call(numerical_list, "create", weight_tag, minimum_type)
             weight_cleanup["created"] = True
+            _retain_unknown_dispatch_owner(weight_feature)
             _call(weight_feature, "set", "data", dataset_tag)
             _call(weight_feature, "set", "expr", [weight_expression])
             _apply_feature_selection(weight_feature, "weight_validation")
@@ -6097,6 +6939,9 @@ def result_evaluate(
                 try:
                     _call(weight_feature, "set", "outersolnum", int(outer))
                     _call(weight_feature, "set", "solnum", int(pair["solnum"]))
+                    _verify_native_feature_before_run(
+                        weight_feature, role="weight_validation", expected_expressions=[weight_expression]
+                    )
                     _call(weight_feature, "run")
                 except Exception as exc:
                     raise ExecutionContractError(
@@ -6106,7 +6951,14 @@ def result_evaluate(
 
                 if ms.entity_dim == 0:
                     try:
+                        minimum_guard = _native_payload_guard_for(
+                            "weight_validation", [weight_expression]
+                        )
+                        if minimum_guard is not None:
+                            minimum_guard(weight_feature, "before_payload_read", int(outer))
                         raw_weight = _call(weight_feature, "getData")
+                        if minimum_guard is not None:
+                            minimum_guard(weight_feature, "after_payload_read", int(outer))
                         normalized_weight, _unused_imag, point_count = _normalise_evalpoint_components(
                             raw_weight, None, num_expressions=1
                         )
@@ -6134,9 +6986,16 @@ def result_evaluate(
                     minimum_value = min(checked_values)
                 else:
                     try:
+                        minimum_guard = _native_payload_guard_for(
+                            "weight_validation", [weight_expression]
+                        )
+                        if minimum_guard is not None:
+                            minimum_guard(weight_feature, "before_payload_read", int(outer))
                         raw_weight, imag_weight, is_weight_complex, _weight_layout = _feature_components(
                             weight_feature, outer=outer, use_outer_getters=True
                         )
+                        if minimum_guard is not None:
+                            minimum_guard(weight_feature, "after_payload_read", int(outer))
                     except Exception as exc:
                         if isinstance(exc, ExecutionContractError):
                             raise
@@ -6345,6 +7204,7 @@ def result_evaluate(
             try:
                 guard_feat = _call(numerical_list, "create", guard_tag, ms.integral_feature_type)
                 guard_cleanup["created"] = True
+                _retain_unknown_dispatch_owner(guard_feat)
                 _call(guard_feat, "set", "data", dataset_tag)
                 _call(guard_feat, "set", "expr", ["1"])
                 _apply_feature_selection(guard_feat, "selection_guard")
@@ -6355,17 +7215,31 @@ def result_evaluate(
                         )
                     )
                 if ms.entity_dim == 0:
-                    guard_real, guard_imag, guard_status, guard_layout = _run_bound_feature(
-                        guard_feat,
-                        solution_binding,
-                        num_expressions=1,
-                        point_feature=True,
-                        outer_getters=True,
-                    )
+                    if stationary_measure_count_only:
+                        guard_real, guard_imag, guard_status, guard_layout = run_stationary_measure_feature(
+                            guard_feat,
+                            num_expressions=1,
+                            point_feature=True,
+                            role="selection measure guard",
+                            expected_expressions=["1"],
+                            outer_getters=True,
+                        )
+                    else:
+                        _verify_native_feature_before_run(
+                            guard_feat, role="selection_guard", expected_expressions=["1"]
+                        )
+                        guard_real, guard_imag, guard_status, guard_layout = _run_bound_feature(
+                            guard_feat,
+                            solution_binding,
+                            num_expressions=1,
+                            point_feature=True,
+                            native_payload_guard=_native_payload_guard_for("selection_guard", ["1"]),
+                            outer_getters=True,
+                        )
                     if guard_status:
                         raise ExecutionContractError("COMPLEX_DATA_ERROR", "point counting measure returned complex data")
                     guard_field_array = None
-                    if solution_binding:
+                    if pair_mapping_complete and solution_binding:
                         from ._solution_binding import SolutionBinding
                         guard_field_array = SolutionBinding.field_array_from_engine(
                             _point_reduce(guard_real, "sum"),
@@ -6379,16 +7253,30 @@ def result_evaluate(
                     else:
                         selection_measure = _to_float(_point_reduce(guard_real, "sum"))
                 else:
-                    guard_real, guard_imag, guard_status, guard_layout = _run_bound_feature(
-                        guard_feat,
-                        solution_binding,
-                        num_expressions=1,
-                        outer_getters=True,
-                    )
+                    if stationary_measure_count_only:
+                        guard_real, guard_imag, guard_status, guard_layout = run_stationary_measure_feature(
+                            guard_feat,
+                            num_expressions=1,
+                            point_feature=False,
+                            role="selection measure guard",
+                            expected_expressions=["1"],
+                            outer_getters=True,
+                        )
+                    else:
+                        _verify_native_feature_before_run(
+                            guard_feat, role="selection_guard", expected_expressions=["1"]
+                        )
+                        guard_real, guard_imag, guard_status, guard_layout = _run_bound_feature(
+                            guard_feat,
+                            solution_binding,
+                            num_expressions=1,
+                            native_payload_guard=_native_payload_guard_for("selection_guard", ["1"]),
+                            outer_getters=True,
+                        )
                     if guard_status:
                         raise ExecutionContractError("COMPLEX_DATA_ERROR", "selection measure returned complex data")
                     guard_field_array = None
-                    if solution_binding:
+                    if pair_mapping_complete and solution_binding:
                         from ._solution_binding import SolutionBinding
                         guard_field_array = SolutionBinding.field_array_from_engine(
                             guard_real,
@@ -6452,6 +7340,7 @@ def result_evaluate(
             try:
                 meas_feat = _call(numerical_list, "create", meas_tag, ms.integral_feature_type)
                 meas_cleanup["created"] = True
+                _retain_unknown_dispatch_owner(meas_feat)
                 _call(meas_feat, "set", "data", dataset_tag)
                 _call(meas_feat, "set", "expr", measure_expr)
                 _apply_feature_selection(meas_feat, "denominator")
@@ -6465,16 +7354,29 @@ def result_evaluate(
                             meas_feat, role="denominator_measure"
                         )
                     )
-                m_raw, m_imag, m_status, m_layout = _run_bound_feature(
-                    meas_feat,
-                    solution_binding,
-                    num_expressions=1,
-                    point_feature=ms.entity_dim == 0,
-                    outer_getters=True,
-                )
+                if stationary_measure_count_only:
+                    m_raw, m_imag, m_status, m_layout = run_stationary_measure_feature(
+                        meas_feat,
+                        num_expressions=1,
+                        point_feature=ms.entity_dim == 0,
+                        role="denominator measure",
+                        expected_expressions=measure_expr,
+                    )
+                else:
+                    _verify_native_feature_before_run(
+                        meas_feat, role="denominator", expected_expressions=measure_expr
+                    )
+                    m_raw, m_imag, m_status, m_layout = _run_bound_feature(
+                        meas_feat,
+                        solution_binding,
+                        num_expressions=1,
+                        point_feature=ms.entity_dim == 0,
+                        native_payload_guard=_native_payload_guard_for("denominator", measure_expr),
+                        outer_getters=True,
+                    )
                 if m_status:
                     raise ExecutionContractError("COMPLEX_DATA_ERROR", "measure denominator is unexpectedly complex")
-                if solution_binding:
+                if pair_mapping_complete:
                     from ._solution_binding import SolutionBinding
                     m_field_array = SolutionBinding.field_array_from_engine(
                         m_raw,
@@ -6492,6 +7394,10 @@ def result_evaluate(
             except Exception as exc:
                 if (strict_metric_evidence and weight_expression is not None
                         and isinstance(exc, ExecutionContractError)):
+                    raise
+                if (stationary_measure_count_only
+                        and isinstance(exc, ExecutionContractError)
+                        and exc.code in {"SOLUTION_COUNT_DRIFT", "FIELD_ARRAY_SHAPE_MISMATCH"}):
                     raise
                 m_raw = None
                 m_value = None
@@ -6524,11 +7430,26 @@ def result_evaluate(
                 # attempt still has to run before the error is returned.
                 try:
                     _call(meas_feat, "set", native_property, "off")
+                    if stationary_measure_count_only:
+                        verify_stationary_count_binding("before_native_read")
+                    _verify_native_feature_before_run(
+                        meas_feat, role="denominator_measure_cross_section",
+                        expected_expressions=measure_expr,
+                    )
                     _call(meas_feat, "run")
+                    cross_section_guard = _native_payload_guard_for(
+                        "denominator_measure_cross_section", measure_expr
+                    )
+                    if cross_section_guard is not None:
+                        cross_section_guard(meas_feat, "before_payload_read", None)
                     try:
                         cs_raw = _call(meas_feat, "getData")
                     except Exception:
                         cs_raw = _call(meas_feat, "getReal")
+                    if cross_section_guard is not None:
+                        cross_section_guard(meas_feat, "after_payload_read", None)
+                    if stationary_measure_count_only:
+                        verify_stationary_count_binding("after_native_read")
                     cross_section_measure = _to_float(cs_raw)
                 finally:
                     try:
@@ -6536,6 +7457,10 @@ def result_evaluate(
                             _axisymmetric_measure_readback(
                                 meas_feat, role="denominator_measure_restore"
                             )
+                        )
+                        _verify_native_feature_before_run(
+                            meas_feat, role="denominator_measure_restore",
+                            expected_expressions=measure_expr,
                         )
                         _call(meas_feat, "run")
                     except Exception as restore_exc:
@@ -6588,6 +7513,7 @@ def result_evaluate(
                 try:
                     num_feat = _call(numerical_list, "create", num_tag, ms.integral_feature_type)
                     num_cleanup["created"] = True
+                    _retain_unknown_dispatch_owner(num_feat)
                     _call(num_feat, "set", "data", dataset_tag)
                     _call(
                         num_feat,
@@ -6606,13 +7532,29 @@ def result_evaluate(
                                 num_feat, role="weighted_numerator"
                             )
                         )
-                    num_real, num_imag, num_status, num_layout = _run_bound_feature(
-                        num_feat,
-                        solution_binding,
-                        num_expressions=len(expressions),
-                        point_feature=ms.entity_dim == 0,
-                        outer_getters=True,
-                    )
+                    if stationary_measure_count_only:
+                        num_real, num_imag, num_status, num_layout = run_stationary_measure_feature(
+                            num_feat,
+                            num_expressions=len(expressions),
+                            point_feature=ms.entity_dim == 0,
+                            role="weighted numerator",
+                            expected_expressions=[f"({weight_expression})*({e})" for e in effective_expressions],
+                        )
+                    else:
+                        numerator_expressions = [
+                            f"({weight_expression})*({e})" for e in effective_expressions
+                        ]
+                        _verify_native_feature_before_run(
+                            num_feat, role="numerator", expected_expressions=numerator_expressions
+                        )
+                        num_real, num_imag, num_status, num_layout = _run_bound_feature(
+                            num_feat,
+                            solution_binding,
+                            num_expressions=len(expressions),
+                            point_feature=ms.entity_dim == 0,
+                            native_payload_guard=_native_payload_guard_for("numerator", numerator_expressions),
+                            outer_getters=True,
+                        )
                     if transform_before_statistics and complex_mode != "preserve":
                         if num_status:
                             raise ExecutionContractError(
@@ -6632,7 +7574,7 @@ def result_evaluate(
                             pre_transform_point_sum_applied = True
                         if phase_after_transform_applied:
                             phase_after_point_sum_applied = True
-                    if solution_binding:
+                    if pair_mapping_complete:
                         from ._solution_binding import SolutionBinding
                         transformed = SolutionBinding.field_array_from_engine(
                             num_transformed,
@@ -6645,7 +7587,8 @@ def result_evaluate(
                     else:
                         transformed = num_transformed
                 except Exception as exc:
-                    if (strict_metric_evidence and isinstance(exc, ExecutionContractError)):
+                    if (isinstance(exc, ExecutionContractError)
+                            and (strict_metric_evidence or stationary_measure_count_only)):
                         raise
                     raise ExecutionContractError(
                         "ENGINE_CALL_FAILED",
@@ -6693,6 +7636,245 @@ def result_evaluate(
                     phase_after_measure_division_applied = True
                 return divided
 
+            def _native_unit_vector(
+                roles: set[str],
+                *,
+                expected_expressions: Sequence[str] | None,
+                expression_changed: bool = False,
+            ) -> tuple[list[str], list[dict[str, Any]]]:
+                rows = [
+                    row for row in stationary_native_binding_evidence
+                    if row.get("role") in roles and row.get("stage") == "after_payload_read"
+                ]
+                if not rows:
+                    raise ExecutionContractError(
+                        "RESULT_UNIT_UNVERIFIED",
+                        f"actual {sorted(roles)!r} unit readback is missing after the numeric payload read",
+                    )
+                vectors: list[list[str]] = []
+                for row in rows:
+                    actual_expressions = row.get("expressions")
+                    unit_map = row.get("unit_readback")
+                    if (row.get("data") != dataset_tag or not isinstance(actual_expressions, list)
+                            or not isinstance(unit_map, Mapping)
+                            or row.get("roi") != stationary_native_roi_identity):
+                        raise ExecutionContractError(
+                            "RESULT_UNIT_UNVERIFIED",
+                            f"actual {sorted(roles)!r} unit readback is not bound to the current data/ROI",
+                        )
+                    if expected_expressions is not None and actual_expressions != list(expected_expressions):
+                        raise ExecutionContractError(
+                            "NATIVE_RESULT_BINDING_MISMATCH",
+                            f"actual {sorted(roles)!r} expression readback differs from the unit conversion role",
+                        )
+                    if expression_changed:
+                        if len(actual_expressions) != len(expressions):
+                            raise ExecutionContractError(
+                                "FIELD_ARRAY_SHAPE_MISMATCH",
+                                "changed centered expression readback has an unexpected expression axis",
+                            )
+                        names = actual_expressions
+                    else:
+                        names = list(expected_expressions or ())
+                    vector: list[str] = []
+                    for name in names:
+                        unit = unit_map.get(name)
+                        if type(unit) is not str or not unit or unit != unit.strip():
+                            raise ExecutionContractError(
+                                "RESULT_UNIT_UNVERIFIED",
+                                f"actual {sorted(roles)!r} unit readback is missing or empty for {name!r}",
+                                details={"expression": name, "unit_readback": unit,
+                                         "unit_readback_is_dimensionless": False},
+                            )
+                        vector.append(unit)
+                    vectors.append(vector)
+                if any(vector != vectors[0] for vector in vectors[1:]):
+                    raise ExecutionContractError(
+                        "RESULT_UNIT_UNVERIFIED",
+                        f"actual {sorted(roles)!r} unit readback changed between bound payload cells",
+                        details={"readback_vectors": vectors[:16], "rows_truncated": len(vectors) > 16},
+                    )
+                return vectors[0], rows
+
+            def _convert_unit_tree(
+                numerator_value: Any,
+                denominator_value: Any,
+                *,
+                purpose: str,
+                operation: str,
+                numerator_roles: set[str],
+                numerator_expressions: Sequence[str] | None,
+                numerator_expression_changed: bool = False,
+                denominator_roles: set[str],
+                denominator_expressions: Sequence[str],
+            ) -> Any:
+                nonlocal unit_conversion_reader
+                primary_roles = {"aggregate"} if stationary_measure_count_only else {"primary"}
+                primary_units, primary_rows = _native_unit_vector(
+                    primary_roles, expected_expressions=effective_expressions,
+                )
+                source_units, source_rows = _native_unit_vector(
+                    numerator_roles,
+                    expected_expressions=numerator_expressions,
+                    expression_changed=numerator_expression_changed,
+                )
+                measure_units, measure_rows = _native_unit_vector(
+                    denominator_roles, expected_expressions=denominator_expressions,
+                )
+                if len(source_units) != len(expressions) or len(primary_units) != len(expressions) or len(measure_units) != 1:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        "actual numerator, primary, and denominator unit readbacks do not match their expression axes",
+                    )
+                requested_units = spec.get("units")
+                if requested_units is not None:
+                    for index, (requested_unit, observed_unit) in enumerate(zip(requested_units, primary_units)):
+                        if requested_unit and requested_unit != observed_unit:
+                            raise ExecutionContractError(
+                                "RESULT_UNIT_UNVERIFIED",
+                                f"requested output unit differs from the confirmed primary unit at expression {index}",
+                                details={"requested_unit": requested_unit, "primary_unit_readback": observed_unit},
+                            )
+
+                max_cells = (W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                             if strict_field_readback else RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS)
+                plan, cell_count = _plan_result_unit_conversion(
+                    numerator_value,
+                    denominator_value,
+                    expression_count=len(expressions),
+                    max_cells=max_cells,
+                    operation=operation,
+                )
+                def _bounded_unit_rows(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+                    bounded: list[dict[str, Any]] = []
+                    for row in rows[:16]:
+                        roi = row.get("roi")
+                        roi_summary: Any = None
+                        if isinstance(roi, Mapping):
+                            roi_summary = {key: roi.get(key) for key in (
+                                "scope", "component", "geometry", "entity_dimension", "kind",
+                                "named", "is_inheriting",
+                            )}
+                            entities = roi.get("entities")
+                            if isinstance(entities, list):
+                                roi_summary["entity_count"] = len(entities)
+                                roi_summary["entities_sha256"] = hashlib.sha256(
+                                    json.dumps(entities, separators=(",", ":")).encode("utf-8")
+                                ).hexdigest()
+                        unit_map = row.get("unit_readback")
+                        bounded.append({
+                            "role": row.get("role"), "stage": row.get("stage"),
+                            "data": row.get("data"),
+                            "expressions": list(row.get("expressions", ()))[:16],
+                            "roi": roi_summary,
+                            "unit_readback": dict(list(unit_map.items())[:16])
+                                if isinstance(unit_map, Mapping) else None,
+                        })
+                    return {"readback_count": len(rows), "truncated": len(rows) > len(bounded),
+                            "rows": bounded}
+
+                role_readbacks = {
+                    "primary": _bounded_unit_rows(primary_rows),
+                    "numerator_or_variance": _bounded_unit_rows(source_rows),
+                    "denominator": _bounded_unit_rows(measure_rows),
+                }
+
+                def record_conversion_stage(evidence: dict[str, Any]) -> None:
+                    unit_conversion_stages.append({
+                        "purpose": purpose,
+                        "status": evidence["status"],
+                        "operation": evidence["operation"],
+                        "conversion_cells": evidence["conversion_cells"],
+                        "sdk_dispatches": evidence["sdk_dispatches"],
+                        "native_unit_readbacks": evidence["native_unit_readbacks"],
+                        "sampled_evaluations": evidence["sampled_evaluations"],
+                        "sampled_evaluations_truncated": evidence["sampled_evaluations_truncated"],
+                    })
+                    combined = dict(evidence)
+                    combined["conversion_stages"] = [dict(row) for row in unit_conversion_stages]
+                    combined["sdk_dispatches"] = sum(
+                        int(row["sdk_dispatches"]) for row in unit_conversion_stages
+                    )
+                    combined["sdk_dispatch_count_scope"] = "total_across_conversion_stages"
+                    nonlocal unit_conversion_evidence
+                    unit_conversion_evidence = combined
+
+                dimensionless_identity = (
+                    all(unit == "1" for unit in primary_units + source_units + measure_units)
+                )
+                if dimensionless_identity:
+                    if operation == "std":
+                        converted = _nested_sqrt(_nested_divide(numerator_value, denominator_value))
+                    elif operation == "rms":
+                        converted = _nested_sqrt(_nested_divide(numerator_value, denominator_value))
+                    else:
+                        converted = _nested_divide(numerator_value, denominator_value)
+                    record_conversion_stage({
+                        "status": "IDENTITY_FROM_ACTUAL_DIMENSIONLESS_READBACKS",
+                        "operation": operation,
+                        "conversion_cells": cell_count,
+                        "sdk_dispatches": 0,
+                        "native_unit_readbacks": role_readbacks,
+                        "sampled_evaluations": [],
+                        "sampled_evaluations_truncated": False,
+                        "scope": "actual same-data/ROI feature unit properties; literal unit 1 was read back for every role",
+                    })
+                    return converted
+
+                if unit_conversion_reader is None:
+                    unit_conversion_reader = _result_unit_evaluator(worker, model)
+                sampled: list[dict[str, Any]] = []
+                evaluation_count = 0
+
+                def convert(leaf: _ResultUnitConversionLeaf) -> float:
+                    nonlocal evaluation_count
+                    index = leaf.expression_index
+                    target_unit = primary_units[index]
+                    if operation == "std":
+                        result = unit_conversion_reader.standard_deviation(
+                            leaf.numerator, leaf.denominator, source_units[index],
+                            measure_units[0], target_unit,
+                        )
+                    elif operation == "rms":
+                        result = unit_conversion_reader.root_mean_square(
+                            leaf.numerator, leaf.denominator, source_units[index],
+                            measure_units[0], target_unit,
+                        )
+                    else:
+                        differential = leaf.component == "imag" or (
+                            leaf.component is None and complex_mode == "imag"
+                        )
+                        absolute_magnitude = (
+                            complex_mode == "abs" and is_complex is True and leaf.component is None
+                        )
+                        result = unit_conversion_reader.quotient(
+                            leaf.numerator, leaf.denominator, source_units[index],
+                            measure_units[0], target_unit,
+                            differential=differential,
+                            absolute_magnitude=absolute_magnitude,
+                        )
+                    evaluation_count += 2 if result.get("zero_expression") is not None else 1
+                    if len(sampled) < 16:
+                        sampled.append({
+                            "expression_index": index,
+                            "component": leaf.component,
+                            **result,
+                        })
+                    return float(result["value"])
+
+                converted = _apply_result_unit_conversion_plan(plan, convert)
+                record_conversion_stage({
+                    "status": "TYPED_PARAMBASE_EVALUATE_READBACKS_RETURNED",
+                    "operation": operation,
+                    "conversion_cells": cell_count,
+                    "sdk_dispatches": evaluation_count,
+                    "native_unit_readbacks": role_readbacks,
+                    "sampled_evaluations": sampled,
+                    "sampled_evaluations_truncated": cell_count > len(sampled),
+                    "scope": "actual same-data/ROI feature unit properties plus private fixed typed ParamBase.evaluate(String,String) readback",
+                })
+                return converted
+
             # The aggregation feature used for the variance/square integrals: the
             # weighted numerator when a weight is given, the measure feature
             # otherwise.  The measure feature's ``expr`` is restored afterwards so
@@ -6701,7 +7883,31 @@ def result_evaluate(
 
             if aggregate == "average":
                 if weight_expression:
+                    numerator_before_division = transformed
                     transformed = _divide_by_measure(transformed)
+                    if spec.get("units") is not None:
+                        numerator_expressions = [
+                            f"({weight_expression})*({expression})"
+                            for expression in effective_expressions
+                        ]
+                        transformed = _convert_unit_tree(
+                            numerator_before_division, denominator_measure,
+                            purpose="weighted_mean_output",
+                            operation="quotient",
+                            numerator_roles={"weighted numerator"} if stationary_measure_count_only else {"numerator"},
+                            numerator_expressions=numerator_expressions,
+                            denominator_roles={"denominator measure"} if stationary_measure_count_only else {"denominator"},
+                            denominator_expressions=measure_expr,
+                        )
+                    else:
+                        unit_conversion_evidence = {
+                            "status": "NOT_REQUESTED_WEIGHTED_RATIO_UNIT_NOT_NORMALIZED",
+                            "operation": "quotient",
+                            "conversion_cells": None,
+                            "sdk_dispatches": 0,
+                            "native_unit_readbacks": "preserved_in_native_result_binding_evidence",
+                            "scope": "no spec.units target was requested; output unit is reported as unverified",
+                        }
                 elif feat_type.startswith("Av"):
                     # The Av* feature already returns the mean over the selection;
                     # dividing again would divide by the measure twice.  The rule
@@ -6720,13 +7926,31 @@ def result_evaluate(
                         "the centered variance integral needs the measure feature, which is "
                         "not available",
                     )
+                numerator_before_division = transformed
                 if feat_type.startswith("Av") and not weight_expression:
                     mean_value = transformed
                 else:
                     mean_value = _divide_by_measure(transformed)
+                if weight_expression or not feat_type.startswith("Av"):
+                    mean_expressions = (
+                        [f"({weight_expression})*({expression})" for expression in effective_expressions]
+                        if weight_expression else list(effective_expressions)
+                    )
+                    mean_value = _convert_unit_tree(
+                        numerator_before_division, denominator_measure,
+                        purpose="standard_deviation_center",
+                        operation="quotient",
+                        numerator_roles=(
+                            ({"weighted numerator"} if stationary_measure_count_only else {"numerator"})
+                            if weight_expression else ({"aggregate"} if stationary_measure_count_only else {"primary"})
+                        ),
+                        numerator_expressions=mean_expressions,
+                        denominator_roles={"denominator measure"} if stationary_measure_count_only else {"denominator"},
+                        denominator_expressions=measure_expr,
+                    )
 
                 def _mean_for_cell(expression_index: int, outer_position: int | None, inner_position: int | None) -> Any:
-                    if solution_binding is None:
+                    if not pair_mapping_complete:
                         rows = list(mean_value) if isinstance(mean_value, Sequence) and not isinstance(mean_value, (str, bytes)) else [mean_value]
                         if len(rows) == len(expressions):
                             return _strict_singleton_value(
@@ -6757,15 +7981,24 @@ def result_evaluate(
                     result: list[str] = []
                     for expression_index, expression in enumerate(effective_expressions):
                         mean_cell = _mean_for_cell(expression_index, outer_position, inner_position)
+                        # expression_units is indexed by the caller's original
+                        # expression names; effective_expressions may add
+                        # real()/abs()/phase wrappers. Keep the center literal
+                        # in the matching actual native unit readback.
                         unit = expression_units.get(expressions[expression_index])
-                        centered = _centered_square_expression(expression, mean_cell, unit=unit)
+                        centered = _centered_square_expression(
+                            expression,
+                            mean_cell,
+                            unit=unit,
+                            scalar_center_is_differential=(complex_mode == "imag"),
+                        )
                         if weight_expression:
                             centered = f"({weight_expression})*({centered})"
                         result.append(centered)
                     return result
 
                 try:
-                    if solution_binding:
+                    if pair_mapping_complete:
                         outer_labels = list(solution_binding.get("outer_indices") or [])
                         inner_by_outer = solution_binding.get("inner_indices_by_outer") or {}
                         pair_by_key = {
@@ -6793,7 +8026,8 @@ def result_evaluate(
                                         "SOLUTION_AXIS_METADATA_UNAVAILABLE",
                                         f"missing SolutionInfo pair ({outer}, {inner}) for centered variance",
                                     )
-                                _call(aggregate_feature, "set", "expr", _centered_exprs(outer_position, inner_position))
+                                centered_expressions = _centered_exprs(outer_position, inner_position)
+                                _call(aggregate_feature, "set", "expr", centered_expressions)
                                 try:
                                     _call(aggregate_feature, "set", "outersolnum", int(pair["outer"]))
                                     _call(aggregate_feature, "set", "solnum", int(pair["solnum"]))
@@ -6802,12 +8036,23 @@ def result_evaluate(
                                         "SOLUTION_SELECTION_FAILED",
                                         f"could not select centered variance solution ({pair['outer']}, {pair['inner']})",
                                     ) from exc
+                                _verify_native_feature_before_run(
+                                    aggregate_feature, role="centered variance",
+                                    expected_expressions=centered_expressions,
+                                )
                                 _call(aggregate_feature, "run")
+                                centered_guard = _native_payload_guard_for(
+                                    "centered variance", centered_expressions
+                                )
+                                if centered_guard is not None:
+                                    centered_guard(aggregate_feature, "before_payload_read", int(pair["outer"]))
                                 centered_real, centered_imag, centered_status, _centered_layout = _feature_components(
                                     aggregate_feature,
                                     outer=int(pair["outer"]),
                                     use_outer_getters=True,
                                 )
+                                if centered_guard is not None:
+                                    centered_guard(aggregate_feature, "after_payload_read", int(pair["outer"]))
                                 if centered_status:
                                     raise ExecutionContractError(
                                         "COMPLEX_DATA_ERROR",
@@ -6836,9 +8081,25 @@ def result_evaluate(
                                     centered_value[expression_index][outer_position][inner_position] = [float(cell)]
                         sq_value = centered_value
                     else:
-                        _call(aggregate_feature, "set", "expr", _centered_exprs(None, None))
+                        centered_expressions = _centered_exprs(None, None)
+                        _call(aggregate_feature, "set", "expr", centered_expressions)
+                        if stationary_measure_count_only:
+                            verify_stationary_count_binding("before_native_read")
+                        _verify_native_feature_before_run(
+                            aggregate_feature, role="centered variance",
+                            expected_expressions=centered_expressions,
+                        )
                         _call(aggregate_feature, "run")
+                        centered_guard = _native_payload_guard_for(
+                            "centered variance", centered_expressions
+                        )
+                        if centered_guard is not None:
+                            centered_guard(aggregate_feature, "before_payload_read", None)
                         centered_real, centered_imag, centered_status, _centered_layout = _feature_components(aggregate_feature)
+                        if centered_guard is not None:
+                            centered_guard(aggregate_feature, "after_payload_read", None)
+                        if stationary_measure_count_only:
+                            verify_stationary_count_binding("after_native_read")
                         if centered_status:
                             raise ExecutionContractError(
                                 "COMPLEX_DATA_ERROR",
@@ -6850,13 +8111,30 @@ def result_evaluate(
                                 centered_imag,
                                 num_expressions=len(expressions),
                             )
+                        if stationary_measure_count_only:
+                            validate_count_only_components(
+                                centered_real,
+                                centered_imag,
+                                status=centered_status,
+                                layout=_centered_layout,
+                                num_expressions=len(expressions),
+                                role="centered variance integral",
+                            )
+                        if ms.entity_dim == 0:
                             centered_real = _point_reduce(centered_real, "sum")
-                        cells = _single_expression_cells(
-                            centered_real,
-                            num_expressions=len(expressions),
-                            label="centered variance",
-                        )
-                        sq_value = cells[0] if len(cells) == 1 else cells
+                        if stationary_measure_count_only:
+                            # Keep the verified native singleton solution row
+                            # and aggregate point axis aligned with measured M.
+                            # Scalarizing here would force a first-value guess
+                            # or lose the expression/solution/point shape.
+                            sq_value = centered_real
+                        else:
+                            cells = _single_expression_cells(
+                                centered_real,
+                                num_expressions=len(expressions),
+                                label="centered variance",
+                            )
+                            sq_value = cells[0] if len(cells) == 1 else cells
                 except Exception as exc:
                     if isinstance(exc, ExecutionContractError):
                         raise
@@ -6870,6 +8148,16 @@ def result_evaluate(
                 # |mean|² from E|f|² here: for large nearly constant fields
                 # that cancellation creates a false non-zero std.
                 transformed = _nested_sqrt(second_moment)
+                transformed = _convert_unit_tree(
+                    sq_value, denominator_measure,
+                    purpose="standard_deviation_output",
+                    operation="std",
+                    numerator_roles={"centered variance"},
+                    numerator_expressions=None,
+                    numerator_expression_changed=True,
+                    denominator_roles={"denominator measure"} if stationary_measure_count_only else {"denominator"},
+                    denominator_expressions=measure_expr,
+                )
 
             elif aggregate == "rms":
                 if aggregate_feature is None:
@@ -6883,16 +8171,29 @@ def result_evaluate(
                     sq_exprs = [f"abs(({e}))^2" for e in effective_expressions]
                 try:
                     _call(aggregate_feature, "set", "expr", sq_exprs)
-                    sq_real, sq_imag, sq_status, sq_layout = _run_bound_feature(
-                        aggregate_feature,
-                        solution_binding,
-                        num_expressions=len(expressions),
-                        point_feature=ms.entity_dim == 0,
-                        outer_getters=True,
-                    )
+                    if stationary_measure_count_only:
+                        sq_real, sq_imag, sq_status, sq_layout = run_stationary_measure_feature(
+                            aggregate_feature,
+                            num_expressions=len(expressions),
+                            point_feature=ms.entity_dim == 0,
+                            role="RMS square integral",
+                            expected_expressions=sq_exprs,
+                        )
+                    else:
+                        _verify_native_feature_before_run(
+                            aggregate_feature, role="RMS square integral", expected_expressions=sq_exprs
+                        )
+                        sq_real, sq_imag, sq_status, sq_layout = _run_bound_feature(
+                            aggregate_feature,
+                            solution_binding,
+                            num_expressions=len(expressions),
+                            point_feature=ms.entity_dim == 0,
+                            native_payload_guard=_native_payload_guard_for("RMS square integral", sq_exprs),
+                            outer_getters=True,
+                        )
                     if sq_status:
                         raise ExecutionContractError("COMPLEX_DATA_ERROR", "|f|² second moment returned complex data")
-                    if solution_binding:
+                    if pair_mapping_complete:
                         from ._solution_binding import SolutionBinding
                         sq_value = SolutionBinding.field_array_from_engine(
                             sq_real,
@@ -6907,12 +8208,24 @@ def result_evaluate(
                     if ms.entity_dim == 0:
                         sq_value = _point_reduce(sq_value, "sum")
                 except Exception as exc:
+                    if (isinstance(exc, ExecutionContractError)
+                            and stationary_measure_count_only):
+                        raise
                     raise ExecutionContractError(
                         "ENGINE_CALL_FAILED",
                         f"the square integral ∫w|f|² dμ could not be evaluated: "
                         f"{type(exc).__name__}: {exc}",
                     )
-                transformed = _nested_sqrt(_divide_by_measure(sq_value))
+                transformed = _convert_unit_tree(
+                    sq_value, denominator_measure,
+                    purpose="root_mean_square_output",
+                    operation="rms",
+                    numerator_roles={"RMS square integral"},
+                    numerator_expressions=sq_exprs,
+                    numerator_expression_changed=True,
+                    denominator_roles={"denominator measure"} if stationary_measure_count_only else {"denominator"},
+                    denominator_expressions=measure_expr,
+                )
 
             if meas_feat is not None:
                 if meas_cleanup["created"] and not meas_cleanup["removed"]:
@@ -7004,6 +8317,12 @@ def result_evaluate(
             "native_unit_conversion": "UNVERIFIED",
             "physical_dimensionality": "UNVERIFIED",
         }
+    elif (transformed is not None and aggregate == "average" and weight_expression is not None
+          and spec.get("units") is None):
+        # Without an explicit target, the weighted quotient can have a unit
+        # different from the primary expression. Preserve the numeric result
+        # while leaving that output-unit claim unverified.
+        output_expression_units = {str(expression): None for expression in expressions}
 
     if field_array_payload is not None and transformed is not None:
         field_array_payload = _field_array_with_values(
@@ -7231,6 +8550,7 @@ def result_evaluate(
         "evaluated_expressions": list(effective_expressions),
         "expression_units": dict(output_expression_units),
         "native_expression_units": dict(expression_units),
+        "unit_conversion_evidence": unit_conversion_evidence,
         "is_complex": is_complex,
         "field_array": (
             _field_array_summary(field_array_payload)
@@ -7314,6 +8634,16 @@ def result_evaluate(
             "execution_state_unknown": cleanup["cleanup_failed"],
         },
     }
+    if stationary_native_binding_evidence:
+        response["native_result_binding_evidence"] = {
+            "status": "VERIFIED_ACTUAL_NATIVE_BINDING_READBACKS",
+            "scope": "native numerical data/expr/ROI/unit observations before run and around payload reads",
+            "readback_count": len(stationary_native_binding_evidence),
+            "common_roi_identity": dict(stationary_native_roi_identity)
+                if stationary_native_roi_identity is not None else None,
+            "solution_axes_authority": "unchanged; binding readback does not establish outer/inner tuple axes",
+            "readbacks": list(stationary_native_binding_evidence),
+        }
     if expression_unit_observation is not None:
         response["expression_unit_observation"] = expression_unit_observation
     if value_unit_derivation is not None:
@@ -7400,6 +8730,46 @@ def result_evaluate(
             response["result_budget"] = budget
         _enforce_w21_field_response_limits(response)
     return response
+
+
+def _mark_unknown_cleanup_skipped(attempt: Any) -> None:
+    """Annotate retained transient cleanup owners without making SDK calls."""
+    for owner in attempt.owners:
+        if not isinstance(owner, list):
+            continue
+        for record in owner:
+            if (not isinstance(record, dict)
+                    or not {"tag", "type_id", "created", "removed"} <= set(record)
+                    or not record.get("created") or record.get("removed")):
+                continue
+            record["cleanup_status"] = "SKIPPED_AFTER_FIRST_UNKNOWN"
+            record["cleanup_skip_reason"] = "attempt fence blocked every later SDK dispatch"
+
+
+@wraps(_result_evaluate_body)
+def result_evaluate(
+    worker: Any,
+    model_tag: str,
+    arguments: Mapping[str, Any],
+    *,
+    strict_metric_evidence: bool = False,
+    strict_field_readback: bool = False,
+    _w21_initial_output_context: Any = None,
+) -> dict[str, Any]:
+    """Run result evaluation under one opt-in first-UNKNOWN dispatch fence."""
+    with result_unknown_dispatch_scope(worker, model_tag, arguments) as attempt:
+        try:
+            return _result_evaluate_body(
+                worker,
+                model_tag,
+                arguments,
+                strict_metric_evidence=strict_metric_evidence,
+                strict_field_readback=strict_field_readback,
+                _w21_initial_output_context=_w21_initial_output_context,
+            )
+        finally:
+            if attempt.first_unknown is not None:
+                _mark_unknown_cleanup_skipped(attempt)
 
 
 

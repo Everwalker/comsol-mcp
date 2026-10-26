@@ -82,7 +82,7 @@ class FSelection:
         self._entities = [int(value) for value in entities]
 
     def all(self) -> None:
-        self._entities = []
+        self._entities = [1]
 
     def entities(self) -> list[int]:
         return list(self._entities)
@@ -987,13 +987,13 @@ def test_strict_weighted_metric_keeps_global_unit_readback_out_of_roi_scope_and_
     assert weight["status"] == "UNVERIFIED"
     assert weight["unit_evidence"]["status"] == "UNVERIFIED"
     assert weight["unit_evidence"]["global_parameter_context_unit_readback"] == {
-        "status": "READBACK_ONLY", "unit": "1", "expression": "w",
+        "status": "UNAVAILABLE", "unit": None, "expression": "w",
         "source": "Model.param().evaluateUnit(expression)",
         "scope": "global_parameter_context",
+        "unavailable_reason": "evaluateUnit_is_not_in_the_fixed_typed_read_chain",
     }
-    # A same-named global parameter can resolve as dimensionless while the
-    # NumericalFeature reports a different configured/default unit. Neither
-    # value binds the local field expression to this selected ROI/tuple.
+    # The fixed Model.param()/ParamBase.evaluate(String,String) conversion
+    # adapter does not turn a global parameter unit into ROI dimensionality.
     assert weight["unit_evidence"]["roi_context_dimensionality"] == {
         "status": "UNVERIFIED",
         "expression": "w",

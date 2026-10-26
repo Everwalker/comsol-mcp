@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import base64
 from collections import deque
+from contextlib import contextmanager
+from contextvars import ContextVar
 import hashlib
 import json
 import math
@@ -397,21 +399,134 @@ def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: M
                 "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": str(exc), "safe_retry": False}}
 
 
+class _UnknownDispatchAttempt:
+    """Attempt-local first-UNKNOWN latch with strong retention after failure."""
+
+    __slots__ = ("first_unknown", "first_call", "owners", "skipped_dispatches", "retained")
+
+    def __init__(self, owners: tuple[Any, ...] = ()) -> None:
+        self.first_unknown: BaseException | None = None
+        self.first_call: dict[str, Any] | None = None
+        self.owners: list[Any] = list(owners)
+        self.skipped_dispatches: list[dict[str, Any]] = []
+        self.retained = False
+
+    def retain(self, *owners: Any) -> None:
+        self.owners.extend(owner for owner in owners if owner is not None)
+
+    def latch(self, exc: BaseException, receiver: Any, method: str, args: tuple[Any, ...]) -> None:
+        if self.first_unknown is not None:
+            return
+        self.first_unknown = exc
+        self.first_call = {
+            "method": method,
+            "receiver": receiver,
+            "args": args,
+            "exception": exc,
+        }
+        self.retain(receiver, args, exc)
+        self.retained = True
+        _UNKNOWN_DISPATCH_RETAINED.append(self)
+
+    def block(self, receiver: Any, method: str, args: tuple[Any, ...]) -> BaseException:
+        self.skipped_dispatches.append({
+            "method": method,
+            "receiver_type": type(receiver).__name__,
+            "argument_count": len(args),
+        })
+        assert self.first_unknown is not None
+        return self.first_unknown
+
+
+_UNKNOWN_DISPATCH_CONTEXT: ContextVar[_UnknownDispatchAttempt | None] = ContextVar(
+    "comsol_result_unknown_dispatch_attempt", default=None
+)
+_UNKNOWN_DISPATCH_RETAINED: list[_UnknownDispatchAttempt] = []
+
+
+@contextmanager
+def result_unknown_dispatch_scope(*owners: Any):
+    """Fence one result-evaluate attempt after its first structured UNKNOWN.
+
+    Nested scopes reuse the existing attempt. Calls outside this opt-in scope
+    retain their historical dispatch and cleanup behavior.
+    """
+    active = _UNKNOWN_DISPATCH_CONTEXT.get()
+    if active is not None:
+        active.retain(*owners)
+        yield active
+        return
+
+    attempt = _UnknownDispatchAttempt(tuple(owners))
+    token = _UNKNOWN_DISPATCH_CONTEXT.set(attempt)
+    try:
+        try:
+            yield attempt
+        except BaseException:
+            if attempt.first_unknown is not None:
+                raise attempt.first_unknown
+            raise
+        else:
+            if attempt.first_unknown is not None:
+                raise attempt.first_unknown
+    finally:
+        _UNKNOWN_DISPATCH_CONTEXT.reset(token)
+
+
+def _retain_unknown_dispatch_owner(*owners: Any) -> None:
+    active = _UNKNOWN_DISPATCH_CONTEXT.get()
+    if active is not None:
+        active.retain(*owners)
+
+
+def _active_unknown_dispatch_attempt() -> _UnknownDispatchAttempt | None:
+    return _UNKNOWN_DISPATCH_CONTEXT.get()
+
+
+def _latch_unknown_dispatch(exc: BaseException, receiver: Any, method: str,
+                            args: tuple[Any, ...] = ()) -> None:
+    """Latch a local generation-integrity failure into the active result fence."""
+    attempt = _active_unknown_dispatch_attempt()
+    if attempt is not None:
+        attempt.latch(exc, receiver, method, args)
+
+
 def _model(worker: Any, model_tag: str) -> Any:
+    attempt = _active_unknown_dispatch_attempt()
+    if attempt is not None and attempt.first_unknown is not None:
+        raise attempt.block(worker, "client.model", (model_tag,))
     try:
         return worker.client().model(model_tag)
     except Exception as exc:
+        if attempt is not None and _worker_failure_unknown(exc):
+            attempt.latch(exc, worker, "client.model", (model_tag,))
+            raise
         raise ExecutionContractError("NODE_NOT_FOUND", f"bound model {model_tag!r} is unavailable") from exc
+    except BaseException as exc:
+        if attempt is not None:
+            attempt.latch(exc, worker, "client.model", (model_tag,))
+        raise
 
 
 def _call(node: Any, method: str, *args: Any) -> Any:
+    attempt = _active_unknown_dispatch_attempt()
+    if attempt is not None and attempt.first_unknown is not None:
+        raise attempt.block(node, method, args)
     try:
         return getattr(node, method)(*args)
     except AttributeError as exc:
+        if attempt is not None and _worker_failure_unknown(exc):
+            attempt.latch(exc, node, method, args)
+            raise
         raise ExecutionContractError("API_UNSUPPORTED", f"selected node does not expose {method}()") from exc
-    except ExecutionContractError:
+    except ExecutionContractError as exc:
+        if attempt is not None and _worker_failure_unknown(exc):
+            attempt.latch(exc, node, method, args)
         raise
     except Exception as exc:
+        if attempt is not None and _worker_failure_unknown(exc):
+            attempt.latch(exc, node, method, args)
+            raise
         # The worker's reply carries the engine's own exception text; keep a
         # bounded copy so an engine refusal stays diagnosable instead of being
         # flattened into a bare exception-class name.
@@ -419,6 +534,10 @@ def _call(node: Any, method: str, *args: Any) -> Any:
         if len(detail) > 600:
             detail = detail[:600] + "…(truncated)"
         raise ExecutionContractError("ENGINE_CALL_FAILED", f"COMSOL {method} call failed: {type(exc).__name__}: {detail}") from exc
+    except BaseException as exc:
+        if attempt is not None:
+            attempt.latch(exc, node, method, args)
+        raise
 
 
 # ---------------------------------------------------------------------------

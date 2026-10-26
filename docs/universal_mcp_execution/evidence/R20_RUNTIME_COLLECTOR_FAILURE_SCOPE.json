@@ -1,0 +1,56 @@
+{
+  "schema": "universal-r20-runtime-collector-native-failure-scoped-evidence/1",
+  "status": "BOUNDED_CAPTURE_VERIFIED_NATIVE_DIAGNOSTIC_NOT_PASSED_UNKNOWN_OWNER_RETAINED",
+  "main_review": {
+    "relative_path": "_state/universal-main-review/20261026-r20-runtime-main-review/MAIN_CAPTURE_AND_FAILURE_REVIEW.json",
+    "bytes": 6174,
+    "sha256": "b841692fbc8e4f9bec78f114964edd55e9b6ebc066d2a9424df6627908a6ef2e"
+  },
+  "transport": {
+    "A0_A5": "six_original_tool_and_operator_returns_known0_actualREADY_independentlyverified",
+    "B0_GO": "once_original_tool_and_operator_known0_before_original_deadline",
+    "B1_COLLECT": "once_original_tool_and_operator_known0_three_file_bounded_capture_verified",
+    "stage_b_index_sha256": "c7f42cb89a41604dd5514d50f8b17a3049e594e7ff079c0b36ab054cd09d886b"
+  },
+  "capture": {
+    "files": [
+      {
+        "name": "GO-consumed.json",
+        "bytes": 303,
+        "sha256": "7dadeee8e7d446e875264306763f45155467204233bc91a78e3eb91d7de8e897"
+      },
+      {
+        "name": "FAILURE.json",
+        "bytes": 251,
+        "sha256": "8f2e21b0061d2ad585cc60840d9a7589ce592a0715ca3bc5e60dfdfc16ed5d2c"
+      },
+      {
+        "name": "journal.jsonl",
+        "bytes": 17448,
+        "sha256": "b1384d290ce807bb99c679e5609c2bdf8db6d3c3dd5a476ed7ab291aeeafef6f"
+      }
+    ],
+    "aggregate_bytes": 18002,
+    "journal_records": 46,
+    "reader": "OnlyjournalusesReadWrite-sharing; FileAccess.Read throughout; SHA/base64 fromsameboundedbuffer. Notatomic snapshot; samelengthconcurrentrewrite mayevadecheck."
+  },
+  "native_observation": {
+    "CreateProcessW_known_true_count": 2,
+    "ResumeThread_previous_suspend1_count": 2,
+    "original_child_A_preIPC_GetExitCodeProcess_BOOL": 1,
+    "original_child_A_exit_unsigned": 3221225794,
+    "original_child_A_exit_hex": "0xc0000142",
+    "last_error122": "NotfailurecauseevidenceonthissuccessfulBOOL",
+    "terminal": "UNKNOWN_OWNER_RETAINED",
+    "storage_IPC_ABA_normalretirement_cleanup_and_parentexit": "NOT_PROVEN",
+    "specific_DLL_and_underlying_reason": "UNVERIFIED"
+  },
+  "interpretation_source": {
+    "title": "Microsoft NTSTATUS values",
+    "url": "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55",
+    "mapping": "0xc0000142 STATUS_DLL_INIT_FAILED; thisdoesnotidentifyspecificDLL/cause"
+  },
+  "preserved_non_native_errors": "LocalA1launch127beforeoperator/remote waspreserved; stageAindexoperatorhashmetadatatypo hasseparateerratumandactualbyteverification; one localreadonlypostcapture checkerassertion correctedwithoutreceiptchangeornewremotequery.",
+  "fence": "R20oneGO/onecollector spent. FirstUNKNOWN retainedoriginalowner; nofurtherquery/SDK/restore/cleanup/adoption/retry. No automaticnewdiagnosticrelease.",
+  "goal": "Stillactive/incomplete. NoC/System/nativeMCP/full273/60/427/savefreshreopen/unpreset/freshfinalacceptance."
+}

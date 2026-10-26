@@ -1,61 +1,54 @@
-# 当前交接 — 2026-10-26（r286）
+# 当前交接 — 2026-10-26（r295）
 
-Goal active / PROGRESS。完整MASTER_GOAL及冻结273/60/427持续有效，completed_groups为空；未开始fresh最终unpreset Reviewer、未选heldouts。当前均为有界源码/软件接受；案例专项、native与科学结果各保留范围。
+Goal **active / PROGRESS**。完整MASTER_GOAL及冻结273 actions / 60 tests / 427子断言持续有效，completed_groups为空。适用平台原生链、真实保存及新Worker重开、两个未预设licensed任务族和fresh最终Reviewer均未完成；未开始最终Reviewer、未选heldouts。案例专项保持自身状态。
 
-最新r286：Q5限定源码/软件已Main接受（MAIN_NARROW_SOURCE_SOFTWARE_ACCEPTANCE.json5009B/f87655064bb67deae873bc8b8ff8b217f7ef0ffaf8208140d849950c1b699e3a）；3uniquePASS、20pins已核，observer/capture机制不变，最终应用/构件NOT_BOUND。U06 r4 handoff4018B/1d9bffaf…已交，最终5uniquePASS；strong Leibniz submission01a17783-d4b9-70b1-8dee-a765459d2af7复审中，旧r3详细段落是历史基线，不表示当前仍在实现r4。R19由同Bernoulli离线完成完整A/B链，必须先审全部执行代码再启动timer；人类同范围持续授权有效。Mac授权资源变化后的实际重预检free0.633804GiB仍低于原2GiB，disk满足8GB，nativeNOT_RUN、不降低阈值。详细最新事实见RESUME.current_checkpoint_r286，以下源码接受/历史依据继续保留。
+恢复读RESUME.json.current_checkpoint_r295 / current_source_roles_r295。历史报告/失败在_state原路径与各checkpoint保留；不由旧PID/PTY/JSON恢复权限。主Agent负责设计和集中验收，同一Luna连续实现/测试/修复，Strong复审具体冻结候选。
 
-恢复先读RESUME.json.current_checkpoint_r286、current_checkpoint_r282及current_source_roles_r286。用multi_agent协调子任务；原Luna连续实现/测试/Debug，Main处理实质架构及集中验收。历史native handle不poll/input/EOF/query/kill/cleanup/adopt/replay，仅读已保存证据。active_job_refs是混合历史登记，不能据其PID或JSON恢复权限。
+## 当前已接受的正式源码
 
-当前源码与发布：
+U06 exact6已整合：
 
-normal helper的exact5已由原Euler按受审字节整合：
+- comsol_mcp/_g2_engine.py：113418B / 71f1e21bb8219d4be9f61a6a850adeb1af5161de294ff17ed486798c37abcbb9。
+- comsol_mcp/_g2_public_api.py：41657B / a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505。
+- comsol_mcp/_g3_results.py：539707B / f37353ee6419cffc45bb940cdcc0321a714e05727b4a4dbdd0eff520e707706f。
+- tests/test_u06_stationary_measure_integration.py：35746B / 188491d5bf0535b9d19e42d89b870b2c92199e9b827e607e2234d84f27d50623。
+- tests/u06_stationary_measure_inert.py：9557B / be60ab9d9c9985227f11fc442f642b3ce85d737aaaeaf9499e519fd49295085c。
+- tests/test_g3_w17.py：82979B / cb1914632d5d4517b7c920188749483209797815d2ed9c80a95b4a804bcd2d35。
 
-- tools/full_project_release.py222690B/ab8cb10958fcadfcb0d2f14f7323fd478f6114a1668b3fc491e5aad926cb857a。
-- tests/test_full_project_release.py92229B/f4dd7f0bfb3e33b3b85edf450b110eeece5468fca5de5a4aec941eaa88b62e1c。
-- tests/test_generic_pip_isolation.py28969B/34320f3ae81faea1d9badacab54a45daeb3a431375588a426744e22f917c4522。
-- 新tests/test_normal_launch_isolation.py10854B/e4077cd8b128059eec54d69823251f81ed03fab14c898f1e6d9d46fe8f16d4e9。
-- 新tests/offline_effect_gate.py9085B/ea4fa9ed6f0efcdec4736e0bdf5eef700481341c2bd26f77639b0d4a187f0a8c。
+全部mode0644，三产品等已接受R5。通用修复覆盖预算先于真实getter、legacy RemoteJava子receiver/named probe fence、固定typed ParamBase READ链、实际S/M单位及RMS受控换算、real绝对/imag差值/preserve复数中心、UNKNOWN先latch再退出并保留原owner。无public schema/CAPABILITIES/D2/Java扩权。仿射RMS在无冻结physicalzero约定时仍显式unsupported，非full427接受。
 
-独立Leibniz报告_state/universal-main-review/20261026-normal-launch-isolation-independent-review/REVIEW.md9806B/1f5b3c47dbd3491fcde8cb074c3a49bbaf9846d606fe4fdcddba3d5d16191c5a；pins19704B/141240394cbe0113230dc5ae731fa6bd38f5a7efd3d16c3436f0c25c9f4ffa6d。原Q3 P1-01/P2-03源码闭合、新实质P1/P2零。Main同目录MAIN_FINAL_SOURCE_SOFTWARE_ACCEPTANCE.json4946B/a85352e4…、INTEGRATION_RECEIPT.json4553B/6a4f2d5703e81922f932b1099debb0e9cf303c216a4ed544c3003ab64d0462a1；Main核全部5canonical/private字节相同。lifecycle50328B/08591b2a…仅未变fixture，未整合或改写。
+R5 Strong报告7843B/464fe9b8…及Main产品接受4553B/ec4a9cce…在20261026-u06-r5-delta-independent-review。R1 portable1P2拒绝9699B/a8b0848d…保留；R2把imag(T)primary改为1而独立保留source300+i1，实际center1K推导variance0，helper不变。既有断言对齐evaluateUnit UNAVAILABLE与唯一FSelection.all单实体修复均有精确失败指纹依据。R2 Strong8873B/98f15037…、0 openP1/P2，Main精确整合授权8449B/8b9a400d…。
 
-行为：固定/bin/ps、/usr/bin/sandbox-exec；Windows system32-only kernel32/GetSystemDirectoryW→固定WindowsPowerShell，无法安全解析则UNKNOWN；真实normal child -I/-B、lexical venv，venv --without-pip后显式隔离ensurepip，失败保持INITIALIZING不READY；child-only PIP_*过滤/devnull，父HOME/home/CODEX_HOME不变。build/download不在这次normal承诺范围。
+canonical当前软件：20261026-u06-canonical-integration，实际18 unique PASS（14 portable+4相关旧），JUnit3164B/6a00ec77…，summary19095B/aa99764b…，provenance18252B/9f09fa39…，Main最终接受5514B/34f1cbdbb40687d240df628c5de52c2964d86cf55c8bf5babb121805d561b203。Repo Python3.12.13 -I -B/pytest9.1.1；7实际模块路径全canonical，无privateoverlay，8类preimportdeny各1，HOME未变。旧193 manifest保持12504f82…；整合后的195 manifest e13e76a9…在测试时全核，旧4由rollback/其余189由live核。一次postrun审计把旧pin误比新文件的脚本FAIL已保留并修正，不重跑pytest、不改源码。当前18不与旧8/14/18/R3 301/R4 5/R5 3相加。
 
-软件按指纹：145/145全套为helper75264604…、fulltest40b1422b…；最终ab8/f4dd仅bootstrap focused1/1，不相加为146或称最终145。最终env抽取在静态反向重建中精确回到旧指纹；既有pip调用等价，新增ensurepip环境已针对覆盖。旧unsafe-ps FAIL、fixture/gate/basetemp失败和raw均保留。handoff中的“user instruction/user-provided”来自Main parent-agent效率指导/转述，不是human禁测或新执行授权；必要合理affected检查仍被原任务授权。
+## 版本与应用构建
 
-本阶段exact10（5source/tests+Main3+GENERIC_NORMAL_LAUNCH_ISOLATION_SCOPE.json+MAC_CAPTURE_UNKNOWN_HOLD_SCOPE.json）已普通non-force push并fresh逐blob读回为6b8f0649fc561031b0fb962a68a0d1dc9d606ad6，parent82ad9252891e08ab4c825ced96f335604ca8399e，1014642B。回执_state/universal-main-review/20261026-normal-launch-source-publication/REMOTE_READBACK.json5635B/3525d1b82a813b281e28bcd4f1586717bb3618e6b0b0c326ae63218c8e3ec25d；原始tool returns同目录ORIGINAL_GIT_TOOL_RETURNS.json。HEAD/index/origin/main/FETCH_HEAD/worktree全10文件精确匹配；CLEAN仅该读回时点。首次freshfetch128 SSL_ERROR_SYSCALL保留；一次同HTTP1.1/证书校验的原session24598重试known0，未改TLS/proxy/DNS或全局设置。公开状态revision281，本r286后续本地继续，不另发receipt-only commit。应用0.1.10/9bd/199members/wheel484a仍不变；actualcoherent新ab8和最终绑定未就绪。原82ad exact4、aff3 exact7各回执继续保留。后续仍按持续授权只发必要源码/测试/可重建fixture/进度/紧凑证据，排除原始材料/运行目录/归档/凭据/商业二进制。
+已把pyproject.toml、comsol_mcp/_server.py VERSION、uv.lock editable comsol-mcp三处从0.1.10同步0.1.11，仅三行、mode0644、依赖和六U06文件不变。新SHA依次11b19685ccd2a68ba505e3d1c594dd8c34f8af5b2170e7adaccc208e9570f209、75770adb7d3bc459a1aebd82c7065c894020d9374283dcdfac7869e263e467c7、4ef8d92c9317188a0cb9acfe0dd1ecdd88325a6ec44bd5bba9b6803d62c21d41。Main版本接受1806B/190e37ee…在20261026-current-version-011；预写脚本失败原件保留。195输入是版本改动前快照，不能声称与整个新live tree相同；原18产品/测试指纹保持有效。无tests/uvsync/build/native。
 
-Q4 capture与后续M4：
+Euler已交只读buildprep：20261026-current-coherent-app-build-prep/BUILD_PREP_HANDOFF.md14378B/607189a1…、INPUT_PINS203184B/e718aab1…、proposal39290B/79b67b85…。其基线明确为U06整合前，不作当前源。已重核普通依赖Win34/ARM41/Intel40和派生crypto1，共116target rows；Java9source及168013B/fce17263…worker不变，不重编Java。新版必须新firstparty wheel，不复用旧484a或helper07归档；实际membership需从新canonical派生，不预填199。
 
-冻结候选_state/universal-mac-genuine-home-uninstall-prep-20261026-q4：operator65306/789b54829fbd5dcce3126dbf6f17940caac6b25504301c0c59eeceaf1db17c98；observer7896/3cd1026e2e0ce50b540d10e4264ae786776945a83ed3625fe92621e7a6768c6c；delivery6563/c5fc451f8b707401f594456d3fb3eb90c8e4e20e43926edb889ecffa7738bf21，Main实际核22pins。
+同Euler任务01a17814-d134-76b1-ba12-928cfc2135aa在准备完整执行壳（实际submission以roles中记录为准）：fresh输出/源commit待本阶段真实发布后绑定，固定builder/uv/第三方哈希，whole-tree网络deny/output-only profile，child-only pip/python环境保留HOME/home/CODEX_HOME，outeroriginalPopen先root再init、UNKNOWN保留，不重放旧observe_cli。现仅私有prep，没有build/process执行权限。内层原pip argv无-I/-B必须披露，不宣称继承外层flags或所有descendant UNKNOWN安全。版本仅改本项目时，派生crypto provenance需透明重绑新选定lock并保留原Rustbuild来源，不能伪称新锁是原编译输入。OpenSSL实际4.0.3，旧archive entry名4.0.2是已知兼容命名差异，暂不改已接受helper。未来逐wheel双向成员/METADATA/WHEEL/RECORD及三archive exactmanifest逐成员核验。
 
-Q3 P1-02组件已由同强Reviewer及Main限定接受。报告_state/universal-main-review/20261026-q4-capture-boundary-source-review/REVIEW.md8693B/091d61852c4204d275c5bcb1b285746bcd07504f65b579e8572fb6bf7ba96f93；Main同目录MAIN_CAPTURE_BOUNDARY_SCOPE_ACCEPTANCE.json3173B/025ec630b190afe44b98fd745fea2fc6f58435a92ef95346bdf8a9b1f0ef702f。capture内先hold同原root/error/listener，callback错误/返回进入独立robustfallback，正常close不变。29unique与21subtests分开，旧4counterFAIL/新10场景另记；trace人工结束与后续inert close不作native保持证明。
+## Windows实际失败与围栏
 
-final helper/artifacts仍NOT_BOUND、无runtime lease。绑定新ab8时须把Q4 literal ps及其inert argv叶改为/bin/ps；还需实际coherent archive/lock/wheel/source pins。只审必要delta/组合，不重复已绿全套。旧Q3/observer/所有失败冻结，不用旧07包冒充新ab8。 同Pasteur已在私有Q5执行/bin/ps及strictinert argv窄delta，submission01a17757-3fc5-76e0-990c-36947caf5e95；无actualps或runtime。
+R20新root nonce3bc51410447ef3bfab5e3d49a02beb85，13材料177196B、manifest6f0aec51…、operator38209B/b548ad91…、seal4551B/741bc8ac…及fullchain经Strong0P1/P2和Main接受。原A窗口11:24:31.628845—11:54:31.628845UTC。A0-A5六真实originalTool/operator0；Main核basefields/12streams/8origins/actualordinarycontext/15compilerargv/runtime/System32source，actualREADY5828B/f27a30b6…。A1本地路径127在operator前、无远端请求；stageAindex hash录入错误由独立erratum纠正依据，原index不改。
 
-旧三架构包在_state/universal-normal-pip-coherent-release-20261026-0e8f8b2c609243489e86cd7c769e01cf：win31401982/ae622602…、x8636521630/23983b12…、ARM31346622/1b13e2d4…，helper07、app199/wheel484a，均只artifact旧记录。OpenSSL4.0.3 provenance与4.0.2 license basename差异保留，实际SBOM/LICENSES版本取native版本；不据此放行M4。新包须基于发布的当前source，逐字证明可复用app/deps/locks，避免重复第三方/Java编译或旧绿suite。U06若即将整合，应统筹一次新app/构件生成。
+B0一次known0，11:35:31.473418—11:35:32.017059UTC，在原A期内；B1一次known0/capture0，11:36:22.528753UTC返回，无live session。三capture共18002B：GO-consumed303B/7dadeee8…、FAILURE251B/8f2e21b0…、journal17448B/b1384d29…共46行。Main逐originalTool/basefields/原streams/同bufferbase64/hash核验；index8415B/c7f42cb8…，Main6174B/b841692fbc8e4f9bec78f114964edd55e9b6ebc066d2a9424df6627908a6ef2e。两helper CreateProcessW true、Resume前count1；A在storageIPC前原handle查询BOOL1返回exit3221225794=0xc0000142。先前childidentity/token/Job/deny-policy Refusal触发准备X，prewrite确认非STILL_ACTIVE后进入UNKNOWN，未写IPC。last_error122在成功BOOL旁不是失败根因。唯一terminal UNKNOWN_OWNER_RETAINED，无helper frame/A/B/A/normalclose/delete/parentexit/nativeC/System/MCP通过证明；specific DLL/CLR/UIACL/resource原因未证实。
 
-选定Base只读静态观察：_state/universal-main-review/20261026-mac-nonframework-runtime/selected-base-bootstrap-static/OBSERVATION.json8866B/212531b6372d216cdeb0732b7abb5bdb7f5820b4dba2f5e7748f51419194b9cb。Base/lib冻结pin一致，venv26750/976ba2fb…、ensurepip9445/90f6c76c…确认stock不向下一venv hop传-I/-B，ensurepip只条件传播-I。bundledpip25.0.1 wheel1841526/c46efd13…已读元数据；WHEEL_PKG_DIR真实有效选择未解析。Base startup/venv/pip/安装NOT_RUN，不能把bundled存在当选择证据。
+R20所有one-shot已消耗，**不再连接/read/query/SDK/恢复/cleanup/adopt/retry**，原parent/resource graph保留。已知A退出不等于可清理未知owner图。Plato任务01a17809-a8a9-78a1-9d82-cc2d251baf67仅对本地capture/source和官方文档做强审及下一条最小诊断建议，无R21/新lease。R19原B1 sharing失败仍nativeUNVERIFIED、全部旧root fenced。新增reader journal-only ReadWrite-sharing/其余Read-sharing，SHA/base64同bounded bytes，但不保证atomic或same-length原位改写检测。
 
-U06 private v3：
+直接human call_e35…“允许本次及后续同范围诊断”持续有效，仅同已核验机器、同R18临时AppC/Job/helper/privateUI/SACL作用范围、Main接受和全新namespace；不重复确认。人类记录1695B/689c60c4…在R18 review目录。无服务/账号/WFP/BFE/既有ACL/COMSOL/JDK更改和旧owner接管授权。
 
-原Arendt01a1761d-7c1d-78b1-941a-7a122cf1d94a，实际Luna max，只写_state/universal-result-stationary-measure-20261026-r3的g3/g2/public_api及必要tests/runner/evidence；不改Java/_java_worker/D2/public CAPABILITIES，不造C票据。固定私有Model.param()->ModelParam及ParamBase.evaluate(String,String)->double READ，用actual descriptor/version/generation/typed String；全部SDK跳经同一firstUNKNOWN fence，原中间proxy保留。
+## Mac、helper与全目标边界
 
-原v2g3f22f5906…/g2c88ae93…，289unique真实pytest及JUnit311差异、误拷wrapper日志provenance保留。独立v2复审9103B/317861ae82c8421a9bff2c8f5047a272d9ad8e3ef7d6f85dc3b14ca8de987455：1未闭合P1（预算通过后的raw getter、legacy子receiver和特殊probe漏fence）+1newP2（conditional local call_probe遮蔽strict named）；原预算转发/explicit weighted integral guard限定闭合，单位4counter仍OPEN。Main决策均在_state/universal-main-review/20261026-current9bd-r10-core/，最新MAIN_U06_V2_GUARDED_GETTER_AND_NAMED_PROBE_REPAIR.json3959/67fc668e…及typed interface6712/6ac4e751…。
+normalhelper exact5已接受整合/发布6b8f0649：helper222690B/ab8cb109…，测试finalf4dd7f0b…；145绿属于此前7526/40b1，最终ab8/f4dd仅bootstrapfocused1，不相加。Q4capture29unique与21subtests分开；人工trace结束不是native寿命证明。Q5 operator65158B/e32ceff5…、observer7896B/3cd1026e…相同Q4，3unique/20pins核验并Main接受5009B/f8765506…；finalapp/wheel/lock/requirements/manifest/archive仍NOT_BOUND。
 
-原turn01a176ad…provider429不算产品失败；sameagent恢复后交付r3 handoff10668B/5fb5d2db…、三源码71f1e21b…/c08fbefb…/106e5efb…和301unique PASS（JUnit323差异原样、18countonly包含），另3counter不相加，原5FAIL/6PASS冻结。完整强复审已出_state/universal-main-review/20261026-u06-r3-delta-independent-review/REVIEW.md11055B/11e59078cc22917fa5bac2923b97fbeed19f200985faacd47eb87c22a35b440c，pins46734B/58c1bdb33e70d193ada331ee8bb4f0ad629652fd2b1b05ad3d8ed8f4db909e67；CHANGES_REQUIRED1P1+2P2。Main决策MAIN_U06_R4_ADAPTER_UNKNOWN_RMS_COMPLEX_CENTER_DECISION.json4742B/1bc08b184c118a0a4d992cfa51a36c747f9fb46a700cc8c40f241a5ad9acd8ad；同Arendt submission01a1774f-8806-7b61-8cd5-59e2b752538d连续r4修复：本地adapterUNKNOWN须同attempt latch在finally前；RMS需实际S/M单位受控类型转换；complex center虚部须温差表达式而非绝对量。r3不整合、不重跑无关greens/Java/native。
+selected nonframework Base静态WHEEL_PKG_DIR为空，effective选择/启动/venv/ensurepip/pip/install未运行。最近授权资源变化后实际free pages41537×16384=680542208B=0.633804GiB，仍低于原Server2GiB/Worker1GiB门槛，disk满足原8GB；无内存变更/降线/把inactive当free或无条件重测。Mac新native不放行。
 
-Windows R18：
+旧Mac R10 PTY19679/190对象、Q1和全部旧Win UNKNOWN保留原owner，不poll/input/EOF/close/kill/query/cleanup/adopt/replay。Lorentz原CoreHOLD不关；Bernoulli远端UNKNOWN context不随意关闭。旧Q2R4 CreateProcess前auto-review拒绝的HOME覆盖形状保持NOT_RUN，不绕过。W23缺fixture保持supplemental FAILED_MISSING_TEST_INPUT。
 
-原Bernoulli01a175e3-075c-7561-bf3e-a05b269fad45 Luna max；R18 packet _state/universal-windows-private-desktop-prep-20261026-r18/source 13文件177196B，manifest2401B/fd5daf77f770fa108d232da2b9ec09d4c9a70e1af634cad2104ed292e4dc443b。packet源码/软件Main与Plato接受保持不变：17focused、另3affected，不合并；3 oldR17 expectedFAIL保留，未重跑412。Main接受4626B/583657b4…。
+## 发布与下一动作
 
-本次remoteRoot C:/Users/Everwalker/universal-private-desktop-944566ea6ad2488abde2431b2f864eab已在A1独占创建、A2传输、A3核验；原始owner保持，不能再当unspent namespace。human已直接答复call_e35a0d947d3c46ce91c5fe22e9db8f19“允许本次及后续同范围诊断”，覆盖本R18新增station/desktops/LowNW和父关联；后续同机同边界、Main验收且全新namespace持续有效，不再重复确认。确切记录HUMAN_R18_UI_SCOPE_AUTHORIZATION.json1695B/689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7。原publication授权亦持续。
+最新已fresh核HEAD/origin/main/FETCH_HEAD为d77d6fb1c2bc303b69bd30dbe96c58f7c2b70b4f，parent6b8f0649。当前exact14源码阶段（U06六文件+版本三文件+Main3+两紧凑证据）正在普通non-force发布准备，pre-fetch known0且remote未变；新commit/readback尚未发生。目录20261026-u06-canonical-source-publication。持续同步授权有效，禁止raw/凭据/运行目录/商业二进制入库，CI NOT_CHECKED。
 
-本地executor-prep原23文件/86646B，seal3902B/b66546455491819df999c89124748520e6f4b63b68663378ddc1df393d8199c6冻结。Main读全operator12064B/e9f94d25…和remote脚本，发现UNKNOWN handler未guard stderr且单sleep可被异常退出，要求同Bernoulli在freshlocal executor-prep-r2修robust非返回原transport hold；Task为同独立review目录MAIN_OPERATOR_UNKNOWN_HOLD_REPAIR.json，submission01a176f1-1513-73e0-8341-3258f12d3c58。r2已交付并经Main完整代码/测试/28pins核验接受：operator13382B/b2fe30931e70e1370eb3e5a20a91a8c6eba89c25f2bf6bd62387afb5e51e83f7，seal4933/e34ac17ac9bb033b3df87717cf0f15afd6d621446dfd7a91e5476765b43ec745；两inert输出BrokenPipe+主pause异常在独立hold保留同原objects，无SDK/close/cleanup，非native证明。Main接受2477/6afe816b…；remote包/root/nonce不变，旧R18/446未重跑。实际A0-A5原始exec及driver receipts全部known0，Main核全部12流extent/hash与8actualmodule来源/manifest。实际READY5827B/7fbdc322a1655b3f55e4cfa38d9f33158b7fa9671796894669f31d915b11fe47：原父PID9620/birth134374762213981955、普通SID1001、AppContainerfalse/noThreadTokentrue/Jobfalse；固定csc输出11776B/fb067591…、actualcompiler exit0，非transport0推断。Main实际接受MAIN_ACTUAL_READY_ACCEPTANCE.json12710B/8b8a59c2c3bd0d95751690891759e661813d41b5bc6fffddf48fdac6202d2ab7。
-
-当前StageB仅本地具体化：r2/stage-b绑定实际READYsha，显式B0_GO/B1_COLLECT各一次，沿已审closed-file writer与bounded collector、原Popen/UNKNOWNhold机制；Bernoulli submission01a17755-1bf8-7b80-bca0-b276d9c31b3a，强Leibniz并行静态01a17756-b077-7710-8ef2-6db41e329b6f。Main在08:40:42UTC见只完成operator、其余绑定/seal未齐，剩37秒不足复核与调度，已明确不发STAGE_B_RELEASE：GO/collector均NOT_RUN。原lease2506B/7a371553… GO期限08:41:19.459759UTC不延期、不重放；原父后续状态UNVERIFIED，不query/cleanup或推断NO-GO/exit。Main规划纠正见MAIN_NO_STAGE_B_RELEASE_DECISION.json：完整A/B执行链须在全新R19计时StageA前准备/复核齐，READY后仅动态观测数据接受及one-shotrelease。JSON/source/READY不产nativeC许可。
-
-旧native与停止边界：
-
-Mac R10原PTY19679/190对象与Q1及所有早期Mac/Windows未知owner保留。R10仅T014五mode/五export/136sample算术吻合约1.752e-13；study一次APPLIED后U06postdispatchUNKNOWN，save/includeSolution/cleanup未到，不是Core/native保存重开。Q2R4自动审批在CreateProcess前因HOME覆盖/可能删除拒绝，NOT_RUN；不得wrapper/env-i同形重试。新流程genuine HOME不变，资源门槛在真实新admission再按冻结条件核，旧free页/网络快照不是当前事实。历史W23缺fixture仍supplemental FAILED_MISSING_TEST_INPUT，不改SKIP/PASS或作当前native阻塞。
-
-继续源修复→强delta复审→Main集中接受/持续同步→coherent可绑定材料→真实新runtime。当前有实质PROGRESS，不能标goal complete/paused/blocked或把有界软件记录升成全427/native/科学接受。
+完成普通push并fresh逐blob读回后，继续完整buildprep/真实commit绑定；Main集中审execution/profile后才新构建。并行收Strong R20失败根因建议，只有新具体方案通过Main才考虑下一条fresh诊断。完整273/60/427、平台native、savefreshreopen、两个unpreset任务族和fresh最终Reviewer均未通过，不报完成。

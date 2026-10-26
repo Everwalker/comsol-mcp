@@ -1,23 +1,19 @@
-# 当前进度 — 2026-10-26（r286）
+# 当前进度 — 2026-10-26（r295）
 
-通用 MCP 目标继续执行，状态 **IN_PROGRESS / PROGRESS**。冻结273 actions / 60 tests / 427子断言、适用平台核心链、真实保存及新Worker重开、两个未预设任务族和fresh最终Reviewer均未完成；completed_groups为空。案例专项保留自身状态。
+通用 MCP 目标 **IN_PROGRESS / PROGRESS**。冻结273 actions / 60 tests / 427子断言、适用平台原生核心链、真实保存及新Worker重开、两个未预设任务族和fresh最终Reviewer均未完成；completed_groups为空。案例专项保持自身范围。
 
-**普通helper源码已接受并精确整合五文件**：可信系统工具路径、真实子Python -I/-B、--without-pip后显式ensurepip，以及child-only PIP环境隔离。helper222690B/ab8cb109…；独立复审与Main确认原Q3 P1-01/P2-03闭合、新实质P1/P2零。软件范围严格分开：145全套对应此前7526/40b1指纹，最终ab8/f4dd只有bootstrap focused1/1，不合并或声称最终145。应用仍0.1.10/9bd/199成员/wheel484a不变。
+**U06通用结果修复已验收并精确整合六文件**：3产品逐字节等已接受R5，2新增可移植测试及1既有测试窄修复均经独立Strong复审0 open P1/P2。canonical实际加载路径验证 **18 unique PASS**（14新+4直接相关旧），Repo Python3.12.13 -I -B / pytest9.1.1，8类启动前硬拒绝各1，HOME未变，mode0644。旧193输入及当次195输入均核验；195是之后版本同步前的快照。Main最终接受5514B/34f1cbdb…。旧private8/14/18及R3/R4/R5结果不加总，所有原失败与一次收尾审计脚本错误保留。
 
-**Q4 capture组件限定接受**：原owner hold前移到capture内部，回调失败/返回仍有独立fallback，正常close保留。真实软件29 unique +21 subtests分别记；原Q3四项counterFAIL与Q4十个场景另记，effect0。人工终止观察不算native资源保持。final helper/artifacts仍NOT_BOUND，绑定时须把字面ps改为/bin/ps。 Q5现已将严格argv绑定/bin/ps并经Main限定接受：3uniquePASS、20deliverypins核验、observer/capture字节保持，未重复29；final app/artifacts仍NOT_BOUND。
+**项目版本已同步0.1.11**：只改pyproject、_server.VERSION和uv.lock本项目版本三行，Main1806B/190e37ee…核字节/AST/TOML/mode及依赖不变；未重跑测试、uvsync或构建。新应用wheel/lock/archive尚未构建；旧0.1.10/9bd/wheel484a及helper07归档不能冒充当前候选。
 
-本阶段exact10（5份必要源码/测试、Main3、两份紧凑证据）已普通推送并fresh逐blob核验为 **6b8f0649fc561031b0fb962a68a0d1dc9d606ad6**（parent82ad9252，1014642B，回执5635B/3525d1b8…）。首次fresh fetch TLS失败已保留，一次同配置重试known0；安全设置不变。CLEAN仅该读回时点，本r286是后续本地继续，不为回执另发commit。旧三归档仍helper07，不能用来放行新M4。
+**Windows R20：采集成功，原生诊断未通过**。一次B0/B1的original Tool/operator均known0，三份capture共18002B、journal46行已Main独立核字节。两helper创建/恢复成功，但A在存储IPC前返回0xc0000142；terminal为UNKNOWN_OWNER_RETAINED，未取得读帧/A/B/A/正常清理/parent退出证明。具体DLL/原因未确认，成功BOOL旁的last_error122不是根因证据。Main6174B/b841692f…。原一次性操作已消耗；不再远端read/query/SDK/恢复/cleanup/adopt/retry，原owner保留。Plato仅用已回收材料做强审与根因建议，无R21放行。
 
-并行剩余工作：
+**普通helper及Q5组件接受保持**：helperab8 exact5已整合/发布；145软件属于旧指纹，最终ab8/f4dd仅bootstrap focused1，不能声称最终145。Q4为29 unique+21 subtests分别记；Q5把严格argv绑定/bin/ps，3 unique PASS，最终app/artifacts仍NOT_BOUND。selected非Framework Base只有静态证据，实际bootstrap/venv/ensurepip/install仍NOT_RUN。
 
-- Arendt（原GPT-6 Luna max）：U06 r4交付。私有adapter本地UNKNOWN先latch、RMS以实际S/M单位typed换算、complex std虚部差值中心已实现，最终5unique软件PASS；两次fixture复数标志FAIL及attempt03/最终PASS分开保留。Leibniz强复审实际delta/组合进行中，Main源码接受未完成，不整合/重包；r3原301/323不提升为r4。
-- Bernoulli（原GPT-6 Luna max）：R18 A0–A5均actualknown0，Main核原始回执/全部12流及8来源，实际READY5827B/7fbdc322…接受；固定csc编译helper11776B/fb067591…、普通父上下文已观测。StageB在原期限前未完成完整绑定/复核，Main已拒绝放行，GO/collector均NOT_RUN；原namespace不重试。Main纠正先启动timer后准备B的时序：新R19先审完整链，再启动StageA。原父当前状态UNVERIFIED，不据到期推断退出。人类本次及后续同范围持续授权有效；13包177196B/fd5不变。 已审StageB终止组件18inputs/5seal核验，可供新R19复用；R19完整链正离线准备，未释放任何新native。
-- Pasteur：Q5限定源码/软件接受完成；Base默认sysconfig的WHEEL_PKG_DIR为空（静态），实际effective选择/启动/venv/ensurepip/pip/安装仍NOT_RUN。
+Mac最近实际资源预检free pages=0.633804GiB，仍低于原Server2GiB（Worker1GiB）门槛，disk满足8GB；不降低阈值或把inactive cache当空闲页。Mac R10原PTY19679/190对象、Q1及全部旧Windows UNKNOWN均保持原owner，不poll/input/EOF/query/kill/cleanup/adopt/replay。旧Q2R4在CreateProcess前auto-review拒绝的HOME覆盖形状保持NOT_RUN；新流程保留genuine HOME。
 
-旧Mac R10 PTY19679/190对象、Q1与全部旧Windows UNKNOWN保留原owner；不poll/input/EOF/query/kill/cleanup/adopt/replay。T014数值/导出吻合不等于Core保存重开。旧Q2R4在CreateProcess前被自动审批拒绝，NOT_RUN；不重试被拒的HOME覆盖形状。新流程保留genuine HOME。
+当前HEAD/origin/main/FETCH_HEAD最新已核为 **d77d6fb1c2bc303b69bd30dbe96c58f7c2b70b4f**。本r295阶段准备按exact14（六源码测试+三版本+Main3+两紧凑证据）普通non-force发布，预fetch已知0且remote未变；新提交/readback尚未发生。持续授权有效，只发布必要源码/测试/可重建fixture/进度/紧凑证据，排除raw、凭据、运行目录和商业二进制。CI NOT_CHECKED。
 
-Mac资源重预检：空闲页41537×16384=0.634GiB，仍低于原2GiB线；磁盘满足8GB。native未启动、阈值不变，不把inactive cache加为空闲页；其余源码/Windows工作继续。
+下一步：完成本阶段普通同步与fresh逐blob核验；同Euler绑定真实新commit并准备完整coherent构建owner/profile/冻结输入后才执行。Strong核R20失败后由Main决定下一条有实据的新诊断，不盲重试。完整427/native/save重开/unpreset/fresh最终Reviewer仍未过。
 
-下一步：强复审U06 r4并集中验收/必要返工；新R19完整链离线审查完成后再有限StageA/GO；接受源码后构建coherent新应用并完成Q5绑定。冻结scope/阈值不变。
-
-恢复读 CURRENT_HANDOFF.md、RESUME.json.current_checkpoint_r286及current_source_roles_r286。active_job_refs含历史owner，不是新lease。历史W23缺fixture仍supplemental FAILED_MISSING_TEST_INPUT；历史入口与证据按原hash保留，不重复复制。
+恢复先读CURRENT_HANDOFF.md和RESUME.json.current_checkpoint_r295/current_source_roles_r295；历史owner记录不是新lease。历史W23缺fixture仍为supplemental FAILED_MISSING_TEST_INPUT。

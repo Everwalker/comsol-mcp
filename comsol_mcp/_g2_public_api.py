@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import math
 import re
 from typing import Any, Mapping
 
@@ -271,11 +272,8 @@ def provisional_effect(arguments: Mapping[str, Any]) -> str:
     return effect
 
 
-def describe_receiver(worker: Any, node: Any) -> dict[str, Any]:
-    describe = getattr(worker, "describe_public", None)
-    if not callable(describe):
-        _refuse("Worker has no public interface descriptor", "API_UNSUPPORTED")
-    descriptor = describe(node)
+def _normalize_public_descriptor(descriptor: Any) -> dict[str, Any]:
+    """Validate and normalize one already-observed public descriptor."""
     if (not isinstance(descriptor, Mapping) or not isinstance(descriptor.get("runtime_version"), str)
             or not isinstance(descriptor.get("interfaces"), list)
             or len(descriptor["interfaces"]) > MAX_PUBLIC_INTERFACES
@@ -315,6 +313,13 @@ def describe_receiver(worker: Any, node: Any) -> dict[str, Any]:
     }
 
 
+def describe_receiver(worker: Any, node: Any) -> dict[str, Any]:
+    describe = getattr(worker, "describe_public", None)
+    if not callable(describe):
+        _refuse("Worker has no public interface descriptor", "API_UNSUPPORTED")
+    return _normalize_public_descriptor(describe(node))
+
+
 def supports(descriptor: Mapping[str, Any], owner: str, method: str,
              parameters: tuple[str, ...], returns: str | None = None) -> bool:
     return owner in descriptor["interfaces"] and any(
@@ -322,6 +327,275 @@ def supports(descriptor: Mapping[str, Any], owner: str, method: str,
         and tuple(row["parameters"]) == parameters and (returns is None or row["returns"] == returns)
         for row in descriptor["methods"]
     )
+
+
+# Fixed private result-unit read chain. These capabilities intentionally stay
+# outside CAPABILITIES: callers cannot discover or invoke them through the
+# public API surface.
+_MODEL = "com.comsol.model.Model"
+_MODEL_PARAM = "com.comsol.model.ModelParam"
+_PARAM_BASE = "com.comsol.model.ParamBase"
+_PARAM_READ = Capability(_MODEL, "param", (), _MODEL_PARAM, "READ")
+_PARAM_EVALUATE = Capability(
+    _PARAM_BASE, "evaluate", (_STRING, _STRING), "double", "READ",
+    (("string", 0), ("string", 0)), return_kind="float64", return_rank=0,
+)
+
+
+def _fixed_descriptor_metadata(descriptor: Mapping[str, Any]) -> None:
+    limits = descriptor.get("metadata_limits")
+    if (descriptor.get("metadata_complete") is not True
+            or not isinstance(limits, Mapping)
+            or set(limits) != {"interfaces", "methods"}
+            or any(type(limits.get(key)) is not int or limits[key] <= 0
+                   for key in ("interfaces", "methods"))
+            or limits["interfaces"] > MAX_PUBLIC_INTERFACES
+            or limits["methods"] > MAX_PUBLIC_METHODS
+            or len(descriptor.get("interfaces", ())) > limits["interfaces"]
+            or len(descriptor.get("methods", ())) > limits["methods"]):
+        _refuse("required actual public receiver metadata is incomplete or malformed", "API_UNSUPPORTED")
+    if not supports_release(descriptor.get("runtime_version")):
+        _refuse("actual COMSOL release has no reviewed result-unit adapter", "API_UNSUPPORTED")
+
+
+class _ResultUnitEvaluator:
+    """Private, fixed Model.param/ParamBase.evaluate read adapter.
+
+    The caller must already be inside result_unknown_dispatch_scope. Every
+    worker descriptor and Java method dispatch is routed through _g2_engine._call.
+    """
+
+    def __init__(self, worker: Any, model: Any) -> None:
+        from ._java_worker import PersistentJavaWorker, RemoteJava
+        from ._g2_engine import _retain_unknown_dispatch_owner
+
+        if not isinstance(worker, PersistentJavaWorker) or not isinstance(model, RemoteJava):
+            _refuse("result-unit reads require the actual persistent worker and RemoteJava model", "API_UNSUPPORTED")
+        self.worker = worker
+        self.model = model
+        self.param_proxy: Any = None
+        self._generation = self._current_generation(model)
+        self._runtime_version: str | None = None
+        _retain_unknown_dispatch_owner(worker, model)
+
+        model_descriptor = self._describe(model)
+        self._require_capability(model_descriptor, _PARAM_READ)
+        param_proxy = self._invoke(model, _PARAM_READ, ())
+        if not isinstance(param_proxy, RemoteJava):
+            _refuse("Model.param did not return an actual RemoteJava proxy", "API_UNSUPPORTED")
+        self.param_proxy = param_proxy
+        _retain_unknown_dispatch_owner(worker, model, param_proxy)
+        if param_proxy._worker is not worker or param_proxy._generation != self._generation:
+            _refuse("Model.param returned a proxy from another worker or generation", "API_UNSUPPORTED")
+        param_descriptor = self._describe(param_proxy)
+        if _PARAM_BASE not in param_descriptor["interfaces"]:
+            _refuse("Model.param result does not implement ParamBase", "API_UNSUPPORTED")
+        self._require_capability(param_descriptor, _PARAM_EVALUATE)
+
+    def _latch_adapter_unknown(self, exc: BaseException, receiver: Any, method: str,
+                               args: tuple[Any, ...], *returned_or_local: Any) -> None:
+        """Latch only locally classified UNKNOWNs before they unwind to cleanup."""
+        if not isinstance(exc, ExecutionContractError) or exc.code != "EXECUTION_STATE_UNKNOWN":
+            return
+        from ._g2_engine import _latch_unknown_dispatch, _retain_unknown_dispatch_owner
+
+        _retain_unknown_dispatch_owner(
+            self.worker, self.model, self.param_proxy, *returned_or_local,
+        )
+        _latch_unknown_dispatch(exc, receiver, method, args)
+
+    def _current_generation(self, receiver: Any) -> int:
+        from ._java_worker import RemoteJava
+
+        generation = self.worker.generation
+        if (type(generation) is not int or generation < 1
+                or not isinstance(receiver, RemoteJava)
+                or receiver._worker is not self.worker
+                or receiver._generation != generation):
+            from ._g2_engine import _latch_unknown_dispatch
+
+            exc = ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "result-unit receiver is stale or belongs to another worker",
+            )
+            _latch_unknown_dispatch(exc, receiver, "result_unit_generation_check", ())
+            raise exc
+        return generation
+
+    def _describe(self, receiver: Any) -> dict[str, Any]:
+        from ._g2_engine import _call, _retain_unknown_dispatch_owner
+
+        raw: Any = None
+        try:
+            self._current_generation(receiver)
+            _retain_unknown_dispatch_owner(self.worker, self.model, self.param_proxy, receiver)
+            raw = _call(self.worker, "describe_public", receiver)
+            self._current_generation(receiver)
+            if (not isinstance(raw, Mapping) or "metadata_limits" not in raw
+                    or type(raw.get("metadata_complete")) is not bool):
+                _refuse("required actual public receiver metadata is incomplete or malformed", "API_UNSUPPORTED")
+            descriptor = _normalize_public_descriptor(raw)
+            _fixed_descriptor_metadata(descriptor)
+            if self._runtime_version is None:
+                self._runtime_version = descriptor["runtime_version"]
+            elif descriptor["runtime_version"] != self._runtime_version:
+                _refuse("result-unit receiver runtime version changed within one read chain", "API_UNSUPPORTED")
+            return descriptor
+        except ExecutionContractError as exc:
+            self._latch_adapter_unknown(exc, self.worker, "describe_public", (receiver,), raw)
+            raise
+
+    def _require_capability(self, descriptor: Mapping[str, Any], capability: Capability) -> None:
+        _fixed_descriptor_metadata(descriptor)
+        if not supports(descriptor, capability.receiver, capability.method,
+                        capability.parameters, capability.returns):
+            _refuse(
+                "actual receiver does not expose the exact fixed result-unit signature",
+                "API_UNSUPPORTED",
+            )
+
+    @staticmethod
+    def _typed_arguments(capability: Capability, values: tuple[Any, ...]) -> tuple[dict[str, Any], ...]:
+        if len(values) != len(capability.parameters):
+            _refuse("fixed result-unit invocation argument count is invalid", "API_UNSUPPORTED")
+        typed: list[dict[str, Any]] = []
+        for value, kind, signature in zip(values, capability.input_contract, capability.parameters):
+            typed_value = validate_typed_value({
+                "kind": kind[0], "shape": [], "data": value, "java_signature": signature,
+            })
+            typed.append(typed_value)
+        return tuple(typed)
+
+    def _invoke_typed(self, receiver: Any, capability: Capability,
+                      typed: tuple[dict[str, Any], ...]) -> Any:
+        from ._g2_engine import _call, _retain_unknown_dispatch_owner
+
+        self._current_generation(receiver)
+        _retain_unknown_dispatch_owner(self.worker, self.model, self.param_proxy, receiver, typed)
+        result = _call(receiver, capability.method, *typed)
+        self._current_generation(receiver)
+        return result
+
+    def _invoke(self, receiver: Any, capability: Capability, values: tuple[Any, ...]) -> Any:
+        typed = self._typed_arguments(capability, values)
+        return self._invoke_typed(receiver, capability, typed)
+
+    def _unit_text(self, unit: Any, label: str) -> str:
+        if (type(unit) is not str or not unit or unit != unit.strip() or len(unit) > 256
+                or any(char in unit for char in "[]{};\n\r\"'")):
+            _refuse(f"{label} is missing, malformed, or not a bounded native unit string", "API_UNSUPPORTED")
+        return unit
+
+    @staticmethod
+    def _number_text(value: Any, label: str) -> str:
+        import math
+
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            _refuse(f"{label} is not a real scalar", "INVALID_RESULT")
+        number = float(value)
+        if not math.isfinite(number):
+            _refuse(f"{label} is not finite", "INVALID_RESULT")
+        return format(number, ".17g")
+
+    def _evaluate(self, expression: str, target_unit: str) -> float:
+        from ._g2_engine import _retain_unknown_dispatch_owner
+
+        typed: tuple[dict[str, Any], ...] = ()
+        result: Any = None
+        try:
+            self._current_generation(self.param_proxy)
+            if (type(expression) is not str or not expression or len(expression) > 2048
+                    or any(char in expression for char in "{};\n\r\"'")):
+                _refuse("constant conversion expression is malformed or unbounded", "INVALID_REQUEST")
+            target_unit = self._unit_text(target_unit, "requested conversion unit")
+            typed = self._typed_arguments(_PARAM_EVALUATE, (expression, target_unit))
+            result = self._invoke_typed(self.param_proxy, _PARAM_EVALUATE, typed)
+            if isinstance(result, bool) or not isinstance(result, (int, float)):
+                _refuse("ParamBase.evaluate did not return a real scalar double", "EXECUTION_STATE_UNKNOWN")
+            number = float(result)
+            if not math.isfinite(number):
+                _refuse("ParamBase.evaluate returned a non-finite scalar", "EXECUTION_STATE_UNKNOWN")
+            _retain_unknown_dispatch_owner(self.worker, self.model, self.param_proxy, expression, target_unit)
+            return number
+        except ExecutionContractError as exc:
+            call_args = typed if typed else (expression, target_unit)
+            self._latch_adapter_unknown(
+                exc, self.param_proxy, _PARAM_EVALUATE.method, tuple(call_args),
+                expression, target_unit, result,
+            )
+            raise
+
+    def quotient(self, numerator: Any, denominator: Any, numerator_unit: str,
+                 denominator_unit: str, target_unit: str, *, differential: bool = False,
+                 absolute_magnitude: bool = False) -> dict[str, Any]:
+        numerator_unit = self._unit_text(numerator_unit, "actual numerator unit readback")
+        denominator_unit = self._unit_text(denominator_unit, "actual denominator unit readback")
+        target_unit = self._unit_text(target_unit, "actual primary target unit readback")
+        n_text = self._number_text(numerator, "native numerator")
+        d_text = self._number_text(denominator, "native denominator")
+        if float(d_text) == 0.0:
+            _refuse("native denominator is zero during unit conversion", "INVALID_RESULT")
+        source = f"(({n_text}[{numerator_unit}])/({d_text}[{denominator_unit}]))"
+        converted = self._evaluate(source, target_unit)
+        zero_source = f"0*((1[{numerator_unit}])/(1[{denominator_unit}]))"
+        zero_converted = self._evaluate(zero_source, target_unit) if differential or absolute_magnitude else 0.0
+        if absolute_magnitude and zero_converted != 0.0:
+            _refuse("complex magnitude cannot be converted through an affine unit offset", "API_UNSUPPORTED")
+        value = converted - zero_converted if differential else converted
+        return {"value": value, "expression": source, "zero_expression": zero_source if differential or absolute_magnitude else None,
+                "target_unit": target_unit, "differential": differential,
+                "software_facing_method": "ParamBase.evaluate(String,String)"}
+
+    def standard_deviation(self, variance: Any, measure: Any, variance_unit: str,
+                           measure_unit: str, target_unit: str) -> dict[str, Any]:
+        variance_unit = self._unit_text(variance_unit, "actual centered-variance unit readback")
+        measure_unit = self._unit_text(measure_unit, "actual denominator unit readback")
+        target_unit = self._unit_text(target_unit, "actual primary target unit readback")
+        v_text = self._number_text(variance, "native centered variance")
+        m_text = self._number_text(measure, "native denominator")
+        if float(m_text) == 0.0 or float(v_text) < 0.0:
+            _refuse("native variance/denominator is invalid during unit conversion", "INVALID_RESULT")
+        source = f"sqrt(({v_text}[{variance_unit}])/({m_text}[{measure_unit}]))"
+        converted = self._evaluate(source, target_unit)
+        zero_source = f"0*sqrt((1[{variance_unit}])/(1[{measure_unit}]))"
+        zero_converted = self._evaluate(zero_source, target_unit)
+        return {"value": converted - zero_converted, "expression": source,
+                "zero_expression": zero_source, "target_unit": target_unit,
+                "differential": True, "software_facing_method": "ParamBase.evaluate(String,String)"}
+
+    def root_mean_square(self, square_integral: Any, measure: Any,
+                         square_integral_unit: str, measure_unit: str,
+                         target_unit: str) -> dict[str, Any]:
+        square_integral_unit = self._unit_text(
+            square_integral_unit, "actual RMS square-integral unit readback",
+        )
+        measure_unit = self._unit_text(measure_unit, "actual RMS measure unit readback")
+        target_unit = self._unit_text(target_unit, "actual primary target unit readback")
+        square_text = self._number_text(square_integral, "native RMS square integral")
+        measure_text = self._number_text(measure, "native RMS measure")
+        if float(measure_text) == 0.0 or float(square_text) < 0.0:
+            _refuse("native RMS square-integral/measure is invalid", "INVALID_RESULT")
+        source = f"sqrt(({square_text}[{square_integral_unit}])/({measure_text}[{measure_unit}]))"
+        converted = self._evaluate(source, target_unit)
+        zero_source = f"sqrt((0[{square_integral_unit}])/(1[{measure_unit}]))"
+        zero_converted = self._evaluate(zero_source, target_unit)
+        if zero_converted != 0.0:
+            _refuse(
+                "RMS output unit has an affine zero offset with no authorized RMS convention",
+                "API_UNSUPPORTED",
+            )
+        return {
+            "value": converted,
+            "expression": source,
+            "zero_expression": zero_source,
+            "target_unit": target_unit,
+            "differential": False,
+            "software_facing_method": "ParamBase.evaluate(String,String)",
+        }
+
+
+def _result_unit_evaluator(worker: Any, model: Any) -> _ResultUnitEvaluator:
+    return _ResultUnitEvaluator(worker, model)
 
 
 def _capability_for_row(row: Mapping[str, Any]) -> Capability | None:
