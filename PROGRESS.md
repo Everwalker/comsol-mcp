@@ -1,5 +1,21 @@
 # 当前进度 — 2026-10-26
 
+当前续跑 r266：准备按持续授权普通同步本轮三份Main已验收限定摘要（R10 T014数值吻合及U06 postdispatch UNKNOWN、R16自身只读17queries、standalone runtime/Q1 UNKNOWN）与Main3。无raw SD/模型/归档/账本/运行时/商业二进制上传。R10原PTY19679冻结且Core/SDK退出未知；通用驻态M修复由明确Luna配置执行，原Anscombe编排出现provider TLS错误，其已派生执行01a175ca-6d44-7732-a8f4-4bfa0771e029仍需按实际状态收结果，不重复派工/不改TLS设置。Q2 SOURCE R2因hold提示可BrokenPipe提前退出的P1未接受，明确Luna Pasteur在新R3修复（3e21a5bf…），尚无Q2效果；Windows正常安装R2候选交独立Leibniz源码审查，未放远端。最后已验证公开仍1414f375/r262；新同步须fresh读回后才报发布成功。全427/平台/native save-reopen/两未预设族/fresh最终Reviewer未通过，Goal active/PROGRESS。
+
+以下r265及更早为历史，以当前RESUME r266为准。
+
+当前续跑 r265：用户确认实质资源变化后，唯一新预检通过（free5894979584B）；R10 Core仅执行一次，原reader两ACK均核验，Server/Worker前free2855845888/1234092032B均满足原门槛。Main重算已保存的五mode/五export/136samples，T014数值误差最大1.752e-13<1e-8；随后U06 weighted phase-after诊断的实际M读取因outer/inner映射不全而postdispatch EXECUTION_STATE_UNKNOWN，原PTY19679/190对象保留，save/cleanup未达、Core/SDK退出未知。Main接受限定证据7334B/94d00bdb…，Core/native闭环未过。已显式GPT-6 Luna max Anscombe连续修复通用驻态M路径（source-only，ab0f1aed…），不猜轴/填分母/重放旧owner。WindowsR16 A1/A2/B原wait各0，Main核97/18/32/28pins、17只读查询/6原buffer；Session0/service-station/Default仅新自身上下文，未证权限或C0000142原因，C/native资格未过。Mac Q1外层原执行handle丢失，UNKNOWN原owner保持；独立Q2自动normal卸载source-prep10checks及Windows正常安装R2source-prep25checks已交付待Main审，均未放实际效果。Mendel自报原实际model为Sol，后续执行改用工具明确指定Luna，历史模型标签不冒充核验。最后公开1414f375/r262及fresh回执0072c781有效；全427/平台/native新Worker reopen/两未预设族/fresh最终Reviewer/Goal未过，active/PROGRESS。
+
+以下r264及更早为历史，以当前RESUME r265为准。
+
+当前续跑 r264：新standalone CPython3.12.13/20260610已一次正常uv获取known0（原759b8a/session89656→835ff0，勿再poll），Main静态接受3375B/b2418681…；actualbinary96793b10…/libpython da9ab1e0…/ARM64与静态SOABI核验，尚非产品卸载资格。GitHub-only来源限定已按官方Astralmirror证据前向纠正，原mismatch保留；原“无任何.framework依赖”表述过宽未满足，系统CoreFoundation/SystemConfiguration事实保留，独立Python.framework启动路径不存在；产品guard从未修改。已放同Dalton有限新scope（task24895B/9884ed14…，dispatch01a17580…）：只新67fRoot/uninstall-qualification-1aafb3a0b2fa/application的正常离线安装、用户内容漂移负控、readyplan与满足原content/process guards才一次--confirm；最多4正常只读ps，无旧PID定向查询/信号/清理。现有Framework目标仍BLOCKED_UNKNOWN。WindowsR16短命令软件18项reported通过，待完整冻结/Main源码审查，尚未放A/B。最后公开1414f375/r262 fresh6回执0072c781有效；MacCore原free门槛/全部旧UNKNOWN保持，全427/矩阵/native恢复/未预设族/最终Reviewer/Goal未过，active/PROGRESS。
+
+以下r263及更早为历史，以当前RESUME r264为准。
+
+当前续跑 r263：1414f375bebae6f6b05e226cc9c8d47b1acbaa6e（parent30d）已普通非强制同步，fresh fetch及逐6份HEAD/index/origin/main/FETCH_HEAD/worktree blob一致；737998B，REMOTE_READBACK2638B/0072c781…。仅Main3与当前SDKmetadata/M4code-data/R15长度失败三compact，raw模型/归档/账本/运行时/商业二进制未上传。CLEAN仅读回时点；本r263为本地继续，不为回执重复发布。候选source9bd/0.1.10/wheel484adf8d未改；R16短PS命令SOURCEPREP和新nonFrameworkPython有限获取仍继续，尚无新A/B或卸载资格。MacCore实际free门槛及全部旧UNKNOWN保持；全427/矩阵/native reopen/两未预设族/fresh最终Reviewer未过，Goal active/PROGRESS。
+
+以下r262及更早为历史，以当前RESUME r263为准。
+
 当前续跑 r262：当前source9bd/0.1.10的实际coldSDK bind及metadata Setup已Main接受（bind1add4c90…；Setup2526B/b94dbf09…），原SDK Popen0/AnyIO[0,0]/38close，21describe+4metadata全部success/text=structured；Core未放、实际旧free门槛不变。M4全新sibling布局的唯一正常transition已Main接受3130B/e7b0b70b…：195→199→195同版本构件切换/回滚、19原capture=18×0+1×预期73、真实fullbackup/fullrestore与两新synthetic操作/UNKNOWN语义、模型byteSHA保护；恢复UNKNOWN不转成功/safe_retryfalse。R1布局拒绝及两private verifier错误全保留，normalpipeline未重跑；crash82/wholeprefix卸载/native reopen未运行。WindowsR15 actual A1 known0确认新namespace的 /C:/ SFTP修复，A2 known1原GBK“命令行太长。”，9704字符EncodedCommand；Main接受失败scope2772B/4e306e75…，B未放、R15spent不重试/查旧Root。与cmd8191上限一致，实际DefaultShell未查，不归因native/权限。新R16同范围短命令SOURCEPREP（01a1756c…）继续；非Framework新Python有限获取（01a1756d…）已放，旧Framework目标仍BLOCKED_UNKNOWN。以上3份compact+Main3拟普通同步，raw model/archive/ledger/venv/商业材料不上传。最后公开30d/r259仍已验证；全427/平台/native恢复/两未预设族/最终fresh Reviewer/Goal未过，active/PROGRESS。
 
 以下r261及更早为历史，以当前RESUME r262为准。
