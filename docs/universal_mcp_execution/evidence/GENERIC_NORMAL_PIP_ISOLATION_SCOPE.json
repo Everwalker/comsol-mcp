@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "scope": "GENERIC_NORMAL_PIP_SOURCE_AND_PARSER_SOFTWARE_ONLY",
+  "status": "SCOPED_ACCEPTED_NOT_RUNTIME_OR_FULL_GOAL",
+  "problem": "Inherited pip destination/config settings could redirect locked installs outside the owned venv. pip25's initial global parser also read PIP_PYTHON before command --isolated and could internally launch a different interpreter.",
+  "change": "Only pip child environment filters all PIP_* names case-insensitively then sets PIP_CONFIG_FILE=os.devnull. Lexical venv Python -I -B, pip --isolated, offline/hash/binary/input flags and explicit no-cache-dir remain. Parent HOME/home/CODEX_HOME and all non-PIP values are preserved; returned records omit environment values.",
+  "source": [
+    {
+      "path": "tools/full_project_release.py",
+      "bytes": 219590,
+      "sha256": "07cfe0a9506c7994c1ba60db90838bb93c668f9b69b2d053161829798af3092a"
+    },
+    {
+      "path": "tests/test_full_project_release.py",
+      "bytes": 85573,
+      "sha256": "1f62addc0131694b506fbb64d4c42d2c1b252adbf6997b9663fe6a3e5ce66488"
+    },
+    {
+      "path": "tests/test_generic_pip_isolation.py",
+      "bytes": 28963,
+      "sha256": "78ae1161ce1b00c13c7ae7d0cae3c52d75c5e64473fdb7743dfa83ea9c44b206"
+    }
+  ],
+  "review": {
+    "independent_product_P1": "CLOSED_SOURCE_SCOPED",
+    "new_product_P1": 0,
+    "new_product_P2": 0,
+    "report_sha256": "096587035078f6a26348cb60827d3cebf62a193faa2b4959f5f28effe077abe1",
+    "Main": "Complete shared source diff and exact r3 test-only delta read; critical owner/root/process/uninstall/main functions unchanged; original247 assert AST equal. Three reserved-variable test mutation sites removed, actual values checked read-only."
+  },
+  "software": {
+    "platform": "macOS ARM64",
+    "python": "3.12.13",
+    "pytest": "9.1.1",
+    "runtime": "absolute Repo/.venv/bin/python -I -B",
+    "latest_focused": {
+      "passed": 19,
+      "seconds": 0.74,
+      "gate_unexpected_attempts": 0,
+      "log_sha256": "5ece249c47eb40a4ef41af1026c743aff0d612e934754f78dda9d024261f6835"
+    },
+    "counter": "Real hash-pinned R1 helper + pip25 global parse_command reached one synthetic internal-spawn denial before process creation; current helper selected check with zero interpreter-identification/internal-spawn calls. Only identification/subprocess leaves inert; parser/defaults/configuration real.",
+    "missing_fixture": {
+      "passed": 16,
+      "skipped": 2,
+      "scope": "r2 generic-only batch; external loader/parser nodes SKIP, unchanged mechanism inherited in r3, not rerun",
+      "log_sha256": "63ef3cfde461a600550626759c5496eb7f9d5f32dd23f25291737cfd9b9db1fe"
+    },
+    "counts": "Overlapping batches are not summed. Latest19 includes18generic nodes and one existing symlink-doctor node; not whole-suite or cross-platform acceptance."
+  },
+  "fixture": {
+    "optional_env": "COMSOL_MCP_PIP25_NUPKG",
+    "default": "_state/universal-windows-host-package/python.3.12.10.nupkg",
+    "source": "https://www.nuget.org/packages/python/3.12.10",
+    "nupkg_bytes": 14515433,
+    "nupkg_sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+    "wheel_member": "tools/Lib/ensurepip/_bundled/pip-25.0.1-py3-none-any.whl",
+    "wheel_sha256": "c46efd13b6aa8279f33f2864459c8ce587ea6a1a59ee20de055868d8f7688f7f",
+    "policy": "No automatic download; absent external fixture skips only two nodes, mismatched hash fails. Runtime archive/thirdparty extracted source not shipped."
+  },
+  "reproduce": {
+    "tests": [
+      "tests/test_generic_pip_isolation.py",
+      "tests/test_full_project_release.py::test_doctor_uses_venv_path_when_python_is_a_symlink"
+    ],
+    "private_qualified_gate_sha256": "5be4a0fd4a729112976264db056b7e34c051b421c3bb3990363dcc45da7e5ebd"
+  },
+  "limits": [
+    "Actual pip install/check/uninstall NOT_RUN in these software oracles.",
+    "New coherent normal delivery archives and genuine-HOME M4 qualification pending.",
+    "Native Windows/Mac COMSOL, full427/platform/save-fresh-reopen, two unpreset families and final independent unified acceptance remain incomplete.",
+    "No private runner, raw environment, credentials, runtime binary, model or raw archive published."
+  ]
+}

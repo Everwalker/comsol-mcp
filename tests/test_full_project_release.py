@@ -1353,6 +1353,7 @@ def _transition_fixture(
     candidate = {"comsol-mcp": candidate_version, "base-dep": "1.0", "candidate-dep": "2.0", "pip": "24.0"}
     state: dict[str, str] = {}
     events: list[str] = []
+    pip_invocations: list[tuple[list[str], dict[str, str] | None]] = []
     old_lock = tmp_path / "old.lock"
     new_lock = tmp_path / "new.lock"
     old_line = "comsol-mcp==0.1.9" if old_lock_has_version else "base-dep==1.0"
@@ -1374,8 +1375,10 @@ def _transition_fixture(
         state.update(old)
         return {"status": "PASS_PROCESS_ISOLATED_INSTALL_AND_IMPORT"}
 
-    def fake_run(argv: list[str], *, cwd: pathlib.Path | None = None) -> dict[str, object]:
+    def fake_run(argv: list[str], *, cwd: pathlib.Path | None = None,
+                 env: dict[str, str] | None = None) -> dict[str, object]:
         del cwd
+        pip_invocations.append((list(argv), dict(env) if env is not None else None))
         if "install" in argv:
             lock = pathlib.Path(argv[argv.index("--requirement") + 1])
             if "comsol-mcp==0.2.0" in lock.read_text(encoding="utf-8"):
@@ -1421,6 +1424,7 @@ def _transition_fixture(
     monkeypatch.setattr(release, "distribution_fingerprint", fake_distribution_fingerprint)
     monkeypatch.setattr(release, "_installed_version", lambda _python: state.get("comsol-mcp"))
     result = release.transition_check(args, pathlib.Path(release.__file__))
+    result["_fixture_pip_invocations"] = pip_invocations
     return result, state, events
 
 

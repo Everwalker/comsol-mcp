@@ -2426,9 +2426,13 @@ def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
         return result
 
 
-def run_record(command: list[str], *, cwd: pathlib.Path | None = None) -> dict[str, Any]:
+def run_record(command: list[str], *, cwd: pathlib.Path | None = None,
+               env: dict[str, str] | None = None) -> dict[str, Any]:
     start = time.monotonic()
-    proc = _capture(command, cwd=str(cwd) if cwd else None, capture_output=True, text=True)
+    capture_kwargs = {"cwd": str(cwd) if cwd else None, "capture_output": True, "text": True}
+    if env is not None:
+        capture_kwargs["env"] = env
+    proc = _capture(command, **capture_kwargs)
     return {"argv": command, "cwd": str(cwd) if cwd else None,
             "exit_code": proc.returncode, "stdout": proc.stdout,
             "stderr": proc.stderr, "duration_seconds": round(time.monotonic() - start, 3)}
@@ -2942,14 +2946,27 @@ def uninstall_venv(venv: pathlib.Path, evidence: pathlib.Path, *, confirm: bool 
     return plan
 
 
+def _isolated_pip_invocation(venv_python: pathlib.Path, pip_args: list[str]) -> tuple[list[str], dict[str, str]]:
+    """Build one venv-bound pip invocation without changing the caller environment."""
+    # pip's global parser reads PIP_* defaults before it processes --isolated.
+    # Remove them from the child up front so PIP_PYTHON cannot re-dispatch pip.
+    child_environment = {key: value for key, value in os.environ.items()
+                         if not key.upper().startswith("PIP_")}
+    child_environment["PIP_CONFIG_FILE"] = os.devnull
+    command = [str(venv_python), "-I", "-B", "-m", "pip", "--isolated", *pip_args]
+    return command, child_environment
+
+
 def pip_install_lock(venv_python: pathlib.Path, requirements: pathlib.Path, wheelhouse: pathlib.Path,
                      *, force_reinstall: bool = False) -> dict[str, Any]:
-    args = [str(venv_python), "-m", "pip", "install", "--no-index", "--only-binary=:all:",
-            "--disable-pip-version-check", "--no-input", "--find-links", str(wheelhouse),
-            "--require-hashes", "--requirement", str(requirements)]
+    pip_args = ["install", "--no-index", "--only-binary=:all:",
+                "--disable-pip-version-check", "--no-input", "--no-cache-dir",
+                "--find-links", str(wheelhouse),
+                "--require-hashes", "--requirement", str(requirements)]
     if force_reinstall:
-        args.insert(5, "--force-reinstall")
-    return run_record(args)
+        pip_args.insert(1, "--force-reinstall")
+    command, child_environment = _isolated_pip_invocation(venv_python, pip_args)
+    return run_record(command, env=child_environment)
 
 
 def doctor(venv_python: pathlib.Path) -> dict[str, Any]:
@@ -2967,7 +2984,9 @@ files=[p for p in pkg.rglob('*') if p.is_file() and not p.name.startswith('._') 
 launcher=pathlib.Path(sys.executable).parent / ('comsol-mcp.exe' if sys.platform=='win32' else 'comsol-mcp')
 print(json.dumps({'python':sys.version.split()[0],'executable':sys.executable,'prefix':sys.prefix,'version':d.version,'module':str(pkg),'entry_points':eps,'entry_point_path':str(launcher),'entry_point_exists':launcher.is_file(),'package_file_count':len(files),'java_sources':[p.relative_to(pkg).as_posix() for p in files if p.suffix=='.java'],'action_catalogs':[p.relative_to(pkg).as_posix() for p in files if p.name.lower()=='02_action_catalog.json'],'schemas':[p.relative_to(pkg).as_posix() for p in files if 'schema' in p.name.lower() and p.suffix=='.json']}))"""
     identity = run_record([str(venv_python), "-I", "-c", code], cwd=isolated_cwd)
-    check = run_record([str(venv_python), "-I", "-m", "pip", "check"], cwd=isolated_cwd)
+    check_command, check_environment = _isolated_pip_invocation(
+        venv_python, ["check", "--no-cache-dir"])
+    check = run_record(check_command, cwd=isolated_cwd, env=check_environment)
     parsed: dict[str, Any] | None = None
     if identity["exit_code"] == 0:
         try:
@@ -3259,11 +3278,13 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
     if lifecycle is None:
         with profile.open("x", encoding="utf-8") as stream:
             stream.write("(version 1)\n(deny network*)\n(allow default)\n")
-    candidate_args = [str(py), "-m", "pip", "install", "--no-index", "--only-binary=:all:",
-                      "--disable-pip-version-check", "--no-input", "--force-reinstall", "--find-links",
-                      str(args.new_wheelhouse), "--require-hashes", "--requirement", str(new_lock_snapshot)]
+    candidate_args, candidate_environment = _isolated_pip_invocation(
+        py, ["install", "--no-index", "--only-binary=:all:", "--disable-pip-version-check",
+             "--no-input", "--no-cache-dir", "--force-reinstall",
+             "--find-links", str(args.new_wheelhouse),
+             "--require-hashes", "--requirement", str(new_lock_snapshot)])
     try:
-        upgrade = run_record([sandbox, "-f", str(profile), *candidate_args])
+        upgrade = run_record([sandbox, "-f", str(profile), *candidate_args], env=candidate_environment)
     except OSError as exc:
         # Preserve the invocation failure, but still run rollback in case pip
         # changed part of the disposable environment before the failure surfaced.
@@ -3291,11 +3312,13 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
         else:
             lifecycle.failures.append("candidate-install-or-identity")
 
-    rollback_args = [str(py), "-m", "pip", "install", "--no-index", "--only-binary=:all:",
-                     "--disable-pip-version-check", "--no-input", "--force-reinstall", "--find-links",
-                     str(args.old_wheelhouse), "--require-hashes", "--requirement", str(old_lock_snapshot)]
+    rollback_args, rollback_environment = _isolated_pip_invocation(
+        py, ["install", "--no-index", "--only-binary=:all:", "--disable-pip-version-check",
+             "--no-input", "--no-cache-dir", "--force-reinstall",
+             "--find-links", str(args.old_wheelhouse),
+             "--require-hashes", "--requirement", str(old_lock_snapshot)])
     try:
-        rollback = run_record([sandbox, "-f", str(profile), *rollback_args])
+        rollback = run_record([sandbox, "-f", str(profile), *rollback_args], env=rollback_environment)
     except OSError as exc:
         rollback = {"argv": [sandbox, "-f", str(profile), *rollback_args], "exit_code": None,
                     "stdout": "", "stderr": f"{type(exc).__name__}: {exc}", "duration_seconds": None}
@@ -3314,9 +3337,10 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
                      if isinstance(current_inventory, dict) else set())
     candidate_only_names = sorted(current_names - original_names)
     if candidate_only_names:
-        cleanup_args = [str(py), "-m", "pip", "uninstall", "--yes", *candidate_only_names]
+        cleanup_args, cleanup_environment = _isolated_pip_invocation(
+            py, ["uninstall", "--yes", *candidate_only_names])
         try:
-            cleanup = run_record([sandbox, "-f", str(profile), *cleanup_args])
+            cleanup = run_record([sandbox, "-f", str(profile), *cleanup_args], env=cleanup_environment)
         except OSError as exc:
             cleanup = {"argv": [sandbox, "-f", str(profile), *cleanup_args], "exit_code": None,
                        "stdout": "", "stderr": f"{type(exc).__name__}: {exc}", "duration_seconds": None}
