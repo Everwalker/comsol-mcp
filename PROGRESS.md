@@ -1,20 +1,19 @@
-# 当前进度 — 2026-10-26（r274）
+# 当前进度 — 2026-10-26（r277）
 
-通用 MCP 目标继续执行，状态 **IN_PROGRESS / PROGRESS**。427 子断言、适用平台核心链、真实保存及新 Worker 重开、两个未预设任务族和 fresh 最终独立 Reviewer 均未完成；completed_groups 为空。案例专项保留各自状态。
+通用 MCP 目标继续执行，状态 **IN_PROGRESS / PROGRESS**。冻结的273 actions / 60 tests / 427子断言、适用平台核心链、真实保存及新Worker重开、两个未预设任务族和fresh最终Reviewer均未完成；completed_groups为空。当前有界源码复审不替代最终验收。
 
-已验收并整合 generic normal-pip 修复：只在 pip 子进程过滤 PIP_* 并关闭配置文件，保留真实 HOME/home/CODEX_HOME、非 PIP 值、离线/hash/所有权及 UNKNOWN 合同。helper219590B/SHA07cfe0a9…，原 fixture85573B/1f62addc…，portable test28963B/78ae1161…。独立产品复审确认 P1 闭合、新P1/P2零；Main接受测试准备窄修复。固定 runtime/前置硬门禁下最新19PASS，真实pip25前置parser原反例触达受控inner-spawn拒绝，修复后0spawn。缺fixture的旧16PASS/2SKIP只对应外部节点，不累计或冒充资格。紧凑证据：docs/universal_mcp_execution/evidence/GENERIC_NORMAL_PIP_ISOLATION_SCOPE.json。
+generic normal-pip exact3源码已验收、整合并按exact7普通非强制推送，fresh读回为 **aff3dc32cab3b54ec922aaa13ae0e13d3500f4fd**（parent7f80917c；7blob一致，955039B）。helper07cfe0a9…，应用仍0.1.10/9bd/199成员/wheel484a。Euler已交三架构coherent归档，限artifact-only；不能据此放行安装或native。本r277继续记录已接受R18阶段的紧凑证据与当前整改，准备按exact4普通同步。
 
-本阶段准备普通同步 exact7 文件（上述3源码、Main3、1紧凑证据）；发布前 fetch已0，HEAD/origin/main/FETCH_HEAD均7f80917ccc252ad9e6febf8ab6b65d79d4ec6678。新push/fresh读回尚待实际返回；最后已验证发布仍为7f80917c/r266。应用包本体仍0.1.10、9bd源码、199成员/wheel484adf8d…；新helper尚未进入coherent正常归档，实际pip/安装/卸载资格NOT_RUN。
+当前实质工作：
 
-连续工作：
+- **U06 v3**：Arendt（GPT-6 Luna max）继续实现。v2固定Python真实pytest289 unique PASS，JUnit根tests=311的22项差异保留；另4项PASS只表示单位bug已复现。Main明确采用私有固定Model.param与ParamBase.evaluate(String,String)只读链，复用actual descriptor/类型化分派及同一首UNKNOWN fence，不改Java或公开generic API。v2未整合，native NOT_RUN。
+- **normal helper + Q4**：Q3独立审查为2P1/1P2 CHANGES_REQUIRED：PATH工具身份、listener在UNKNOWN外层hold前被context关闭、子Python缺实际-I/-B。Q3原20 PASS仍仅软件PREP。Euler修真实helper工具解析/子Python，原Pasteur修fresh Q4的capture内原owner hold；都只写private源码与软件证据，保留真实HOME，NOT_BOUND，无运行lease。
+- **Windows R18**：Main与独立Plato已接受限定源码/软件；manifest fd5daf77…，13份177196B，17 focused PASS与另3 affected PASS，原R17的3项expected FAIL保留。已向human提交具体新增station/desktops/LowNW/进程线程关联范围问题，尚无答复；首次预选不是批准。transfer/native NOT_RUN，旧持续同范围授权仍有效。
 
-- Arendt（实际指定 GPT-6 Luna max）：U06 v2，修独立v1的3P1/2P2（预算、真实native绑定、首UNKNOWN后SDK、单位尺度、explicit weighted integral），负责实现/真实affected pytest/debug闭环；未整合。
-- Bernoulli（实际指定 GPT-6 Luna max）：Windows R18 source PREP，修R17的CreateDesktop短名、ACL首UNKNOWN保留原SD/owner和Task profile命名。新增station/desktops/LowNW尚无human授权，transfer/native NOT_RUN。
-- Pasteur（原实际GPT-6 Luna max已恢复）：Q3真实HOME不变的正常M4源码，Task6671B/37428c49…，只写新prep范围，futureRoot仅Data。做NOT_BOUND输入capsule/validator等待接受源码及coherent构件，当前无执行lease。
-- Euler完成已验收3源码整合，仅核字节/写私有回执；Main负责普通同步。独立Leibniz产品源码复审已完成，最终unpreset Reviewer未开始。R17独立Plato已完成且关闭；无native owner。
+旧Mac R10 PTY19679/190对象、Q1和全部旧Windows UNKNOWN原owner保持封存，不poll/input/EOF/query/kill/cleanup/adopt/replay。旧Q2R4在CreateProcess前被自动审批拒绝，实际NOT_RUN；新Q4保留genuine HOME，不重试被拒形状。
 
-旧Mac R10 PTY19679/190对象及Q1仍UNKNOWN保留；T014已保存scoped算术/导出结果不等于Core/native保存重开。Q2 R4被自动审批在CreateProcess前拒绝（HOME覆盖且可能删除），实际NOT_RUN；禁止重试/隐藏同形覆盖。所有旧Root/PID/PTY按各自封存边界不交互。
+R18紧凑证据已写入 docs/universal_mcp_execution/evidence/WINDOWS_R18_PRIVATE_DESKTOP_SOURCE_SOFTWARE_SCOPE.json；只含限定接受与指纹，不含原始材料。源码修复和独立P1复审继续，R18仅本地静态准备有限命令，无执行许可。normal venv 采用 --without-pip 后显式隔离ensurepip，内部-I与-B传播边界如实限定。
 
-下一步：完成当前7文件普通push及fresh逐文件读回 → coherent正常构件 → Q3真实绑定/验收后有限新M4执行；同时继续U06/R18源码修复及受影响复审。scope/阈值保持冻结。
+下一步：收取三项实质源码修复 → 强Reviewer复审 → Main集中接受/整合/按既有授权同步 → coherent新helper构件绑定后，才释放新的有限M4。Windows等待已提交的具体human答复。scope/阈值不变。
 
-恢复读取 docs/universal_mcp_execution/state/RESUME.json 的 current_checkpoint_r274、active_job_refs及CURRENT_HANDOFF。原r272入口全文在既有checkpoint按hash保留；历史W23 delta fixture缺失仍为supplemental FAILED_MISSING_TEST_INPUT，见historical_evidence_gaps，未改SKIP/PASS或作为当前native阻塞。此入口只替换当前状态，不再复制整段历史。
+恢复先读 CURRENT_HANDOFF.md 和 state/RESUME.json 的 current_checkpoint_r277、current_checkpoint_r276及current_source_supplements；active_job_refs含历史owner，不能当作新lease。历史W23缺fixture仍为supplemental FAILED_MISSING_TEST_INPUT。r272入口全文及所有旧状态已按原指纹保留，不重复复制历史。

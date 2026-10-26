@@ -1,63 +1,47 @@
-# 当前交接 — 2026-10-26（r274）
+# 当前交接 — 2026-10-26（r277）
 
-当前状态为 active / PROGRESS，继续完整 MASTER_GOAL。规范源码、冻结规则及 427 子断言范围沿用 docs/universal_mcp_execution/MASTER_GOAL.md、RELEASE_DOD、GENERAL_COVERAGE。当前日常源码复审不是最终 unpreset Reviewer；未选择 heldouts、未完成任何通用 group。
+Goal active / PROGRESS。完整MASTER_GOAL与冻结273/60/427门槛持续有效；completed_groups为空。案例保留自身状态；未开始fresh最终unpreset Reviewer、未选heldouts。当前review均限源码/软件阶段。
 
-恢复步骤：
+恢复时先读RESUME.json.current_checkpoint_r277、current_checkpoint_r276及current_source_supplements，再用实际multi_agent状态收取下列候选。原Luna连续实现/测试/Debug，Main仅处理实质接口与集中验收。不得用app create_thread/fork/send派子任务。旧native owner及handle只读已保存证据，不poll/input/EOF/query/kill/cleanup/adopt/replay。
 
-1. 读取 state/RESUME.json 的 current_checkpoint_r274 和 active_job_refs。该 JSON 保留所有旧 owner、历史状态及精确证据；其 historical_blockers_r272 是历史登记，不能当实时机器容量或当前网络事实。
-2. 核当前源码执行 Agent 的 authoritative 状态，按下列 scope 收取交付；历史 native HOLD/UNKNOWN 的原 handle 不 poll、不输入，仅读已保存证据。源修复由原 Luna 连续实现/测试/debug；Main 只处理实质架构决策及集中验收。使用 multi_agent 工具，不使用 app create_thread/fork/send_message_to_thread 派工。
-3. 对冻结新指纹做有界复审。仅实质问题返工；不得重复无关绿测、把 overlapping batch 相加、把软件/PREP/文档能力当 native 通过。
-4. 已验收阶段按既有持续授权普通 non-force push 到 origin main，并 fresh fetch/逐白名单读回；发布必要源码、测试、可重建 fixture、进度、紧凑证据。原始模型/账本/运行时/归档/凭据/商业二进制保留本地。
-5. Source 集中接受后制作 coherent 正常构件、重新绑定有限 operator 与输入，再开展有权限的新 runtime。旧 UNKNOWN owner 不因新源码已修复而恢复或重放。
+当前发布：exact7必要文件已普通non-force push并fresh逐blob读回，HEAD/origin/main/FETCH_HEAD为aff3dc32cab3b54ec922aaa13ae0e13d3500f4fd，parent7f80917ccc252ad9e6febf8ab6b65d79d4ec6678；955039B。回执_state/universal-main-review/20261026-normal-pip-source-publication/REMOTE_READBACK.json，4781B/388f2294e1931bbe464eb305589cbf405becdcba82c6622611d49a8aa62f36d9。CLEAN仅原读回时点，本r277之后本地继续；不为回执另发commit。应用0.1.10/9bd/199members/wheel484a不变；helper07cfe0a9506c7994c1ba60db90838bb93c668f9b69b2d053161829798af3092a。已验收阶段继续按既有授权只发必要源码/测试/可重建fixture/Main3/紧凑证据，排除原始运行材料、归档、凭据与商业二进制。
 
-当前产品与同步：
+R18限定接受摘要已写入 evidence/WINDOWS_R18_PRIVATE_DESKTOP_SOURCE_SOFTWARE_SCOPE.json，本轮exact4为Main3与该紧凑证据，准备ordinary同步；原始诊断packet/runtime不发布。最新已实际读回仍为上段aff3，推送完成后须fresh逐blob读回，不能从本地commit推断发布成功。
 
-normal-pip exact3源码已集中接受并整合，实际19PASS/独立产品P1闭合，helper07cfe0a9…、fixture1f62addc…、portable78ae1161…。紧凑公开证据为GENERIC_NORMAL_PIP_ISOLATION_SCOPE.json。当前预备exact7普通同步，prefetch0且HEAD/origin/main/FETCH_HEAD均7f80917c；新push/fresh读回尚未发生，不能报发布成功。应用0.1.10/9bd/199members/wheel484a不变，新helper尚未进入coherent正常归档，实际M4运行未获资格。
+U06 v3：
 
-U06 generic measure v2：
+- Arendt01a1761d-7c1d-78b1-941a-7a122cf1d94a，实际GPT-6 Luna max；submission01a176ad-de1d-7480-a774-baa14d1d2d1e。仅_state/universal-result-stationary-measure-20261026-r3。
+- v2 g3 f22f5906d3a0dd3ce8c7455c9bfa12f2d42d22a0df6457522034c153785256fe；g2 c88ae93ae727ec6a9a8fb11fe2d10d2863bc64962261389fe27df55b7cfd98db。P1软件固定真实pytest289 unique PASS，根JUnit tests=311差异原样保留。4 unit counters PASS是bug复现，非转换验收；旧runner误拷日志已留provenance。v2未Main接受/整合，native NOT_RUN。
+- 必要决策_state/universal-main-review/20261026-current9bd-r10-core/MAIN_U06_PARAMBASE_TYPED_READ_DECISION.json：private _g2_public_api固定两条READ（Model.param()->ModelParam；ParamBase.evaluate(String,String)->double），actual receiver/version/generation/精确签名校验，两个String typed java_signature，再走既有Worker分派。全部describe/accessor/evaluate纳入同一firstUNKNOWN fence，保留原中间proxy。public CAPABILITIES/registry、D2、Java/_java_worker不改，无C ticket或generic公开evaluate。
+- 原单位/预算/native绑定三决策仍约束v3。actual N/M单位常量换算；缺单位不默认为1；温标绝对中心/差值std与虚部offset分开；只bounded aggregate cell。3文件及必要private tests/runner/evidence，不动shared。
 
-- executor Arendt 01a1761d-7c1d-78b1-941a-7a122cf1d94a，指定 gpt-6-luna/max；只写 _state/universal-result-stationary-measure-20261026-r2。
-- immutable v1 为 _state/universal-result-stationary-measure-20261026-r1，source476601B/3b9ef5bdad27294996718e9f0d02fff330abe3ca451ae11769b5fef0ecfd0ea2。
-- 独立报告 _state/universal-main-review/20261026-u06-stationary-measure-independent-review/REVIEW.md，16548B/8364e2b15caaf100d41bfa3df21ffee63dcd46377ce05535be959e783b652aef，3P1/2P2，CHANGES_REQUIRED。
-- Main 三份决策在 _state/universal-main-review/20261026-current9bd-r10-core/：MAIN_U06_V1_RAW_BUDGET_AND_SELECTION_REPAIR_DECISION.json（e1afe70f…）、MAIN_U06_NATIVE_BINDING_AND_FIRST_UNKNOWN_DECISION.json（5577B/9be8f57a…）、MAIN_U06_ACTUAL_MEASURE_UNITS_DECISION.json（6620B/2cabb8ae…）。
-- v2 新增窄授权 private _g2_engine.py opt-in attempt-local ContextVar 首 UNKNOWN fence：阻止全部后续 SDK，包括 fallback、recheck、axisym restore 与 cleanup，原 owner/entry/error 强保留；不是 permit issuer 或全局无关模型禁令。
-- 原生实际 data/expr/ROI 前后回读与 count/study binding 分开；count-only 不伪造 solution axes 或严格 metric 资格。
-- 单位使用 actual N/M/second-moment unit，文档化 ParamBase.evaluate(String,String) 只换算数值常量；None 不变1，std 中心和差值温标正确，复杂接口歧义交 Main。官方6.4文档只为 API 来源，不是 native 结果。
-- 原18裸 unittest 结果不是固定 runtime/affected pytest 接受；Repo/.venv 实际有 pytest。v2 runner 必须在 import 前装硬拒绝，真实 pytest 及必要受影响回归；保留原失败。
+- 独立Leibniz正静态复审不可变v2的P1组合路径，submission01a176b8-ace2-7153-b045-e25d2e81002b，输出_state/universal-main-review/20261026-u06-v2-p1-source-review；不读在变r3、不选heldouts，P2单位继续OPEN。
 
-Normal pip source stage：
+Q3/normal helper/Q4：
 
-- 同Luna Euler已将r3 exact3受审文件整合正式路径；仅私有integration回执待收。Main实际读回全部hash吻合。
-- Main接受文件在_state/universal-main-review/20261026-normal-pip-isolation-r2-independent-review/MAIN_FINAL_SOURCE_SOFTWARE_ACCEPTANCE.json（3960B/8d3e2916…）。独立4080B报告09658703…产品P1闭合、新P1/P2零；r3仅测试准备纠正，helper/247原assert不变，19PASS/gate0。
-- 正式helper219590B/07cfe0a9506c7994c1ba60db90838bb93c668f9b69b2d053161829798af3092a；tests fixture85573B/1f62addc0131694b506fbb64d4c42d2c1b252adbf6997b9663fe6a3e5ce66488；portable28963B/78ae1161ce1b00c13c7ae7d0cae3c52d75c5e64473fdb7743dfa83ea9c44b206。
-- 原r1/r2/r3全部记录冻结；真实pip25 globalparser旧inner-spawn deny/新0spawn。r2无fixture16PASS2SKIP继承机制，未重跑/累计。源码/软件接受不等于实际pip、normal包或Windows/Mac安装卸载通过。
-- 下一步由Main exact7普通push/fresh读回，之后给同Luna真实源码指纹和coherent构建任务；不把私有gate/nupkg/运行时放入发布。
+- Q3只读_state/universal-mac-genuine-home-uninstall-prep-20261026-q3。operator64268B/a9a20ee605b4bc93bd68ac4ae85ed7fe32e0d6332e3e940ffcd4fdc7c09d587b，14 delivery pins经Main核验，20unique软件PASS。无futureRoot查询/创建或运行lease。
+- 独立Leibniz完整报告_state/universal-main-review/20261026-q3-genuine-home-source-review/REVIEW.md，2P1/1P2 CHANGES_REQUIRED：真实guard的ps/sandbox仍PATH解析、capture UNKNOWN先触发socket.__exit__再到outerhold、父-I/-B未传真实Base子链。不得将20绿当成问题关闭。
+- 同目录MAIN_GENERIC_NORMAL_LAUNCH_REPAIR_TASK.json：Euler01a175da-8dfc-7f80-891f-90115da00f66 Luna max，submission01a176b0-385b-7472-b909-b329a5911ba8，仅fresh _state/universal-normal-launch-isolation-repair-20261026-r1。正常helper可信OS路径（Darwin/bin/ps与/usr/bin/sandbox-exec；Windows system32-only kernel32/GetSystemDirectoryW→固定WindowsPowerShell），不可用则UNKNOWN；真实normal Python子argv显式-I/-B，lexical venv，既有pip/config隔离不降。软件inert叶、实际helper与固定pytest，禁止实际进程/ctypes/pip/venv/native。
+- 必要nested bootstrap补充为同目录MAIN_CPYTHON_VENV_NESTED_BOOTSTRAP_DECISION.json：Main读Repo stdlib发现venv默认再启无flags的ensurepip。改Base -I -B -m venv --without-pip后，新lexical venv -I -B -m ensurepip逐步确知返回；stdlib内部仅传播-I而非-B单独限定，不monkeypatch，不当另一Base已通过。
+- 同目录MAIN_Q4_CAPTURE_BOUNDARY_REPAIR_TASK.json：原Pasteur01a175cb-c572-7270-80c9-34adca5fc1c1已恢复Luna max，submission01a176b0-5f52-7762-8864-8fb024a81919，仅fresh _state/universal-mac-genuine-home-uninstall-prep-20261026-q4。private real observer新增显式nonreturn UNKNOWN hook，在capture内先hold原root/error/listener再可能unwind；真实__exit__/close不得变no-op。窄inert close事件反例与hold观察边界要明确；genuine HOME所有层保留。模板NOT_BOUND，helper/新构件待Main接受后绑定。
+- 原Q3/旧observer/失败记录冻结。HOME/home/CODEX_HOME不得赋值/删除/覆盖（包括testsetup）；只独立dict或产品TMP/state/project scopes。Q4不恢复旧Q2被拒命令，也不授予actual Base/安装/删除执行。
 
-Windows R18 source PREP：
+coherent helper07 构件：
 
-- executor Bernoulli 01a175e3-075c-7561-bf3e-a05b269fad45，指定 gpt-6-luna/max；只写 _state/universal-windows-private-desktop-prep-20261026-r18。
-- R17 独立 Reviewer Plato 01a17641-83e2-7d41-8034-f63b8f73f5c9，指定 gpt-6-astra/max；报告 _state/universal-main-review/20261026-r17-private-desktop-independent-review/REVIEW.md，13833B/cb3771fa69b4f5a3bc23f3f0869ed5b0c44f8018e180c461ef870616c557aa12。
-- 同目录 MAIN_R18_SUBSTANTIVE_REPAIR_TASK.json，6283B/ae4b83a6cd86a7ab9f05699311fcc663e2b4d57df0c2fef34672ddf66b9d837f，submission01a1764e-50ae-7250-8d45-95b7bca5028f。
-- R17 source13/175172B 与 manifest03374727… 保持冻结；412pytest/23subtests/8preimport只是原软件记录。Main 接受1P1+1P2+D1：CreateDesktopW不能带反斜杠；task_acls UNKNOWN后finally LocalFree；profile前缀Task不符。已明确允许纠正两处错误oracle且保存原反例FAIL，其余有效assert不降。
-- R18 remote nonce944566ea6ad2488abde2431b2f864eab/root C:/Users/Everwalker/universal-private-desktop-944566ea6ad2488abde2431b2f864eab 均仅 DATA_ONLY/unspent；station comsol.private.<nonce>，desktops a/b，profiles comsol.selector.<nonce>.a/.b。
-- 精确 masks/D:P/LowNW、同原 owner 线程、borrowed不close、恢复顺序及 reverse known-close 沿 Main 原设计。C# fixed helper/reused product模块不变，不发C permit。
-- 旧持续 AppContainer 范围授权不包含新增 station/desktops/Low标签。先冻结具体新材料/Main+独立复审，再请求 human 作为最后一步；目前不得 transfer/SSH/native 或查询 Root/PID。
+Euler已完成_state/universal-normal-pip-coherent-release-20261026-0e8f8b2c609243489e86cd7c769e01cf/ARTIFACT_HANDOFF.md。应用199成员与canonical逐字节一致后复用wheel484a/第三方locks，source202，三个归档31,401,982B/win ae622602…、36,521,630B/x86 23983b12…、31,346,622B/ARM1b13e2d4…；CRC/manifest/member结果为交付证据，尚非Main runtime接受。旧原始命令/两次x86失败保留。OpenSSL4.0.3 provenance与license成员名4.0.2的差异明确保留。Q3实质问题尚开，helper07包不放行M4；后续接受helper再增量复用wheels/locks，勿重跑旧第三方/Java/446绿测。
 
-M4 Q3 source PREP：
+Windows R18：
 
-- 原Luna Pasteur01a175cb-c572-7270-80c9-34adca5fc1c1已恢复，仅SOURCE，旧Q2 lease明确撤销执行用途；此前没有获得runtime owner。
-- Task6671B/37428c49ca0d0d927c79e566f6ef88befad167944fa89253dab9a0fc34820875，路径_state/universal-main-review/20261026-mac-nonframework-runtime/MAIN_Q3_GENUINE_HOME_SOURCE_PREP_TASK.json。只写_state/universal-mac-genuine-home-uninstall-prep-20261026-q3。
-- futureRoot仅Data：/private/tmp/comsol-m4-nonframework-cpython-20261026-67f0a7be213e/uninstall-qualification-q3-a07fe3e6a3c745a4bdccba0a98d7112e，未查询/创建；无执行lease。真实HOME/home/CODEX_HOME所有层及测试保留，产品state/project/TMP独立scope。
-- 做NOT_BOUND capsule模板/validator等coherent正常包存在后真实绑定，不能把旧49pins冒充新包。正常helper/原observer/guards不替换；有限正常install/负控/ready/confirm的SOURCE惯例不授予实际执行。
+- Bernoulli01a175e3-075c-7561-bf3e-a05b269fad45 Luna max源码交付完成，_state/universal-windows-private-desktop-prep-20261026-r18。13文件177196B；source/run-manifest.json=FUTURE_MATERIALS.json2401B/fd5daf77f770fa108d232da2b9ec09d4c9a70e1af634cad2104ed292e4dc443b。
+- R17实际3 expected FAIL、R18 focus17 PASS和另affected3 PASS分别保留；未重跑412。CreateDesktopW短名a/b、task_acls首UNKNOWN原SD/owner保留及无finallyfree、profile Task前缀纠正。C#及复用模块冻结。
+- 独立Plato_state/universal-main-review/20261026-r18-private-desktop-independent-review/REVIEW.md5255B/bc988ccf1ccbc9f5cea5f274baf6cf1df0776de4c8161aff27f8e0a4a0e1704e；Main同目录MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json4626B/583657b4647175ea9204147bd0ce7c977d0c8840937c3d279549d8187ea409a7。F1/F2/D1闭合，新增实质P1/P2零；限source/software，无native。
+- futureRoot C:/Users/Everwalker/universal-private-desktop-944566ea6ad2488abde2431b2f864eab DATA_ONLY/unspent/未查询。station comsol.private.<nonce>、desktops a/b、profiles comsol.selector.<nonce>.a/.b，单Job两fixedhelper ABA。
+- 已通过request_user_input_async提交具体新增UI范围human问题，尚无答复；预选不算批准。此前R9持续AppContainer/存储/新三路径ACL/Job范围及持续publication授权仍有效，但不包含新增station/desktops/LowNW SACL与父进程/线程关联。此差异及已冻结R18 Task是新确认的原因。human直接答复前不得transfer/SSH/native，未发executionlease；获准后Main必须核实际READY再发一次closed-file GO。
+- Main_R18_FINITE_OPERATOR_PREP_TASK.json已发同Bernoulli作fresh本地静态命令准备，submission01a176b3-81b6-7ee3-9274-4d84b6dbaae4；固定strictHostKey/BatchMode/原Popen、短命令、StageA停actualREADY再由Main核验、StageB单次closed-fileGO。未授executionlease，不能执行任何SSH/SCP/预检或查futureRoot。
+- 同原owner/thread，借用originalstation/threaddesktop不close；每次SDK确知返回才进入后续，firstUNKNOWN保留原owner，零SDK/restore/cleanup/retry。R5–R17旧资源均不接管或查询。Plato完成且关闭，无nativeowner；需要复审可恢复。
 
-Mac 和旧 UNKNOWN：
+旧native与门槛：
 
-- R10 root/private owner、PTY19679 保留；已保存 T014 五mode/五export/136samples，Main纯算术重算最大误差约1.752e-13。study唯一一次APPLIED/count1/timestamp改变；之后U06 denominator失败转postdispatch UNKNOWN，save/cleanup未达，Core/SDK numeric exit未知。禁止再次 poll/input/EOF/query/kill/cleanup/adopt/replay。
-- Q1 原handle丢失为UNKNOWN。Q2R4原固定命令在CreateProcess前被自动审批拒绝（覆盖HOME且可能删除），无新Base/PTY/Q2运行，状态NOT_RUN。不得通过wrapper隐藏同形HOME覆盖或env-i移除HOME。
-- Main新设计 _state/universal-main-review/20261026-mac-nonframework-runtime/MAIN_FUTURE_GENUINE_HOME_NORMAL_M4_DESIGN.json，3370B/78d4208f95bc2fa2c165ec14e784fef0f8f4b22a4bb2bfdc82f745b49fd6bd53：真实HOME在所有层不变，只用产品专属state/project scope，接受source/coherent新包后才重做新operator/lease。
-- 其余旧MacR5/R6/R7、WindowsR5–R12/catalog未知引用全部保留在RESUME。R16只读自身Session0/service-station/Default观测不证明旧C0000142原因或native C资格。
-- 固定free-page/磁盘/资源门槛在下一真实新runtime admission时按原规则检查；旧快照不是当前容量，不降门槛或重复空转探测。
+Mac R10 PTY19679/190对象、Q1、全部早期Mac/Windows未知owner保持原封存。R10 T014五mode/五export/136samples算术吻合约1.752e-13仅scoped结果；study一次APPLIED后U06postdispatchUNKNOWN，save/includeSolution/cleanup未到。旧Q2R4自动审批在CreateProcess前因HOME覆盖/可能删除拒绝，NOT_RUN；不得wrapper/env-i同形重试。新runtime admission按冻结free-page/磁盘门槛实际复检，旧容量/网络快照不是当前事实。历史W23 fixture缺失仍supplemental FAILED_MISSING_TEST_INPUT，不改SKIP/PASS或当当前native阻塞。
 
-历史 W23 delta fixture 缺失按冻结 GENERAL_COVERAGE 原 disposition 保留为 FAILED_MISSING_TEST_INPUT，记录在 RESUME.historical_evidence_gaps；未重测或改成 SKIP/PASS，不作当前 COMSOL native 阻塞。其来源与边界见 current_checkpoint_r273.historical_fixture_scope。
-
-r272入口全文按字节保存在 _state/universal-main-review/20261026-checkpoint-r272/HISTORY_PRESERVATION.json 绑定的两份私有原文。公开Git历史仍保留已发布旧状态。当前入口只保留具体续跑所需信息；后续替换当前段落，详细历史继续留既有RESUME/checkpoint，不再复制整段历史。
+当前目标仍有源码与软件实质进展，不标complete/paused/blocked。收取候选后按实质diff有界复审，Main接受后整合并持续普通同步，再按实际权限/资源释放全新有限runtime；最终全427与未预设统一验收仍待完成。所有细节及历史证据在RESUME与各现有checkpoint；入口不再追加整段历史。
