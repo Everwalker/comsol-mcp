@@ -15,6 +15,7 @@ import datetime as dt
 import hashlib
 import importlib.metadata as metadata
 import json
+import ntpath
 import os
 import pathlib
 import re
@@ -60,6 +61,10 @@ STATE_SNAPSHOT_KIND = "IN_PROGRESS_CAMPAIGN_SNAPSHOT"
 INSTALL_MARKER_SCHEMA = "comsol-mcp-venv-install/1"
 INSTALL_PROJECT_ID = "org.comsol-mcp.isolated-python-install"
 INSTALL_MARKER_NAME = ".comsol-mcp-install.json"
+DARWIN_PROCESS_LIST_EXECUTABLE = "/bin/ps"
+DARWIN_SANDBOX_EXECUTABLE = "/usr/bin/sandbox-exec"
+WINDOWS_SYSTEM_DIRECTORY_MAX_CHARS = 32768
+LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x800
 SOURCE_DISTRIBUTION_CLASSES = {"LOCAL_RECOVERY_ONLY", "PUBLIC_SOURCE_CANDIDATE"}
 USER_SCOPE_DECISIONS_PATH = "repository/docs/full_project_execution/USER_SCOPE_DECISIONS.json"
 OPENSSL_402_SOURCE_URL = "https://www.openssl.org/source/openssl-4.0.2.tar.gz"
@@ -2609,13 +2614,17 @@ def create_venv(python: pathlib.Path, venv: pathlib.Path) -> pathlib.Path:
     if root.exists():
         raise ReleaseError(f"installation target already exists; refusing to overwrite: {root}")
     root.parent.mkdir(parents=True, exist_ok=True)
-    record = run_record([str(python), "-m", "venv", str(root)])
+    record = run_record([str(python), "-I", "-B", "-m", "venv", "--without-pip", str(root)])
     if record["exit_code"]:
         raise ReleaseError("venv creation failed: " + record["stderr"][-1000:])
     candidate = root / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if not candidate.is_file():
         raise ReleaseError("created venv has no Python interpreter")
     _write_install_marker(root, state="INITIALIZING")
+    bootstrap = run_record([str(candidate), "-I", "-B", "-m", "ensurepip", "--upgrade", "--default-pip"],
+                           env=_isolated_pip_environment())
+    if bootstrap["exit_code"]:
+        raise ReleaseError("bundled pip bootstrap failed: " + bootstrap["stderr"][-1000:])
     _record_install_inventory(candidate)
     return candidate
 
@@ -2755,6 +2764,58 @@ def _framework_prerequisite_guard(root: pathlib.Path) -> dict[str, Any] | None:
     return None
 
 
+def _is_windows_runtime() -> bool:
+    return os.name == "nt"
+
+
+def _is_executable_file(path: str) -> bool:
+    """Check a fixed tool path without resolving through the caller's PATH."""
+    try:
+        candidate = pathlib.Path(path)
+        return candidate.is_absolute() and candidate.is_file() and os.access(path, os.X_OK)
+    except (OSError, ValueError):
+        return False
+
+
+def _windows_powershell_path(ctypes_module: Any | None = None) -> str | None:
+    """Resolve only system PowerShell using the system32-loaded Windows API."""
+    try:
+        if ctypes_module is None:
+            import ctypes as ctypes_module
+        loader = getattr(ctypes_module, "WinDLL", None)
+        if not callable(loader):
+            return None
+        kernel32 = loader("kernel32", winmode=LOAD_LIBRARY_SEARCH_SYSTEM32)
+        get_system_directory = kernel32.GetSystemDirectoryW
+        get_system_directory.argtypes = [ctypes_module.POINTER(ctypes_module.c_wchar), ctypes_module.c_uint]
+        get_system_directory.restype = ctypes_module.c_uint
+        buffer = ctypes_module.create_unicode_buffer(WINDOWS_SYSTEM_DIRECTORY_MAX_CHARS)
+        length = get_system_directory(buffer, len(buffer))
+        directory = buffer.value
+        if (isinstance(length, bool) or not isinstance(length, int) or length <= 0 or
+                length >= len(buffer) or not isinstance(directory, str) or len(directory) != length or
+                not ntpath.isabs(directory) or "\x00" in directory):
+            return None
+        return ntpath.join(directory, "WindowsPowerShell", "v1.0", "powershell.exe")
+    except Exception:
+        return None
+
+
+def _resolve_process_inventory_executable(ctypes_module: Any | None = None) -> str | None:
+    if _is_windows_runtime():
+        candidate = _windows_powershell_path(ctypes_module)
+    else:
+        candidate = DARWIN_PROCESS_LIST_EXECUTABLE
+    if not candidate or not _is_executable_file(candidate):
+        return None
+    return candidate
+
+
+def _sandbox_executable_path() -> str | None:
+    candidate = DARWIN_SANDBOX_EXECUTABLE
+    return candidate if _is_executable_file(candidate) else None
+
+
 def _process_guard(root: pathlib.Path) -> dict[str, Any]:
     """Fail closed if a process may still be using the isolated interpreter."""
     root_text = os.path.normcase(str(root)).replace("\\", "/")
@@ -2765,16 +2826,21 @@ def _process_guard(root: pathlib.Path) -> dict[str, Any]:
     if prerequisite is not None:
         return prerequisite
 
-    if os.name == "nt":
-        powershell = shutil.which("powershell.exe") or shutil.which("pwsh.exe")
-        if not powershell:
-            return {"status": "UNKNOWN", "reason": "PowerShell process inventory is unavailable", "pids": []}
+    process_tool = _resolve_process_inventory_executable()
+    if not process_tool:
+        if _is_windows_runtime():
+            reason = "system PowerShell process inventory is unavailable or could not be resolved safely"
+        else:
+            reason = "fixed /bin/ps process inventory is unavailable"
+        return {"status": "UNKNOWN", "reason": reason, "pids": []}
+
+    if _is_windows_runtime():
         script = (
             "$rows = @(Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine); "
             "ConvertTo-Json -InputObject $rows -Compress"
         )
         try:
-            proc = _capture([powershell, "-NoProfile", "-NonInteractive", "-Command", script],
+            proc = _capture([process_tool, "-NoProfile", "-NonInteractive", "-Command", script],
                                   capture_output=True, text=True, timeout=15)
         except (OSError, subprocess.TimeoutExpired):
             return {"status": "UNKNOWN", "reason": "PowerShell process inventory failed or timed out", "pids": []}
@@ -2787,7 +2853,7 @@ def _process_guard(root: pathlib.Path) -> dict[str, Any]:
         return _windows_process_rows_guard(rows, root_text, os.getpid())
 
     try:
-        proc = _capture(["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, timeout=15)
+        proc = _capture([process_tool, "-axo", "pid=,ppid=,command="], capture_output=True, text=True, timeout=15)
     except (OSError, subprocess.TimeoutExpired):
         return {"status": "UNKNOWN", "reason": "ps process inventory failed or timed out", "pids": []}
     if proc.returncode != 0 or proc.stderr.strip():
@@ -2946,13 +3012,19 @@ def uninstall_venv(venv: pathlib.Path, evidence: pathlib.Path, *, confirm: bool 
     return plan
 
 
-def _isolated_pip_invocation(venv_python: pathlib.Path, pip_args: list[str]) -> tuple[list[str], dict[str, str]]:
-    """Build one venv-bound pip invocation without changing the caller environment."""
+def _isolated_pip_environment() -> dict[str, str]:
+    """Build a child-only pip environment without changing the caller environment."""
     # pip's global parser reads PIP_* defaults before it processes --isolated.
     # Remove them from the child up front so PIP_PYTHON cannot re-dispatch pip.
     child_environment = {key: value for key, value in os.environ.items()
                          if not key.upper().startswith("PIP_")}
     child_environment["PIP_CONFIG_FILE"] = os.devnull
+    return child_environment
+
+
+def _isolated_pip_invocation(venv_python: pathlib.Path, pip_args: list[str]) -> tuple[list[str], dict[str, str]]:
+    """Build one venv-bound pip invocation without changing the caller environment."""
+    child_environment = _isolated_pip_environment()
     command = [str(venv_python), "-I", "-B", "-m", "pip", "--isolated", *pip_args]
     return command, child_environment
 
@@ -2983,7 +3055,7 @@ pkg=pathlib.Path(comsol_mcp.__file__).resolve().parent
 files=[p for p in pkg.rglob('*') if p.is_file() and not p.name.startswith('._') and '__pycache__' not in p.parts]
 launcher=pathlib.Path(sys.executable).parent / ('comsol-mcp.exe' if sys.platform=='win32' else 'comsol-mcp')
 print(json.dumps({'python':sys.version.split()[0],'executable':sys.executable,'prefix':sys.prefix,'version':d.version,'module':str(pkg),'entry_points':eps,'entry_point_path':str(launcher),'entry_point_exists':launcher.is_file(),'package_file_count':len(files),'java_sources':[p.relative_to(pkg).as_posix() for p in files if p.suffix=='.java'],'action_catalogs':[p.relative_to(pkg).as_posix() for p in files if p.name.lower()=='02_action_catalog.json'],'schemas':[p.relative_to(pkg).as_posix() for p in files if 'schema' in p.name.lower() and p.suffix=='.json']}))"""
-    identity = run_record([str(venv_python), "-I", "-c", code], cwd=isolated_cwd)
+    identity = run_record([str(venv_python), "-I", "-B", "-c", code], cwd=isolated_cwd)
     check_command, check_environment = _isolated_pip_invocation(
         venv_python, ["check", "--no-cache-dir"])
     check = run_record(check_command, cwd=isolated_cwd, env=check_environment)
@@ -3013,7 +3085,7 @@ print(json.dumps({'python':sys.version.split()[0],'executable':sys.executable,'p
 
 def package_fingerprint(venv_python: pathlib.Path) -> dict[str, Any]:
     code = """import hashlib,json,pathlib,comsol_mcp\npkg=pathlib.Path(comsol_mcp.__file__).resolve().parent\nrows=[]\nfor p in sorted(pkg.rglob('*')):\n if p.is_file() and '__pycache__' not in p.parts and p.suffix not in {'.pyc','.pyo'}:\n  rows.append({'path':p.relative_to(pkg).as_posix(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})\nprint(json.dumps({'root':str(pkg),'files':rows,'digest':hashlib.sha256(json.dumps(rows,sort_keys=True,separators=(',',':')).encode()).hexdigest()}))"""
-    record = run_record([str(venv_python), "-I", "-c", code], cwd=venv_python.absolute().parent.parent)
+    record = run_record([str(venv_python), "-I", "-B", "-c", code], cwd=venv_python.absolute().parent.parent)
     if record["exit_code"]:
         raise ReleaseError("installed package fingerprint failed: " + record["stderr"][-1000:])
     try:
@@ -3035,7 +3107,7 @@ for dist in metadata.distributions():
 rows.sort(key=lambda row:(row['name'],row['version']))
 payload=json.dumps(rows,sort_keys=True,separators=(',',':'))
 print(json.dumps({'distributions':rows,'digest':hashlib.sha256(payload.encode()).hexdigest()}))"""
-    record = run_record([str(venv_python), "-I", "-c", code], cwd=venv_python.absolute().parent.parent)
+    record = run_record([str(venv_python), "-I", "-B", "-c", code], cwd=venv_python.absolute().parent.parent)
     if record["exit_code"]:
         raise ReleaseError("installed distribution inventory failed: " + record["stderr"][-1000:])
     try:
@@ -3098,7 +3170,7 @@ def _offline_child(args: argparse.Namespace, port: int) -> dict[str, Any]:
 def offline_install(args: argparse.Namespace, script: pathlib.Path) -> dict[str, Any]:
     if sys.platform != "darwin":
         raise ReleaseError("native process-level offline isolation is implemented only for macOS sandbox-exec")
-    sandbox = shutil.which("sandbox-exec")
+    sandbox = _sandbox_executable_path()
     if not sandbox:
         raise ReleaseError("sandbox-exec is unavailable; no process-level offline claim can be made")
     if args.venv.exists():
@@ -3118,7 +3190,7 @@ def offline_install(args: argparse.Namespace, script: pathlib.Path) -> dict[str,
             controlled.before_offline_install(args, script, listener, profile)
         with profile.open("x", encoding="utf-8") as stream:
             stream.write("(version 1)\n(deny network*)\n(allow default)\n")
-        child_argv = [str(args.python), str(script), "_offline_child", "--python", str(args.python),
+        child_argv = [str(args.python), "-I", "-B", str(script), "_offline_child", "--python", str(args.python),
                       "--requirements", str(args.requirements), "--wheelhouse", str(args.wheelhouse),
                       "--venv", str(args.venv), "--port", str(port)]
         proc = _capture([sandbox, "-f", str(profile), *child_argv], capture_output=True, text=True)
@@ -3131,7 +3203,8 @@ def offline_install(args: argparse.Namespace, script: pathlib.Path) -> dict[str,
         except OSError:
             accepted_any = False
     _json_write(args.evidence / "offline-install-process.log.json", {
-        "argv": ["sandbox-exec", "-f", str(profile), "<release-python>", "full_project_release.py", "_offline_child", "..."],
+        "argv": ["sandbox-exec", "-f", str(profile), "<release-python>", "-I", "-B",
+                 "full_project_release.py", "_offline_child", "..."],
         "exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr,
         "listener_accepted": accepted_any, "profile_sha256": sha256_file(profile),
     })
@@ -3179,7 +3252,7 @@ def _transition_identity_matches(observed: dict[str, Any], original: dict[str, A
 def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str, Any]:
     if sys.platform != "darwin":
         raise ReleaseError("transition-check requires process-level network isolation on macOS")
-    sandbox = shutil.which("sandbox-exec")
+    sandbox = _sandbox_executable_path()
     if not sandbox:
         raise ReleaseError("sandbox-exec unavailable; transition test would not prove offline behavior")
     if args.work_root.exists():
@@ -3409,7 +3482,7 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
 
 
 def _installed_version(py: pathlib.Path) -> str | None:
-    record = run_record([str(py), "-I", "-c", "import importlib.metadata as m; print(m.version('comsol-mcp'))"],
+    record = run_record([str(py), "-I", "-B", "-c", "import importlib.metadata as m; print(m.version('comsol-mcp'))"],
                         cwd=py.absolute().parent.parent)
     return record["stdout"].strip().splitlines()[-1] if record["exit_code"] == 0 and record["stdout"].strip() else None
 

@@ -1,0 +1,67 @@
+{
+  "schema": "generic-normal-launch-isolation-scope/1",
+  "status": "SCOPED_SOURCE_AND_SOFTWARE_DELTA_ACCEPTED",
+  "files": [
+    {
+      "path": "tools/full_project_release.py",
+      "bytes": 222690,
+      "sha256": "ab8cb10958fcadfcb0d2f14f7323fd478f6114a1668b3fc491e5aad926cb857a"
+    },
+    {
+      "path": "tests/test_full_project_release.py",
+      "bytes": 92229,
+      "sha256": "f4dd7f0bfb3e33b3b85edf450b110eeece5468fca5de5a4aec941eaa88b62e1c"
+    },
+    {
+      "path": "tests/test_generic_pip_isolation.py",
+      "bytes": 28969,
+      "sha256": "34320f3ae81faea1d9badacab54a45daeb3a431375588a426744e22f917c4522"
+    },
+    {
+      "path": "tests/test_normal_launch_isolation.py",
+      "bytes": 10854,
+      "sha256": "e4077cd8b128059eec54d69823251f81ed03fab14c898f1e6d9d46fe8f16d4e9"
+    },
+    {
+      "path": "tests/offline_effect_gate.py",
+      "bytes": 9085,
+      "sha256": "ea4fa9ed6f0efcdec4736e0bdf5eef700481341c2bd26f77639b0d4a187f0a8c"
+    }
+  ],
+  "repairs": [
+    "Trusted fixed /bin/ps and /usr/bin/sandbox-exec; Windows system32-only kernel32/GetSystemDirectoryW resolves fixed system PowerShell; unavailable or invalid resolution refuses before dependent dispatch.",
+    "Actual normal helper child Python argv explicitly -I -B and lexical venv binding. Venv creation uses --without-pip then explicit isolated ensurepip; failures retain INITIALIZING and do not claim READY.",
+    "Shared child-only case-insensitive PIP_* filtering and devnull config apply to pip and ensurepip. Parent HOME/home/CODEX_HOME remain unchanged."
+  ],
+  "independent_review": {
+    "bytes": 9806,
+    "sha256": "1f5b3c47dbd3491fcde8cb074c3a49bbaf9846d606fe4fdcddba3d5d16191c5a"
+  },
+  "main_acceptance": {
+    "bytes": 4946,
+    "sha256": "a85352e4b3b6eb6466040e44e39eaa7d8210faa1003ccdd62234805a4dbe1f1d"
+  },
+  "integration": {
+    "bytes": 4553,
+    "sha256": "6a4f2d5703e81922f932b1099debb0e9cf303c216a4ed544c3003ab64d0462a1"
+  },
+  "software": {
+    "prior_full_suite": {
+      "helper_sha256": "752646044c6595526c34ff2d0e4a89e7634653c94a19ec2ea2ad1de37a5a7e1f",
+      "fulltest_sha256": "40b1422b32113fd5291f2ef04ce95808c2b5521d9adc16d214db690b6c4369c0",
+      "unique_passed": 145
+    },
+    "final_helper_sha256": "ab8cb10958fcadfcb0d2f14f7323fd478f6114a1668b3fc491e5aad926cb857a",
+    "final_focused_passed": 1,
+    "final_full145": "NOT_RUN",
+    "counts_combined": false,
+    "delta_basis": "Final environment extraction reversed exactly to prior145 pins; existing pip calls statically equivalent; added bootstrap environment contract exercised with inert process leaves."
+  },
+  "preserved": "Old unsafe-ps oracle FAIL, intermediate fixture/gate failures and raw results retained; no historical record changed to PASS.",
+  "scope_limits": [
+    "Direct helper -I/-B does not assert all stdlib descendants propagate -B. Selected Base source was observed; effective WHEEL_PKG_DIR/startup/installation remain unverified.",
+    "No actual ps/sandbox/Windows SDK/Base/venv/ensurepip/pip/native qualification or execution lease. Build/download outside this normal-launch claim.",
+    "Q4 needs the explicit bare-ps to /bin/ps binding delta and real coherent artifacts before M4 release.",
+    "Full427/platform core/save-reopen/two unpreset families/fresh final Reviewer incomplete."
+  ]
+}

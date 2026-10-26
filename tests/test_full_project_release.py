@@ -22,6 +22,27 @@ sys.modules[spec.name] = release
 spec.loader.exec_module(release)
 
 
+@pytest.fixture(autouse=True)
+def _allow_only_pytest_owned_install_roots(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+    """Let ownership tests use gate-local temp trees without weakening host-root checks."""
+    original = release._canonical_install_root
+    test_root = tmp_path.resolve()
+
+    def canonical(path: pathlib.Path) -> pathlib.Path:
+        candidate = pathlib.Path(os.path.abspath(os.fspath(path)))
+        try:
+            inside_test_root = os.path.commonpath((str(test_root), str(candidate))) == str(test_root)
+        except ValueError:
+            inside_test_root = False
+        if inside_test_root:
+            if candidate.is_symlink():
+                raise release.ReleaseError("install root itself must not be a symlink")
+            return candidate.resolve(strict=False)
+        return original(path)
+
+    monkeypatch.setattr(release, "_canonical_install_root", canonical)
+
+
 def make_wheel(path: pathlib.Path, *, name: str = "demo-pkg", version: str = "1.0",
                tag: str = "py3-none-any", extra: tuple[str, bytes] | None = None) -> str:
     dist = name.replace("-", "_")
@@ -809,7 +830,8 @@ def test_doctor_uses_venv_path_when_python_is_a_symlink(tmp_path: pathlib.Path, 
     assert result["installed_under_prefix"] is True
     assert calls[0]["cwd"] == venv
     assert calls[1]["cwd"] == venv
-    assert "pathlib.Path(sys.executable).parent" in calls[0]["argv"][3]
+    assert calls[0]["argv"][1:3] == ["-I", "-B"]
+    assert "pathlib.Path(sys.executable).parent" in calls[0]["argv"][calls[0]["argv"].index("-c") + 1]
 
 
 def _make_marked_install(root: pathlib.Path) -> pathlib.Path:
@@ -863,10 +885,50 @@ def test_uninstall_confirm_removes_only_marked_venv_and_keeps_receipts_outside(
     assert final["target_root_exists_after_attempt"] is False
 
 
-def test_real_temporary_venv_marker_inventory_and_cleanup(tmp_path: pathlib.Path,
-                                                          monkeypatch: pytest.MonkeyPatch) -> None:
-    root = tmp_path / "real-temporary-venv"
+def test_inert_venv_bootstrap_marker_inventory_and_cleanup(tmp_path: pathlib.Path,
+                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "inert-temporary-venv"
+    monkeypatch.setenv("PIP_TARGET", "/synthetic/external-target")
+    monkeypatch.setenv("PIP_PYTHON", "/synthetic/alternate-python")
+    monkeypatch.setenv("pIp_CoNfIg_FiLe", "/synthetic/hostile-pip.ini")
+    parent_environment = dict(release.os.environ)
+    reserved_keys = ("HOME", "home", "CODEX_HOME")
+    reserved_before = {key: (key in parent_environment, parent_environment.get(key)) for key in reserved_keys}
+    calls: list[list[str]] = []
+    child_environments: list[dict[str, str] | None] = []
+
+    def fake_run_record(argv: list[str], **kwargs: object) -> dict[str, object]:
+        calls.append(list(argv))
+        env = kwargs.get("env")
+        child_environments.append(dict(env) if isinstance(env, dict) else None)
+        if "venv" in argv:
+            target = pathlib.Path(argv[-1])
+            target.mkdir(parents=True)
+            (target / "pyvenv.cfg").write_text("home = /synthetic/base\n", encoding="utf-8")
+            binary = target / "bin"
+            binary.mkdir()
+            (binary / "python").write_text("inert interpreter placeholder\n", encoding="utf-8")
+        return {"argv": argv, "exit_code": 0, "stdout": "", "stderr": "", "duration_seconds": 0.0}
+
+    monkeypatch.setattr(release, "run_record", fake_run_record)
     venv_python = release.create_venv(pathlib.Path(sys.executable), root)
+    assert calls == [
+        [str(pathlib.Path(sys.executable)), "-I", "-B", "-m", "venv", "--without-pip", str(root)],
+        [str(venv_python), "-I", "-B", "-m", "ensurepip", "--upgrade", "--default-pip"],
+    ]
+    expected_child_environment = {key: value for key, value in parent_environment.items()
+                                  if not key.upper().startswith("PIP_")}
+    expected_child_environment["PIP_CONFIG_FILE"] = os.devnull
+    if child_environments[0] is not None or child_environments[1] != expected_child_environment:
+        raise AssertionError("venv/ensurepip child environments did not follow the isolated pip policy")
+    reserved_child = child_environments[1]
+    assert reserved_child is not None
+    reserved_after = {key: (key in release.os.environ, release.os.environ.get(key)) for key in reserved_keys}
+    reserved_child_values = {key: (key in reserved_child, reserved_child.get(key)) for key in reserved_keys}
+    if reserved_before != reserved_after or reserved_before != reserved_child_values:
+        raise AssertionError("HOME/home/CODEX_HOME changed in parent or ensurepip child")
+    if dict(release.os.environ) != parent_environment:
+        raise AssertionError("venv creation changed the parent environment")
     marker = release._load_install_marker(root)
     assert marker["state"] == "INITIALIZING"
     assert release._content_guard(root, marker)["status"] == "CLEAR"
@@ -879,6 +941,58 @@ def test_real_temporary_venv_marker_inventory_and_cleanup(tmp_path: pathlib.Path
 
     assert result["status"] == "PASS_UNINSTALLED"
     assert not root.exists()
+
+
+def test_inert_base_venv_failure_stops_before_marker_or_bootstrap(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "base-venv-failure"
+    calls: list[list[str]] = []
+
+    def failed_base(argv: list[str], **_kwargs: object) -> dict[str, object]:
+        calls.append(list(argv))
+        return {"argv": argv, "exit_code": 17, "stdout": "", "stderr": "synthetic venv failure",
+                "duration_seconds": 0.0}
+
+    monkeypatch.setattr(release, "run_record", failed_base)
+    with pytest.raises(release.ReleaseError, match="venv creation failed"):
+        release.create_venv(pathlib.Path("/synthetic/base-python"), root)
+
+    assert calls == [["/synthetic/base-python", "-I", "-B", "-m", "venv", "--without-pip", str(root)]]
+    assert not root.exists()
+    assert not (root / release.INSTALL_MARKER_NAME).exists()
+
+
+def test_inert_ensurepip_failure_keeps_initializing_marker_without_inventory(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "ensurepip-failure"
+    calls: list[list[str]] = []
+
+    def failed_bootstrap(argv: list[str], **_kwargs: object) -> dict[str, object]:
+        calls.append(list(argv))
+        if "venv" in argv:
+            root.mkdir()
+            (root / "pyvenv.cfg").write_text("home = /synthetic/base\n", encoding="utf-8")
+            binary = root / "bin"
+            binary.mkdir()
+            (binary / "python").write_text("inert interpreter placeholder\n", encoding="utf-8")
+            return {"argv": argv, "exit_code": 0, "stdout": "", "stderr": "", "duration_seconds": 0.0}
+        return {"argv": argv, "exit_code": 23, "stdout": "", "stderr": "synthetic ensurepip failure",
+                "duration_seconds": 0.0}
+
+    monkeypatch.setattr(release, "run_record", failed_bootstrap)
+    with pytest.raises(release.ReleaseError, match="bundled pip bootstrap failed"):
+        release.create_venv(pathlib.Path("/synthetic/base-python"), root)
+
+    marker = release._load_install_marker(root)
+    assert marker["state"] == "INITIALIZING"
+    assert "owned_inventory" not in marker
+    assert calls == [
+        ["/synthetic/base-python", "-I", "-B", "-m", "venv", "--without-pip", str(root)],
+        [str(root / "bin" / "python"), "-I", "-B", "-m", "ensurepip", "--upgrade", "--default-pip"],
+    ]
+    assert root.exists()
 
 
 @pytest.mark.parametrize("guard_status", ["BUSY", "UNKNOWN"])
@@ -1417,7 +1531,7 @@ def _transition_fixture(
         return {"distributions": rows, "digest": digest}
 
     monkeypatch.setattr(release.sys, "platform", "darwin")
-    monkeypatch.setattr(release.shutil, "which", lambda name: "/usr/bin/sandbox-exec" if name == "sandbox-exec" else None)
+    monkeypatch.setattr(release, "_is_executable_file", lambda path: path == "/usr/bin/sandbox-exec", raising=False)
     monkeypatch.setattr(release, "offline_install", fake_offline_install)
     monkeypatch.setattr(release, "run_record", fake_run)
     monkeypatch.setattr(release, "package_fingerprint", fake_package_fingerprint)
@@ -1428,12 +1542,27 @@ def _transition_fixture(
     return result, state, events
 
 
-def test_distribution_fingerprint_reads_complete_normalized_inventory() -> None:
-    result = release.distribution_fingerprint(pathlib.Path(sys.executable))
+def test_distribution_fingerprint_reads_complete_normalized_inventory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    venv_python = tmp_path / "venv" / "bin" / "python"
+    rows = [{"name": "pip", "version": "25.0.1"}, {"name": "wheel", "version": "0.45.1"}]
+    digest = hashlib.sha256(json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    calls: list[list[str]] = []
+
+    def fake_run_record(argv: list[str], **_kwargs: object) -> dict[str, object]:
+        calls.append(list(argv))
+        payload = json.dumps({"distributions": rows, "digest": digest})
+        return {"argv": argv, "exit_code": 0, "stdout": payload + "\n", "stderr": "", "duration_seconds": 0.0}
+
+    monkeypatch.setattr(release, "run_record", fake_run_record)
+    result = release.distribution_fingerprint(venv_python)
     assert result["distributions"]
     assert result["digest"] == hashlib.sha256(
         json.dumps(result["distributions"], sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+    assert calls[0][0] == str(venv_python)
+    assert calls[0][1:3] == ["-I", "-B"]
 
 
 def test_transition_check_rolls_back_artifact_and_candidate_only_distributions(

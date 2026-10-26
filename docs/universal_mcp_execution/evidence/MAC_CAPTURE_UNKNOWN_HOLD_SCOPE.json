@@ -1,0 +1,35 @@
+{
+  "schema": "mac-capture-unknown-hold-scope/1",
+  "status": "CAPTURE_COMPONENT_SOURCE_SOFTWARE_ACCEPTED",
+  "operator": {
+    "bytes": 65306,
+    "sha256": "789b54829fbd5dcce3126dbf6f17940caac6b25504301c0c59eeceaf1db17c98"
+  },
+  "observer": {
+    "bytes": 7896,
+    "sha256": "3cd1026e2e0ce50b540d10e4264ae786776945a83ed3625fe92621e7a6768c6c"
+  },
+  "independent_review": {
+    "bytes": 8693,
+    "sha256": "091d61852c4204d275c5bcb1b285746bcd07504f65b579e8572fb6bf7ba96f93"
+  },
+  "main_acceptance": {
+    "bytes": 3173,
+    "sha256": "025ec630b190afe44b98fd745fea2fc6f58435a92ef95346bdf8a9b1f0ef702f"
+  },
+  "accepted_behavior": "Original capture enters non-returning original-owner hold before helper listener context unwind; callback return/error invokes independent robust fallback; normal known-return close remains.",
+  "software": {
+    "unique_nodes_passed": 29,
+    "subtests_passed": 21,
+    "old_Q3_same_oracle_expected_FAIL": 4,
+    "Q4_scenario_rows_PASS": 10,
+    "actual_native_process_socket_effects": 0,
+    "counts_combined": false
+  },
+  "limits": [
+    "Artificial tracing interruption ends only inert software observation; later context close is not OS/native resource-retention proof.",
+    "helper07 is old software input; final helper/artifacts NOT_BOUND. P1-01 trusted-tool and P2-03 child startup closure remain pending separate generic-helper review.",
+    "No actual Base startup/install/venv/ensurepip/pip/native, futureRoot query/create, transfer or execution lease. Original unknown owners unchanged."
+  ],
+  "runtime_and_final_goal": "NOT_RUN_NOT_RELEASED_NOT_COMPLETE"
+}

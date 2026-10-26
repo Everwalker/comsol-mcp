@@ -321,7 +321,7 @@ def test_doctor_pip_check_uses_isolated_no_log_child_without_changing_home(
     assert result["status"] == "PASS"
     assert len(captured) == 2
     identity_argv, identity_kwargs = captured[0]
-    assert identity_argv[:3] == [str(venv_python), "-I", "-c"]
+    assert identity_argv[:4] == [str(venv_python), "-I", "-B", "-c"]
     assert "env" not in identity_kwargs
     check_argv, check_kwargs = captured[1]
     assert check_argv[:7] == [str(venv_python), "-I", "-B", "-m", "pip", "--isolated", "check"]
