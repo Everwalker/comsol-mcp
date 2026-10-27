@@ -16,6 +16,27 @@ def _actual_gate(monkeypatch,original):
     monkeypatch.setattr(acl,'check_suspended_child_dacl',original)
     monkeypatch.setattr(acl,'NativeChildAclApi',lambda:adapter)
 
+def _synthetic_external_exit(api, state, events, process):
+    """Record external exit for this exact fake child; never send a new termination."""
+    assert process._api is api and process.pid == 456 and process.birth_filetime_100ns == 123
+    handle = process._handle
+    assert getattr(handle, 'value', handle) == 200
+    assert state['alive'] is True and state['cleanup_fail'] is True
+    events.append(('synthetic-external-exit', process, handle, process.pid, process.birth_filetime_100ns))
+    state['alive'] = False
+
+
+def _assert_original_terminate_error_without_retry(process, events):
+    first_error = process._terminate_error
+    assert isinstance(first_error, RuntimeError)
+    count = sum(isinstance(x, tuple) and x[0] == 'terminate' for x in events)
+    with pytest.raises(RuntimeError) as captured:
+        process.terminate()
+    assert captured.value is first_error and process._terminate_error is first_error
+    assert sum(isinstance(x, tuple) and x[0] == 'terminate' for x in events) == count
+    return first_error
+
+
 @pytest.mark.parametrize('mode',['control','child_unknown','child_terminal'])
 def test_inner_child_token_actual_owner_retry_and_factory_gate(monkeypatch,tmp_path,mode):
     original_acl=acl.check_suspended_child_dacl
@@ -56,7 +77,12 @@ def test_inner_child_token_actual_owner_retry_and_factory_gate(monkeypatch,tmp_p
         token.release_owned(api)
         assert token.closed and events.count(('close',57))==before==1
         assert not api._retained_child_tokens
-    api.close_handle=original_close;state['cleanup_fail']=False;launcher.stop(error.handle)
+    api.close_handle=original_close
+    if mode!='child_terminal':
+        first_error=_assert_original_terminate_error_without_retry(process,events)
+        _synthetic_external_exit(api,state,events,process)
+        assert process._terminate_error is first_error
+    launcher.stop(error.handle)
     factory.close();assert ('close-job',300) in events
 
 @pytest.mark.parametrize('role',['server','worker'])
@@ -78,11 +104,24 @@ def test_actual_memory_sqlite_release_unknown_retains_terminal_capability_until_
         worker=PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=factory)
         monkeypatch.setattr(subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=0,stderr=''))
         daemon,project,*_=_make_daemon(tmp_path,monkeypatch,worker=worker)
+        from comsol_mcp import _control_daemon
+        identity_calls=[]
+        def synthetic_worker_identity(pid):
+            identity_calls.append(pid)
+            if pid != 456:
+                raise AssertionError('unexpected PID in synthetic worker identity')
+            return {'alive': state['alive'], 'start_epoch_ms': 123}
+        monkeypatch.setattr(_control_daemon,'process_identity',synthetic_worker_identity)
         started=daemon.dispatch({'operation':'session.connect','arguments':{'project_id':project,'runtime_id':'fixture-runtime',
             'endpoint':{'host':'127.0.0.1','port':2040},'idempotency_key':'memory-worker-start'},'execution':{}})
     sid=started['data']['session_id'];key=(project,sid)
     owners=daemon._session_server_handles if role=='server' else daemon._session_worker_handles
-    owner=owners[key];process=owner.process if role=='server' else owner._process;state['cleanup_fail']=False
+    owner=owners[key];process=owner.process if role=='server' else owner._process
+    if role=='worker':
+        assert identity_calls == [456]
+    first_error=_assert_original_terminate_error_without_retry(process,events)
+    _synthetic_external_exit(api,state,events,process)
+    assert process._terminate_error is first_error
     from comsol_mcp import _w26_memory_resources as memory
     from tests.test_w26_os_resources import _write_memory_config
     config=memory.TrustedMemoryResourceConfig.load(_write_memory_config(tmp_path))

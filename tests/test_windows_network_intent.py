@@ -404,9 +404,10 @@ def transferred_getter_sdk(monkeypatch, fault=None):
                                 GetSecurityInfo=lambda *a:SD(),ConvertSecurityDescriptorToStringSecurityDescriptor=lambda *a:'same-SDDL')}
     for name,module in modules.items():monkeypatch.setitem(sys.modules,name,module)
     monkeypatch.setattr(C,'WinDLL',lambda *a,**kw:state.kernel,raising=False)
-    monkeypatch.setattr(subprocess,'run',run)
+    from tests.windows_netsh_query_fake_sdk import install
+    install(monkeypatch,net,state,fault)
     monkeypatch.setattr(net,'_dynamic_range_owner',None,raising=False)
-    state.original_close=close_function
+    state.original_close=state.kernel.CloseHandle
     return state
 
 

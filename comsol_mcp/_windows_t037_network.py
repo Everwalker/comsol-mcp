@@ -83,6 +83,7 @@ class _DynamicRangeOwner:
         self.registry = registry_for(self)
         self.pending_return = None
         self.operation_error = None
+        self.process_owner = None
         self.state = 'ACQUIRED'
         self._seal = seal
 
@@ -111,6 +112,8 @@ class _DynamicRangeOwner:
             if (self._seal is not _OWNER_SEAL or owner is not self
                     or _dynamic_range_owner is not self or self.state != 'UNKNOWN'):
                 _ownership_unknown('original unresolved query owner required')
+            if self.process_owner is not None and self.process_owner.state == 'UNKNOWN':
+                _ownership_unknown('original query process outcome is unknown')
             if self.pending_return is not None:
                 _ownership_unknown('unconfirmed original PyHANDLE transfer cannot be reconstructed or detached again')
             entries = tuple(reversed(self.registry.unresolved()))
@@ -321,7 +324,6 @@ def _read_protected_dynamic_range(owner):
     import os
     import ntpath
     import hashlib
-    import subprocess
     if os.name != 'nt':
         _fail('Windows read-only dynamic-port observation required')
     import win32api
@@ -396,18 +398,19 @@ def _read_protected_dynamic_range(owner):
     if read_bytes != image_size:
         _fail('protected netsh image ended before its pinned extent')
     env = {'SystemRoot': windows, 'WINDIR': windows, 'PATH': system}
-    completed = subprocess.run([executable, 'int', 'ipv4', 'show', 'dynamicport', 'tcp'],
-        shell=False, cwd=system, env=env, stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15, check=False)
-    if completed.returncode or completed.stderr.strip() or len(completed.stdout) > 16384:
+    from . import _windows_netsh_query as query
+    query.bind(owner.kernel)
+    process_owner = query.QueryOwner(owner, owner.kernel, __import__('ctypes').get_last_error)
+    returncode, stdout, stderr = process_owner.execute(executable, system, env)
+    if returncode or stderr.strip():
         _fail('protected netsh IPv4 TCP show query failed or exceeded its output bound')
     try:
-        bounds = decode_ipv4_tcp_dynamic_range_output(completed.stdout, _get_windows_oem_code_page())
+        bounds = decode_ipv4_tcp_dynamic_range_output(stdout, _get_windows_oem_code_page())
     except ValueError as exc:
         _fail(str(exc))
     if any(fingerprint(h, directory) != before for h, directory, before in handles):
         _fail('protected netsh image/path security identity drifted during observation')
-    return DynamicTcpRangeObservation(bounds, executable, image.hexdigest(), hashlib.sha256(completed.stdout).hexdigest())
+    return DynamicTcpRangeObservation(bounds, executable, image.hexdigest(), hashlib.sha256(stdout).hexdigest())
 
 
 def read_windows_ipv4_tcp_dynamic_range():
@@ -430,9 +433,13 @@ def read_windows_ipv4_tcp_dynamic_range():
         try:
             return _read_protected_dynamic_range(owner)
         except BaseException as exc:
-            owner.operation_error = exc
+            if owner.operation_error is None:
+                owner.operation_error = exc
             raise
         finally:
+            if owner.process_owner is not None and owner.process_owner.state == 'UNKNOWN':
+                owner.state = 'UNKNOWN'
+                _ownership_unknown('original query process and protected handles retained')
             errors = owner.registry.drain(scope)  # UNKNOWN entries never auto-retry.
             if errors or owner.pending_return is not None or owner.registry.unresolved():
                 owner.state = 'UNKNOWN'
