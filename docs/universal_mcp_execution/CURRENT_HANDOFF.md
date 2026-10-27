@@ -1,31 +1,15 @@
-# 通用 MCP 当前续跑入口 — r325
+# 通用 MCP 当前续跑入口 — r330
 
-目标active / IN_PROGRESS；完整273 actions/60 tests/427子断言及适用native、save+freshWorker、两个未预设licensed任务族、fresh最终Reviewer均未通过，completed_groups=[]、heldouts未选。当前指针RESUME.json.current_checkpoint_r325 / current_source_roles_r325 / current_execution_gates。上一Main3原字节在 `_state/universal-main-review/20261027-checkpoint-r325/prior-main3/`。
+目标 IN_PROGRESS；273/60/427、适用 native、save + fresh Worker、两个未预设 licensed 任务族及 fresh 最终 Reviewer 未通过；completed_groups=[]、heldout NOT_SELECTED。当前指针 `RESUME.json.current_checkpoint_r330`。r328 Main3 原字节在 `_state/universal-main-review/20261027-checkpoint-r330/prior-main3/`；早期长篇历史保留于该原件及原始 evidence。
 
-| 范围 | 当前状态 |
-| --- | --- |
-| 规范源码 | 0.1.12 /d774ec0e；generic attach-only已Main接受和远端10blob验证；当前74fakePASS/1deselected |
-| 当前四构件 | R6 once真实build Tool/rootwait0/双EOF；Strong/Main字节验收完成，1195inputs429045031B无漂移 |
-| 分发结构 | 源207/package199/buildsrc202/wheel205，三ZIP47/54/56成员，35/42/42wheels；119嵌套出现/55unique RECORD已审 |
-| source ZIP | 207成员、3283549B/SHA43c7de0a…，独立data装配，非第五原build输出 |
-| .12安装及MCP | NOT_RUN；matching Q6SourceBase/binder/operator/capsule由Newton准备，仅source/data |
-| 交互owner | r2 38fake候选独立审1P2输出cap；Euler新r3最小修复/受影响测试待审，无runtime release |
-| Windows r3 | 已获真人同范围持续批准并运行A0-A5；A0-A4known0，A5 READY300s超时transport1，NO GO/父状态未确认，9681保留 |
-| Windows后续 | Aristotle只prepare新r4条件preGO三记录collector与reader已观测诊断，0SDK guard放宽，0runtime |
-| Mac Core | 最近strictfree142901248B；原2GiB/1GiB门槛BLOCKED，无新Core/COMSOL/JDK/native |
+## 当前运行与验收
 
-当前Main里程碑接受 `_state/universal-main-review/20261027-r6-coherent-artifacts-independent-review/MAIN_ARTIFACT_ACCEPTANCE.json`（4922B/SHA438288799e8731e6b117bbd09ba06c2cb38c2287862e10738736d9cf76ef3a5f）。Main读完整报告/result/原Tool+owner事件与重点wheel，先核266refs122330538B，再核Strong1195refs429045031B/mode/mtime。Strong全部205wheel成员/RECORD、三ZIP外层与所有119内嵌wheel出现/55unique字节、207canonical/frozen/Git/sourceZIP相符；artifact source仍d774，不能以将来的docs-only发布commit替代应用源commit。完整父环境证据是未改driver成功前的exact-equality guard，不声称独立重建raw环境。
+Mac Main接受 `_state/universal-main-review/20261027-public-mcp-012-actual-runtime-independent-review/MAIN_ACTUAL_RUNTIME_ACCEPTANCE.json` 4401B/SHA 57ff16e8c8d745baec1c7684c1983ededb3f3fdba53c5541281223920cb0867d；[紧凑证据](evidence/public-mcp-0.1.12-macos-arm64-20261027.json) 为本阶段四文件发布候选。
 
-四原artifact完整SHA/bytes见evidence/distribution-0.1.12-20261027.json，原目录 `_state/coherent-012-20261027-r6-4dd3df4a2fa54267b89b6f3389b22a73/release-r1/`。build original-returns/00005/00006同session83693，00007terminal0，非两次build；preflight62722也已known0；canary17224已known0，均不复poll。canary44pins/147557B、六检查/cwd和读/loopback/自建外部write EPERM1先被Main接受，后另发一次buildrelease。controller只plan/DEVNULL数据pins变，执行driver/owner/profile/verifier保持R5逻辑；代码仅版本/count literal变化。独立source ZIP路径在binding/build-r1/source-artifact/，199package与真实wheel相等，helper仍ab8cb109。失败PREP/mode、Main掩码/输入manifest列表误读、自有review审计错误均保留，不算产品失败或native重试。
+- Mac .12 actual once：原 Tool session 20027 → wait-01 terminal 0，outer wait 0；离线安装、199 origins、11 responses、112 tools、分页1+2、INVALID_REQUEST、discover NOT_FOUND、doctor PASS_STATIC。daemon/stdio 双 EOF，daemon wait -15 / PLANNED_SIGTERM；stdio wait 0 与 outgoing initialized 仅为源码成功门推导，未单独序列化。控制通道来源更正为 127.0.0.1 动态 TCP loopback，无独立socket capture，不证明OS confinement。application保留，不卸载、不重跑、不复poll 20027。Volta 0 P1/P2，Main核36 inputs/4788745B无漂移并限定接受；紧凑证据本阶段发布PENDING，273 个逻辑 catalog 与冻结 coverage 的 unique ID 集合一致；registry 条件追加独立只读 code.describe_java，state SUPPORTED_UNVERIFIED，形成 metadata total 274。额外项身份基于已安装源码/hash 对齐的静态推导，本次未单独列页或调用，不是新增 required 或功能 alias。原交接 `_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf-original-returns/ACTUAL_RESULT_HANDOFF.json` 8681B/SHA 660170c05dfcaa00601a9d736c33dc2d1a66995257442fbe56af218d2ce4e95e；transport更正 `MAIN_TRANSPORT_CLARIFICATION.json` 2220B/SHA 90dd61f6d635b49db489fedceff4ac597509c1ccbaf84eeecd01e7ad10d1a129。
+- Windows file fixture：F0/F1/F2 Tool均0、真实PS六cases通过；full static Tool0、12 materials/80819B、failure-cap guard通过。Main限定接受 `_state/universal-main-review/20261027-ordinary-x-a6-ps-file-fixture-actual-r1-28951af4/MAIN_ACTUAL_FILE_FIXTURE_AND_STATIC_ACCEPTANCE.json` 10456B/SHA 21e2793da8eee6f34ca6a008e2334709a0583a275cf27abb3d2fff154d4c2b15；不等于native。
+- Windows r4 Stage A：**MAIN_RELEASED_RESULT_PENDING**，已派Aristotle，仅A0–A5各一次、前序known0继续；A5 known0 READY或knownnonzero后停Main。A6/B0/B1/helper/X未放行。任务 `_state/universal-main-review/20261027-ordinary-x-r4-stage-a-once-task.json` 3927B/SHA 4d35b667f0dc409099f4b06256a2c475380b6ee65b65fb069dcb671532e4fb5b；release `20261027-ordinary-x-full-chain-prep-r4/STAGE_A_RELEASE.json` 2479B/SHA 2b354252b5fd8905e9cfd50201c642f38e1004edd6fb3eafb555138555e2f85e；standing authority `20261027-ordinary-x-r4-and-a6-fixture-independent-review/HUMAN_STANDING_SCOPE_AUTHORITY_R4.json` 3417B/SHA 989c056a84432a36744b48b038ce13377be1dbefd140652cdd01a7ae5c0a773a；均在 `_state/universal-main-review/` 下。active-job原返回目录 `_state/universal-main-review/20261027-ordinary-x-r4-stage-a-original-returns/`。不访问实际远端根、旧资源，原未知owner不query/cleanup/replay。
 
-Intel继续仅复用derivedcrypto2973023b已验bytes。历史b749来源文档未恢复、当前963 locator不同；实际OpenSSL静态4.0.3/legacylicense文件名4.0.2差异保持。字节接受不等于OS兼容、.12安装/native/actualMCP或所有内层UNKNOWN安全资格。旧0.1.11 R5构件与Mac Q6-r4正常安装/卸载成功为历史限定证据，不能贴到新.12；原SourceBase1805和0026成功根/evidence/ownedBase都不改/清理/复用。
+公开 HEAD/origin main eba4d1c8，207应用 blobs 与 d774ec0e 一致；0.1.12四构件已Strong/Main字节接受，历史0.1.11生命周期不等同.12 native。Core strict-free 142901248B，Server 2GiB/Worker 1GiB 门槛仍 BLOCKED，不复采。旧r3 A5 terminal1/no READY、9681和所有其他旧UNKNOWN继续fenced。
 
-下一主线：同terraNewton以已接受.12包、sourceZIP与旧已审CPython/依赖只读来源，在新materials namespace准备SourceBase及最小data-literal重绑的Q6 binder/operator/capsule。保持genuineHOME/home/CODEX_HOME/PATH/完整源基线及Path类型修复；仅新source/data/inert，不调用effectful prepare_copy，不创建未来runroot/application，不执行安装/协议。HEAD敏感Git事实已固定（head-facts-r1/HEAD_FACTS.json8473B/SHA9ccedfa5c92531934ef60a41fb0c822c5d4530de321483f42ddca96bf8668193），Main按持续授权精确4文件（Main3+当前发行紧凑证据）普通同步+远端逐blob读回；不传raw/builddirs/凭据/商业二进制。
-
-Public owner-r2 finalpins ae92c455…、38fake真实owner→driver组合已受审；Volta一P2在interactive_owner.py218，原communicate先累计全部剩余输出，timeout不是字节限额。Main已读11243B报告/actualsource并核60refs1471623B，要求Euler新owner-prep-r3用受限双流逐块读取/真实EOF/deadline后再原wait，保持仅成功11responses+frontend双EOF/wait0才一次原SIGTERM及实际-15分类；任何未知后无query/signal/wait/close/cleanup，known语义失败保留owner。r2原38/fixtureNameError保留不累加；修后只复审影响，不新required。matching.12实际数据与owner源审俱全后Main才发具体一次runtime release。用户Goal与已有本项目普通安装测试权限需据实际范围评估，不凭source里的bool伪造真人授权或新审批。
-
-Windows directhuman reply call_f9ab3a06057d4eabbffef7b3f145a248明确本次及同目标同机同范围Main验收freshnamespace持续批准。r3实际authority及StageA原lease仅在私有_state中保留，不在RESUME序列化有效审批内容。A0-A4原operator/transportknown0，A5固定READY文件300s读回超时transport1，无actualREADY或StageB/GO；不以A4launcher成功推断编译成功、父存活或helper状态。9681远端parent真实原因/状态UNVERIFIED，全部A stages已花费、lease不延长，无额外远端文件capture或SDK/query/restore/cleanup/retry/adopt。只保留已收到local原Tool/receipt/streams。Aristotle新r4source-only Main决定在20261027-ordinary-x-r4-prego-observability-MAIN_DECISION.md：预book仅新namespace在A5knownnonzero时一次A6三明确文件collector，与success→MainGO/B1互斥总一次collector；unknowntransport不能collect；只增已有read-path/stat拒绝前diagnostic，不猜或放宽DLL/nlink/ABI，真实runtimelease未发。旧r3/旧R23等原失败保持。
-
-旧254f R23r3仍native FAILURE_UNKNOWN_OWNER_RETAINED，eadadd旧NO GO与全部Windows旧owner不碰；LorentzCoreHOLD、R10PTY19679、Q1、builder89383等旧UNKNOWN均不poll/input/EOF/close/kill/query/cleanup/adopt/replay。已知终态27141/52895/56636/64340/17224/62722/83693及此前normal/build sessions不复poll；60332已由原executor确认terminal exit1并保存A5.wait-08原Tool，Main不接管或复poll。agent状态不证明native退出。W23缺fixture仍supplemental FAILED_MISSING_TEST_INPUT。
-
-继续通用安装/公开协议→连接/自省→同Model项目Java→作业/结果/资源→保存/freshWorker重开。StrongMain规划集中验收，同terrahigh连续实现测试修复；这些限定source/bytes阶段接受不替代最终独立未预设统一验收。
+下一步：Main发布Mac阶段紧凑证据，同时根据r4实际Tool/run指针和A5结果处理conditional lease。只在取得真实证据后更新状态，避免追加新required。

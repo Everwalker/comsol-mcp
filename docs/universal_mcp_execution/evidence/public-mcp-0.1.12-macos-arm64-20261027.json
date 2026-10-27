@@ -1,0 +1,160 @@
+{
+  "schema": "public-mcp-scoped-runtime-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_SCOPED_REAL_RUNTIME",
+  "product": {
+    "name": "comsol-mcp",
+    "version": "0.1.12",
+    "platform": "macos-arm64",
+    "date": "2026-10-27",
+    "source_commit": "d774ec0e4127ce63af8b4e1a8dc6bfc85422a3b7",
+    "published_docs_head_abbrev": "eba4d1c8",
+    "application_source_entries_match": 207
+  },
+  "artifacts": {
+    "application_wheel": {
+      "name": "comsol_mcp-0.1.12-py3-none-any.whl",
+      "bytes": 3180942,
+      "sha256": "ecb424aa4e14be22e0705381c283392dc695b9aeae620d523e685e3b2d9edfcb"
+    },
+    "arm_offline_bundle": {
+      "name": "offline.zip",
+      "bytes": 31365073,
+      "sha256": "96d89ef55bc3a68ae8f29984e496d0ace718d33f1324b872a05c478853ee85d8"
+    }
+  },
+  "observed": {
+    "original_tool_exit": 0,
+    "outer_original_wait": 0,
+    "offline_install_status": "PASS_PROCESS_ISOLATED_INSTALL_AND_IMPORT",
+    "installed_version": "0.1.12",
+    "installed_package_members_verified": 199,
+    "installed_interpreter_sha256": "96793b100c947cdc81a38e8fb8c9c1889abccda9840ce1bef58d372bf3f2c263",
+    "response_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "public_tools_listed": 112,
+    "registry_page_counts": [
+      1,
+      2
+    ],
+    "invalid_limit": {
+      "is_error": true,
+      "business_success": false,
+      "error_code": "INVALID_REQUEST"
+    },
+    "describe_operations": [
+      "registry_describe:runtime.discover",
+      "registry_describe:runtime.doctor",
+      "operation_describe:runtime.discover",
+      "operation_describe:runtime.doctor"
+    ],
+    "discover": {
+      "outer_success": true,
+      "inner_status": "NOT_FOUND",
+      "comsol_started": false,
+      "license_checked_out": false
+    },
+    "doctor": {
+      "outer_success": true,
+      "inner_status": "PASS_STATIC",
+      "comsol_started": false,
+      "license_checked_out": false
+    },
+    "stream_eof": {
+      "stdio": [
+        "stdout",
+        "stderr"
+      ],
+      "daemon": [
+        "stdout",
+        "stderr"
+      ]
+    },
+    "daemon_stop": {
+      "signal": "SIGTERM",
+      "original_wait": -15,
+      "classification": "PLANNED_SIGTERM"
+    },
+    "registry_metadata_total": 274
+  },
+  "source_gate_inferences": {
+    "stdio_wait_zero": "Required by the accepted source success gate; no separate raw wait field was serialized.",
+    "outbound_initialized": "Required by the accepted source success path; outbound frame was not separately serialized."
+  },
+  "transport": {
+    "description": "Authenticated HTTP TCP loopback using a dynamically assigned port, with MCP stdio.",
+    "basis": "Source inspection and Main correction; no socket capture.",
+    "confinement_proven": false
+  },
+  "interpretation_notes": [
+    "Main corrected the original Unix-socket description to loopback TCP; original task and release remain preserved.",
+    "The initial local frame comparison was key-order-sensitive; semantic JSON comparison matched without replay."
+  ],
+  "not_established": [
+    "Core execution",
+    "JDK execution",
+    "COMSOL execution",
+    "license qualification",
+    "native qualification",
+    "OS confinement",
+    "complete goal or full matrix acceptance",
+    "held-out task acceptance"
+  ],
+  "local_reconstruction": {
+    "note": "Repository-relative local metadata pointers; original raw records remain local and are not included in this public draft.",
+    "actual_handoff": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf-original-returns/ACTUAL_RESULT_HANDOFF.json",
+      "bytes": 8681,
+      "sha256": "660170c05dfcaa00601a9d736c33dc2d1a66995257442fbe56af218d2ce4e95e"
+    },
+    "input_pins": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/owner-binding-r1/ACTUAL_INPUT_PINS_FINAL.json",
+      "bytes": 22949,
+      "sha256": "812e2191795e252197cd240f15c5ffc7637d5cd12e5db7f0a2b78b6089b8525b"
+    },
+    "actual_binding": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf/ACTUAL_BOUND_BINDING.json",
+      "bytes": 4524,
+      "sha256": "396d1404bc391b8ce5e9fae6c0bdad8f92669c2a74e69d787da95c891be3be13"
+    },
+    "transport_clarification": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf/MAIN_TRANSPORT_CLARIFICATION.json",
+      "bytes": 2220,
+      "sha256": "90dd61f6d635b49db489fedceff4ac597509c1ccbaf84eeecd01e7ad10d1a129"
+    }
+  },
+  "main_runtime_acceptance": {
+    "path": "_state/universal-main-review/20261027-public-mcp-012-actual-runtime-independent-review/MAIN_ACTUAL_RUNTIME_ACCEPTANCE.json",
+    "bytes": 4401,
+    "sha256": "57ff16e8c8d745baec1c7684c1983ededb3f3fdba53c5541281223920cb0867d",
+    "scope": "Main read full review/raw/gates and rehashed 36 inputs / 4788745 bytes without drift; Volta 0 P1/P2"
+  },
+  "registry_count_reconciliation": {
+    "status": "MAIN_ACCEPTED_SOURCE_DERIVED_NON_GATING",
+    "logical_catalog_unique_ids": 273,
+    "frozen_general_coverage_unique_ids": 273,
+    "logical_catalog_and_coverage_sets_equal": true,
+    "registry_metadata_total": 274,
+    "additional_registry_only_action": {
+      "id": "code.describe_java",
+      "state": "SUPPORTED_UNVERIFIED",
+      "description": "Independent read-only Java describe route conditionally added by registry source; its identity is inferred from installed-source/hash alignment; not separately listed or called in this run; not an alias or a new required action."
+    },
+    "main_acceptance": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/owner-catalog-count-reconciliation-r1/MAIN_RECONCILIATION_ACCEPTANCE.json",
+      "bytes": 1357,
+      "sha256": "1cc0622523411690487a217ab40695071ddbbe8c66aa0886a5f59a1189b16960"
+    },
+    "scope": "Frozen 273/60/427 unchanged; source-derived reconciliation is non-gating."
+  }
+}
