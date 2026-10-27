@@ -1,0 +1,65 @@
+{
+  "schema": "windows-hostbootstrap-empty-runtime-data-software-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE",
+  "version": "0.1.15",
+  "base_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
+  "source_files": [
+    {
+      "path": "comsol_mcp/_windows_host_bootstrap.py",
+      "bytes": 116633,
+      "sha256": "172fa9c708c7b352504de98b3983ba745b1193db949a1f55bacad393e501f16c"
+    },
+    {
+      "path": "tests/test_windows_empty_runtime_data.py",
+      "bytes": 7326,
+      "sha256": "950e2da10d50729b0fd8e8150f24daa6654b51b3c1b844c70feecbd9e527055b"
+    },
+    {
+      "path": "comsol_mcp/_server.py",
+      "bytes": 11704,
+      "sha256": "101965b28cb2c6d194516e6227022637182b5e43b35b6d35ec39434618cc758b"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 1989,
+      "sha256": "deb7d1e63a1ef5474f3dbe97b0bc7e5a8955652a3011615499955a1f659b6390"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 307301,
+      "sha256": "30230b0b65467e0bba56c5bcdc44aef5e4e131435171e1f87ccbc49b50fe010d"
+    }
+  ],
+  "source_main_acceptance": {
+    "path": "_state/universal-main-review/20261028-windows-empty-file-integration-independent-review-r1/MAIN_CANONICAL_015_SOURCE_SOFTWARE_ACCEPTANCE.json",
+    "bytes": 2938,
+    "sha256": "d56d3fe7c528560dff103e2519c32ab75f105f3493fe526b384c7e0a8d28721a"
+  },
+  "independent_review": {
+    "independent_result": {
+      "path": "_state/universal-main-review/20261028-windows-empty-file-integration-independent-review-r1/RESULT.json",
+      "bytes": 11939,
+      "sha256": "9614aae9c72ff489d666ab5c748b62a9af720f17423cbf0bfd6b6ae5817aa9a7"
+    },
+    "independent_report": {
+      "path": "_state/universal-main-review/20261028-windows-empty-file-integration-independent-review-r1/REVIEW.md",
+      "bytes": 8377,
+      "sha256": "2479e76ba05355512ceec36a9467a39f7d52c9a9adcce5970a3a304757a22640"
+    },
+    "exact_inputs": {
+      "path": "_state/universal-main-review/20261028-windows-empty-file-integration-independent-review-r1/EXACT_INPUT_PINS.json",
+      "bytes": 114247,
+      "sha256": "bbf434b77cbce5db58f8680fd97725504f8b94a33707d9a4b0e354856262ac16"
+    }
+  },
+  "integration_result_sha256": "8579558a5e667c89ee815e77244e7b24738fdb8f16e940c279bb877cc9c4bbee",
+  "behavior": "Allow size-zero runtime data only in canonical Python Lib subtree with empty SHA and without executable/library suffix; required entrypoints and archives remain nonempty.",
+  "software_observation": "434 pytest aggregate; no separately serialized full command or per-case ID journal.",
+  "limits": [
+    "Runner hook starts after pytest/ctypes imports, not OS confinement.",
+    "External interpreter/dependency bytes not pinned in all pre-run refs.",
+    "0.1.15 build/install/runtime/native NOT_RUN.",
+    "Prior candidate failures preserved; no retroactive native PASS."
+  ],
+  "goal": "ACTIVE_NOT_COMPLETE"
+}

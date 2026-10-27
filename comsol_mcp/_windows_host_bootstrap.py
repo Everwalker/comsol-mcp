@@ -237,15 +237,21 @@ def parse_plan(raw):
                 or p.split("/")[0] not in {"python312", "jdk11", "offline", "materials"}
                 or len(ntpath.join(prefix, *p.split("/"))) > 240):
             fail("PLAN_INVENTORY", "duplicate, venv, out-of-root or overlong inventory entry")
-        if type(row["size"]) is not int or not 0 < row["size"] <= MAX_FILE:
+        if type(row["size"]) is not int or not 0 <= row["size"] <= MAX_FILE:
             fail("PLAN_INVENTORY", "positive bounded file size required")
         if row["role"] not in {"python", "runtime", "jdk", "python_archive", "bundle_archive"}:
             fail("PLAN_INVENTORY", "unsupported material role")
+        sha256 = _hex(row["sha256"])
+        if row["size"] == 0 and (row["role"] != "runtime"
+                or not p.startswith("python312/tools/Lib/")
+                or p.casefold().endswith((".exe", ".dll", ".pyd", ".jar", ".class"))
+                or sha256 != digest(b"")):
+            fail("PLAN_INVENTORY", "empty files require exact normal Python Lib runtime data")
         if (row["role"] == "jdk") != p.startswith("jdk11/"):
             fail("PLAN_INVENTORY", "JDK role must match its exact subtree")
         names.add(p.casefold())
         total += row["size"]
-        files.append(FileIntent(p, row["size"], _hex(row["sha256"]), row["role"]))
+        files.append(FileIntent(p, row["size"], sha256, row["role"]))
     if total > MAX_TOTAL:
         fail("PLAN_INVENTORY", "total install bytes exceed bound")
     for p in names:
@@ -257,6 +263,8 @@ def parse_plan(raw):
                 "jdk11/bin/java.exe", "materials/python.nupkg", "materials/offline.zip"}
     if not required <= by_path.keys():
         fail("PLAN_INVENTORY", "normal Python, installed MCP, JDK and original archives are required")
+    if any(by_path[p].size == 0 for p in required):
+        fail("PLAN_INVENTORY", "required entrypoints and archives must be nonempty")
     for p, role in (("python312/tools/python.exe", "python"), ("materials/python.nupkg", "python_archive"),
                     ("materials/offline.zip", "bundle_archive")):
         if by_path[p].role != role:

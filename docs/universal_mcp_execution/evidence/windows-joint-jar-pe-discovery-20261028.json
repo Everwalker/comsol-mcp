@@ -1,0 +1,56 @@
+{
+  "schema": "windows-joint-jar-pe-finite-discovery-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_FINITE_READONLY_MATERIAL_DISCOVERY_ONLY",
+  "observation": {
+    "original_terminal": 0,
+    "file_observations": 26,
+    "ancestors": 8,
+    "reported_PE_component_version": "6.4.0.293",
+    "engine_version": "NOT_ESTABLISHED",
+    "qualification": false,
+    "file_bytes": 29225585,
+    "reserved_read_bytes": 29770445,
+    "raw_success_row_status": "No status field; OBSERVED is handoff summary"
+  },
+  "saved_handoff": {
+    "path": "_state/universal-main-review/20261028-windows-jar-pe-once-prep-r1/original-tool-returns/ACTUAL_HANDOFF.json",
+    "bytes": 12111,
+    "sha256": "bcd8f0d41fe9f31d13232a1e4e36546474314248b52b9406faad628ce58276d6"
+  },
+  "limitations": [
+    "Finite readonly discovery only, no native/product/engine/qualification acceptance.",
+    "EOF and individual SDK events are source-based, not independently serialized.",
+    "Original session SPENT; no polling, replay or target follow-up.",
+    "Whole JAR/PE/resource bytes not retained locally; target hashes and resource parser are not independently replayed from bytes.",
+    "Exact OS launch UTC and dispatch message are not independently serialized in supplied runtime copies."
+  ],
+  "strong_actual_review": {
+    "status": "ACCEPTED_0_P1_P2",
+    "references": {
+      "result": {
+        "path": "_state/universal-main-review/20261028-windows-jar-pe-actual-independent-review-r1/RESULT.json",
+        "bytes": 22117,
+        "sha256": "6927b928419c7b0db4170b1afa803acf4610f598ae522f1bf57227a9cea33342"
+      },
+      "report": {
+        "path": "_state/universal-main-review/20261028-windows-jar-pe-actual-independent-review-r1/REVIEW.md",
+        "bytes": 9949,
+        "sha256": "f15d9b1a2b20aff8dfbe2e108d46e4768f7b3de025e8fdff48729c1b885f6e70"
+      },
+      "pins": {
+        "path": "_state/universal-main-review/20261028-windows-jar-pe-actual-independent-review-r1/EXACT_INPUT_PINS.json",
+        "bytes": 31749,
+        "sha256": "eeb2691930d60153f923fb322d5e339b915b47c656d5419270f179c9eef7214b"
+      }
+    }
+  },
+  "main_actual_acceptance": {
+    "status": "ACCEPTED_FINITE_DISCOVERY_ONLY",
+    "reference": {
+      "path": "_state/universal-main-review/20261028-windows-jar-pe-actual-independent-review-r1/MAIN_ACTUAL_FINITE_MATERIAL_DISCOVERY_ACCEPTANCE.json",
+      "bytes": 3139,
+      "sha256": "581d978b565934f859ea774a557b5918ff52e2e1e3529c7391f9a4acd573f061"
+    }
+  },
+  "goal": "ACTIVE_NOT_COMPLETE"
+}

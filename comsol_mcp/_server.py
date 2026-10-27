@@ -176,7 +176,7 @@ class _SessionServerProxy:
 
 session_server = _SessionServerProxy()
 
-VERSION = "0.1.14"
+VERSION = "0.1.15"
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMSOL_ROOT = Path(r"C:\Program Files\COMSOL\COMSOL63\Multiphysics")
 DEFAULT_SERVER_HOME = WORKSPACE_ROOT / "comsol-server-home"
