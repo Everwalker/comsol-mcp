@@ -1,0 +1,76 @@
+{
+  "schema": "public-mcp-macos-arm64-scoped-runtime-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_SCOPED_ACTUAL_SOFTWARE",
+  "version": "0.1.14",
+  "source_snapshot": "c4b733750ebb1ca27fc62462976d67690a1baf12",
+  "observed_handoff": {
+    "sha256": "487ae330fd7ebfb34e92628cd30eeaaa3bdb14bb0121e3aa5e607109250ec950",
+    "bytes": 7260,
+    "outer_tool_terminal": 0,
+    "copied_entry_wait": 0,
+    "offline_install_original_wait": 0,
+    "installed_origins": 200,
+    "listed_tools": 112,
+    "response_ids_count": 11,
+    "pagination": [
+      1,
+      2
+    ],
+    "invalid_limit": "INVALID_REQUEST",
+    "discover": {
+      "inner_status": "NOT_FOUND",
+      "roots": []
+    },
+    "doctor": {
+      "inner_status": "PASS_STATIC"
+    },
+    "daemon_wait": -15,
+    "daemon_retirement": "PLANNED_SIGTERM",
+    "daemon_and_stdio_each_stdout_stderr_EOF": "as recorded in handoff",
+    "stdio_decoded_stdout_bytes": 142557,
+    "stdio_decoded_stderr_bytes": 431
+  },
+  "limits": [
+    "stdio wait0 and outgoing initialized are source-success-gate inferred; no independent serialized numeric wait or outgoing initialized frame.",
+    "11 responses and 112 listed tools do not establish all tools executed.",
+    "No full OS confinement, COMSOL/JDK/Core/native/license/scientific or full goal qualification.",
+    "One original session terminal0 SPENT, do not poll/replay.",
+    "SourceBase pre/post comparison covers the normal helper call only, not the entire later protocol interval.",
+    "Environment equality observed at dispatch preflight and known0 capture, not continuous telemetry.",
+    "Exact outer dispatch UTC not independently serialized."
+  ],
+  "independent_review": {
+    "status": "ACCEPTED_0_P1_P2",
+    "references": {
+      "REVIEW.md": {
+        "path": "_state/universal-main-review/20261028-public-mcp-014-actual-independent-review-r1/REVIEW.md",
+        "bytes": 11203,
+        "sha256": "273b6c227072cf2c0db5975ca2db205c058730a3feca94435d79252b429d8099"
+      },
+      "RESULT.json": {
+        "path": "_state/universal-main-review/20261028-public-mcp-014-actual-independent-review-r1/RESULT.json",
+        "bytes": 12482,
+        "sha256": "e6825375a63e5c34cb3b0dcf672af59607d0202d260d1caba7d6ceae7b227346"
+      },
+      "EXACT_INPUT_PINS.json": {
+        "path": "_state/universal-main-review/20261028-public-mcp-014-actual-independent-review-r1/EXACT_INPUT_PINS.json",
+        "bytes": 120070,
+        "sha256": "2037af3e954e38d7ebc1eb2bde548c0eec4e0b891ecab7e1b94f185624f016d4"
+      },
+      "REVIEW_FREEZE.json": {
+        "path": "_state/universal-main-review/20261028-public-mcp-014-actual-independent-review-r1/REVIEW_FREEZE.json",
+        "bytes": 3339,
+        "sha256": "6ab635283fe538b38250904213bf25f0aaf7b1b37c91920346e293d9a62ae7c3"
+      }
+    }
+  },
+  "main_actual_acceptance": {
+    "status": "ACCEPTED_SCOPED_ACTUAL_SOFTWARE",
+    "reference": {
+      "path": "_state/universal-main-review/20261028-public-mcp-014-actual-independent-review-r1/MAIN_ACTUAL_NORMAL_INSTALL_PUBLIC_MCP_ACCEPTANCE.json",
+      "bytes": 4672,
+      "sha256": "a40628ced6f21db3ab2720800c29bafabc1d87d8c0a298df898b13efbb74c056"
+    }
+  },
+  "goal": "ACTIVE_NOT_COMPLETE"
+}
