@@ -1,0 +1,60 @@
+{
+  "schema": "canonical-control-attach-only-scoped-evidence/1",
+  "date": "2026-10-27",
+  "version": "0.1.12",
+  "status": "MAIN_ACCEPTED_SOURCE_AND_FOCUSED_SOFTWARE",
+  "source_binding": "The six exact files below in the same source publication; commit is independently read back after publication.",
+  "source_files": [
+    {
+      "path": "comsol_mcp/_control_client.py",
+      "bytes": 12631,
+      "sha256": "e9020793753896bf762b5ad4070fea0a437301a062c75d39198d87d8bfb8c4cb"
+    },
+    {
+      "path": "tests/test_control_attach_only.py",
+      "bytes": 8489,
+      "sha256": "a5c36edd5e524e595a4cc0498bc698f09c22d105caf8d025073ef104dfb3ca59"
+    },
+    {
+      "path": "README.md",
+      "bytes": 16799,
+      "sha256": "bd7d80f3bf8bada0395c9e127ecd69d09770b4f49ac2feef2503b2499b62072d"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 1989,
+      "sha256": "ae1c4fbba3f5d096959d4b717f4806f762dec8ba3df0ef1bc6c26b20eeb1abb8"
+    },
+    {
+      "path": "comsol_mcp/_server.py",
+      "bytes": 11704,
+      "sha256": "871799903d56e8d8ea76caad328adcb9ee5237c14f8a894e2f5d395ff3498c12"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 307301,
+      "sha256": "f127248f9059f96f15cf8718657ab78cf99da4d61670135cb91e9872446f1ca4"
+    }
+  ],
+  "behavior": [
+    "COMSOL_SERVER_MCP_CONTROL_MODE absent/auto retains existing local automatic startup",
+    "attach-only requires an existing private local endpoint and authenticated health preflight; no fallback spawn, PID inspection or directory repair",
+    "Windows SCM selector retains precedence, including blank or malformed values",
+    "Invalid mode and preflight failure return sanitized NOT_SUBMITTED; post-dispatch UNKNOWN is unchanged and not replayed"
+  ],
+  "software": {
+    "passed": 74,
+    "deselected": "public adapter envelope case requires socketpair and was excluded under the no-network test gate",
+    "scope": "Canonical functions with fake filesystem, health and transport; guarded process/network/native/env effects. Not native or actual public MCP.",
+    "parent_environment_equal": true,
+    "retained_earlier_failures": true,
+    "third_party_lock_packages_unchanged": 52
+  },
+  "limits": [
+    "Private-directory POSIX checks are not Windows DACL or race-freedom proof",
+    "NOT_ATTEMPTED describes daemon startup, not absence of health RPC or all frontend effects",
+    "0.1.11 artifacts do not contain this mode; matching 0.1.12 artifact and installed protocol status are tracked in PROGRESS.md",
+    "Full matrix, native platforms, fresh Worker reopen, heldout families and final Reviewer remain unpassed"
+  ],
+  "Main_acceptance_sha256": "7c5a5d285e24ee52325dd63020d513d8472867f7b24f13ccaeed5cb384f0d637"
+}

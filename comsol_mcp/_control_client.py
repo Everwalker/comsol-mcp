@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -32,6 +33,13 @@ class ScmAttachError(ControlStartupError):
         super().__init__("Explicit SCM attach-only preflight failed; requested operation was not submitted.")
 
 
+class LocalAttachOnlyError(ControlStartupError):
+    """Local attach-only selection failed before operation submission."""
+
+    def __init__(self):
+        super().__init__("Local attach-only control preflight failed; requested operation was not submitted.")
+
+
 # Windows MCP stdio hosts are placed in an SDK-created Job Object whose close
 # policy terminates descendants.  A control daemon started from that host must
 # request all three creation flags together or it is still owned by the Job.
@@ -46,8 +54,22 @@ def _is_windows() -> bool:
     return os.name == "nt"
 
 
-def control_home() -> Path:
+def control_home(*, create: bool = True) -> Path:
     from comsol_mcp._server import COMSOL_SERVER_MCP_HOME
+    if not create:
+        # Inspect the configured lexical root before resolving it. Never create,
+        # chmod, or repair an existing directory in attach-only mode.
+        if COMSOL_SERVER_MCP_HOME.is_symlink():
+            raise RuntimeError("Configured control root must not be a symlink")
+        home = COMSOL_SERVER_MCP_HOME.resolve() / "control-private"
+        observed = home.lstat()
+        if not stat.S_ISDIR(observed.st_mode) or stat.S_ISLNK(observed.st_mode):
+            raise RuntimeError("Control directory must be a real directory")
+        if hasattr(os, "getuid") and observed.st_uid != os.getuid():
+            raise RuntimeError("Control directory is owned by another user")
+        if stat.S_IMODE(observed.st_mode) & 0o077:
+            raise RuntimeError("Control directory is not private")
+        return home
     home = COMSOL_SERVER_MCP_HOME.resolve() / "control-private"
     home.mkdir(mode=0o700, parents=True, exist_ok=True)
     if home.is_symlink():
@@ -149,6 +171,22 @@ def ensure_control() -> dict:
             # Native/private causes stay with their original reader. Neither
             # endpoint bytes nor transport exception text enter public errors.
             raise ScmAttachError() from None
+    mode = os.environ.get("COMSOL_SERVER_MCP_CONTROL_MODE")
+    if mode not in (None, "auto", "attach-only"):
+        raise LocalAttachOnlyError()
+    if mode == "attach-only":
+        try:
+            home = control_home(create=False)
+            endpoint = _read_endpoint(home)
+            if not isinstance(endpoint, dict):
+                raise LocalAttachOnlyError()
+            result = _request(endpoint, {"operation": "session_health", "arguments": {}, "execution": {}}, 1.0)
+            if not isinstance(result, dict) or result.get("success") is not True:
+                raise LocalAttachOnlyError()
+            return endpoint
+        except Exception:
+            # Never expose endpoint/token/path or the transport exception.
+            raise LocalAttachOnlyError() from None
     home = control_home()
     endpoint = _read_endpoint(home)
     if endpoint:
@@ -226,7 +264,7 @@ def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
                 # ensure_control may have started a daemon before discovering
                 # that it is not ready. This describes the requested operation
                 # only and makes no claim about control-daemon startup effects.
-                "control_startup_outcome": "NOT_ATTEMPTED" if isinstance(exc, ScmAttachError) else "UNRESOLVED",
+                "control_startup_outcome": "NOT_ATTEMPTED" if isinstance(exc, (ScmAttachError, LocalAttachOnlyError)) else "UNRESOLVED",
             },
         }
 
