@@ -1,30 +1,31 @@
-# 通用 MCP 当前续跑入口 — r321
+# 通用 MCP 当前续跑入口 — r325
 
-目标 active / IN_PROGRESS；完整 273 actions /60 tests /427 子断言及适用 native、save+freshWorker、两个未预设 licensed 任务族、fresh 最终 Reviewer 均未通过，completed_groups=[]、heldouts 未选。当前指针为 RESUME.json.current_checkpoint_r321 / current_source_roles_r321 / current_execution_gates。此前 Main3 原字节保存在 `_state/universal-main-review/20261027-checkpoint-r321/prior-main3/`。
+目标active / IN_PROGRESS；完整273 actions/60 tests/427子断言及适用native、save+freshWorker、两个未预设licensed任务族、fresh最终Reviewer均未通过，completed_groups=[]、heldouts未选。当前指针RESUME.json.current_checkpoint_r325 / current_source_roles_r325 / current_execution_gates。上一Main3原字节在 `_state/universal-main-review/20261027-checkpoint-r325/prior-main3/`。
 
 | 范围 | 当前状态 |
 | --- | --- |
-| 规范源码 | 0.1.12；generic attach-only 集成已 Main 接受，六文件精确指纹见 evidence/control-attach-only-0.1.12-20261027.json |
-| 软件验证 | 当前 canonical 74 PASS /1 deselected；Strong/Main 已审私有控制源逐字节相同，默认 auto/SCM 与提交后 UNKNOWN 不变；52 第三方 lock entries 不变 |
-| 0.1.12 发行 | NOT_BUILT；R6 PREP 模板完成，待实际 source commit/远端逐字节收据绑定与 Main 放行 |
-| 上版 0.1.11 | 源592471c5；R5 四构件 Strong/Main 字节接受，不能代替 .12 包 |
-| Mac 上版正常流程 | Q6-r4 actual once Strong/Main 接受；安装/负控/ready/仅移除自建 application，原 Tool/driver0，不重跑 |
-| 公开 MCP | 实际 installed 协议调用 NOT_RUN；owner source PREP 为 PARTIAL，不可执行 |
-| Windows | ordinary-X 后端 source/fake 已接受，r2 finite packet 7+16 inert /独立复审中，无实际 runtime grant；旧254f仍 UNKNOWN |
-| Mac Core | 最近 strictfree142901248B，原2GiB/1GiB门槛 BLOCKED，无新 native release |
+| 规范源码 | 0.1.12 /d774ec0e；generic attach-only已Main接受和远端10blob验证；当前74fakePASS/1deselected |
+| 当前四构件 | R6 once真实build Tool/rootwait0/双EOF；Strong/Main字节验收完成，1195inputs429045031B无漂移 |
+| 分发结构 | 源207/package199/buildsrc202/wheel205，三ZIP47/54/56成员，35/42/42wheels；119嵌套出现/55unique RECORD已审 |
+| source ZIP | 207成员、3283549B/SHA43c7de0a…，独立data装配，非第五原build输出 |
+| .12安装及MCP | NOT_RUN；matching Q6SourceBase/binder/operator/capsule由Newton准备，仅source/data |
+| 交互owner | r2 38fake候选独立审1P2输出cap；Euler新r3最小修复/受影响测试待审，无runtime release |
+| Windows r3 | 已获真人同范围持续批准并运行A0-A5；A0-A4known0，A5 READY300s超时transport1，NO GO/父状态未确认，9681保留 |
+| Windows后续 | Aristotle只prepare新r4条件preGO三记录collector与reader已观测诊断，0SDK guard放宽，0runtime |
+| Mac Core | 最近strictfree142901248B；原2GiB/1GiB门槛BLOCKED，无新Core/COMSOL/JDK/native |
 
-Main 下一步：精确10文件（六 source/test/docs/version、Main3、紧凑 evidence）普通非强制同步并对远端 ref 与每个 API blob 逐字节读回；把真实新提交/receipt 交同 Newton，完成 R6 全新命名空间的207源码绑定、17叶 shell manifest/freeze/受影响 inert。Main 集中审查后仅一次 canary；实际6项及 cwd 见证全部通过且原 root known0/双流完整，才允许一次 build。只重建本项目 wheel/三目标包，复用已审第三方 bytes，不编译 Java/商业库，不发布 raw/runtime/凭据。
+当前Main里程碑接受 `_state/universal-main-review/20261027-r6-coherent-artifacts-independent-review/MAIN_ARTIFACT_ACCEPTANCE.json`（4922B/SHA438288799e8731e6b117bbd09ba06c2cb38c2287862e10738736d9cf76ef3a5f）。Main读完整报告/result/原Tool+owner事件与重点wheel，先核266refs122330538B，再核Strong1195refs429045031B/mode/mtime。Strong全部205wheel成员/RECORD、三ZIP外层与所有119内嵌wheel出现/55unique字节、207canonical/frozen/Git/sourceZIP相符；artifact source仍d774，不能以将来的docs-only发布commit替代应用源commit。完整父环境证据是未改driver成功前的exact-equality guard，不声称独立重建raw环境。
 
-attach-only：COMSOL_SERVER_MCP_CONTROL_MODE absent/auto 保持原自动行为；attach-only 严格要求既存本用户私有 control-private 及认证健康检查，不创建/修复目录、不查询 PID、不启动 daemon；空/无效 mode 提交前拒绝。Windows SCM selector 存在时仍优先，包括空/损坏配置。失败脱敏、NOT_SUBMITTED/safe_retry=false，NOT_ATTEMPTED 只描述 daemon startup，不宣称无健康 RPC 或所有 frontend effects。提交后 UNKNOWN 路径原样保留，不重放。POSIX mode/owner 校验不证明 Windows DACL、全部 ancestor 或 TOCTOU 安全。先前 TOOL_01..03 测试门禁失败原件保留，TOOL_05 为当前74/1；README 后续仅时间状态两句指向 PROGRESS，没有为文案重复跑测试。
+四原artifact完整SHA/bytes见evidence/distribution-0.1.12-20261027.json，原目录 `_state/coherent-012-20261027-r6-4dd3df4a2fa54267b89b6f3389b22a73/release-r1/`。build original-returns/00005/00006同session83693，00007terminal0，非两次build；preflight62722也已known0；canary17224已known0，均不复poll。canary44pins/147557B、六检查/cwd和读/loopback/自建外部write EPERM1先被Main接受，后另发一次buildrelease。controller只plan/DEVNULL数据pins变，执行driver/owner/profile/verifier保持R5逻辑；代码仅版本/count literal变化。独立source ZIP路径在binding/build-r1/source-artifact/，199package与真实wheel相等，helper仍ab8cb109。失败PREP/mode、Main掩码/输入manifest列表误读、自有review审计错误均保留，不算产品失败或native重试。
 
-公开 MCP owner PREP `_state/universal-public-mcp-readiness-prep-20261027/owner-prep` 已冻结部分成果，缺真实 precopy/离线安装 glue、constructor/read/write/wait 异常用例和 known 协议失败/UNKNOWN 记录。后续用 .12 实际安装的 interpreter/entrypoint，显式 original-rooted daemon 和 attach-only stdio frontend；最小 stdlib 交互 JSON-lines，先登记 original Popen/streams，再 initialize/tools/list/registry分页/负控/静态 runtime.discover/doctor。MCP1.30 SDK stdio_client cleanup 可终止进程树，不用于本 owner。只有所有静态响应已知、frontend stdin EOF/双流/original wait0，才可执行预先约定的一次本次 no-engine daemon SIGTERM 和已知 wait；任何 UNKNOWN 后零后续 SDK/query/signal/wait/cleanup，保留原 owner。无 mock dispatch、无任务专用白名单，不选 heldouts。
+Intel继续仅复用derivedcrypto2973023b已验bytes。历史b749来源文档未恢复、当前963 locator不同；实际OpenSSL静态4.0.3/legacylicense文件名4.0.2差异保持。字节接受不等于OS兼容、.12安装/native/actualMCP或所有内层UNKNOWN安全资格。旧0.1.11 R5构件与Mac Q6-r4正常安装/卸载成功为历史限定证据，不能贴到新.12；原SourceBase1805和0026成功根/evidence/ownedBase都不改/清理/复用。
 
-上版证据见 evidence/distribution-0.1.11-20261027.json 和 mac-arm64-normal-lifecycle-0.1.11-20261027.json。R5 源207/package199/wheel205，三包及55 unique nested-wheel RECORD 已验证；later source ZIP 是独立数据装配，不计原四 build 输出。Intel 历史 b7494ac7 原文未恢复、当前963a76b4 locator不同；OpenSSL实际4.0.3与旧license文件名4.0.2差异保留。Q6-r4 原 Tool36898 terminal0、1外层及5内层原 communicate/wait known0、完整双流；199安装文件与3f7b539e wheel匹配，4847 owned inventory、四阶段SourceBase与外层最终check、父完整env保持。EOF依原communicate/wait和完整输出，无独立EOF传感器；M/P仅成功hooks同inode/hash检查，negative-control-copy最终状态未单独证明，不声称时间戳等值。成功流程没有注入 UNKNOWN；网络 sandbox 的 EPERM/未接受 listener 不证明 OS 只能写 runroot。0026成功根/evidence/ownedBase 保留，application已按known流程移除；旧R3known2失败保留，不复用旧命名空间。
+下一主线：同terraNewton以已接受.12包、sourceZIP与旧已审CPython/依赖只读来源，在新materials namespace准备SourceBase及最小data-literal重绑的Q6 binder/operator/capsule。保持genuineHOME/home/CODEX_HOME/PATH/完整源基线及Path类型修复；仅新source/data/inert，不调用effectful prepare_copy，不创建未来runroot/application，不执行安装/协议。HEAD敏感Git事实已固定（head-facts-r1/HEAD_FACTS.json8473B/SHA9ccedfa5c92531934ef60a41fb0c822c5d4530de321483f42ddca96bf8668193），Main按持续授权精确4文件（Main3+当前发行紧凑证据）普通同步+远端逐blob读回；不传raw/builddirs/凭据/商业二进制。
 
-Windows ordinary-X：原C#固定X frame不变，一个ordinary子进程/Jobmax1，0 AppContainer/0 UI/0 ACL；此配置不是安全边界证明。Strong/Main已接受实际ctypes后端源95 fake/71 direct observe fault entries，另35重叠状态用例不累加。新的 r2 packet `_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r2` 将 raw READY SHA 和 precise stable actor 绑定到 pre-CreateProcessW 原后端观测，并传递真实 wait/exit/双流 bytes+EOF/Job/knownclose 到终态；UNKNOWN仅已有memory观测，缺失NOT_OBSERVED。未来ordinary专属人类材料、Main release仍未生成，不借旧R18 AppC批准充运行权。Volta仅复审受影响源/PREP，不是final Reviewer；先前fresh Reviewer429未给有效结论，不计通过或产品失败。
+Public owner-r2 finalpins ae92c455…、38fake真实owner→driver组合已受审；Volta一P2在interactive_owner.py218，原communicate先累计全部剩余输出，timeout不是字节限额。Main已读11243B报告/actualsource并核60refs1471623B，要求Euler新owner-prep-r3用受限双流逐块读取/真实EOF/deadline后再原wait，保持仅成功11responses+frontend双EOF/wait0才一次原SIGTERM及实际-15分类；任何未知后无query/signal/wait/close/cleanup，known语义失败保留owner。r2原38/fixtureNameError保留不累加；修后只复审影响，不新required。matching.12实际数据与owner源审俱全后Main才发具体一次runtime release。用户Goal与已有本项目普通安装测试权限需据实际范围评估，不凭source里的bool伪造真人授权或新审批。
 
-旧Windows254f的55行journal只证明捕获链接受，native仍FAILURE_UNKNOWN_OWNER_RETAINED。Aprocess_live首predicate false，随后原HANDLE GetExit BOOL1/exit0xc0000142在WriteFile前latchUNKNOWN；sticky lastError122不是失败证据。未完成IPC/ABA/knowncleanup，不证明CLR/DLL/MIC根因。所有one-shots spent、旧lease不延长；所有旧UI/AppC/Job/owner零后query/restore/cleanup/retry/adopt。固定ProgramFiles只读10pattern未找到工具链，仅该范围，不声称全机不存在。
+Windows directhuman reply call_f9ab3a06057d4eabbffef7b3f145a248明确本次及同目标同机同范围Main验收freshnamespace持续批准。r3实际authority及StageA原lease仅在私有_state中保留，不在RESUME序列化有效审批内容。A0-A4原operator/transportknown0，A5固定READY文件300s读回超时transport1，无actualREADY或StageB/GO；不以A4launcher成功推断编译成功、父存活或helper状态。9681远端parent真实原因/状态UNVERIFIED，全部A stages已花费、lease不延长，无额外远端文件capture或SDK/query/restore/cleanup/retry/adopt。只保留已收到local原Tool/receipt/streams。Aristotle新r4source-only Main决定在20261027-ordinary-x-r4-prego-observability-MAIN_DECISION.md：预book仅新namespace在A5knownnonzero时一次A6三明确文件collector，与success→MainGO/B1互斥总一次collector；unknowntransport不能collect；只增已有read-path/stat拒绝前diagnostic，不猜或放宽DLL/nlink/ABI，真实runtimelease未发。旧r3/旧R23等原失败保持。
 
-LorentzCoreHOLD、R10PTY19679、Q1、builder89383、Windows全部旧UNKNOWN不poll/input/EOF/close/kill/query/cleanup/adopt/replay；agent失联不证明native退出。已知终态35688/79881/60673/65152/36898与publication27141/52895/56636不复poll。W23缺fixture仍supplemental FAILED_MISSING_TEST_INPUT。最后独立读回的公开提交为14037da7，207应用blob当时未变；本次 .12 实际source会改变，不能沿用 .11 不变声明。
+旧254f R23r3仍native FAILURE_UNKNOWN_OWNER_RETAINED，eadadd旧NO GO与全部Windows旧owner不碰；LorentzCoreHOLD、R10PTY19679、Q1、builder89383等旧UNKNOWN均不poll/input/EOF/close/kill/query/cleanup/adopt/replay。已知终态27141/52895/56636/64340/17224/62722/83693及此前normal/build sessions不复poll；60332已由原executor确认terminal exit1并保存A5.wait-08原Tool，Main不接管或复poll。agent状态不证明native退出。W23缺fixture仍supplemental FAILED_MISSING_TEST_INPUT。
 
-继续按通用链正常安装/协议发现→连接/自省→同Model项目Java→作业/结果/资源→保存/freshWorker重开。Strong Main规划/集中验收，同terra high连续实现/测试/修复；阶段限定审查不替代冻结required和最终独立未预设统一验收。
+继续通用安装/公开协议→连接/自省→同Model项目Java→作业/结果/资源→保存/freshWorker重开。StrongMain规划集中验收，同terrahigh连续实现测试修复；这些限定source/bytes阶段接受不替代最终独立未预设统一验收。

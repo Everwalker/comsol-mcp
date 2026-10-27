@@ -1,15 +1,13 @@
-# 当前进度 — 2026-10-27（r321）
+# 当前进度 — 2026-10-27（r325）
 
-通用 MCP 目标 **active / IN_PROGRESS**。273 actions / 60 tests / 427 子断言、适用平台原生链、真实保存及新 Worker 重开、两个未预设 licensed 任务族和 fresh 最终 Reviewer 均未完成；completed_groups=[]，heldouts 未选。案例不作主线。
+通用 MCP 目标 **active / IN_PROGRESS**。273 actions /60 tests /427 子断言、适用平台原生链、真实保存与新 Worker 重开、两个未预设 licensed 任务族、fresh 最终 Reviewer 均未完成；completed_groups=[]，heldouts 未选。案例不作主线。
 
-**规范源码现为 0.1.12，attach-only 已完成 Main 集中验收。** 当前 74 项定向软件测试通过、1 项因无网络测试门禁未运行；不与此前私有 25 项或矩阵计数累加。控制函数与 Strong/Main 已审私有候选逐字节相同；三处版本号一致，52 项第三方依赖未变。默认 auto 和 Windows SCM 优先级保持；显式 attach-only 只连接既存私有 endpoint，健康预检失败不另启 daemon。提交后的 UNKNOWN 不重放。配置和六文件指纹见[源码证据](docs/universal_mcp_execution/evidence/control-attach-only-0.1.12-20261027.json)。POSIX 私有检查不是 Windows DACL 或无竞态证明，软件检查不是实际公开 MCP。
+**0.1.12 规范源码与四个构建产物已获 Strong/Main 限定接受。** 源码为 d774ec0e，attach-only 当前74项定向软件PASS/1deselected，三version字段一致，52第三方lock包不变。原一次canary六检查/cwd/原wait0/双EOF/Tool0均通过，随后另放行的一次真实build原Tool/rootwait0与双EOF已知成功；Main完整读独立报告并重核1195输入429045031B，无漂移。wheel含205成员/199package，确含e9020793控制源码；Win/ARM/Intel三离线包及55 unique nested-wheel RECORD已验。另207成员source ZIP为成功后独立data装配，不是第五原build输出。详[发行证据](docs/universal_mcp_execution/evidence/distribution-0.1.12-20261027.json)。原失败全部保留。
 
-0.1.12 对应构件尚未构建；本阶段按现有持续授权发布这六文件、Main3 和紧凑证据，再把实际提交与远端逐字节收据交给同 terra 绑定 R6 新命名空间。Main 核验冻结材料后才放行一次 canary；实际全部通过后才放行一次 build。
+源码阶段已普通push d774ec0e，并核main/FETCH_HEAD/API ref和10个API blob逐字节一致。HEAD敏感段已完成；本次四构件阶段按持续授权只同步Main3和紧凑evidence，并独立读回远端逐文件字节。原始目录、运行材料、凭据及商业二进制不发布。
 
-上一版 0.1.11 /592471c5 的 R5 wheel 和 Win/ARM/Intel 三包已 Strong/Main 字节接受。Mac ARM64 Q6-r4 正常离线安装→漂移负控拒绝→ready plan→确认卸载，原 Tool/driver 0；1805 SourceBase、199 安装包文件、4847 owned inventory 和父完整环境检查保持。此限定正常流程已发布于 14037da7，并独立逐字节读回；不重跑成功流程，不把它当 0.1.12 或 Core/native 证据。
+**0.1.12真实安装/公开MCP/native仍NOT_RUN。** 同terra Newton准备全新SourceBase和匹配Q6 binder/operator/capsule，仅源与数据，不创建未来application/ownedBase或执行安装。交互owner-r2当前38fake通过，但独立复审发现1项P2：stop_daemon communicate读完全部输出后才检查cap。Main确认，Euler在新owner-r3做持续受限读取/真实EOF修复及受影响inert，复审后才考虑实际installed协议。doctor内层UNKNOWN/discover NOT_FOUND保持原意；软件或字节验收不是运行验收。上一版0.1.11 Mac正常生命周期仅属历史证据，不当作.12结果。
 
-实际 installed MCP initialize/tools/list/call/分页/负控/静态 runtime 仍 **NOT_RUN**。交互 owner 源码准备目前 PARTIAL，尚缺真实安装衔接和异常分支；先完成新源码构件，再继续无 SDK 自动 kill 的原 owner 路径。
+Windows普通X r3源码P1已修复并Strong/Main接受，真人已持续授权本次及同目标、同机同范围、Main验收的新命名空间诊断，不再同范围反复确认。实际A0–A4 operator/transport均known0；A5固定300秒未读到READY，transport1。没有GO和helper实测结果；父进程/SDK/编译实际状态未确认，不猜DLL或ABI原因。9681及全部旧owner保留，零额外远端query/SDK/cleanup/retry/adopt。新terra Aristotle只在全新r4补预定preGO三文件失败记录收取和拒绝前已有读元数据，不放宽guard，无runtime放行。
 
-Windows 普通 fixed-X 后端已获 Strong/Main 源与软件限定接受（95 current fake、71 direct injection entries，另 35 overlapping 不累加）；r2 有限执行包补齐 READY actor 绑定及实际终态数据，7+16 受影响 inert 检查通过，独立复审中。**没有 Windows 实际运行放行。** R23r3 native 仍 UNKNOWN，254f 及全部旧 owner 零后续 SDK/query/restore/cleanup/retry/adopt。
-
-Mac Core 最近 strict-free 142901248 B，原 Server 2 GiB / Worker 1 GiB 门槛仍 BLOCKED，不降门槛、不重复空查。续跑见 RESUME.json.current_checkpoint_r321；未满足 required 和最终独立验收时不报完成。
+Mac Core最近strict-free142901248B，原Server2GiB/Worker1GiB门槛仍BLOCKED，不降门槛、不重复空查。续跑见RESUME.json.current_checkpoint_r325；未满足required和最终独立验收时不报完成。
