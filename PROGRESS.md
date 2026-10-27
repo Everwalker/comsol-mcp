@@ -1,19 +1,11 @@
-# 当前进度 — 2026-10-26（r295）
+# 当前进度 — 2026-10-27（r317）
 
-通用 MCP 目标 **IN_PROGRESS / PROGRESS**。冻结273 actions / 60 tests / 427子断言、适用平台原生核心链、真实保存及新Worker重开、两个未预设任务族和fresh最终Reviewer均未完成；completed_groups为空。案例专项保持自身范围。
+通用 MCP 目标 **active / IN_PROGRESS / PROGRESS**。273 actions /60 tests /427 子断言、适用平台原生核心链、真实保存及新 Worker 重开、两个未预设 licensed 任务族与 fresh 最终 Reviewer 均未完成；completed_groups 为空，heldouts 未选择。案例专项不作主线。
 
-**U06通用结果修复已验收并精确整合六文件**：3产品逐字节等已接受R5，2新增可移植测试及1既有测试窄修复均经独立Strong复审0 open P1/P2。canonical实际加载路径验证 **18 unique PASS**（14新+4直接相关旧），Repo Python3.12.13 -I -B / pytest9.1.1，8类启动前硬拒绝各1，HOME未变，mode0644。旧193输入及当次195输入均核验；195是之后版本同步前的快照。Main最终接受5514B/34f1cbdb…。旧private8/14/18及R3/R4/R5结果不加总，所有原失败与一次收尾审计脚本错误保留。
+正式应用源码 **0.1.11 /592471c5** 已发布；canonical18 unique scoped PASS。R5真实wheel及Win/ARM/Intel三包已获 **Strong/Main发行字节限定接受**：Main655pins/236459532B，独立成员、RECORD、锁/许可证/SBOM/207源码映射核验完成；真实canary/build原wait0/Tool0/双EOF。cwd3 inert在前，完整effect-gate补充inert在build后。旧0.1.10产物为历史，后续文档进度提交不改变应用源592和已冻结四产物；CI记录0不是CI PASS。本阶段只同步Main3与紧凑证据，不发布原始/运行材料或商业二进制。
 
-**项目版本已同步0.1.11**：只改pyproject、_server.VERSION和uv.lock本项目版本三行，Main1806B/190e37ee…核字节/AST/TOML/mode及依赖不变；未重跑测试、uvsync或构建。新应用wheel/lock/archive尚未构建；旧0.1.10/9bd/wheel484a及helper07归档不能冒充当前候选。
+Q6-r3 final binding、另行装配207成员source ZIP、一次真实完整只读precopy已获Strong/Main限定接受：557pins/171520171B、42wheels/199package映射、SourceBase1805项前后相同、futureRoot missing、fullenv相同、原terminal0。current8inert与历史失败不累加，ZIP装配后未重跑套件。新最小driver经Main全源码/实际release无效果校验，现已放行一次exclusiveownedBasecopy→原operator离线安装→negativeplan→自有sentinelunlink→readyplan→仅新application confirmeduninstall，真实结果待报，不推断PASS。genuineHOME/home/CODEX_HOME/PATH保持；首次UNKNOWN零后扫描/记录/重试/清理。最近free-only142901248B，CoreServer2GiB/Worker1GiB仍BLOCKED，原Q6普通流程无此门，不新增required。
 
-**Windows R20：采集成功，原生诊断未通过**。一次B0/B1的original Tool/operator均known0，三份capture共18002B、journal46行已Main独立核字节。两helper创建/恢复成功，但A在存储IPC前返回0xc0000142；terminal为UNKNOWN_OWNER_RETAINED，未取得读帧/A/B/A/正常清理/parent退出证明。具体DLL/原因未确认，成功BOOL旁的last_error122不是根因证据。Main6174B/b841692f…。原一次性操作已消耗；不再远端read/query/SDK/恢复/cleanup/adopt/retry，原owner保留。Plato仅用已回收材料做强审与根因建议，无R21放行。
+Windows R23r2三修复/current21inert接受保持。新R23r3实际A0–A5/GO/B1原返回均0，**native终态UNKNOWN_OWNER_RETAINED，未通过**。55行journal显示新profiles/scratch/UI/Job及两个helpers创建并resume；A在IPC前process_live=false，原HANDLE GetExit BOOL1/exit0xc0000142，lastError122是成功调用的陈旧值，不定CLR/DLL原因。没有ABA或已知清理。Main初核20refs/114482B，Strong失败capture复审进行；254f原owner资源永久封存，零后SDK/query/restore/cleanup/retry/adopt。此前Main验收schema/补充文件位置错误均仅本地preclaim拒绝且已保留，不能混成transport/native重试。现转只读架构可行性分析，停止相似ACL/label盲试。
 
-**普通helper及Q5组件接受保持**：helperab8 exact5已整合/发布；145软件属于旧指纹，最终ab8/f4dd仅bootstrap focused1，不能声称最终145。Q4为29 unique+21 subtests分别记；Q5把严格argv绑定/bin/ps，3 unique PASS，最终app/artifacts仍NOT_BOUND。selected非Framework Base只有静态证据，实际bootstrap/venv/ensurepip/install仍NOT_RUN。
-
-Mac最近实际资源预检free pages=0.633804GiB，仍低于原Server2GiB（Worker1GiB）门槛，disk满足8GB；不降低阈值或把inactive cache当空闲页。Mac R10原PTY19679/190对象、Q1及全部旧Windows UNKNOWN均保持原owner，不poll/input/EOF/query/kill/cleanup/adopt/replay。旧Q2R4在CreateProcess前auto-review拒绝的HOME覆盖形状保持NOT_RUN；新流程保留genuine HOME。
-
-当前HEAD/origin/main/FETCH_HEAD最新已核为 **d77d6fb1c2bc303b69bd30dbe96c58f7c2b70b4f**。本r295阶段准备按exact14（六源码测试+三版本+Main3+两紧凑证据）普通non-force发布，预fetch已知0且remote未变；新提交/readback尚未发生。持续授权有效，只发布必要源码/测试/可重建fixture/进度/紧凑证据，排除raw、凭据、运行目录和商业二进制。CI NOT_CHECKED。
-
-下一步：完成本阶段普通同步与fresh逐blob核验；同Euler绑定真实新commit并准备完整coherent构建owner/profile/冻结输入后才执行。Strong核R20失败后由Main决定下一条有实据的新诊断，不盲重试。完整427/native/save重开/unpreset/fresh最终Reviewer仍未过。
-
-恢复先读CURRENT_HANDOFF.md和RESUME.json.current_checkpoint_r295/current_source_roles_r295；历史owner记录不是新lease。历史W23缺fixture仍为supplemental FAILED_MISSING_TEST_INPUT。
+当前入口 RESUME.json.current_checkpoint_r317。下一步同步已验收发行阶段、核Q6真实结果、完成Windows失败限定复审；条件具备后按冻结公开MCP通用链推进。完整目标未完成，不报完成。

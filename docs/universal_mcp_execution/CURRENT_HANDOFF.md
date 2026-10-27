@@ -1,54 +1,31 @@
-# 当前交接 — 2026-10-26（r295）
+# 通用 MCP 当前续跑入口 — r317
 
-Goal **active / PROGRESS**。完整MASTER_GOAL及冻结273 actions / 60 tests / 427子断言持续有效，completed_groups为空。适用平台原生链、真实保存及新Worker重开、两个未预设licensed任务族和fresh最终Reviewer均未完成；未开始最终Reviewer、未选heldouts。案例专项保持自身状态。
+目标 active / IN_PROGRESS。历史 Main3 原字节保存在 `_state/universal-main-review/20261027-checkpoint-r317/prior-main3/`；精确证据与角色见 RESUME.json.current_checkpoint_r317 / current_source_roles_r317 / current_execution_gates。本页只汇总当前状态。
 
-恢复读RESUME.json.current_checkpoint_r295 / current_source_roles_r295。历史报告/失败在_state原路径与各checkpoint保留；不由旧PID/PTY/JSON恢复权限。主Agent负责设计和集中验收，同一Luna连续实现/测试/修复，Strong复审具体冻结候选。
+| 范围 | 当前结论 |
+| --- | --- |
+| 完整 MASTER_GOAL | 273 actions /60 tests /427子断言原标准不变；completed_groups=[]；heldouts未选；全量/平台native/save+freshWorker/两个未预设licensed任务族/fresh最终Reviewer均NOT_PASSED |
+| 应用源码 | 0.1.11 /592471c5efeecf22abbed3d12f54b5f174ab4de9，已发布；canonical18 unique scoped PASS；非native/CI/整体通过 |
+| R5四发行产物 | Strong/Main实际字节接受；wheel205成员，Win/ARM/Intel归档47/54/56成员，55份unique nested wheel RECORD；Main655pins/236459532B |
+| Q6-r3 | final binding + 第五sourceZIP207成员 + 一次真实readonly precopy获Strong/Main限定接受；normal flow已Main once释放，实际结果待报，未推断PASS |
+| Mac Core | 最近free-only142901248B，不足原Server2GiB/Worker1GiB；继续BLOCKED，无新Core/native放行 |
+| Windows当前 | R23r3实际READY已Main接受，实际GO及B1已known0，native终态UNKNOWN_OWNER_RETAINED，未通过；原owner封存 |
+| 当前发布 | 仅Main3+紧凑发行证据准备普通非强制同步，原始/运行材料和商业二进制不发布 |
 
-## 当前已接受的正式源码
+当前精确发行物见 `docs/universal_mcp_execution/evidence/distribution-0.1.11-20261027.json`。四份SHA分别为wheel `3f7b539e3f7e9ef916c646b66c096c97c8c23b696d82468d350651d95c351993`、Win `759a37f5fab005f6e8c8c3e5baa8aee53b438cd2d73fb80bffba9638d57c82a4`、ARM `b56b1d5f88e1c486cae3382e196bf2e2e10f3b994714367dcd0f2863633d46fe`、Intel `d095fb3a3af0867781c6bc72a3772582e0b9d4021d6a0fabb2b1c468c2891c2c`。Main分发接受在 `20261027-r5-coherent-artifacts-independent-review/MAIN_DISTRIBUTION_BYTES_ACCEPTANCE.json`。真实canary六项/cwd见证和build均wait0/Tool0/双EOF；R5仅driver cwd=root/tmp，其余五代码/策略原字节保持R4。补充完整effect-gate inert在build之后，不能改称事前证明。四产物只证明发行字节，未证明平台安装/原生运行/所有内部子进程UNKNOWN安全。Intel历史原始文档b7494ac7仍未恢复，当前963a76b4 locator不同；OpenSSL实际4.0.3与旧license文件名4.0.2差异如实保留。不再重建/重跑canary，旧失败和UNKNOWN保留。
 
-U06 exact6已整合：
+Q6实际capsule19745B/SHA853d35c79215f341d84112d7ed6e6ae8bd18b69f3784c7317f5f6c5667b88b48，sourceZIP3341963B/SHAf2dcc32eb03ab352f65bbe041800ca050128bf54ada69bbe0c8a06309777e43d。该ZIP是在R5四产物之后独立数据装配，不计入原build。Main当前接受 `20261027-q6-r3-final-binding-independent-review/MAIN_FINAL_BINDING_PRECOPY_ACCEPTANCE.json`：557pins/171520171B；literal/data delta，binder函数和normal/UNKNOWN gates不变；current8inert、10deny probes、历史3/8等失败分开，不累加。一次真实validator直接调用precopy返回BOUND_INPUTS_VERIFIED_READ_ONLY、42wheels/199映射、SourceBase1805before=after、fullenv相同、futureRoot missing、原terminal0。capsule execution=false从不自行授权。
 
-- comsol_mcp/_g2_engine.py：113418B / 71f1e21bb8219d4be9f61a6a850adeb1af5161de294ff17ed486798c37abcbb9。
-- comsol_mcp/_g2_public_api.py：41657B / a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505。
-- comsol_mcp/_g3_results.py：539707B / f37353ee6419cffc45bb940cdcc0321a714e05727b4a4dbdd0eff520e707706f。
-- tests/test_u06_stationary_measure_integration.py：35746B / 188491d5bf0535b9d19e42d89b870b2c92199e9b827e607e2234d84f27d50623。
-- tests/u06_stationary_measure_inert.py：9557B / be60ab9d9c9985227f11fc442f642b3ce85d737aaaeaf9499e519fd49295085c。
-- tests/test_g3_w17.py：82979B / cb1914632d5d4517b7c920188749483209797815d2ed9c80a95b4a804bcd2d35。
+Q6下一次normal flow必须由Main具体释放现有binder.prepare_owned_layout_from_capsule，经真实完整precopy后独占复制新ebb5命名空间owned-base；再由其lexical Python -I -B启动原operator：offline-install→含自建内容漂移的negative uninstall plan→只移除自有inside sentinel→ready plan→confirm removal仅该application。原SourceBase只读，owned-base和application为新root兄弟，genuine HOME/home/CODEX_HOME保留；known结果核SourceBase并保存primary/postcheck/record双因，firstUNKNOWN即原owner hold，零后扫描/重试/清理。当前7859B最小driver与实际Mainrelease已通过无效果validate_release/argv校验，Main已放行一次原正常流程，copy/runtime/install/uninstall真实结果待报，不推断完成；普通Q6代码无Core内存门，不能新增required或推导执行许可。OS级只能写runroot隔离尚未证明。
 
-全部mode0644，三产品等已接受R5。通用修复覆盖预算先于真实getter、legacy RemoteJava子receiver/named probe fence、固定typed ParamBase READ链、实际S/M单位及RMS受控换算、real绝对/imag差值/preserve复数中心、UNKNOWN先latch再退出并保留原owner。无public schema/CAPABILITIES/D2/Java扩权。仿射RMS在无冻结physicalzero约定时仍显式unsupported，非full427接受。
+Windows R23r2已修scratch关闭次序、invalid descriptor后继续SDK、PE header-RVA剩余extent，current21 unique inert有原run02返回/trace；Strong/Main源码接受保持。新R23r3只更新identity数据，10程序与已接受r2相同、29函数/2类operator AST相同，A0–A5原Tool/operator/transport均0。实际READY6248B/SHA0d36778bd08b50e6cd6f36bf6fdc88db4e01beb7b329f185cd4fa1994caa05f4、birth精确十进制134375482314729137；Main核84refs、8origins/15cscargv/6compiler/3runtime/6DLL。只证明来源/编译与普通父上下文；PE不证明loaded CLR，READY不证明当前存活。
 
-R5 Strong报告7843B/464fe9b8…及Main产品接受4553B/ec4a9cce…在20261026-u06-r5-delta-independent-review。R1 portable1P2拒绝9699B/a8b0848d…保留；R2把imag(T)primary改为1而独立保留source300+i1，实际center1K推导variance0，helper不变。既有断言对齐evaluateUnit UNAVAILABLE与唯一FSelection.all单实体修复均有精确失败指纹依据。R2 Strong8873B/98f15037…、0 openP1/P2，Main精确整合授权8449B/8b9a400d…。
+旧eadadd namespace因Main验收schema不兼容在本地拒绝B0，原A已过期且NO GO，不接管/查询/清理。新254f namespace首B0又在verify_freeze因Main误放两份UNSEALED补充文件而本地preclaim拒绝，无Popen/SSH/GO；原Tool与STOP_INDEX保持。两文件已原字节归档至contract-fix/r23r3-main-placement-correction/，33冻结文件、seal、原lease/acceptance均不变，Main完整冻结static/READY/Blease/argv/budget无效果预检PASS。Main只允许首次真正进入claim/transport的一次B0，known0且完整原返回落盘后才准一次预订B1记录收集。原GO截止2026-10-27T05:00:26.545Z不延长，至少60秒余量，B1仅新root既定三记录，不是进程/handle/liveness查询。首次nativeUNKNOWN零后SDK/query/restore/cleanup/retry/adopt；这不是native通过，适用同人类R18新UI/AppC/Job/新root-code-exe ACL+LowNW范围，不加服务/账号/WFP/BFE/既有ACL/COMSOL/JDK/debugger/impersonation权限。
 
-canonical当前软件：20261026-u06-canonical-integration，实际18 unique PASS（14 portable+4相关旧），JUnit3164B/6a00ec77…，summary19095B/aa99764b…，provenance18252B/9f09fa39…，Main最终接受5514B/34f1cbdbb40687d240df628c5de52c2964d86cf55c8bf5babb121805d561b203。Repo Python3.12.13 -I -B/pytest9.1.1；7实际模块路径全canonical，无privateoverlay，8类preimportdeny各1，HOME未变。旧193 manifest保持12504f82…；整合后的195 manifest e13e76a9…在测试时全核，旧4由rollback/其余189由live核。一次postrun审计把旧pin误比新文件的脚本FAIL已保留并修正，不重跑pytest、不改源码。当前18不与旧8/14/18/R3 301/R4 5/R5 3相加。
+所有旧UNKNOWN包括Lorentz CoreHOLD、R10 PTY19679、Q1、Euler89383、Windows各原owner/UI/AppC/Job继续封存；禁止poll/input/EOF/close/kill/query/cleanup/adopt/replay。新已终态builder35688/79881/60673不再poll。agent notLoaded/notfound绝不证明native终止。旧R22子退出0xc0000142且IPC前latch UNKNOWN，没有DLL原因证明，不能重分类成功。W23缺fixture仍supplemental FAILED_MISSING_TEST_INPUT。
 
-## 版本与应用构建
+后续公开MCP开发自测依冻结 `20261027-current-public-mcp-next-sequence/REMAINING_PUBLIC_MCP_SEQUENCE.md` 的合同顺序（其起跑前旧状态保留为历史）：真实构件/正常安装发现→连接与对象自省→同Model项目Java→作业/结果/资源→保存与fresh Worker重开。沿用60测试/427断言，无新增required，尚不选择heldouts。Main集中规划/验收，同terra high连续实现调试；独立Reviewer仅当前阶段审查，最终未预设统一验收仍未开始。
 
-已把pyproject.toml、comsol_mcp/_server.py VERSION、uv.lock editable comsol-mcp三处从0.1.10同步0.1.11，仅三行、mode0644、依赖和六U06文件不变。新SHA依次11b19685ccd2a68ba505e3d1c594dd8c34f8af5b2170e7adaccc208e9570f209、75770adb7d3bc459a1aebd82c7065c894020d9374283dcdfac7869e263e467c7、4ef8d92c9317188a0cb9acfe0dd1ecdd88325a6ec44bd5bba9b6803d62c21d41。Main版本接受1806B/190e37ee…在20261026-current-version-011；预写脚本失败原件保留。195输入是版本改动前快照，不能声称与整个新live tree相同；原18产品/测试指纹保持有效。无tests/uvsync/build/native。
+本次实际Windows结果覆盖先前pendingGO状态：B0/B1实际原Tool/operator/transport0，collect三文件25853B逐Base64/hash匹配，FAILURE为UNKNOWN_OWNER_RETAINED。Main已读55行journal并核20refs114482B；profiles/scratch/新UI/Job/两helper已创建resume，Afirstpredicate process_live=false，原HANDLE GetExit BOOL1/exit0xc0000142、lastError122陈旧，IPC/ABA/正常cleanup未完成。254f所有一次额度花完，零后remote/SDK/query/restore/cleanup/retry/adopt；当前存活状态未查。Volta独立限定capture复审进行，Euler仅做已保存证据/官方文档/现有工具的源侧架构可行性，不启动下一实验。
 
-Euler已交只读buildprep：20261026-current-coherent-app-build-prep/BUILD_PREP_HANDOFF.md14378B/607189a1…、INPUT_PINS203184B/e718aab1…、proposal39290B/79b67b85…。其基线明确为U06整合前，不作当前源。已重核普通依赖Win34/ARM41/Intel40和派生crypto1，共116target rows；Java9source及168013B/fce17263…worker不变，不重编Java。新版必须新firstparty wheel，不复用旧484a或helper07归档；实际membership需从新canonical派生，不预填199。
-
-同Euler任务01a17814-d134-76b1-ba12-928cfc2135aa在准备完整执行壳（实际submission以roles中记录为准）：fresh输出/源commit待本阶段真实发布后绑定，固定builder/uv/第三方哈希，whole-tree网络deny/output-only profile，child-only pip/python环境保留HOME/home/CODEX_HOME，outeroriginalPopen先root再init、UNKNOWN保留，不重放旧observe_cli。现仅私有prep，没有build/process执行权限。内层原pip argv无-I/-B必须披露，不宣称继承外层flags或所有descendant UNKNOWN安全。版本仅改本项目时，派生crypto provenance需透明重绑新选定lock并保留原Rustbuild来源，不能伪称新锁是原编译输入。OpenSSL实际4.0.3，旧archive entry名4.0.2是已知兼容命名差异，暂不改已接受helper。未来逐wheel双向成员/METADATA/WHEEL/RECORD及三archive exactmanifest逐成员核验。
-
-## Windows实际失败与围栏
-
-R20新root nonce3bc51410447ef3bfab5e3d49a02beb85，13材料177196B、manifest6f0aec51…、operator38209B/b548ad91…、seal4551B/741bc8ac…及fullchain经Strong0P1/P2和Main接受。原A窗口11:24:31.628845—11:54:31.628845UTC。A0-A5六真实originalTool/operator0；Main核basefields/12streams/8origins/actualordinarycontext/15compilerargv/runtime/System32source，actualREADY5828B/f27a30b6…。A1本地路径127在operator前、无远端请求；stageAindex hash录入错误由独立erratum纠正依据，原index不改。
-
-B0一次known0，11:35:31.473418—11:35:32.017059UTC，在原A期内；B1一次known0/capture0，11:36:22.528753UTC返回，无live session。三capture共18002B：GO-consumed303B/7dadeee8…、FAILURE251B/8f2e21b0…、journal17448B/b1384d29…共46行。Main逐originalTool/basefields/原streams/同bufferbase64/hash核验；index8415B/c7f42cb8…，Main6174B/b841692fbc8e4f9bec78f114964edd55e9b6ebc066d2a9424df6627908a6ef2e。两helper CreateProcessW true、Resume前count1；A在storageIPC前原handle查询BOOL1返回exit3221225794=0xc0000142。先前childidentity/token/Job/deny-policy Refusal触发准备X，prewrite确认非STILL_ACTIVE后进入UNKNOWN，未写IPC。last_error122在成功BOOL旁不是失败根因。唯一terminal UNKNOWN_OWNER_RETAINED，无helper frame/A/B/A/normalclose/delete/parentexit/nativeC/System/MCP通过证明；specific DLL/CLR/UIACL/resource原因未证实。
-
-R20所有one-shot已消耗，**不再连接/read/query/SDK/恢复/cleanup/adopt/retry**，原parent/resource graph保留。已知A退出不等于可清理未知owner图。Plato任务01a17809-a8a9-78a1-9d82-cc2d251baf67仅对本地capture/source和官方文档做强审及下一条最小诊断建议，无R21/新lease。R19原B1 sharing失败仍nativeUNVERIFIED、全部旧root fenced。新增reader journal-only ReadWrite-sharing/其余Read-sharing，SHA/base64同bounded bytes，但不保证atomic或same-length原位改写检测。
-
-直接human call_e35…“允许本次及后续同范围诊断”持续有效，仅同已核验机器、同R18临时AppC/Job/helper/privateUI/SACL作用范围、Main接受和全新namespace；不重复确认。人类记录1695B/689c60c4…在R18 review目录。无服务/账号/WFP/BFE/既有ACL/COMSOL/JDK更改和旧owner接管授权。
-
-## Mac、helper与全目标边界
-
-normalhelper exact5已接受整合/发布6b8f0649：helper222690B/ab8cb109…，测试finalf4dd7f0b…；145绿属于此前7526/40b1，最终ab8/f4dd仅bootstrapfocused1，不相加。Q4capture29unique与21subtests分开；人工trace结束不是native寿命证明。Q5 operator65158B/e32ceff5…、observer7896B/3cd1026e…相同Q4，3unique/20pins核验并Main接受5009B/f8765506…；finalapp/wheel/lock/requirements/manifest/archive仍NOT_BOUND。
-
-selected nonframework Base静态WHEEL_PKG_DIR为空，effective选择/启动/venv/ensurepip/pip/install未运行。最近授权资源变化后实际free pages41537×16384=680542208B=0.633804GiB，仍低于原Server2GiB/Worker1GiB门槛，disk满足原8GB；无内存变更/降线/把inactive当free或无条件重测。Mac新native不放行。
-
-旧Mac R10 PTY19679/190对象、Q1和全部旧Win UNKNOWN保留原owner，不poll/input/EOF/close/kill/query/cleanup/adopt/replay。Lorentz原CoreHOLD不关；Bernoulli远端UNKNOWN context不随意关闭。旧Q2R4 CreateProcess前auto-review拒绝的HOME覆盖形状保持NOT_RUN，不绕过。W23缺fixture保持supplemental FAILED_MISSING_TEST_INPUT。
-
-## 发布与下一动作
-
-最新已fresh核HEAD/origin/main/FETCH_HEAD为d77d6fb1c2bc303b69bd30dbe96c58f7c2b70b4f，parent6b8f0649。当前exact14源码阶段（U06六文件+版本三文件+Main3+两紧凑证据）正在普通non-force发布准备，pre-fetch known0且remote未变；新commit/readback尚未发生。目录20261026-u06-canonical-source-publication。持续同步授权有效，禁止raw/凭据/运行目录/商业二进制入库，CI NOT_CHECKED。
-
-完成普通push并fresh逐blob读回后，继续完整buildprep/真实commit绑定；Main集中审execution/profile后才新构建。并行收Strong R20失败根因建议，只有新具体方案通过Main才考虑下一条fresh诊断。完整273/60/427、平台native、savefreshreopen、两个unpreset任务族和fresh最终Reviewer均未通过，不报完成。
+Q6 once release在execution-prep-r1/MAIN_RELEASE_ONCE.json，SHA4efd07194e053bc28f426df69096280e492cddf2082f2446988e416499a9c6c2，driver SHA0eca87b0e52620de01b41047577498a9da3ae2d6cf6e1f988c430468cd9a2318；Main完整7859B源码及原RootedCapturePrep审阅后在noeffects gate实际validate_release/launchargv通过。相同terra执行唯一正常序列，不改capsule/source，不手动ensurepip/pip/repair，不执行Core；普通helper内部短时loopback隔离probe属于原合同，无externalnetwork/download。原始Tool先store+notify/原样落盘，driver全量stdout/stderr重定向避免截断。首次UNKNOWN原owner非返回hold，known非零保存后交Main决定，不自动换root。
