@@ -1,0 +1,68 @@
+{
+  "schema": "windows-netsh-query-owner-software-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_CANONICAL_SOURCE_SOFTWARE",
+  "version": "0.1.14",
+  "source_commit": "b642eab24e889efeb217344019cb71077cf93cd5",
+  "source_tree": "330d183a05dee04430f2694cccfa98ef364f8d20",
+  "parent_published": "bea799f1a075258be0b65fb8d4109e58b11ecf14",
+  "production_sources": {
+    "comsol_mcp/_windows_t037_network.py": {
+      "bytes": 22235,
+      "sha256": "a94e6788a7d68a2fb6a6d4d42894fadaafe8427fa4d3f6e22d14ca6dd67afa94"
+    },
+    "comsol_mcp/_windows_netsh_query.py": {
+      "bytes": 9710,
+      "sha256": "7b046530a9d3ed078fb9a78b58309428d9b9639f765b8cc22bbe2361e506cffa"
+    }
+  },
+  "changed_ten_file_fingerprint_sha256": "3bac5320139fa50cfb954f97c9be06f43287b6a28a73a0d55fbfcc9b20ba8a54",
+  "distinct_software_results": [
+    {
+      "scope": "focused fake SDK",
+      "passed": 199
+    },
+    {
+      "scope": "selected qualification/registration",
+      "passed": 39
+    },
+    {
+      "scope": "complete original five-file broader tests",
+      "passed": 80,
+      "subset_nine_not_added": true
+    }
+  ],
+  "main_acceptance": {
+    "path": "_state/universal-main-review/20261028-windows-netsh-owner-integration-r1/MAIN_CANONICAL_SOURCE_SOFTWARE_ACCEPTANCE.json",
+    "bytes": 6264,
+    "sha256": "e2c05196b9511adaa874f9a0c01f6f88820619244622d5d69a3e671a9b698f6f"
+  },
+  "independent_affected_review": {
+    "REVIEW.md": {
+      "path": "_state/universal-main-review/20261028-windows-netsh-broader-correction-independent-review-r1/REVIEW.md",
+      "bytes": 8135,
+      "sha256": "faa6745647b2d43998fa0015c7192df7a22d4779dd682606d0ebfa7da668eae3"
+    },
+    "RESULT.json": {
+      "path": "_state/universal-main-review/20261028-windows-netsh-broader-correction-independent-review-r1/RESULT.json",
+      "bytes": 1981,
+      "sha256": "668969ff9bdff9bb2859ff7f66f622d6d92b82f96619fe046a0c919eccf03720"
+    },
+    "EXACT_INPUT_PINS.json": {
+      "path": "_state/universal-main-review/20261028-windows-netsh-broader-correction-independent-review-r1/EXACT_INPUT_PINS.json",
+      "bytes": 11816,
+      "sha256": "52c78abee1f3cd89a41cb83dc920cf3e457f0ddd6eaf40410ec0007e5013c56d"
+    }
+  },
+  "private_r3_acceptance": {
+    "path": "_state/universal-main-review/20261027-windows-netsh-owner-fix-r3-independent-review-r1/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+    "bytes": 2487,
+    "sha256": "00f98f4f5f825e3e8077a9095a4dfe72beb37d8c1e028768ad647052bc9c1449",
+    "mode": "0o644"
+  },
+  "limits": [
+    "Windows native NOT_RUN",
+    "0.1.14 build/install/actual public MCP NOT_RUN",
+    "0.1.13 actual runtime belongs to earlier source and artifacts",
+    "full 273/60/427 and final qualification not complete"
+  ]
+}
