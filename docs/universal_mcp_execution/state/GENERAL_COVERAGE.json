@@ -178,7 +178,7 @@
     },
     {
       "path": "comsol_mcp/_g2_public_api.py",
-      "sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+      "sha256": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
       "pin_receipt_match": false,
       "receipt_sha256": "9c8f8823dfa3ee8f8535c945d6b5867e7c846972cc720e2dbdc33bf4bd2ec6d5",
       "git_blob": "5355697116d691c92f98149e1d860f97b729b9fe",
@@ -578,7 +578,7 @@
   ],
   "api_capability_snapshot_binding": {
     "source_path": "comsol_mcp/_g2_public_api.py",
-    "source_sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+    "source_sha256": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
     "fixed_source_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
     "extraction": "static AST expansion of _CAPABILITY_ROWS _cap calls and the source-declared typed-property family loop; no product module import",
     "affected_action_rows": [
@@ -822,7 +822,8 @@
           "status": "UNVERIFIED",
           "comsol_contacted": false,
           "reason": "本轮授权限定为静态源码映射，明确不运行COMSOL。"
-        }
+        },
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；关联响应外层 success=true，内层 NOT_FOUND、roots_examined=[]；roots=[] 为绑定源码成功门推得的请求参数，未验证真实安装发现。"
       },
       "uncovered_reasons": [
         "静态源码只确认handler可达；本轮没有执行MCP handler或COMSOL，不能据此判定该操作、版本、许可证、数值或物理验收通过。",
@@ -1207,7 +1208,8 @@
           "status": "UNVERIFIED",
           "comsol_contacted": false,
           "reason": "本轮授权限定为静态源码映射，明确不运行COMSOL。"
-        }
+        },
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；关联响应外层 success=true，内层 PASS_STATIC，所测 installation 静态检查；不推导 JDK/Core/许可或 COMSOL native 通过。"
       },
       "uncovered_reasons": [
         "静态源码只确认handler可达；本轮没有执行MCP handler或COMSOL，不能据此判定该操作、版本、许可证、数值或物理验收通过。",
@@ -2375,7 +2377,8 @@
           "status": "UNVERIFIED",
           "comsol_contacted": false,
           "reason": "本轮授权限定为静态源码映射，明确不运行COMSOL。"
-        }
+        },
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；经公共 registry_list 工具收到第一页 count=1、cursor=1 和续页 count=2、cursor=3，limit=0 返回 INVALID_REQUEST；仅该次分页及无效参数路径，未单独调用 registry_call(registry.list)。"
       },
       "uncovered_reasons": [
         "静态源码只确认handler可达；本轮没有执行MCP handler或COMSOL，不能据此判定该操作、版本、许可证、数值或物理验收通过。",
@@ -2556,7 +2559,8 @@
           "status": "UNVERIFIED",
           "comsol_contacted": false,
           "reason": "本轮授权限定为静态源码映射，明确不运行COMSOL。"
-        }
+        },
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；公共 registry_describe 对 runtime.discover/runtime.doctor 返回描述；operation_describe 对同两项返回描述，是独立兼容入口；不等于对象 api.describe 或任意 operation 通过。"
       },
       "uncovered_reasons": [
         "静态源码只确认handler可达；本轮没有执行MCP handler或COMSOL，不能据此判定该操作、版本、许可证、数值或物理验收通过。",
@@ -2925,7 +2929,8 @@
           "status": "UNVERIFIED",
           "comsol_contacted": false,
           "reason": "本轮授权限定为静态源码映射，明确不运行COMSOL。"
-        }
+        },
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；公共 registry_call 的两次受限静态操作获得关联响应；本次未覆盖该动态入口的所有 operation、权限、错误或 native 路径。"
       },
       "uncovered_reasons": [
         "静态源码只确认handler可达；本轮没有执行MCP handler或COMSOL，不能据此判定该操作、版本、许可证、数值或物理验收通过。",
@@ -12871,14 +12876,14 @@
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "CAPABILITIES",
-            "line": 165,
-            "end_line": 165
+            "line": 166,
+            "end_line": 166
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "describe_api",
-            "line": 406,
-            "end_line": 437
+            "line": 680,
+            "end_line": 711
           },
           {
             "role": "dispatch_or_handler",
@@ -12891,8 +12896,8 @@
             "role": "dispatch_or_handler",
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "describe_api",
-            "line": 406,
-            "end_line": 437
+            "line": 680,
+            "end_line": 711
           }
         ],
         "entrypoint_sources": [
@@ -12953,14 +12958,14 @@
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
-            "line": 408,
+            "line": 682,
             "symbol": "describe_api",
             "text": "_refuse(\"api.describe has unknown fields\")",
             "role": "literal_occurrence_only_not_proof"
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
-            "line": 424,
+            "line": 698,
             "symbol": "describe_api",
             "text": "\"schema_version\": 1, \"operation\": \"api.describe\", \"status\": status,",
             "role": "literal_occurrence_only_not_proof"
@@ -12994,19 +12999,19 @@
             {
               "path": "comsol_mcp/_g2_public_api.py",
               "symbol": "VERSION",
-              "line": 16,
-              "end_line": 16
+              "line": 17,
+              "end_line": 17
             },
             {
               "path": "comsol_mcp/_g2_public_api.py",
               "symbol": "CAPABILITIES",
-              "line": 165,
-              "end_line": 165
+              "line": 166,
+              "end_line": 166
             }
           ],
           "api_capability_source_snapshot": {
             "path": "comsol_mcp/_g2_public_api.py",
-            "sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+            "sha256": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
             "refresh_scope": [
               "api.describe",
               "api.invoke",
@@ -13031,14 +13036,14 @@
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "CAPABILITIES",
-            "line": 165,
-            "end_line": 165
+            "line": 166,
+            "end_line": 166
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "describe_api",
-            "line": 406,
-            "end_line": 437
+            "line": 680,
+            "end_line": 711
           },
           {
             "role": "dispatch_or_handler",
@@ -13051,8 +13056,8 @@
             "role": "dispatch_or_handler",
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "describe_api",
-            "line": 406,
-            "end_line": 437
+            "line": 680,
+            "end_line": 711
           }
         ],
         "candidate_unit_test_files": [
@@ -13185,20 +13190,20 @@
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "CAPABILITIES",
-            "line": 165,
-            "end_line": 165
+            "line": 166,
+            "end_line": 166
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "prepare_invoke",
-            "line": 369,
-            "end_line": 403
+            "line": 643,
+            "end_line": 677
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "execute_prepared",
-            "line": 458,
-            "end_line": 514
+            "line": 732,
+            "end_line": 788
           },
           {
             "role": "dispatch_or_handler",
@@ -13211,15 +13216,15 @@
             "role": "dispatch_or_handler",
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "prepare_invoke",
-            "line": 369,
-            "end_line": 403
+            "line": 643,
+            "end_line": 677
           },
           {
             "role": "dispatch_or_handler",
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "execute_prepared",
-            "line": 458,
-            "end_line": 514
+            "line": 732,
+            "end_line": 788
           }
         ],
         "entrypoint_sources": [
@@ -13321,19 +13326,19 @@
             {
               "path": "comsol_mcp/_g2_public_api.py",
               "symbol": "VERSION",
-              "line": 16,
-              "end_line": 16
+              "line": 17,
+              "end_line": 17
             },
             {
               "path": "comsol_mcp/_g2_public_api.py",
               "symbol": "CAPABILITIES",
-              "line": 165,
-              "end_line": 165
+              "line": 166,
+              "end_line": 166
             }
           ],
           "api_capability_source_snapshot": {
             "path": "comsol_mcp/_g2_public_api.py",
-            "sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+            "sha256": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
             "refresh_scope": [
               "api.describe",
               "api.invoke",
@@ -13358,20 +13363,20 @@
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "CAPABILITIES",
-            "line": 165,
-            "end_line": 165
+            "line": 166,
+            "end_line": 166
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "prepare_invoke",
-            "line": 369,
-            "end_line": 403
+            "line": 643,
+            "end_line": 677
           },
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "execute_prepared",
-            "line": 458,
-            "end_line": 514
+            "line": 732,
+            "end_line": 788
           },
           {
             "role": "dispatch_or_handler",
@@ -13384,15 +13389,15 @@
             "role": "dispatch_or_handler",
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "prepare_invoke",
-            "line": 369,
-            "end_line": 403
+            "line": 643,
+            "end_line": 677
           },
           {
             "role": "dispatch_or_handler",
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "execute_prepared",
-            "line": 458,
-            "end_line": 514
+            "line": 732,
+            "end_line": 788
           }
         ],
         "candidate_unit_test_files": [
@@ -13500,8 +13505,8 @@
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "CAPABILITIES",
-            "line": 165,
-            "end_line": 165
+            "line": 166,
+            "end_line": 166
           },
           {
             "role": "dispatch_or_handler",
@@ -13617,19 +13622,19 @@
             {
               "path": "comsol_mcp/_g2_public_api.py",
               "symbol": "VERSION",
-              "line": 16,
-              "end_line": 16
+              "line": 17,
+              "end_line": 17
             },
             {
               "path": "comsol_mcp/_g2_public_api.py",
               "symbol": "CAPABILITIES",
-              "line": 165,
-              "end_line": 165
+              "line": 166,
+              "end_line": 166
             }
           ],
           "api_capability_source_snapshot": {
             "path": "comsol_mcp/_g2_public_api.py",
-            "sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+            "sha256": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
             "refresh_scope": [
               "api.describe",
               "api.invoke",
@@ -13654,8 +13659,8 @@
           {
             "path": "comsol_mcp/_g2_public_api.py",
             "symbol": "CAPABILITIES",
-            "line": 165,
-            "end_line": 165
+            "line": 166,
+            "end_line": 166
           },
           {
             "role": "dispatch_or_handler",
@@ -59235,7 +59240,8 @@
         "evidence_status": "NOT_RUN",
         "reliable_inheritance": "NONE_CASE_LEVEL_EVIDENCE",
         "rationale": "该子断言属于已冻结通用核心要求；没有与当前固定源及该断言精确绑定的可靠继承验收证据。",
-        "linked_existing_core_tests": []
+        "linked_existing_core_tests": [],
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；经 registry_call 得到 discover NOT_FOUND 与 installation doctor PASS_STATIC 的真实关联响应；不证明六组合、两版本、JDK/classpath 或 native 安装发现。"
       },
       {
         "assertion_id": "T001.EXECUTION.03-b25a0df5",
@@ -62630,7 +62636,8 @@
         "evidence_status": "NOT_RUN",
         "reliable_inheritance": "NONE_CASE_LEVEL_EVIDENCE",
         "rationale": "该子断言属于已冻结通用核心要求；没有与当前固定源及该断言精确绑定的可靠继承验收证据。",
-        "linked_existing_core_tests": []
+        "linked_existing_core_tests": [],
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；一次真实 stdio 观测 11 条关联响应、tools/list 112 项（只列出）、两个分页及 isError/structuredContent；该条完整多范围断言与全部目标维持原状。"
       },
       {
         "assertion_id": "T038.PASS.01-2c7d92f6",
@@ -62656,7 +62663,8 @@
         "evidence_status": "NOT_RUN",
         "reliable_inheritance": "NONE_CASE_LEVEL_EVIDENCE",
         "rationale": "该子断言属于已冻结通用核心要求；没有与当前固定源及该断言精确绑定的可靠继承验收证据。",
-        "linked_existing_core_tests": []
+        "linked_existing_core_tests": [],
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；本次原 stdout 的 11 行均为相应 JSON-RPC 响应，日志在 stderr；此为单次有界观测，不提升冻结全目标断言状态。"
       },
       {
         "assertion_id": "T038.PASS.03-377095b2",
@@ -64683,7 +64691,8 @@
         "evidence_status": "NOT_RUN",
         "reliable_inheritance": "NONE_CASE_LEVEL_EVIDENCE",
         "rationale": "该子断言属于已冻结通用核心要求；没有与当前固定源及该断言精确绑定的可靠继承验收证据。",
-        "linked_existing_core_tests": []
+        "linked_existing_core_tests": [],
+        "evidence_note": "证据见 scoped_public_mcp_runtime_evidence；已保留本次离线安装原日志与安装结果；不覆盖完整小模型、LAN/完全隔离或其他目标要求。"
       },
       {
         "assertion_id": "T056.EVIDENCE.02-065db0db",
@@ -75733,7 +75742,7 @@
       ],
       "source_snapshot": {
         "source_path": "comsol_mcp/_g2_public_api.py",
-        "source_sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+        "source_sha256": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
         "fixed_source_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
         "extraction": "static AST expansion of _CAPABILITY_ROWS _cap calls and the source-declared typed-property family loop; no product module import",
         "affected_action_rows": [
@@ -76380,5 +76389,44 @@
     "恢复回执与PIN定义固定基线；source_fingerprints若记录CURRENT_WORKTREE_DIFFERS_FROM_RESTORE_RECEIPT，按当前候选源码记录，不改写PIN或恢复回执。",
     "tests/test_interp_native_default_units.py和unit-default证据目录属于当前工作树附加内容；单测范围不等同COMSOL原生、数值或物理验收。",
     "目录内catalog声明的baseline_commit是历史设计目录基线；产品源码固定身份仍单独记录为cd47281777eae6f4ea0d40c5c754dca9982eda86。"
-  ]
+  ],
+  "scoped_public_mcp_runtime_evidence": {
+    "evidence_scope": "ONE_SCOPED_MACOS_ARM64_012_PUBLIC_MCP_RUNTIME; NOT_MATRIX_OR_NATIVE",
+    "public_compact": {
+      "path": "docs/universal_mcp_execution/evidence/public-mcp-0.1.12-macos-arm64-20261027.json",
+      "bytes": 5943,
+      "sha256": "8b76be46833694147ba3b583441071fd16f02d3e1a828c9522394fd56acdba9b"
+    },
+    "main_acceptance": {
+      "path": "_state/universal-main-review/20261027-public-mcp-012-actual-runtime-independent-review/MAIN_ACTUAL_RUNTIME_ACCEPTANCE.json",
+      "bytes": 4401,
+      "sha256": "57ff16e8c8d745baec1c7684c1983ededb3f3fdba53c5541281223920cb0867d"
+    },
+    "actual_handoff": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf-original-returns/ACTUAL_RESULT_HANDOFF.json",
+      "bytes": 8681,
+      "sha256": "660170c05dfcaa00601a9d736c33dc2d1a66995257442fbe56af218d2ce4e95e"
+    },
+    "raw_event_log": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf-original-returns/normal-command-events.raw.jsonl",
+      "bytes": 489924,
+      "sha256": "4e31e40725c3f23b648264622a32d6d712f07635410044fb240ce229505d1212"
+    },
+    "exact_binding": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf/ACTUAL_BOUND_BINDING.json",
+      "bytes": 4524,
+      "sha256": "396d1404bc391b8ce5e9fae6c0bdad8f92669c2a74e69d787da95c891be3be13"
+    },
+    "terminal_tool_original": {
+      "path": "_state/universal-public-mcp-readiness-prep-20261027/actual-public-mcp-r1-a6fccf-original-returns/wait-01.tool-return.json",
+      "bytes": 209,
+      "sha256": "bc0dc1edb0b2fcef939141311d766b00534abe02d29af03c746c8295b2397b29"
+    },
+    "notes": [
+      "11 correlated responses and 112 tools listed only; pagination and one invalid request observed.",
+      "stdout/stderr EOF observed for stdio and daemon; original daemon wait -15 recorded.",
+      "Original stdio wait 0, initialized notification and outgoing request arguments follow accepted source success gate; no independent raw serialization.",
+      "One offline install log preserved; native engine, COMSOL/JDK/Core and license checkout are outside this evidence."
+    ]
+  }
 }

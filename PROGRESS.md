@@ -1,11 +1,13 @@
-# 当前进度 — 2026-10-27（r330）
+# 当前进度 — 2026-10-27（r332）
 
-通用 MCP 目标 **IN_PROGRESS**。273 actions / 60 tests / 427 子断言、适用 native、真实保存及 fresh Worker 重开、两个未预设 licensed 任务族和 fresh 最终 Reviewer 均未完成；completed_groups=[]，heldout NOT_SELECTED。案例不作主线。
+通用 MCP 目标 **IN_PROGRESS**。273 actions / 60 tests / 427 子断言、适用 native、真实保存和 fresh Worker 重开、两个未预设 licensed 任务族及 fresh 最终 Reviewer 均未通过；completed_groups=[]，heldout NOT_SELECTED。
 
-**Mac 0.1.12 实际公开 MCP 一次运行已获 Strong/Main 限定接受。** 原 Tool session 20027 的 wait-01 terminal 0、outer wait 0；实际离线安装、199 package origins、11 responses / 112 tools、分页 1+2、负控 INVALID_REQUEST；discover NOT_FOUND、doctor PASS_STATIC。daemon 与 stdio 双 EOF，daemon 原 wait -15 为 PLANNED_SIGTERM。stdio wait 0 和 outgoing initialized 由已审源码成功门推导，没有独立序列化原值。实际控制通道为 127.0.0.1 动态 TCP loopback（来源更正），不是 Unix socket，也不证明 OS confinement。application 保留；不卸载、不重跑或复 poll 20027。Volta 0 P1/P2，Main 核36 inputs / 4788745B无漂移并限定接受；本阶段紧凑证据发布 PENDING，273 个逻辑 catalog 与冻结 coverage 的 unique ID 集合一致；registry 条件追加独立只读 code.describe_java，state SUPPORTED_UNVERIFIED，形成 metadata total 274。额外项身份基于已安装源码/hash 对齐的静态推导，本次未单独列页或调用，不是新增 required 或功能 alias。[紧凑证据](docs/universal_mcp_execution/evidence/public-mcp-0.1.12-macos-arm64-20261027.json)。
+Mac 0.1.12 实际公开 MCP 阶段已获 Strong/Main 限定接受并普通非强制发布；公开 HEAD/origin main/FETCH_HEAD `b230fe16c8f418d6bbcfd4e9713b5a89cb461d4e`，四 API blobs 已独立字节回读，207 应用源码 blobs 与 d774ec0e 一致。该验收不代表 Core/native、license 或全目标通过。
 
-**Windows r4 文件 fixture 与静态验证限定接受。** F0/F1/F2 原 Tool 均 0，真实 PowerShell 六 cases 通过；本地 full static Tool 0、12 materials / 80819B、跨层 failure-cap guard 通过。[Main 接受](_state/universal-main-review/20261027-ordinary-x-a6-ps-file-fixture-actual-r1-28951af4/MAIN_ACTUAL_FILE_FIXTURE_AND_STATIC_ACCEPTANCE.json)。这不构成 native 验收。
+**Coverage 证据对齐已获 Main 限定接受，四文件发布候选待 Main。** 既有 ledger 增补 actual MCP 的九项 notes 与共享指针；Main 核整个 JSON 精确等于10项新增/18基线 guards及56个静态 API 叶路径元数据刷新，全部执行和断言状态、273/60/427 不变。旧 `--check` exit2/API_SNAPSHOT_CHANGED 保留，refresh 与最终 `--check` 原 Tool 均 0；不等于 native 或 M1 全通过。ledger 2950510B/SHA 00af26d7ab492a49521109a4c4a9b2a79a36e3fe19cbbafbd268e3922b095858；[Main 接受](_state/universal-public-mcp-readiness-prep-20261027/owner-public-coverage-delta-r1/refresh-20261027-r1/MAIN_COVERAGE_DELTA_ACCEPTANCE.json)。
 
-Main 已放行并派 Aristotle 执行 r4 Stage A：**MAIN_RELEASED_RESULT_PENDING**，A0–A5 各一次且前序 known0 才继续；A5 known0 READY 或 knownnonzero 后均停 Main，A6/B0/B1/helper/X 未放行。原返回指针 `_state/universal-main-review/20261027-ordinary-x-r4-stage-a-original-returns/`；不读取实际远端根，不查询或轮询旧资源。旧 r3 A5 terminal1/no READY、9681 及其他旧 UNKNOWN 均 fenced。
+Windows R5 初版因 fstat 仅校验 size 未绑定 opened file 被 Huygens 指出 1 P2；新 R5-r2 已修复并完成 fake/full static/freeze，seal 942570fb5dc35881fcac637b34dfb5460ddb0ededd3fe7dd9ac611330d1a12af，manifest dc023758604bed2626c869b0754d6b3fe233c890202aba4a87960384bd8c53ff，Huygens affected复审0 P1/P2，Main核110 inputs/568669B无漂移并限定接受源码。WinPath/fd 差异属同版 CPython 静态兼容依据，不是 Windows 实际运行证据；reserved remote 02ed 未探测/创建/授权，无 R5-r2 runtime release。
 
-已发布 HEAD/origin main eba4d1c8，207 应用 blobs 与 d774ec0e 一致。Core strict-free 142901248B，Server 2GiB / Worker 1GiB 门槛 BLOCKED；不重复资源采样。下一步：Main 发布本阶段紧凑证据，并依 r4 实际 Tool/run 指针处理 Stage A 和 A5 conditional lease。详 RESUME.json.current_checkpoint_r330。
+原 R4 7ea UNKNOWN owner、9681 等继续 fenced，R4 collector 已花费，不再读取或 SDK/GO/cleanup/retry。Core 上次 03:30Z strict-free 142901248B 低于 Server 2GiB/Worker 1GiB 门槛，记录为 BLOCKED，非当前新测，不复采。
+
+下一步：Main 发布本 coverage 证据对齐候选；R5-r2源码已接受；按持续同范围权限由Main决定fresh runtime。详 RESUME.json.current_checkpoint_r332。
