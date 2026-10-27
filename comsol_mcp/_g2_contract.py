@@ -65,6 +65,8 @@ def signature_spec(signature: Any) -> dict[str, Any] | None:
         "java.lang.String": ("string", 0), "String": ("string", 0),
         "[Z": ("boolean", 1), "[I": ("int32", 1), "[J": ("int64", 1),
         "[D": ("float64", 1), "[Ljava.lang.String;": ("string", 1),
+        "[[Z": ("boolean", 2), "[[I": ("int32", 2), "[[J": ("int64", 2),
+        "[[D": ("float64", 2), "[[Ljava.lang.String;": ("string", 2),
         "boolean[]": ("boolean", 1), "int[]": ("int32", 1),
         "long[]": ("int64", 1), "double[]": ("float64", 1),
         "java.lang.String[]": ("string", 1), "String[]": ("string", 1),
