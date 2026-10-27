@@ -1,9 +1,9 @@
-# 当前进度 — 2026-10-28（r357）
+# 当前进度 — 2026-10-28（r368）
 
-目标 **IN_PROGRESS**；273/60/427、native、save + fresh Worker、两个未预设任务族及 fresh final reviewer 未全通过；completed_groups=[]、heldouts NOT_SELECTED、final NOT_STARTED。
+目标 **IN_PROGRESS**；273/60/427、native、save + fresh Worker、两个未预设任务族和 fresh final reviewer 未全通过；completed_groups=[]、heldouts NOT SELECTED、final NOT STARTED。
 
-`.14` Windows netsh query owner 源码/软件已 Strong/Main 接受，本地源码提交 `b642eab24e889efeb217344019cb71077cf93cd5`；focused 199、selected 39、完整原范围 80 PASS 分开计数，旧失败保留。`.14` build/install/Windows native NOT_RUN；已接受构件和 Mac 软件协议仍属 `.13` / `53c16d…`。[源码证据](docs/universal_mcp_execution/evidence/windows-netsh-query-owner-0.1.14-20261028.json)。
+`.14` 四个实际 build 产物及独立 source ZIP 的字节与绑定已 Strong/Main 限定接受：[构件证据](docs/universal_mcp_execution/evidence/distribution-0.1.14-20261028.json)。209 HEAD/sourceZIP、203 release source、200 package、206 wheel 是不同集合；source ZIP 是独立数据装配，不是原 builder 第五输出。Intel Rust 来源及 OpenSSL label 历史限界保留。
 
-phase1 R5 实际 SSH 认证拒绝 terminal255，stdout 0/stderr 310，inventory NOT_OBSERVED，target 当前 UNKNOWN_NOT_QUERIED；失败证据 Strong/Main 接受，R5 SPENT 不重派/查询/清理。[失败证据](docs/universal_mcp_execution/evidence/windows-readonly-inventory-auth-refusal-20261028.json)。R6 仅源码/数据准备和窄范围复审，无 runtime lease。
+最新接受的构件为 `.14`；最新实际 normal-install/public MCP 软件 runtime 仍 `.13` / 53c，`.14` 安装/MCP/native NOT_RUN。R8 的 25 项有限只读发现和 A3 policy canary 分别限定接受，不构成 native 全通过。[R8 证据](docs/universal_mcp_execution/evidence/windows-readonly-finite-discovery-20261028.json)。
 
-最后已接受公开 HEAD 为 `bea799f1a075258be0b65fb8d4109e58b11ecf14`；本地源码和 r357 五文件拟按持续授权普通同步，实际发布以原 Tool 和远端 readback receipt 为准，此快照不预先认证成功。旧 UNKNOWN/SPENT fences 保留；Mac 历史 free 142901248B 不复采，T008 六项 recipe NOT_READY/NOT_RUN。
+公开 HEAD c4b、`.14` code b642；本阶段五文件拟按持续授权普通同步，实际状态以原 Tool 和远端 receipt 为准，本快照不预先认证推送。Main 正核候选和 Mac 材料的 HEAD 依赖。旧 UNKNOWN/SPENT fences 与失败保留，Mac 历史 free 142901248B 不复采。

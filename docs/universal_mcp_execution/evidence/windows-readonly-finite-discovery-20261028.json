@@ -1,0 +1,52 @@
+{
+  "schema": "windows-readonly-finite-discovery-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_LIMITED_READONLY_DISCOVERY",
+  "observation": {
+    "candidate_count": 25,
+    "present_directories": 19,
+    "present_files": 4,
+    "fixed_version_text_candidates_not_found": 2,
+    "not_found_winerror": 2,
+    "qualification": false,
+    "jdk_release_text": "Temurin11.0.32.1+1, text observation only, no JDK execution",
+    "dynamic_port": "NOT_RUN",
+    "source_scope": "readonly candidate discovery; no runtime qualification"
+  },
+  "evidence_limits": {
+    "EOF": "Source-derived from accepted operator draining both streams before original wait/receipt; no independently serialized EOF flags.",
+    "SDK": "Accepted source collect/finish-known/result output; no independent per-API raw journal.",
+    "binary_hashes": "Observer reported; only embedded JDK release payload independently byte-rehashed.",
+    "ACL": "Readback shape only; no effective access or child-write claim.",
+    "old_R6_R7": "Original UNKNOWN owners retained without query, reclassification or adoption."
+  },
+  "main_acceptance": {
+    "path": "_state/universal-main-review/20261028-canonical-live-c-phase1-r8-actual-discovery-independent-review-r1/MAIN_ACTUAL_FINITE_DISCOVERY_ACCEPTANCE.json",
+    "bytes": 4223,
+    "sha256": "6622cd0f8f2ad7b2b2b1cea82c9da642ed89d8daa41675de569f8a33df64037a"
+  },
+  "independent_review": {
+    "REVIEW.md": {
+      "path": "_state/universal-main-review/20261028-canonical-live-c-phase1-r8-actual-discovery-independent-review-r1/REVIEW.md",
+      "bytes": 10284,
+      "sha256": "36dd613b2b3f9b22f4dfb4c12eecd3d02eb1ce7cd1f466f5ea761097b8c58e79"
+    },
+    "RESULT.json": {
+      "path": "_state/universal-main-review/20261028-canonical-live-c-phase1-r8-actual-discovery-independent-review-r1/RESULT.json",
+      "bytes": 2769,
+      "sha256": "d5c7762158b35f3b19cabb3f72f443daa09c4d592a074cdc4becfd6f55684d64"
+    },
+    "EXACT_INPUT_PINS.json": {
+      "path": "_state/universal-main-review/20261028-canonical-live-c-phase1-r8-actual-discovery-independent-review-r1/EXACT_INPUT_PINS.json",
+      "bytes": 26842,
+      "sha256": "e9e179fb89a6226c3479981c3ae6ceae3991f07dbd14cfbbf582ebd7f23782f1"
+    }
+  },
+  "actual_handoff_sha256": "8bcc775be07eedbbb7211f0cf2c4fae8785615826f1281bfa5bc0b6d82555b98",
+  "not_established": [
+    "native product qualification",
+    "SYSTEM/WFP/SCM or effective ACL",
+    "COMSOL/JDK startup",
+    "all goal requirements or final review"
+  ],
+  "goal": "ACTIVE_NOT_COMPLETE"
+}

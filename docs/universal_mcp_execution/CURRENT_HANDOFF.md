@@ -1,8 +1,9 @@
-# 通用 MCP 当前续跑入口 — r357（2026-10-28）
+# 通用 MCP 当前续跑入口 — r368（2026-10-28）
 
-r356 Main3 原件保存在 `_state/universal-main-review/20261028-checkpoint-r357/prior-main3/`。公开最后受理 HEAD `bea799f1a075258be0b65fb8d4109e58b11ecf14`；`.14` 源码已本地 commit `b642eab24e889efeb217344019cb71077cf93cd5`、tree `330d183a05dee04430f2694cccfa98ef364f8d20`，尚待普通同步。
+r367 Main3 原件保存在 `_state/universal-main-review/20261028-checkpoint-r368/prior-main3/`。公开 HEAD/build snapshot `c4b733750ebb1ca27fc62462976d67690a1baf12`，`.14` code `b642eab24e889efeb217344019cb71077cf93cd5`。
 
-- **Windows netsh owner .14**：Strong/Main 源码软件接受 [compact](evidence/windows-netsh-query-owner-0.1.14-20261028.json)，focused 199、selected 39、原完整范围 80 PASS 为独立计数，旧失败保留。`.14` build/install/Windows native NOT_RUN；实际已接受构件和 Mac 软件协议仍是 `.13` / source `53c16d0484b8971385ef56397bc96a28c34beea4`，session41807 SPENT。
-- **phase1 R5**：已接受的有限 SSH 认证拒绝 terminal255 失败 [compact](evidence/windows-readonly-inventory-auth-refusal-20261028.json)；inventory NOT_OBSERVED、target 当前 UNKNOWN_NOT_QUERIED、native NOT_RUN。原 once SPENT，不 query/retry/cleanup；不能推断远端从未启动。R6 仅新 nonce 与现有身份绑定的 source/data 窄范围独立复审，无 runtime lease/claim。
+- **.14 构件字节**：五个实际构件统一 Strong/Main 限定接受，Main 5104B/SHA 63ef813df961e5d5dc36e6207e8b257b66a130aaac3443d9998c00993df7fa6c；513 inputs/304880147B、2909 checks。详 [compact](evidence/distribution-0.1.14-20261028.json)。209 HEAD allowlist/sourceZIP、203 release snapshot、200 package、206 wheel 分别计数；source ZIP 独立 assembly，不是原 builder 第五输出。Intel Rust b749 文档及 OpenSSL label gap 的既有限界保留。
+- **实际 runtime 与发现**：最新实际正常安装/public MCP 软件 runtime 仍 `.13` / 53c；`.14` 安装/MCP/native NOT_RUN。R8 限定 25 项只读发现已接受，[compact](evidence/windows-readonly-finite-discovery-20261028.json)；A3 仅 policy canary 接受。R6/R7 original UNKNOWN fences、R2 FAIL、r1 自动审批拒绝及旧历史不变。
+- **后续**：Main 审本阶段精确五文件，并确认 `.14` Mac 材料 HEAD 依赖后明确普通同步；实际发布以原 Tool 和 receipt 为准，不预先认证成功。Euler 仅 Mac source/data，Aristotle 仅本地 qualification source PREP，无新远端/高影响权限。
 
-下一步 Main 核本地源码与五文件候选后明确普通同步；实际发布状态以原 Tool 和 receipt 为准。273/60/427、completed_groups=[]、heldouts NOT_SELECTED、fresh final NOT_STARTED；T008 六项 recipe NOT_READY/NOT_RUN。旧 UNKNOWN/SPENT fences 保留，Mac 历史 free 142901248B 不复采；新 service/SYSTEM/WFP effects 仍须具体材料经 Main 审后获人类授权。
+273/60/427、completed_groups=[]、heldouts NOT SELECTED、fresh final NOT STARTED；Mac 历史 free 142901248B 不复采，所有已终态 session 不 poll。
