@@ -1,9 +1,9 @@
-# 当前进度 — 2026-10-27（r335）
+# 当前进度 — 2026-10-27（r347）
 
-通用 MCP 目标 **IN_PROGRESS**。冻结 273 actions / 60 tests / 427 子断言、适用 native、真实保存与 fresh Worker 重开、两个未预设 licensed 任务族和 fresh 最终 Reviewer 均未全通过；completed_groups=[]，heldout NOT_SELECTED，fresh final NOT_STARTED。
+通用 MCP 目标 **IN_PROGRESS**；273 actions /60 tests /427 子断言、native、save + fresh Worker、两个未预设 licensed 任务族和 fresh 最终 Reviewer 均未全通过；completed_groups=[]，heldouts NOT_SELECTED，fresh final NOT_STARTED。
 
-**T008 矩阵签名修复已集成 canonical 0.1.13，并获 Strong/Main 源码与软件限定接受。** Postmerge 三组 15/83/1 测试原 Tool0；版本和 coverage check 原 Tool0，52 个第三方依赖与 ledger 不变。[紧凑软件证据](docs/universal_mcp_execution/evidence/t008-matrix-signature-0.1.13-software-20261027.json)。0.1.13 构件、安装、实际 MCP、COMSOL 和 native 均 NOT_RUN，T008 六项冻结断言仍 NOT_RUN；旧 0.1.12 构件与运行证据仅适用于旧版。本阶段 11 文件普通发布候选待 Main 验收；当前公开 HEAD a214e1ca，当前 .13 工作树不能称 207 应用源仍与 d774 全部相同。
+**0.1.13 五构件真实字节已 Strong/Main 限定接受。** 一次 build known0 的 wheel+三离线包，与之后独立装配的 source ZIP 均已验；source ZIP 不是原 build 的第五输出。[紧凑证据](docs/universal_mcp_execution/evidence/distribution-0.1.13-20261027.json)。该接受不证明安装、actual MCP、native 或 COMSOL；Intel 历史 b749 来源与 OpenSSL 文件名标注差异仍保留。
 
-**Windows R5-r2 Stage B 为已知非零失败，非 native PASS。** B0/B1 known0 后固定 X exit 0xc0000142，原 wait0 表示进程已 signaled；双流空且 EOF、Job0、child/Job close，三文件 9896B。Strong/Main 仅接受[失败证据](docs/universal_mcp_execution/evidence/ordinary-x-windows-known-nonzero-20261027.json)，根因未定；parent OS 数值退出未观察，不能推当前活态。02ed GO/collector 已花费，不 query/cleanup/retry/adopt；历史 UNKNOWN owners 仍 fenced。
+AppC r2 Stage A 实际 A0–A5 Tool/operator/transport known0，已收到 raw READY；伴随报告的 safe_exec 误带旧 r1 B0/B1 命令（未执行），P2 更正与复审中，Stage B 未运行、无 GO。恢复时先读派发记录与原 Tool/receipts/claims，不重派同一 lease；expiry 14:36:24.053747Z 不延长。旧046c known refusal 已 Strong/Main 作为失败证据接受，旧 owners 与 spent fences 保留。
 
-R6 仅 source PREP：winexe 对照为待检假说，保留 Job/policy，未获 native 放行。上次 Mac strict-free 142901248B 低于 Server 2GiB/Worker 1GiB，非新测、不复采。详 RESUME.json.current_checkpoint_r335。
+.13 installed MCP 私有 source PREP 已完成最小五文件差异，SourceBase/Q6 binder/capsule/release 仍 UNBOUND，不可执行。产品源码指纹为53c/tree da7c；本阶段六文件按用户持续授权普通同步。实际同步状态以本阶段 PUBLICATION_REMOTE_READBACK.json 与原 Tool 为准；此冻结快照不预先认证推送成功。继续 AppC 原 Stage A 与 .13 SourceBase 准备，不重派旧 lease。Mac 历史 strict-free 142901248B 低于2GiB/1GiB，不复采。详 RESUME.json.current_checkpoint_r347。

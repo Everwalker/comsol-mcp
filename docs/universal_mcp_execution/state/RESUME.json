@@ -1,4 +1,1006 @@
 {
+  "current_checkpoint_r347": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 347,
+    "status": "SIX_FILE_CONDITIONAL_PUBLICATION_ACTUAL_STAGE_A_REVIEW_PENDING",
+    "active_job": {
+      "scope": "APPC_GUI_R2_STAGE_A_ONCE",
+      "status": "ACTUAL_STAGE_A_RAW_READY_RECEIVED_COMPANION_P2_CORRECTION_REVIEW_PENDING_NO_STAGE_B_GO",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 3143,
+        "sha256": "1acc02fcbf8f2f32d78b9d09f3011a2de93104b3d8224a9e38a3bbeb3f4e0644"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2155,
+        "sha256": "89b28ff1935383d835691d14c554655576e6dde8de70cfafc83a9a2811f6d6ec"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "8b5e35d07b88a6d9c1c2c8b62da371eeee797e3ce3a47c2a02b4aa858c59fd9f"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2930,
+        "sha256": "e8c9dd03802b07ea964ba8ea46e46e9a47951cfe49a61328be26f0ed2f938852"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "e77fc426b745bddaee31e5be4411ce430cb8a11174ccd6cb3851532c19866e0a"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "7f1b797a1ef1bf902e2bc014dd5752ebefd6065ec37f9dd6011e34ed02dc2199"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "331991ebf4a0d30640910ecbfeb2c176",
+      "deadline_utc": "2026-10-27T14:36:24.053747+00:00",
+      "materials": {
+        "count": 15,
+        "bytes": 235980
+      },
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "dispatch": "Already dispatched; no replay. Read original dispatch record and returns/receipts/claims.",
+      "stage_B": "NOT_RELEASED_NOT_RUN_NO_GO",
+      "windows": "A0-A5_ACTUALLY_OCCURRED_STAGE_B_NOT_RUN",
+      "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer.",
+      "dispatch_record": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json",
+        "bytes": 691,
+        "sha256": "a348a76dd44d90ed541919db90c0395ac60956e022526089e88557ea23358cbb"
+      },
+      "actual_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-stage-a-original-returns/STAGE_A_ACTUAL_HANDOFF.json",
+        "bytes": 15434,
+        "sha256": "d5a68911f27e89fac521ceb303a4ef2012fcece302f506069e3468189f06dda9"
+      },
+      "raw_READY": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/receipts/A5-READY.json",
+        "bytes": 6749,
+        "sha256": "f8678f7abcc84ee51f233221ff64099bf5410c32c4f255b4b9cac106bb80d882"
+      },
+      "review": "actual chain reviewed; companion safe_exec old r1 B0/B1 commands were not executed; P2 correction and review pending"
+    },
+    "artifact_acceptance": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
+      "bytes": 4726,
+      "sha256": "d2519e7e139b6c854904559aad8ba78e148b9688273cc006353d1c1f4006ee1e"
+    },
+    "artifact_compact": "docs/universal_mcp_execution/evidence/distribution-0.1.13-20261027.json",
+    "scope": "five accepted bytes; source ZIP separately assembled; no install/native",
+    "publication": "Six-file ordinary synchronization conditional; actual state only from r347 receipt and original Tool; snapshot does not pre-certify success.",
+    "MCP_013": "source PREP minimal five files; SourceBase/Q6 binder/capsule/release UNBOUND, no installation",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "next_action": "Main review companion Stage A safe_exec correction and independent review before considering any Stage B release; actual A0-A5 occurred and raw READY received, Stage B/GO not run. Continue AppC original owner without redispatch and 0.1.13 SourceBase preparation. Six-file ordinary publication actual status is determined only by r347 PUBLICATION_REMOTE_READBACK.json and original Tool returns; frozen snapshot does not certify push success. Goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r347/prior-main3",
+    "expected_parent": "53c16d0484b8971385ef56397bc96a28c34beea4",
+    "publication_receipt_path": "_state/universal-main-review/20261027-checkpoint-r347/PUBLICATION_REMOTE_READBACK.json",
+    "actual_stage_a": "A0-A5 Tool/operator/transport known0; raw READY received; companion P2 correction/review pending; no Stage B/GO"
+  },
+  "current_source_roles_r347": {
+    "publication": "conditional six-file synchronization; r347 receipt and original Tool govern actual outcome",
+    "appcontainer": "actual Stage A raw READY; companion P2 correction/review pending; Stage B NOT_RUN_NO_GO",
+    "MCP": "0.1.13 SourceBase/Q6 binding source preparation only",
+    "history": "r346 pre-READY snapshot historical"
+  },
+  "current_checkpoint_r346": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 346,
+    "status": "IN_PROGRESS_SIX_FILE_PUBLICATION_CONDITIONAL_SNAPSHOT",
+    "active_job": {
+      "scope": "APPC_GUI_R2_STAGE_A_ONCE",
+      "status": "EXPLICITLY_DISPATCHED_ONCE_ACTUAL_RESULTS_PENDING",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 3143,
+        "sha256": "1acc02fcbf8f2f32d78b9d09f3011a2de93104b3d8224a9e38a3bbeb3f4e0644"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2155,
+        "sha256": "89b28ff1935383d835691d14c554655576e6dde8de70cfafc83a9a2811f6d6ec"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "8b5e35d07b88a6d9c1c2c8b62da371eeee797e3ce3a47c2a02b4aa858c59fd9f"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2930,
+        "sha256": "e8c9dd03802b07ea964ba8ea46e46e9a47951cfe49a61328be26f0ed2f938852"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "e77fc426b745bddaee31e5be4411ce430cb8a11174ccd6cb3851532c19866e0a"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "7f1b797a1ef1bf902e2bc014dd5752ebefd6065ec37f9dd6011e34ed02dc2199"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "331991ebf4a0d30640910ecbfeb2c176",
+      "deadline_utc": "2026-10-27T14:36:24.053747+00:00",
+      "materials": {
+        "count": 15,
+        "bytes": 235980
+      },
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "dispatch": "Already dispatched; read original record/returns/receipts/claims; do not redispatch",
+      "stage_B": "NOT_RELEASED_NO_GO",
+      "windows": "NOT_RUN",
+      "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer.",
+      "dispatch_record": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json",
+        "bytes": 691,
+        "sha256": "a348a76dd44d90ed541919db90c0395ac60956e022526089e88557ea23358cbb"
+      }
+    },
+    "artifact_acceptance": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
+      "bytes": 4726,
+      "sha256": "d2519e7e139b6c854904559aad8ba78e148b9688273cc006353d1c1f4006ee1e"
+    },
+    "artifact_compact": "docs/universal_mcp_execution/evidence/distribution-0.1.13-20261027.json",
+    "scope": "five accepted bytes; source ZIP separately assembled; no install/native",
+    "publication": "This stage six-file ordinary synchronization is authorized under continuing user scope. Determine actual publication solely from PUBLICATION_REMOTE_READBACK.json and original Tool returns; this frozen snapshot does not certify push success. Continue the original AppC Stage A and 0.1.13 SourceBase preparation; first inspect existing dispatch record and original returns, never redispatch an old lease.",
+    "MCP_013": "source PREP minimal five files; SourceBase/Q6 binder/capsule/release UNBOUND, no installation",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "next_action": "This stage six-file ordinary synchronization is authorized under continuing user scope. Determine actual publication solely from PUBLICATION_REMOTE_READBACK.json and original Tool returns; this frozen snapshot does not certify push success. Continue the original AppC Stage A and 0.1.13 SourceBase preparation; first inspect existing dispatch record and original returns, never redispatch an old lease. Full goal remains IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r346/prior-main3",
+    "expected_parent": "53c16d0484b8971385ef56397bc96a28c34beea4"
+  },
+  "current_source_roles_r346": {
+    "publication": "Six-file ordinary synchronization conditional; receipt and original Tool govern actual state",
+    "appcontainer": "r2 Stage A dispatched once; read original dispatch and returns before any action",
+    "MCP": "0.1.13 SourceBase/Q6 binding remains preparation only",
+    "history": "r345 frozen snapshot retained"
+  },
+  "current_checkpoint_r345": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 345,
+    "status": "FIVE_ARTIFACT_BYTES_ACCEPTED_APPC_STAGE_A_DISPATCHED_RESULTS_PENDING",
+    "active_job": {
+      "scope": "APPC_GUI_R2_STAGE_A_ONCE",
+      "status": "EXPLICITLY_DISPATCHED_ONCE_ACTUAL_RESULTS_PENDING",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 3143,
+        "sha256": "1acc02fcbf8f2f32d78b9d09f3011a2de93104b3d8224a9e38a3bbeb3f4e0644"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2155,
+        "sha256": "89b28ff1935383d835691d14c554655576e6dde8de70cfafc83a9a2811f6d6ec"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "8b5e35d07b88a6d9c1c2c8b62da371eeee797e3ce3a47c2a02b4aa858c59fd9f"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2930,
+        "sha256": "e8c9dd03802b07ea964ba8ea46e46e9a47951cfe49a61328be26f0ed2f938852"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "e77fc426b745bddaee31e5be4411ce430cb8a11174ccd6cb3851532c19866e0a"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "7f1b797a1ef1bf902e2bc014dd5752ebefd6065ec37f9dd6011e34ed02dc2199"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "331991ebf4a0d30640910ecbfeb2c176",
+      "deadline_utc": "2026-10-27T14:36:24.053747+00:00",
+      "materials": {
+        "count": 15,
+        "bytes": 235980
+      },
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "dispatch": "Already dispatched; read original record/returns/receipts/claims; do not redispatch",
+      "stage_B": "NOT_RELEASED_NO_GO",
+      "windows": "NOT_RUN",
+      "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer.",
+      "dispatch_record": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json",
+        "bytes": 691,
+        "sha256": "a348a76dd44d90ed541919db90c0395ac60956e022526089e88557ea23358cbb"
+      }
+    },
+    "artifact_acceptance": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
+      "bytes": 4726,
+      "sha256": "d2519e7e139b6c854904559aad8ba78e148b9688273cc006353d1c1f4006ee1e"
+    },
+    "artifact_compact": "docs/universal_mcp_execution/evidence/distribution-0.1.13-20261027.json",
+    "scope": "five accepted bytes; source ZIP separately assembled; no install/native",
+    "publication": "six-file candidate pending Main review and explicit instruction; expected parent 53c; build HEAD freeze lifted, no Git by this prep",
+    "MCP_013": "source PREP minimal five files; SourceBase/Q6 binder/capsule/release UNBOUND, no installation",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "next_action": "Main review the exact six-file accepted-phase publication candidate and, only on explicit instruction, ordinary nonforce publish after fresh remote parent/index/security checks. For AppC r2 Stage A, first read the r344 explicit dispatch record and original returns/receipts/claims; never redispatch the same lease. Continue 0.1.13 SourceBase/Q6 private source-data preparation; no installation until concrete later release. Goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r345/prior-main3"
+  },
+  "current_source_roles_r345": {
+    "appcontainer": "r2 Stage A already explicitly dispatched; actual results pending; Stage B no GO",
+    "artifacts": "0.1.13 five artifacts Strong/Main accepted bytes only",
+    "MCP": "source PREP unbound; no install authority",
+    "history": "r344 predispatch status historical; dispatch record authoritative"
+  },
+  "current_checkpoint_r344": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 344,
+    "status": "SOURCE_ACCEPTED_STAGE_A_LEASE_BOUND_PENDING_R344_MAIN_VERIFICATION_AND_EXPLICIT_DISPATCH",
+    "active_job": {
+      "scope": "APPC_GUI_R2_STAGE_A_ONCE",
+      "status": "SOURCE_ACCEPTED_STAGE_A_LEASE_BOUND_PENDING_R344_MAIN_VERIFICATION_AND_EXPLICIT_DISPATCH",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 3143,
+        "sha256": "1acc02fcbf8f2f32d78b9d09f3011a2de93104b3d8224a9e38a3bbeb3f4e0644"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2155,
+        "sha256": "89b28ff1935383d835691d14c554655576e6dde8de70cfafc83a9a2811f6d6ec"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "8b5e35d07b88a6d9c1c2c8b62da371eeee797e3ce3a47c2a02b4aa858c59fd9f"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2930,
+        "sha256": "e8c9dd03802b07ea964ba8ea46e46e9a47951cfe49a61328be26f0ed2f938852"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "e77fc426b745bddaee31e5be4411ce430cb8a11174ccd6cb3851532c19866e0a"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "7f1b797a1ef1bf902e2bc014dd5752ebefd6065ec37f9dd6011e34ed02dc2199"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "331991ebf4a0d30640910ecbfeb2c176",
+      "deadline_utc": "2026-10-27T14:36:24.053747+00:00",
+      "materials": {
+        "count": 15,
+        "bytes": 235980
+      },
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "dispatch": "Main verifies r344 durable pointer then separately explicitly dispatches; Aristotle only PREP",
+      "stage_B": "NOT_RELEASED_NO_GO",
+      "windows": "NOT_RUN",
+      "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer."
+    },
+    "artifact_review": {
+      "status": "FIVE_ACTUAL_ARTIFACTS_KNOWN_ZERO_Volta_REVIEW_PENDING",
+      "Main_byte_checks": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_ARTIFACT_BYTE_CHECKS.json",
+        "bytes": 3075,
+        "sha256": "163774ba989dcc8deea136131ddf4f19b3c80da4bcb1305527231b5eec3f6d8e"
+      },
+      "sourceZIP_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/ACTUAL_SOURCEZIP_HANDOFF.json",
+        "bytes": 3976,
+        "sha256": "f04d31141353febf8cb1d655398df5ab160c7d99b68fa3d5767c47792eaca9e2"
+      },
+      "sourceZIP": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/source-artifact/comsol-mcp-0.1.13-source.zip",
+        "bytes": 3285134,
+        "sha256": "013a875a2099dcd88d50bed85ab3fe040e9fbcc75375fe7607b83caca3cd6c70"
+      },
+      "member_manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/source-artifact/SOURCE_ZIP_MEMBER_PINS.json",
+        "bytes": 98084,
+        "sha256": "22c3345be34dda44c9743f84db0d357bb8a07df30b78d74820cce9a9d6c71ae4"
+      },
+      "independent_final_acceptance": "PENDING"
+    },
+    "MCP_013": "SOURCE_PREP_ONLY; SourceBase/Q6 binder/capsule/release UNBOUND; no install/product",
+    "previous_046c": {
+      "status": "STRONG_MAIN_ACCEPTED_KNOWN_REFUSAL_NOT_NATIVE_PASS",
+      "acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-stage-b-independent-review/MAIN_ACTUAL_KNOWN_REFUSAL_ACCEPTANCE.json",
+        "bytes": 3612,
+        "sha256": "438d313b515e923736deb1da8865eb7b3e677ffb013dea4254eb8792b14eebe7"
+      },
+      "compact_evidence": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/docs/universal_mcp_execution/evidence/appcontainer-gui-known-refusal-20261027.json",
+        "bytes": 4109,
+        "sha256": "6f47501aed1a49dc3b478d8c3f44ecc5e2636ad066158d965561fdf8afbdff14"
+      },
+      "publication": "PENDING"
+    },
+    "dispatch_record": "_state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json",
+    "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer.",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "next_action": "Main verify r344 durable AppC r2 Stage A pointer and explicitly dispatch A0-A5 once within lease; stop at READY or known failure, Stage B not released. If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer. Await Volta independent five-artifact review before Main final acceptance; no .13 installation while SourceBase/Q6/capsule/release unbound. Preserve old owner fences; goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r344/prior-main3"
+  },
+  "current_source_roles_r344": {
+    "appcontainer": "r2 source accepted, Stage A lease bound pending Main verification and dispatch; no GO",
+    "build": "four artifacts and separate source ZIP known0, independent five-artifact review pending",
+    "MCP": "0.1.13 source PREP unbound, no runtime",
+    "history": "r343 source ZIP not-run and r2-source pending historical"
+  },
+  "current_checkpoint_r343": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 343,
+    "status": "ACTUAL_BUILD_KNOWN_ZERO_SOURCEZIP_PENDING_APPC_KNOWN_REFUSAL_SOURCE_REPAIR",
+    "active_jobs": [
+      {
+        "scope": "COHERENT_013_SOURCEZIP_R2_ASSEMBLER_BINDING",
+        "status": "REAL_TERMINAL_DATA_BINDING_PREP_SOURCEZIP_NOT_RUN",
+        "build_known_zero_acceptance": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_BUILD_KNOWN_ZERO_FOR_SOURCEZIP.json",
+          "bytes": 3299,
+          "sha256": "8c47edb207bb8f16a1bd85a5774e96b4e97b73a86ffe9f77e0bfbdda22828132"
+        },
+        "next": "Main reviews final binding/argv then separately dispatches one pure data assembly; four build artifacts plus sourceZIP affected Strong/Main review; no build replay"
+      },
+      {
+        "scope": "APPC_GUI_R2_REGISTRY_PREFIX_SOURCE_PREP",
+        "status": "SOURCE_PREP_ONLY_NO_WINDOWS",
+        "decision": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-REGISTRY_PREFIX_DECISION.md",
+          "bytes": 3382,
+          "sha256": "a69874c3212b13b118a2f57808fdb4d6c39b3f2499fcb3bd1202d57fd2a4d5ed"
+        },
+        "next": "Fix ancestor readback versus target validation; Strong/Main source review before any new runtime"
+      }
+    ],
+    "appc_actual": {
+      "status": "CAPTURED_KNOWN_REFUSAL_NOT_NATIVE_PASS",
+      "handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-stage-b-original-returns/STAGE_B_ACTUAL_HANDOFF.json",
+        "bytes": 7856,
+        "sha256": "f3bd424027bbe56f4c03286587324ddf98cb27f5ebffdd054dd6fd77e52d5ba6"
+      },
+      "facts": "B0/B1 Tool/operator/transport0; three files48435B; FAILURE Refusal unexpected actual native key namespace; journal106 lines",
+      "limitations": "Parent reported API-only known cleanup, not postimage or liveness proof; 046c B0/B1 spent, no query/retry/adopt; Huygens actual affected review ongoing"
+    },
+    "build_actual": {
+      "status": "KNOWN_ZERO_SOURCEZIP_PREREQUISITE_ONLY_ARTIFACT_REVIEW_PENDING",
+      "handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/ACTUAL_BUILD_HANDOFF.json",
+        "bytes": 9928,
+        "sha256": "b48b62f87e6e24f951f228b2170fbb91ed8a59e619b79412f9410d9cc61e3d68"
+      },
+      "Main_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_BUILD_KNOWN_ZERO_FOR_SOURCEZIP.json",
+        "bytes": 3299,
+        "sha256": "8c47edb207bb8f16a1bd85a5774e96b4e97b73a86ffe9f77e0bfbdda22828132"
+      },
+      "session": "10595 TERMINAL0 DO_NOT_REPOLL",
+      "wait": 0,
+      "dual_EOF": true,
+      "artifact_count": 4,
+      "sourceZIP": "NOT_RUN",
+      "install_product_native": "NOT_RUN"
+    },
+    "head": "53c16d0484b8971385ef56397bc96a28c34beea4; no Git until five artifacts reviewed",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "fences": "old UNKNOWN and 046c spent retained; no query/retry/adopt",
+    "next_action": "Euler prepare and Main review exact r2 assembler actual-terminal data binding, then one separately authorized sourceZIP assembly and affected five-artifact Strong/Main review. Aristotle repair AppC r2 source only under registry prefix decision, then Strong/Main source review. Preserve 046c spent B0/B1, no query/retry/adopt and all old owner fences; build session 10595 terminal never repoll. Keep HEAD 53c until five-artifact review complete; goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r343/prior-main3"
+  },
+  "current_source_roles_r343": {
+    "appcontainer": "actual known refusal, native not passed; r2 source-only repair",
+    "build": "actual known0, four artifacts pending review, sourceZIP not run; no replay",
+    "history": "r342 dispatch pending historical; two actual executions completed"
+  },
+  "current_checkpoint_r342": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 342,
+    "status": "IN_PROGRESS_TWO_BOUND_POINTERS_PENDING_MAIN_DISPATCH",
+    "active_jobs": [
+      {
+        "scope": "APPC_GUI_R1_STAGE_B_ONCE",
+        "status": "APPC_ACTUAL_READY_ACCEPTED_STAGE_B_RELEASED_PENDING_MAIN_DURABLE_VERIFICATION_AND_EXPLICIT_DISPATCH",
+        "ready_acceptance": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+          "bytes": 4348,
+          "sha256": "27698d7458e384fb58daf50492c09d1071ed3a60fcc15f68b7fff8b5079323ca"
+        },
+        "release": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/STAGE_B_RELEASE.json",
+          "bytes": 2212,
+          "sha256": "085b4366d5dd2811a0b6dd0937ebb3e5e9c851185d654f9d3ea9992f3b6b1762"
+        },
+        "raw_ready": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/receipts/A5-READY.json",
+          "bytes": 6749,
+          "sha256": "e0bf21a2777d8a60dfee4350f64e60350f72245584d49b12651a5ec67fd737e8"
+        },
+        "integer_erratum": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-stage-a-original-returns/HANDOFF_INTEGER_PRECISION_ERRATUM.json",
+          "bytes": 5085,
+          "sha256": "40dbb2c21d3b90f40951478dfa26127146da384a78f6b0bc6155fb8bd147e182"
+        },
+        "raw_birth_decimal_string": "134375786546531101",
+        "allowed_stages": [
+          "B0_GO",
+          "B1_COLLECT"
+        ],
+        "stage_B_expiry_utc": "2026-10-27T14:29:48.800141+00:00",
+        "original_A_go_not_after_utc": "2026-10-27T13:34:37.733908+00:00",
+        "minimum_go_margin_seconds": 60,
+        "dispatch": "Main verify durable pointer then explicitly dispatch; B1 only same-lease original known0 B0",
+        "parent_OS_current_state": "NOT_QUERIED",
+        "GO": "NOT_DISPATCHED"
+      },
+      {
+        "scope": "COHERENT_013_BUILD_PURE_IO_PREBIND",
+        "status": "ACTUAL_PREBIND_ACCEPTED_PENDING_R342_MAIN_VERIFICATION_AND_EXPLICIT_BUILD_DISPATCH",
+        "adapter_source_acceptance": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-independent-review-r1/MAIN_ADAPTER_SOURCE_ACCEPTANCE.json",
+          "bytes": 2655,
+          "sha256": "e682792a97f811746c04ebecaf725ceb822769538b18215b7f4a60a04184488f"
+        },
+        "Main_build_task": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-once-prep-r1/MAIN_BUILD_TASK.json",
+          "bytes": 3129,
+          "sha256": "e5c2579bfac9ed71242d7d522a1bd8994e1e9a8a9283d38e28c4d9d83d3d7d41"
+        },
+        "dispatch_expiry_utc": "2026-10-27T13:59:48.800141+00:00",
+        "actual_build": "NOT_DISPATCHED_NOT_RUN",
+        "note": "Task status EXECUTION_RELEASED_ONCE does not indicate dispatch; Main verifies four prebinding outputs and durable pointer and explicitly dispatches separately.",
+        "actual_prebind_acceptance": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_ACTUAL_PREBIND_ACCEPTANCE.json",
+          "bytes": 3669,
+          "sha256": "f3bf3cec9d6bc02e3071a6c788c048c03568b7e40cc9d9e7f63b4cd7548e6888"
+        },
+        "actual_handoff": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/IO_PREBIND_HANDOFF.json",
+          "bytes": 4896,
+          "sha256": "82f0bc48ddd8165ba1eb0cb41c61b4ad98a526ceda44f2ebc3ab1234df369964"
+        },
+        "original_terminal_tool": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/io-binding-wait01.tool-return.json",
+          "bytes": 760,
+          "sha256": "0b1485d59a42f0e71ec4a3e482ca209fb647ff22fad0935b87806ded2a7c7d18"
+        },
+        "binding": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/BINDING.execution.json",
+          "bytes": 9180,
+          "sha256": "7c35d333224e367af0a688e7baf288cadd83589e90f36273af966bdb8157b1db"
+        },
+        "argv": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/EXACT_ARGV.json",
+          "bytes": 1730,
+          "sha256": "067b5ec93a078fab7557ac8f29845508485cf36968e7b8be380c8d3772f06e59"
+        },
+        "profile_preview": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/BUILD_PROFILE_PREVIEW.sb",
+          "bytes": 6143,
+          "sha256": "62c9d2cca93e137c89aa65039de607fe65137a4b402cf239a1c38e56a772216b"
+        },
+        "receipt": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/BINDING_RECEIPT.json",
+          "bytes": 3054,
+          "sha256": "2dd2d8cf10637c532deaacd64b052d38e327093e0f11b3da2e78c85c84aab5f3"
+        },
+        "source_proof": "source-backed original validate/renderer path; no independently serialized new raw snapshot",
+        "session": "81636 TERMINAL0 DO_NOT_REPOLL"
+      }
+    ],
+    "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r342/MAIN_EXPLICIT_DISPATCHES.json exists, first read that record and corresponding original returns/receipts/once claim and establish original-owner state; never redispatch merely because this pointer says pending.",
+    "dispatch_record": "_state/universal-main-review/20261027-checkpoint-r342/MAIN_EXPLICIT_DISPATCHES.json",
+    "head": "53c16d0484b8971385ef56397bc96a28c34beea4; keep through build, no Git",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "core": "historical strict-free 142901248B below 2GiB/1GiB; no resampling",
+    "next_action": "Main verify r342 Main3 and both live leases, then separately explicitly dispatch AppC B0/B1 and the one exact build. No GO or build has been dispatched by this checkpoint. If _state/universal-main-review/20261027-checkpoint-r342/MAIN_EXPLICIT_DISPATCHES.json exists, first read that record and corresponding original returns/receipts/once claim and establish original-owner state; never redispatch merely because this pointer says pending. Preserve old owner fences and keep HEAD 53c through build.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r342/prior-main3"
+  },
+  "current_source_roles_r342": {
+    "appcontainer": "Stage A actual READY accepted, Stage B pending Main verification and explicit dispatch; no GO",
+    "build": "actual pure I/O prebind accepted, one build pending Main verification and explicit dispatch; NOT_RUN",
+    "history": "r341 source-prebind pending historical; r342 actual prebind accepted governs"
+  },
+  "current_checkpoint_r341": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 341,
+    "status": "IN_PROGRESS_TWO_ACTIVE_POINTERS",
+    "active_jobs": [
+      {
+        "scope": "APPC_GUI_R1_STAGE_B_ONCE",
+        "status": "APPC_ACTUAL_READY_ACCEPTED_STAGE_B_RELEASED_PENDING_MAIN_DURABLE_VERIFICATION_AND_EXPLICIT_DISPATCH",
+        "ready_acceptance": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+          "bytes": 4348,
+          "sha256": "27698d7458e384fb58daf50492c09d1071ed3a60fcc15f68b7fff8b5079323ca"
+        },
+        "release": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/STAGE_B_RELEASE.json",
+          "bytes": 2212,
+          "sha256": "085b4366d5dd2811a0b6dd0937ebb3e5e9c851185d654f9d3ea9992f3b6b1762"
+        },
+        "raw_ready": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/receipts/A5-READY.json",
+          "bytes": 6749,
+          "sha256": "e0bf21a2777d8a60dfee4350f64e60350f72245584d49b12651a5ec67fd737e8"
+        },
+        "integer_erratum": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-stage-a-original-returns/HANDOFF_INTEGER_PRECISION_ERRATUM.json",
+          "bytes": 5085,
+          "sha256": "40dbb2c21d3b90f40951478dfa26127146da384a78f6b0bc6155fb8bd147e182"
+        },
+        "raw_birth_decimal_string": "134375786546531101",
+        "allowed_stages": [
+          "B0_GO",
+          "B1_COLLECT"
+        ],
+        "stage_B_expiry_utc": "2026-10-27T14:29:48.800141+00:00",
+        "original_A_go_not_after_utc": "2026-10-27T13:34:37.733908+00:00",
+        "minimum_go_margin_seconds": 60,
+        "dispatch": "Main verify durable pointer then explicitly dispatch; B1 only same-lease original known0 B0",
+        "parent_OS_current_state": "NOT_QUERIED",
+        "GO": "NOT_DISPATCHED"
+      },
+      {
+        "scope": "COHERENT_013_BUILD_PURE_IO_PREBIND",
+        "status": "PURE_IO_PREBIND_AUTHORIZED_OUTPUTS_PENDING_MAIN_REVIEW_BUILD_NOT_DISPATCHED",
+        "adapter_source_acceptance": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-independent-review-r1/MAIN_ADAPTER_SOURCE_ACCEPTANCE.json",
+          "bytes": 2655,
+          "sha256": "e682792a97f811746c04ebecaf725ceb822769538b18215b7f4a60a04184488f"
+        },
+        "Main_build_task": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-once-prep-r1/MAIN_BUILD_TASK.json",
+          "bytes": 3129,
+          "sha256": "e5c2579bfac9ed71242d7d522a1bd8994e1e9a8a9283d38e28c4d9d83d3d7d41"
+        },
+        "dispatch_expiry_utc": "2026-10-27T13:59:48.800141+00:00",
+        "actual_build": "NOT_RUN",
+        "note": "Task status EXECUTION_RELEASED_ONCE does not indicate dispatch; Main verifies four prebinding outputs and durable pointer and explicitly dispatches separately."
+      }
+    ],
+    "appc_stage_a": "A0-A5 original Tool/operator/transport known0, GUI2, actual READY Strong/Main accepted",
+    "installed_mcp_013_draft": "_state/universal-public-mcp-readiness-prep-20261027/owner-013-binding-draft-r1/ UNBOUND_NOT_EXECUTABLE",
+    "head": "53c16d0484b8971385ef56397bc96a28c34beea4; keep through build; no Git",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "core": "historical strict-free 142901248B below 2GiB/1GiB; no resampling",
+    "next_action": "Main verify r341 durable AppC Stage B pointer then explicitly dispatch only B0_GO and, on same-lease original known0, one B1_COLLECT; GO obeys original A expiry and >=60s margin. Euler performs only authorized pure I/O prebinding for 0.1.13 build; Main must verify four outputs and explicitly dispatch separately before actual build. Preserve all owner fences and keep HEAD 53c. Goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r341/prior-main3"
+  },
+  "current_source_roles_r341": {
+    "appcontainer": "actual READY accepted, Stage B released pending durable Main verification and explicit dispatch; GO not dispatched",
+    "build": "adapter source accepted, pure I/O prebind authorized, outputs pending Main review; actual build NOT_RUN",
+    "history": "r340 pending Stage A historical; r341 actual READY and Stage B release govern"
+  },
+  "current_checkpoint_r340": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 340,
+    "status": "SOURCE_ACCEPTED_A_LEASE_BOUND_PENDING_MAIN_DURABLE_VERIFICATION_AND_EXPLICIT_DISPATCH",
+    "active_job": {
+      "scope": "APPC_GUI_R1_STAGE_A_ONCE",
+      "status": "SOURCE_ACCEPTED_A_LEASE_BOUND_PENDING_MAIN_DURABLE_VERIFICATION_AND_EXPLICIT_DISPATCH",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 4134,
+        "sha256": "3baf53b10995ca9ace0ad1b132e1f17067ffd3a8b700623ae7e90a5552af3469"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2859,
+        "sha256": "05c5b8ec09d7210bb01eb846cd3cd59d258b5b1724fc620bee7edfbb9d641b59"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "3899af2e138c8d9e81d31df444ac8a0d5c208a94441bc8c7138d6cac937f889b"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2981,
+        "sha256": "cbc6ba22e127f5d5bb323373ad248dc5a7e5626bea171bb9dc25be6033faf78f"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "4851a5a4d6bb8f5085edae5c6307134f6f42ae3ba3a8c0ad9d58a640afd38ab1"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "2656c1a8c36330c264d91f88bb74196b90a0ba3c47fc9ff076efee0a9ae15373"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "046c2895a1e67dcd3c0bcca4b0e50392",
+      "deadline_utc": "2026-10-27T13:34:37.733908+00:00",
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "materials": {
+        "count": 15,
+        "bytes": 235288
+      },
+      "dispatch": "Main verifies durable pointer then explicitly dispatches; Aristotle only prepares original Tool directory/argv",
+      "stage_B": "NOT_RELEASED_NO_GO",
+      "windows_actions": "NOT_RUN",
+      "unknown": "original owner hold; zero later SDK/query/cleanup/retry/adopt"
+    },
+    "build": "Actual 0.1.13 canary accepted; real build NOT_RELEASED; Euler schema/UTC lease pure I/O prebinding, frozen shell unchanged; no build run",
+    "head": "53c16d0484b8971385ef56397bc96a28c34beea4; keep through build; Main3 excluded from source208",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "core": "historical strict-free 142901248B below 2GiB/1GiB; no resampling",
+    "next_action": "Main verify r340 durable AppContainer Stage A pointer and exact source/lease/operator, then explicitly dispatch only A0-A5 under original deadline; Aristotle prepares original Tool directory and argv only. Stop at READY or known failure for Main; Stage B not released. Euler prepares 0.1.13 build schema/UTC lease I/O binding; real build not released. HEAD must remain 53c through build; goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r340/prior-main3"
+  },
+  "current_source_roles_r340": {
+    "appcontainer": "GUI r1 source accepted, Stage A lease bound pending Main verification/explicit dispatch; no Windows action",
+    "build": "actual canary accepted; build not released; pure I/O prebinding",
+    "history": "r339 old AppC source-review-only statement historical; r340 active lease governs"
+  },
+  "current_checkpoint_r339": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 339,
+    "status": "ACTUAL_CANARY_ACCEPTED_BUILD_BINDING_PENDING_NOT_RELEASED",
+    "active_job": {
+      "scope": "COHERENT_013_REAL_BUILD_BINDING_PREP",
+      "status": "BUILD_BINDING_PENDING_MAIN_REVIEW_NO_RELEASE",
+      "accepted_canary": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_ACTUAL_CANARY_ACCEPTANCE.json",
+        "bytes": 4952,
+        "sha256": "703d05ba79d822a9cb345a30b52a9e7d2e878d414a10690f4712e7c65c08b007"
+      },
+      "actual_build": "NOT_RELEASED_NOT_RUN",
+      "dispatch": "Main review and separate exact one-build release required; no invocation authorized by canary acceptance",
+      "HEAD": "53c16d0484b8971385ef56397bc96a28c34beea4 must remain through build"
+    },
+    "canary": {
+      "status": "ACTUAL_KNOWN_ZERO_MAIN_ACCEPTED",
+      "acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_ACTUAL_CANARY_ACCEPTANCE.json",
+        "bytes": 4952,
+        "sha256": "703d05ba79d822a9cb345a30b52a9e7d2e878d414a10690f4712e7c65c08b007"
+      },
+      "actual_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/original-returns/ACTUAL_CANARY_HANDOFF.json",
+        "bytes": 7482,
+        "sha256": "a529c4f6d1c4eb5597cb891a4c5a238f5e344cc366cc7d949c23c13485132ab2"
+      },
+      "actual_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/CANARY_RESULT.json",
+        "bytes": 5711,
+        "sha256": "4435c0a821f38e5e2c3275b8c8aa7b1ed9ffac1b3d853a39db58681987638fe1"
+      },
+      "original_terminal_tool": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/original-returns/controller-wait01.tool-return.json",
+        "bytes": 1287,
+        "sha256": "dffa2f0c0640ae710aafd338cdf7712519b604e8dd76a5156f7b81f80a15c955"
+      },
+      "session": "5156 TERMINAL0 DO_NOT_REPOLL",
+      "checks": "six checks, original wait0, dual EOF and actual profile equals preview; no unexpected denials",
+      "build": "NOT_RELEASED_NOT_RUN"
+    },
+    "windows": "R6 ordinary fixed X scoped actual accepted; c3e GO/B1 spent, parent OS numeric exit unobserved; old02ed and UNKNOWN owners fenced",
+    "appcontainer": "GUI r1 source PREP frozen; Huygens independent source review ongoing; no runtime lease/native",
+    "head": "53c16d0484b8971385ef56397bc96a28c34beea4; keep through build; 208 app source selection excludes Main3",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "core": "historical strict-free 142901248B below 2GiB/1GiB; no resampling",
+    "next_action": "Euler prepare fresh 0.1.13 real build binding and exact task/argv from accepted canary and r2 sourceZIP template; Main review and issue separate one-build release before dispatch. No build is currently released. Keep HEAD at 53c until build completes; never poll terminal canary session 5156. AppC GUI source PREP is under independent review, no runtime lease. Goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r339/prior-main3"
+  },
+  "current_source_roles_r339": {
+    "build": "canary actual accepted; real build binding PREP only, no release",
+    "windows": "ordinary fixed X scoped accepted; AppC source review pending",
+    "history": "r338 bound canary predispatch is historical; r339 actual canary governs"
+  },
+  "current_checkpoint_r338": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 338,
+    "status": "ONE_POLICY_CANARY_BOUND_PENDING_R338_MAIN_VERIFICATION_THEN_DISPATCH",
+    "active_job": {
+      "scope": "COHERENT_013_CANARY_FINAL_BINDING",
+      "status": "ONE_POLICY_CANARY_BOUND_PENDING_R338_MAIN_VERIFICATION_THEN_DISPATCH",
+      "Main_canary_task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_CANARY_TASK.json",
+        "bytes": 4222,
+        "sha256": "6e613097a1d92ac50bfaf77060b28c47c6727f322617dc52703ef49dfd5c321d"
+      },
+      "effective_prep_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-prep-independent-review-r2/MAIN_EFFECTIVE_PREP_ACCEPTANCE.json",
+        "bytes": 3892,
+        "sha256": "448683c3b99d4bcb814392038d01ecb62f55eb156b3f7e2ed040a76193b47c72"
+      },
+      "active_sourceZIP_template": {
+        "bytes": 7501,
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-sourcezip-fix-r2/assemble_source_zip.corrected-template.py.txt",
+        "sha256": "98aae04c07bfe20cc42a6d47792fa873cefa7e3e412597f74aab69287db8ca9c"
+      },
+      "lease_expires_at_utc": "2026-10-27T13:03:39.934421+00:00",
+      "dispatch_prerequisite": "Main verify r338 durable active pointer and exact task/final acceptance/pins/argv, then explicitly order one canary before unchanged lease expiry. No build release.",
+      "canary": "BOUND_NOT_DISPATCHED",
+      "build": "NOT_RELEASED_NOT_RUN",
+      "source_HEAD": "53c16d0484b8971385ef56397bc96a28c34beea4",
+      "final_binding_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_FINAL_BINDING_ACCEPTANCE.json",
+        "bytes": 2602,
+        "sha256": "5d2e2ceb2421bb03d2855579e66072489a45b9b4069f987a86f4d79a4e62db8f"
+      },
+      "final_pins": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/FINAL_PINS.json",
+        "bytes": 6964,
+        "sha256": "512475ccc3a9042807d9c2bf0c30111fd5e84c017e8460de75c72fdca9a5ecf1"
+      },
+      "exact_argv": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/EXACT_ARGV.json",
+        "bytes": 1473,
+        "sha256": "e80a4d21bb680c713eaf7ce6dd33ff69ad4a94c94739d031c832971e18a2de08"
+      }
+    },
+    "windows_fixed_X": {
+      "status": "ORDINARY_FIXED_X_CLOSED_EXIT_ZERO_STRONG_MAIN_ACCEPTED",
+      "acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-independent-review/MAIN_ACTUAL_FIXED_X_ACCEPTANCE.json",
+        "bytes": 3445,
+        "sha256": "41d91ab72747bf9fe2c364c54fdb2c1b9702247efd96dd920f8ae0864c61f8d7"
+      },
+      "actual_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-original-returns/STAGE_B_ACTUAL_RESULT.json",
+        "bytes": 7727,
+        "sha256": "ba4fc22c7df5debb83bea14926335f53b2c5c2c6dfb83a39c4cf2ac7a177c36d"
+      },
+      "raw_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/receipts/collected/raw/RESULT.json",
+        "bytes": 735,
+        "sha256": "49b3472c6d1ac917c054843bbd523711bb0f87503e7e7ac59870a13c9d4b0c5e"
+      },
+      "review": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-independent-review/REVIEW.md",
+        "bytes": 10187,
+        "sha256": "b45fc854cd949b4643176687633373215821cf7d564510b5df7bc4244b58f843"
+      },
+      "compact_evidence": "docs/universal_mcp_execution/evidence/ordinary-x-windows-gui-fixed-x-20261027.json",
+      "scope": "ordinary fixed X only, not AppC/MCP/COMSOL; no independently observed parent OS numeric exit or current liveness",
+      "fence": "c3e GO/B1 spent; no query/cleanup/retry/adopt; old02ed failure and old UNKNOWN fenced"
+    },
+    "appcontainer": {
+      "status": "SOURCE_PREP_ONLY_NO_WINDOWS_RELEASE",
+      "decision": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-MAIN_DECISION.md",
+        "bytes": 5281,
+        "sha256": "bae2a91aaa5aaff06c729929c5252bff79ce46f43cd0f26c00c55656603cd465"
+      }
+    },
+    "build": "R1 stale 207 vs actual208 sourceZIP failure retained; R2 effective prep accepted, r1 assembler inactive; no canary/build; HEAD must remain 53c until build done",
+    "publication": "53c16d0484b8971385ef56397bc96a28c34beea4 / tree da7c1ffcccb5303976e31dfc262e25c4c7255324; 11 API blobs accepted; Main3 dirty excluded from source208",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "core": "historical strict-free 142901248B below 2GiB/1GiB; no resampling",
+    "next_action": "Main verify r338 durable active pointer and exact final acceptance/task/pins/argv, then explicitly order one policy canary within original lease; no build release. Preserve original Tool/store+notify and owner unknown boundaries. Continue AppContainer GUI source-only PREP. Goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r338/prior-main3"
+  },
+  "current_source_roles_r338": {
+    "windows": "R6 ordinary fixed X scoped actual accepted; AppC source PREP only",
+    "build": "0.1.13 final canary binding accepted; pending r338 Main verification and explicit one-canary dispatch",
+    "history": "r337 Stage B predispatch historical; r338 actual fixed X governs"
+  },
+  "current_checkpoint_r337": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 337,
+    "status": "MAIN_ACCEPTED_ACTUAL_READY_STAGE_B_RELEASED_PENDING_R337_VERIFIED_DISPATCH",
+    "active_job": {
+      "scope": "WINDOWS_R6_STAGE_B_ONCE",
+      "status": "MAIN_ACCEPTED_ACTUAL_READY_STAGE_B_RELEASED_PENDING_R337_VERIFIED_DISPATCH",
+      "task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-once-task.json",
+        "bytes": 4421,
+        "sha256": "d64358f5e0b900e5b75a5a6e5de2fbc2c7a449bd858ab2fc18f9a550c214422a"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/STAGE_B_RELEASE.json",
+        "bytes": 1703,
+        "sha256": "ce1590da279e3f7e0fdc4bf99d6ce8566c087b61799d8ab63af0900bec9e3da8"
+      },
+      "Main_actual_ready_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+        "bytes": 2848,
+        "sha256": "66198b001e3f32342b8cd36df2c7848f9e90afc317d68852d583119de58976d5"
+      },
+      "actual_ready": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/receipts/A5-READY.json",
+        "bytes": 5211,
+        "sha256": "4dae63394d10e2b660d4fc70a732210165a85e6407d1050619abe96fe829b9bc"
+      },
+      "original_stage_a_release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/STAGE_A_RELEASE.json",
+        "bytes": 2091,
+        "sha256": "5dbe202f4a25cd7fd32580c3dc4e17daab64fc3a5c3f7dcb4e8602eaae28329a"
+      },
+      "stage_a_actual_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-original-returns/STAGE_A_ACTUAL_RESULT.json",
+        "bytes": 14376,
+        "sha256": "4ae2018c5f8557433932a67c9918ce837492407af6ead8c4e6d4f0676cd377a5"
+      },
+      "independent_review": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-independent-review/REVIEW.md",
+        "bytes": 7875,
+        "sha256": "25f987af8e379e97828f17286568fda74cf8f94e763820c3f960631513aa9de5"
+      },
+      "original_stage_b_returns": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-original-returns",
+      "deadline_utc": "2026-10-27T12:22:17.468881+00:00",
+      "ready_approx": "2026-10-27T11:29Z",
+      "nonce": "c3e84e53363ce9807bc61f82ff2cc746",
+      "allowed": "one B0_GO; only same-lease original known0 permits one B1_COLLECT fixed three files",
+      "not_released": [
+        "A6_FAIL_CAPTURE",
+        "secondGO",
+        "secondcollector",
+        "othernamespace",
+        "oldowneroperations"
+      ],
+      "fence": "Refusal/nonzero/unknown stopsdependentchain;noreplay/sourcechanges. Firstnativeunknown originalownerhold/zero SDK/query/cleanup/retry/adopt. B1prebookedfilecapturestillrequiresB0known0,notarbitraryquery ornativePASS. Mainreviewsactualdecodedterminal/journal."
+    },
+    "stage_a_review_result": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-independent-review/REVIEW_RESULT.json",
+      "bytes": 11617,
+      "sha256": "e16ef9440dddf8496f7916f287c4e33e54b3c5c96c63e7a005308edd7db18e6d"
+    },
+    "stage_a_exact_input_pins": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-independent-review/EXACT_INPUT_PINS.json",
+      "bytes": 46212,
+      "sha256": "256c2115ea4ded4cb9564f2def461bac1dfb43418201d1fe3ea50e2780e412a8"
+    },
+    "stage_a": "A0-A5 actual Tool/operator/transport known0, READY accepted, GUI2/WinExe 11776B, parent original identity accepted; 89 inputs/339099B verified",
+    "deadline_utc": "2026-10-27T12:22:17.468881+00:00",
+    "expiry_extended": false,
+    "publication": {
+      "commit": "53c16d0484b8971385ef56397bc96a28c34beea4",
+      "tree": "da7c1ffcccb5303976e31dfc262e25c4c7255324",
+      "api_blobs_verified": 11,
+      "Main_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r335/MAIN_PUBLICATION_READBACK_ACCEPTANCE.json",
+        "bytes": 1526,
+        "sha256": "ab6fcc33533e25517e5170676fed184f8c4fc57eb8ce19f3ab71c0b75ea43eb8"
+      },
+      "scope": "0.1.13 source/software, not artifact/native"
+    },
+    "build_prep": "r1 source ZIP 207 vs actual208 defect; Euler r2 repair and Strong review pending; no canary/build; 208 product/fixture excludes Main3",
+    "core": "last 03:30Z strict-free 142901248B below 2GiB/1GiB, historical; no resampling",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "next_action": "Main verify r337 exact R6 Stage B task and active-job pointer, then dispatch B0_GO once promptly within original lease; only same-lease original Tool/operator/transport known0 plus claim/receipt/streams permits one B1_COLLECT fixed three files. A6 and second GO/collector not released; unknown holds owner, no SDK/query/cleanup/retry/adopt. Review 0.1.13 build PREP r2 sourceZIP 208 correction; no canary/build. Goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r337/prior-main3"
+  },
+  "current_source_roles_r337": {
+    "windows": "R6 Stage A READY accepted, Stage B released pending r337 Main verification; helper/X not yet executed",
+    "source": "0.1.13 published software, build PREP r2 correction/review pending",
+    "history": "r336 Stage A not-run and lexical-only statements historical; r337 current READY governs"
+  },
+  "current_checkpoint_r336": {
+    "schema": "main-resumable-checkpoint/1",
+    "revision": 336,
+    "status": "MAIN_RELEASED_STAGE_A_PENDING_R336_VERIFIED_DISPATCH",
+    "active_job": {
+      "scope": "WINDOWS_R6_STAGE_A_ONCE",
+      "status": "MAIN_RELEASED_STAGE_A_PENDING_R336_VERIFIED_DISPATCH",
+      "task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-once-task.json",
+        "bytes": 3392,
+        "sha256": "3d2a47b6c44b94a5002f81be9b2ddf5d435ff4507148410a52c3c2e0407ebff3"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/STAGE_A_RELEASE.json",
+        "bytes": 2091,
+        "sha256": "5dbe202f4a25cd7fd32580c3dc4e17daab64fc3a5c3f7dcb4e8602eaae28329a"
+      },
+      "authority": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-nonconsole-independent-review/HUMAN_STANDING_SCOPE_AUTHORITY_R6.json",
+        "bytes": 3286,
+        "sha256": "3e8a7dc2d98e474e0e56cdff8f2683ead9fb85156843d8dcb1c25127847877c5"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/r21_r3_operator.py",
+        "bytes": 56544,
+        "sha256": "bb8b8e2b3e157ff719af2909d3023f30d1417fb8c8debba263974b545d02953d"
+      },
+      "static_seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/FREEZE_SEAL.json",
+        "bytes": 5771,
+        "sha256": "e44154b2e1d9ad4e20d11ca506ff92cbbbfb84da036fa98f15e3225eaef1ac50"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/SOURCE_PACKAGE_PINS.json",
+        "bytes": 2327,
+        "sha256": "6b4f8135990227932eca40d003132462ebbf50b0a89622afd739796743fcbb06"
+      },
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-nonconsole-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 2719,
+        "sha256": "b3fa402583b89ab68d7879e1a0f11202951e2d4ad9309fd4dfc62ca1b55e501d"
+      },
+      "original_returns": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-original-returns",
+      "nonce": "c3e84e53363ce9807bc61f82ff2cc746",
+      "deadline_utc": "2026-10-27T12:22:17.468881+00:00",
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "scope_limit": "A0–A5 once, same lease known0 predecessor; A5 READY or knownnonzero stop Main",
+      "not_released": [
+        "A6_FAIL_CAPTURE",
+        "B0_GO",
+        "B1_COLLECT",
+        "helper/X",
+        "othernamespaceoroldowneroperations"
+      ],
+      "remote_namespace": "LEXICAL_ONLY_NOT_PROBED_NOT_CREATED",
+      "actual_runtime": "NOT_RUN",
+      "fence": "Unknown original owner hold; zero later SDK/query/cleanup/retry/adopt; old 02ed/7ea/9681 fenced"
+    },
+    "publication": {
+      "commit": "53c16d0484b8971385ef56397bc96a28c34beea4",
+      "tree": "da7c1ffcccb5303976e31dfc262e25c4c7255324",
+      "api_blobs_verified": 11,
+      "receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r335/PUBLICATION_REMOTE_READBACK.json",
+        "bytes": 4390,
+        "sha256": "3fd2b98f86535408f5da54180d2c34ff5c9bde0b86c3a9b7dd36826b44f6132a"
+      },
+      "r333_r334": "LOCAL_UNPUBLISHED"
+    },
+    "source_013": "published source/software accepted; build/install/actual MCP/native NOT_RUN; Euler build PREP binding actual commit/tree/receipt; 208 product/fixture selection excludes Main3",
+    "core": "last 03:30Z strict-free 142901248B below Server2GiB/Worker1GiB; historical, no resampling",
+    "goal": "273/60/427/native/save+freshWorker/two unpreset licensed families/fresh final Reviewer not all passed; completed_groups=[]; heldouts NOT_SELECTED; fresh final NOT_STARTED",
+    "next_action": "Main verify r336 exact R6 task, release and active-job pointer before dispatch; then original owner may execute only A0-A5 once with same-lease known0 predecessors and stop at A5 READY or knownnonzero for Main. A6/B0/B1/helper/X not released. Preserve original deadline, no extension; unknown holds owner with zero SDK/query/cleanup/retry/adopt. Full goal IN_PROGRESS.",
+    "prior_main3": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r336/prior-main3"
+  },
+  "current_source_roles_r336": {
+    "windows": "R6 source accepted; Stage A release pending r336 Main verification, actual runtime NOT_RUN",
+    "source": "0.1.13 published, build PREP only; prior .12 runtime is historical",
+    "history": "r335 and prior snapshots remain historical; r336 active pointer governs"
+  },
   "current_checkpoint_r335": {
     "schema": "main-resumable-checkpoint/1",
     "revision": 335,
@@ -636,11 +1638,464 @@
   "schema_version": 1,
   "baseline_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
   "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
-  "state_revision": 335,
+  "state_revision": 347,
   "phase": "M3_M4_CURRENT_CANDIDATE_QUALIFICATION_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Main review the eleven-file 0.1.13 source/software and known Windows nonzero compact evidence candidate, then ordinary publication; continue R6 source-only preparation and review without native release. Preserve 02ed spent GO/collector and all historical UNKNOWN fences; no root/process query, cleanup or replay. Full goal IN_PROGRESS; T008 six frozen assertions and 0.1.13 build/install/MCP/native NOT_RUN.",
+  "next_action": "Main review companion Stage A safe_exec correction and independent review before considering any Stage B release; actual A0-A5 occurred and raw READY received, Stage B/GO not run. Continue AppC original owner without redispatch and 0.1.13 SourceBase preparation. Six-file ordinary publication actual status is determined only by r347 PUBLICATION_REMOTE_READBACK.json and original Tool returns; frozen snapshot does not certify push success. Goal IN_PROGRESS.",
   "active_job_refs": [
+    {
+      "scope": "APPC_GUI_R2_STAGE_A_ONCE",
+      "status": "ACTUAL_STAGE_A_RAW_READY_RECEIVED_COMPANION_P2_CORRECTION_REVIEW_PENDING_NO_STAGE_B_GO",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 3143,
+        "sha256": "1acc02fcbf8f2f32d78b9d09f3011a2de93104b3d8224a9e38a3bbeb3f4e0644"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2155,
+        "sha256": "89b28ff1935383d835691d14c554655576e6dde8de70cfafc83a9a2811f6d6ec"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "8b5e35d07b88a6d9c1c2c8b62da371eeee797e3ce3a47c2a02b4aa858c59fd9f"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2930,
+        "sha256": "e8c9dd03802b07ea964ba8ea46e46e9a47951cfe49a61328be26f0ed2f938852"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "e77fc426b745bddaee31e5be4411ce430cb8a11174ccd6cb3851532c19866e0a"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "7f1b797a1ef1bf902e2bc014dd5752ebefd6065ec37f9dd6011e34ed02dc2199"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "331991ebf4a0d30640910ecbfeb2c176",
+      "deadline_utc": "2026-10-27T14:36:24.053747+00:00",
+      "materials": {
+        "count": 15,
+        "bytes": 235980
+      },
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "dispatch": "Already dispatched; no replay. Read original dispatch record and returns/receipts/claims.",
+      "stage_B": "NOT_RELEASED_NOT_RUN_NO_GO",
+      "windows": "A0-A5_ACTUALLY_OCCURRED_STAGE_B_NOT_RUN",
+      "recovery_rule": "If _state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json exists, read it and original Tool/receipts and establish original owner state before any action; never redispatch from pending pointer.",
+      "dispatch_record": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-checkpoint-r344/MAIN_EXPLICIT_STAGE_A_DISPATCH.json",
+        "bytes": 691,
+        "sha256": "a348a76dd44d90ed541919db90c0395ac60956e022526089e88557ea23358cbb"
+      },
+      "actual_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-stage-a-original-returns/STAGE_A_ACTUAL_HANDOFF.json",
+        "bytes": 15434,
+        "sha256": "d5a68911f27e89fac521ceb303a4ef2012fcece302f506069e3468189f06dda9"
+      },
+      "raw_READY": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-source-prep/receipts/A5-READY.json",
+        "bytes": 6749,
+        "sha256": "f8678f7abcc84ee51f233221ff64099bf5410c32c4f255b4b9cac106bb80d882"
+      },
+      "review": "actual chain reviewed; companion safe_exec old r1 B0/B1 commands were not executed; P2 correction and review pending"
+    },
+    {
+      "scope": "COHERENT_013_SOURCEZIP_R2_ASSEMBLER_BINDING",
+      "status": "FIVE_ACTUAL_ARTIFACTS_STRONG_MAIN_ACCEPTED_BYTES_ONLY",
+      "build_known_zero_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_BUILD_KNOWN_ZERO_FOR_SOURCEZIP.json",
+        "bytes": 3299,
+        "sha256": "8c47edb207bb8f16a1bd85a5774e96b4e97b73a86ffe9f77e0bfbdda22828132"
+      },
+      "next": "Main reviews final binding/argv then separately dispatches one pure data assembly; four build artifacts plus sourceZIP affected Strong/Main review; no build replay",
+      "sourcezip_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/ACTUAL_SOURCEZIP_HANDOFF.json",
+        "bytes": 3976,
+        "sha256": "f04d31141353febf8cb1d655398df5ab160c7d99b68fa3d5767c47792eaca9e2"
+      },
+      "Main_byte_checks": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_ARTIFACT_BYTE_CHECKS.json",
+        "bytes": 3075,
+        "sha256": "163774ba989dcc8deea136131ddf4f19b3c80da4bcb1305527231b5eec3f6d8e"
+      },
+      "acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
+        "bytes": 4726,
+        "sha256": "d2519e7e139b6c854904559aad8ba78e148b9688273cc006353d1c1f4006ee1e"
+      }
+    },
+    {
+      "scope": "APPC_GUI_R2_REGISTRY_PREFIX_SOURCE_PREP",
+      "status": "R2_SOURCE_STRONG_MAIN_ACCEPTED",
+      "decision": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-REGISTRY_PREFIX_DECISION.md",
+        "bytes": 3382,
+        "sha256": "a69874c3212b13b118a2f57808fdb4d6c39b3f2499fcb3bd1202d57fd2a4d5ed"
+      },
+      "next": "Fix ancestor readback versus target validation; Strong/Main source review before any new runtime",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r2-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 3143,
+        "sha256": "1acc02fcbf8f2f32d78b9d09f3011a2de93104b3d8224a9e38a3bbeb3f4e0644"
+      }
+    },
+    {
+      "scope": "APPC_GUI_R1_STAGE_B_ONCE",
+      "status": "ACTUAL_CAPTURED_KNOWN_REFUSAL_NOT_NATIVE_PASS",
+      "ready_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+        "bytes": 4348,
+        "sha256": "27698d7458e384fb58daf50492c09d1071ed3a60fcc15f68b7fff8b5079323ca"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/STAGE_B_RELEASE.json",
+        "bytes": 2212,
+        "sha256": "085b4366d5dd2811a0b6dd0937ebb3e5e9c851185d654f9d3ea9992f3b6b1762"
+      },
+      "raw_ready": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/receipts/A5-READY.json",
+        "bytes": 6749,
+        "sha256": "e0bf21a2777d8a60dfee4350f64e60350f72245584d49b12651a5ec67fd737e8"
+      },
+      "integer_erratum": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-stage-a-original-returns/HANDOFF_INTEGER_PRECISION_ERRATUM.json",
+        "bytes": 5085,
+        "sha256": "40dbb2c21d3b90f40951478dfa26127146da384a78f6b0bc6155fb8bd147e182"
+      },
+      "raw_birth_decimal_string": "134375786546531101",
+      "allowed_stages": [
+        "B0_GO",
+        "B1_COLLECT"
+      ],
+      "stage_B_expiry_utc": "2026-10-27T14:29:48.800141+00:00",
+      "original_A_go_not_after_utc": "2026-10-27T13:34:37.733908+00:00",
+      "minimum_go_margin_seconds": 60,
+      "dispatch": "Main verify durable pointer then explicitly dispatch; B1 only same-lease original known0 B0",
+      "parent_OS_current_state": "NOT_QUERIED",
+      "GO": "NOT_DISPATCHED",
+      "actual_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-stage-b-original-returns/STAGE_B_ACTUAL_HANDOFF.json",
+        "bytes": 7856,
+        "sha256": "f3bd424027bbe56f4c03286587324ddf98cb27f5ebffdd054dd6fd77e52d5ba6"
+      },
+      "fence": "046c B0/B1 spent, no query/retry/adopt; parent API-only known cleanup is not postimage or liveness proof"
+    },
+    {
+      "scope": "COHERENT_013_BUILD_PURE_IO_PREBIND",
+      "status": "ACTUAL_BUILD_KNOWN_ZERO_SOURCEZIP_PREREQUISITE_ONLY_ARTIFACT_REVIEW_PENDING",
+      "adapter_source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-independent-review-r1/MAIN_ADAPTER_SOURCE_ACCEPTANCE.json",
+        "bytes": 2655,
+        "sha256": "e682792a97f811746c04ebecaf725ceb822769538b18215b7f4a60a04184488f"
+      },
+      "Main_build_task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-once-prep-r1/MAIN_BUILD_TASK.json",
+        "bytes": 3129,
+        "sha256": "e5c2579bfac9ed71242d7d522a1bd8994e1e9a8a9283d38e28c4d9d83d3d7d41"
+      },
+      "dispatch_expiry_utc": "2026-10-27T13:59:48.800141+00:00",
+      "actual_build": "KNOWN_ZERO_TOOL_WAIT0_DUAL_EOF",
+      "note": "Task status EXECUTION_RELEASED_ONCE does not indicate dispatch; Main verifies four prebinding outputs and durable pointer and explicitly dispatches separately.",
+      "actual_prebind_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_ACTUAL_PREBIND_ACCEPTANCE.json",
+        "bytes": 3669,
+        "sha256": "f3bf3cec9d6bc02e3071a6c788c048c03568b7e40cc9d9e7f63b4cd7548e6888"
+      },
+      "actual_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/ACTUAL_BUILD_HANDOFF.json",
+        "bytes": 9928,
+        "sha256": "b48b62f87e6e24f951f228b2170fbb91ed8a59e619b79412f9410d9cc61e3d68"
+      },
+      "original_terminal_tool": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/io-binding-wait01.tool-return.json",
+        "bytes": 760,
+        "sha256": "0b1485d59a42f0e71ec4a3e482ca209fb647ff22fad0935b87806ded2a7c7d18"
+      },
+      "binding": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/BINDING.execution.json",
+        "bytes": 9180,
+        "sha256": "7c35d333224e367af0a688e7baf288cadd83589e90f36273af966bdb8157b1db"
+      },
+      "argv": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/EXACT_ARGV.json",
+        "bytes": 1730,
+        "sha256": "067b5ec93a078fab7557ac8f29845508485cf36968e7b8be380c8d3772f06e59"
+      },
+      "profile_preview": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/BUILD_PROFILE_PREVIEW.sb",
+        "bytes": 6143,
+        "sha256": "62c9d2cca93e137c89aa65039de607fe65137a4b402cf239a1c38e56a772216b"
+      },
+      "receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-io-adapter-r1/bound-r1/BINDING_RECEIPT.json",
+        "bytes": 3054,
+        "sha256": "2dd2d8cf10637c532deaacd64b052d38e327093e0f11b3da2e78c85c84aab5f3"
+      },
+      "source_proof": "source-backed original validate/renderer path; no independently serialized new raw snapshot",
+      "session": "10595 TERMINAL0 DO_NOT_REPOLL",
+      "Main_known_zero_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-original-returns-r1/MAIN_BUILD_KNOWN_ZERO_FOR_SOURCEZIP.json",
+        "bytes": 3299,
+        "sha256": "8c47edb207bb8f16a1bd85a5774e96b4e97b73a86ffe9f77e0bfbdda22828132"
+      }
+    },
+    {
+      "scope": "APPC_GUI_R1_STAGE_A_ONCE",
+      "status": "ACTUAL_STAGE_A_READY_STRONG_MAIN_ACCEPTED",
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 4134,
+        "sha256": "3baf53b10995ca9ace0ad1b132e1f17067ffd3a8b700623ae7e90a5552af3469"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/STAGE_A_RELEASE.json",
+        "bytes": 2859,
+        "sha256": "05c5b8ec09d7210bb01eb846cd3cd59d258b5b1724fc620bee7edfbb9d641b59"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/r21_r3_operator.py",
+        "bytes": 47179,
+        "sha256": "3899af2e138c8d9e81d31df444ac8a0d5c208a94441bc8c7138d6cac937f889b"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/SOURCE_FREEZE.json",
+        "bytes": 2981,
+        "sha256": "cbc6ba22e127f5d5bb323373ad248dc5a7e5626bea171bb9dc25be6033faf78f"
+      },
+      "seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/FREEZE_SEAL.json",
+        "bytes": 5807,
+        "sha256": "4851a5a4d6bb8f5085edae5c6307134f6f42ae3ba3a8c0ad9d58a640afd38ab1"
+      },
+      "manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-appcontainer-gui-r1-source-prep/source/run-manifest.json",
+        "bytes": 2820,
+        "sha256": "2656c1a8c36330c264d91f88bb74196b90a0ba3c47fc9ff076efee0a9ae15373"
+      },
+      "human_authority_sha256": "689c60c46f9c78b3c6c49eeaea4b49ff32504a2acb1ea95c8b96cc8cb26ef2f7",
+      "nonce": "046c2895a1e67dcd3c0bcca4b0e50392",
+      "deadline_utc": "2026-10-27T13:34:37.733908+00:00",
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "materials": {
+        "count": 15,
+        "bytes": 235288
+      },
+      "dispatch": "Main verifies durable pointer then explicitly dispatches; Aristotle only prepares original Tool directory/argv",
+      "stage_B": "NOT_RELEASED_NO_GO",
+      "windows_actions": "NOT_RUN",
+      "unknown": "original owner hold; zero later SDK/query/cleanup/retry/adopt",
+      "scope_limit": "A0–A5 completed with actual READY; historical stage, no replay"
+    },
+    {
+      "scope": "COHERENT_013_REAL_BUILD_BINDING_PREP",
+      "status": "BUILD_BINDING_PENDING_MAIN_REVIEW_NO_RELEASE",
+      "accepted_canary": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_ACTUAL_CANARY_ACCEPTANCE.json",
+        "bytes": 4952,
+        "sha256": "703d05ba79d822a9cb345a30b52a9e7d2e878d414a10690f4712e7c65c08b007"
+      },
+      "actual_build": "NOT_RELEASED_NOT_RUN",
+      "dispatch": "Main review and separate exact one-build release required; no invocation authorized by canary acceptance",
+      "HEAD": "53c16d0484b8971385ef56397bc96a28c34beea4 must remain through build"
+    },
+    {
+      "scope": "COHERENT_013_CANARY_FINAL_BINDING",
+      "status": "ACTUAL_POLICY_CANARY_KNOWN_ZERO_MAIN_ACCEPTED",
+      "Main_canary_task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_CANARY_TASK.json",
+        "bytes": 4222,
+        "sha256": "6e613097a1d92ac50bfaf77060b28c47c6727f322617dc52703ef49dfd5c321d"
+      },
+      "effective_prep_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-build-prep-independent-review-r2/MAIN_EFFECTIVE_PREP_ACCEPTANCE.json",
+        "bytes": 3892,
+        "sha256": "448683c3b99d4bcb814392038d01ecb62f55eb156b3f7e2ed040a76193b47c72"
+      },
+      "active_sourceZIP_template": {
+        "bytes": 7501,
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-sourcezip-fix-r2/assemble_source_zip.corrected-template.py.txt",
+        "sha256": "98aae04c07bfe20cc42a6d47792fa873cefa7e3e412597f74aab69287db8ca9c"
+      },
+      "lease_expires_at_utc": "2026-10-27T13:03:39.934421+00:00",
+      "dispatch_prerequisite": "Main verify r338 durable active pointer and exact task/final acceptance/pins/argv, then explicitly order one canary before unchanged lease expiry. No build release.",
+      "canary": "ACTUAL_KNOWN_ZERO_ACCEPTED",
+      "build": "NOT_RELEASED_NOT_RUN",
+      "source_HEAD": "53c16d0484b8971385ef56397bc96a28c34beea4",
+      "final_binding_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_FINAL_BINDING_ACCEPTANCE.json",
+        "bytes": 2602,
+        "sha256": "5d2e2ceb2421bb03d2855579e66072489a45b9b4069f987a86f4d79a4e62db8f"
+      },
+      "final_pins": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/FINAL_PINS.json",
+        "bytes": 6964,
+        "sha256": "512475ccc3a9042807d9c2bf0c30111fd5e84c017e8460de75c72fdca9a5ecf1"
+      },
+      "exact_argv": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/EXACT_ARGV.json",
+        "bytes": 1473,
+        "sha256": "e80a4d21bb680c713eaf7ce6dd33ff69ad4a94c94739d031c832971e18a2de08"
+      },
+      "actual_canary_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/MAIN_ACTUAL_CANARY_ACCEPTANCE.json",
+        "bytes": 4952,
+        "sha256": "703d05ba79d822a9cb345a30b52a9e7d2e878d414a10690f4712e7c65c08b007"
+      },
+      "actual_handoff": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/original-returns/ACTUAL_CANARY_HANDOFF.json",
+        "bytes": 7482,
+        "sha256": "a529c4f6d1c4eb5597cb891a4c5a238f5e344cc366cc7d949c23c13485132ab2"
+      },
+      "actual_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-coherent-013-canary-release-r1/activation/CANARY_RESULT.json",
+        "bytes": 5711,
+        "sha256": "4435c0a821f38e5e2c3275b8c8aa7b1ed9ffac1b3d853a39db58681987638fe1"
+      },
+      "original_session": "5156 TERMINAL0 DO_NOT_REPOLL"
+    },
+    {
+      "scope": "WINDOWS_R6_STAGE_B_ONCE",
+      "status": "ORDINARY_FIXED_X_CLOSED_EXIT_ZERO_STRONG_MAIN_ACCEPTED",
+      "task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-once-task.json",
+        "bytes": 4421,
+        "sha256": "d64358f5e0b900e5b75a5a6e5de2fbc2c7a449bd858ab2fc18f9a550c214422a"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/STAGE_B_RELEASE.json",
+        "bytes": 1703,
+        "sha256": "ce1590da279e3f7e0fdc4bf99d6ce8566c087b61799d8ab63af0900bec9e3da8"
+      },
+      "Main_actual_ready_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+        "bytes": 2848,
+        "sha256": "66198b001e3f32342b8cd36df2c7848f9e90afc317d68852d583119de58976d5"
+      },
+      "actual_ready": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/receipts/A5-READY.json",
+        "bytes": 5211,
+        "sha256": "4dae63394d10e2b660d4fc70a732210165a85e6407d1050619abe96fe829b9bc"
+      },
+      "original_stage_a_release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/STAGE_A_RELEASE.json",
+        "bytes": 2091,
+        "sha256": "5dbe202f4a25cd7fd32580c3dc4e17daab64fc3a5c3f7dcb4e8602eaae28329a"
+      },
+      "stage_a_actual_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-original-returns/STAGE_A_ACTUAL_RESULT.json",
+        "bytes": 14376,
+        "sha256": "4ae2018c5f8557433932a67c9918ce837492407af6ead8c4e6d4f0676cd377a5"
+      },
+      "independent_review": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-independent-review/REVIEW.md",
+        "bytes": 7875,
+        "sha256": "25f987af8e379e97828f17286568fda74cf8f94e763820c3f960631513aa9de5"
+      },
+      "original_stage_b_returns": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-original-returns",
+      "deadline_utc": "2026-10-27T12:22:17.468881+00:00",
+      "ready_approx": "2026-10-27T11:29Z",
+      "nonce": "c3e84e53363ce9807bc61f82ff2cc746",
+      "allowed": "one B0_GO; only same-lease original known0 permits one B1_COLLECT fixed three files",
+      "not_released": [
+        "A6_FAIL_CAPTURE",
+        "secondGO",
+        "secondcollector",
+        "othernamespace",
+        "oldowneroperations"
+      ],
+      "fence": "c3e GO/B1 spent; parent OS numeric exit unobserved, no current liveness claim, no query/cleanup/retry/adopt",
+      "actual_result": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-original-returns/STAGE_B_ACTUAL_RESULT.json",
+        "bytes": 7727,
+        "sha256": "ba4fc22c7df5debb83bea14926335f53b2c5c2c6dfb83a39c4cf2ac7a177c36d"
+      },
+      "acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-b-independent-review/MAIN_ACTUAL_FIXED_X_ACCEPTANCE.json",
+        "bytes": 3445,
+        "sha256": "41d91ab72747bf9fe2c364c54fdb2c1b9702247efd96dd920f8ae0864c61f8d7"
+      }
+    },
+    {
+      "scope": "WINDOWS_R6_STAGE_A_ONCE",
+      "status": "ACTUAL_STAGE_A_READY_STRONG_MAIN_ACCEPTED",
+      "task": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-once-task.json",
+        "bytes": 3392,
+        "sha256": "3d2a47b6c44b94a5002f81be9b2ddf5d435ff4507148410a52c3c2e0407ebff3"
+      },
+      "release": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/STAGE_A_RELEASE.json",
+        "bytes": 2091,
+        "sha256": "5dbe202f4a25cd7fd32580c3dc4e17daab64fc3a5c3f7dcb4e8602eaae28329a"
+      },
+      "authority": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-nonconsole-independent-review/HUMAN_STANDING_SCOPE_AUTHORITY_R6.json",
+        "bytes": 3286,
+        "sha256": "3e8a7dc2d98e474e0e56cdff8f2683ead9fb85156843d8dcb1c25127847877c5"
+      },
+      "operator": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/r21_r3_operator.py",
+        "bytes": 56544,
+        "sha256": "bb8b8e2b3e157ff719af2909d3023f30d1417fb8c8debba263974b545d02953d"
+      },
+      "static_seal": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/FREEZE_SEAL.json",
+        "bytes": 5771,
+        "sha256": "e44154b2e1d9ad4e20d11ca506ff92cbbbfb84da036fa98f15e3225eaef1ac50"
+      },
+      "source_freeze": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-full-chain-prep-r6/SOURCE_PACKAGE_PINS.json",
+        "bytes": 2327,
+        "sha256": "6b4f8135990227932eca40d003132462ebbf50b0a89622afd739796743fcbb06"
+      },
+      "source_acceptance": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-nonconsole-independent-review/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+        "bytes": 2719,
+        "sha256": "b3fa402583b89ab68d7879e1a0f11202951e2d4ad9309fd4dfc62ca1b55e501d"
+      },
+      "original_returns": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-main-review/20261027-ordinary-x-r6-stage-a-original-returns",
+      "nonce": "c3e84e53363ce9807bc61f82ff2cc746",
+      "deadline_utc": "2026-10-27T12:22:17.468881+00:00",
+      "allowed_stages": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ],
+      "scope_limit": "A0–A5 completed; actual READY accepted; historical Stage A, no replay",
+      "not_released": [
+        "A6_FAIL_CAPTURE",
+        "B0_GO",
+        "B1_COLLECT",
+        "helper/X",
+        "othernamespaceoroldowneroperations"
+      ],
+      "remote_namespace": "LEXICAL_ONLY_NOT_PROBED_NOT_CREATED",
+      "actual_runtime": "NOT_RUN",
+      "fence": "Unknown original owner hold; zero later SDK/query/cleanup/retry/adopt; old 02ed/7ea/9681 fenced"
+    },
     {
       "scope": "WINDOWS_R5_R2_STAGE_B_ONCE",
       "status": "CLOSED_KNOWN_NONZERO_FAILURE_EVIDENCE_STRONG_MAIN_ACCEPTED",
