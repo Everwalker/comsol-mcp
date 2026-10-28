@@ -8,6 +8,20 @@ import pytest
 from comsol_mcp import _control_client as client
 
 
+@pytest.fixture
+def private_log_preflight(monkeypatch):
+    """These transport/flag tests already stub home and endpoint admission.
+
+    Model the new log admission too; full real helper wiring is tested in
+    test_control_privacy with its explicit synthetic Windows ACL backend.
+    """
+    from comsol_mcp import _control_privacy
+    def admitted(home, launch):
+        with (home / 'control.log').open('ab') as stream:
+            return launch(stream)
+    monkeypatch.setattr(_control_privacy, 'with_log', admitted)
+
+
 def _write_endpoint(home):
     endpoint = {
         "pid": 1234,
@@ -99,7 +113,7 @@ def test_healthy_existing_windows_control_is_attached_without_spawn(monkeypatch,
     assert client.ensure_control() is endpoint
 
 
-def test_windows_spawn_requests_breakaway_detached_process_group(monkeypatch, tmp_path):
+def test_windows_spawn_requests_breakaway_detached_process_group(monkeypatch, tmp_path, private_log_preflight):
     endpoint = {"pid": 1234, "port": 4321, "token": "secret"}
     popen_calls = []
 
@@ -126,7 +140,7 @@ def test_windows_spawn_requests_breakaway_detached_process_group(monkeypatch, tm
     assert "start_new_session" not in kwargs
 
 
-def test_windows_breakaway_winerror_5_fails_closed_without_transport_fallback(monkeypatch, tmp_path):
+def test_windows_breakaway_winerror_5_fails_closed_without_transport_fallback(monkeypatch, tmp_path, private_log_preflight):
     monkeypatch.setattr(client, "control_home", lambda: tmp_path)
     monkeypatch.setattr(client, "_is_windows", lambda: True)
     monkeypatch.setattr(client, "_read_endpoint", lambda home: None)
@@ -153,7 +167,7 @@ def test_windows_breakaway_winerror_5_fails_closed_without_transport_fallback(mo
     assert "start_new_session" not in calls[0][1]
 
 
-def test_dispatch_preserves_windows_prerequisite_as_not_submitted(monkeypatch, tmp_path):
+def test_dispatch_preserves_windows_prerequisite_as_not_submitted(monkeypatch, tmp_path, private_log_preflight):
     calls = []
 
     def denied(*args, **kwargs):
@@ -164,6 +178,7 @@ def test_dispatch_preserves_windows_prerequisite_as_not_submitted(monkeypatch, t
 
     monkeypatch.setattr(client, "control_home", lambda: tmp_path)
     monkeypatch.setattr(client, "_is_windows", lambda: True)
+    monkeypatch.setattr(client, "_read_endpoint", lambda home: None)
     monkeypatch.setattr(client.subprocess, "Popen", denied)
     monkeypatch.setattr(client, "_request", lambda *args: pytest.fail("no health or operation request expected"))
     result = client.dispatch("server_connect", {}, {"request_id": "r", "idempotency_key": "k"})
@@ -174,7 +189,7 @@ def test_dispatch_preserves_windows_prerequisite_as_not_submitted(monkeypatch, t
     assert len(calls) == 1
 
 
-def test_startup_timeout_is_not_submitted_without_claiming_no_control_effect(monkeypatch, tmp_path):
+def test_startup_timeout_is_not_submitted_without_claiming_no_control_effect(monkeypatch, tmp_path, private_log_preflight):
     spawn_calls = []
     popen_calls = []
     clock = iter((0.0, 16.0))

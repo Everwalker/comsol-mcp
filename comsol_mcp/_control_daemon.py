@@ -13668,8 +13668,12 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
         scm_publisher = prepare_home(home, _scm_runtime)
         singleton = scm_publisher._lock
     else:
-        home.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(home, 0o700)
+        from . import _control_privacy
+        if _control_privacy._is_windows():
+            home = _control_privacy.prepare_home(home, create=True)
+        else:
+            home.mkdir(mode=0o700, parents=True, exist_ok=True)
+            os.chmod(home, 0o700)
         singleton = ProcessLock(home / "control.lock")
     try:
         from ._state_backup import assert_no_pending_restore
@@ -13714,6 +13718,11 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
             _owner_observer(daemon)
         return _serve_control_listener(home, daemon, token, _scm_runtime,
                                        _scm_bootstrap_request, _scm_profile_source_sha256, scm_publisher)
+    except Exception as error:
+        from ._control_privacy import ControlPrivacyError, retain_operation
+        if _scm_runtime is None and isinstance(error, ControlPrivacyError):
+            retain_operation(error, daemon, singleton, home)
+        raise
     finally:
         # Existing close drains accepted execution lanes and preserves UNKNOWN
         # ownership. SCM STOP is not a solver cancellation or a host RESTORE.
@@ -13804,9 +13813,17 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
         # authenticated endpoint/token remains exclusively in control.json.
         _write_control_daemon_identity(home, daemon_identity)
         if scm_publisher is None:
-            temporary.write_text(json.dumps(endpoint))
-            os.chmod(temporary, 0o600)
-            temporary.replace(home / "control.json")
+            from . import _control_privacy
+            if _control_privacy._is_windows():
+                try:
+                    _control_privacy.publish_endpoint(home, endpoint)
+                except _control_privacy.ControlPrivacyError as error:
+                    _control_privacy.retain_operation(error, server, daemon, home)
+                    raise
+            else:
+                temporary.write_text(json.dumps(endpoint))
+                os.chmod(temporary, 0o600)
+                temporary.replace(home / "control.json")
         else:
             scm_publisher.publish(server)
         stop_monitor = None

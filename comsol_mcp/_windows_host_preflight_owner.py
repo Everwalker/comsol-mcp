@@ -26,6 +26,7 @@ def scalar(value,kind):
 class _PreflightOwner:
     def __init__(self,api):
         self._seal=_SEAL;self.api=api;self.registry=registry_for(api);self.sdk={};self.first_cause=None;self.scope=self.registry.scope();self.retired=False
+        self._borrowed_outputs=[]
         if self.registry.owner is not api:fail('readonly preflight requires original API registry owner')
         if self.registry.unresolved():fail('readonly preflight root must precede acquisition; existing resources cannot be re-adopted')
     def check_owner(self):
@@ -35,11 +36,27 @@ class _PreflightOwner:
             fail('readonly preflight original actual owner/root changed')
     def remember(self,error):
         if self.first_cause is None and error is not None:self.first_cause=error
+        if error is not None and getattr(self, '_control_strict', False):
+            self._control_held = True
+    def _control_check(self):
+        if getattr(self, '_control_held', False):
+            fail('original control privacy observation is UNKNOWN; resources retained')
     def function(self,name,dll):
         self.check_owner()
+        self._control_check()
         if threading.get_ident()!=self.scope.thread_id:
             fail('readonly SDK acquisition/read requires original preflight thread')
-        if name not in self.sdk:self.sdk[name]=getattr(dll,name)
+        if name not in self.sdk:
+            original = getattr(dll,name)
+            if getattr(self, '_control_strict', False):
+                def observed(*args, **kwargs):
+                    self.check_owner(); self._control_check()
+                    try:return original(*args, **kwargs)
+                    except BaseException as error:
+                        self.remember(error)
+                        raise
+                self.sdk[name] = observed
+            else:self.sdk[name]=original
         return self.sdk[name]
     def capture(self,storage,*,family,closer,keepalive=()):
         self.check_owner();address=getattr(storage,'value',storage)
@@ -74,6 +91,7 @@ class _PreflightOwner:
                 raise
     def release(self,storage,*,family,primary=None):
         self.remember(primary);self.check_owner()
+        self._control_check()
         entry=self.registry.find(self.api,storage,domain='native' if family=='handle' else 'host_preflight_local')
         if entry is None:fail('readonly metadata cannot adopt a resource for cleanup')
         try:entry.release_owned(self.api)
@@ -82,6 +100,15 @@ class _PreflightOwner:
         entry=self.registry.find(self.api,storage)
         if entry is None:fail('borrowed SID requires original retained token allocation')
         entry.keepalive=(*entry.keepalive,*buffers)
+    def retain_borrowed_outputs(self,storage,*buffers):
+        # Observation storage only: never acquire, adopt or close the CRT handle.
+        self.check_owner();self._control_check()
+        if threading.get_ident()!=self.scope.thread_id:
+            fail('borrowed metadata requires original preflight thread')
+        address=getattr(storage,'value',storage)
+        if type(address) is not int or address<=0 or address==C.c_void_p(-1).value:
+            fail('borrowed metadata handle malformed')
+        self._borrowed_outputs.append((storage,buffers))
     def entries(self):
         return tuple(e for e in self.registry.unresolved() if e.seq>self.scope.seq)
     def path_closer(self,handle):

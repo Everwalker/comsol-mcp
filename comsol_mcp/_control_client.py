@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from ._platform_process import process_identity
+from ._control_privacy import ControlPrivacyError
 
 
 class ControlStartupError(RuntimeError):
@@ -56,6 +57,9 @@ def _is_windows() -> bool:
 
 def control_home(*, create: bool = True) -> Path:
     from comsol_mcp._server import COMSOL_SERVER_MCP_HOME
+    if _is_windows():
+        from ._control_privacy import prepare_home
+        return prepare_home(COMSOL_SERVER_MCP_HOME / "control-private", create=create)
     if not create:
         # Inspect the configured lexical root before resolving it. Never create,
         # chmod, or repair an existing directory in attach-only mode.
@@ -81,6 +85,11 @@ def control_home(*, create: bool = True) -> Path:
 
 
 def _request(endpoint: dict, payload: dict, timeout: float) -> dict:
+    from ._control_privacy import request_if_current
+    return request_if_current(endpoint, lambda current: _submit_request(current, payload, timeout))
+
+
+def _submit_request(endpoint: dict, payload: dict, timeout: float) -> dict:
     port = endpoint.get("port")
     if type(port) is not int or not 1 <= port <= 65535:
         raise RuntimeError("Invalid control endpoint")
@@ -96,6 +105,9 @@ def _request(endpoint: dict, payload: dict, timeout: float) -> dict:
 
 
 def _read_endpoint(home: Path) -> dict | None:
+    if _is_windows():
+        from ._control_privacy import read_endpoint
+        return read_endpoint(home)
     path = home / "control.json"
     if not path.exists():
         return None
@@ -157,6 +169,13 @@ def _spawn_control_daemon(home: Path, stream):
 
 
 def ensure_control() -> dict:
+    try:
+        return _ensure_control()
+    except ControlPrivacyError:
+        raise ControlStartupError("Private control preflight failed; requested operation was not submitted.") from None
+
+
+def _ensure_control() -> dict:
     # Select before control_home: even a blank/malformed locator is attach-only.
     locator = os.environ.get("COMSOL_SERVER_MCP_SCM_ENDPOINT_CONFIG")
     if locator is not None:
@@ -194,14 +213,20 @@ def ensure_control() -> dict:
             result = _request(endpoint, {"operation": "session_health", "arguments": {}, "execution": {}}, 1.0)
             if result.get("success"):
                 return endpoint
+        except ControlPrivacyError:
+            raise
         except Exception:
             if _alive(endpoint.get("pid"), endpoint.get("process_start_epoch_ms")):
                 raise RuntimeError("Existing control process is unresponsive; no replacement started")
     # The daemon acquires the singleton lock before publishing its endpoint.
     # Concurrent transport processes may launch contenders; only one may run.
     log = home / "control.log"
-    with log.open("ab") as stream:
-        _spawn_control_daemon(home, stream)
+    if _is_windows():
+        from ._control_privacy import with_log
+        with_log(home, lambda stream: _spawn_control_daemon(home, stream))
+    else:
+        with log.open("ab") as stream:
+            _spawn_control_daemon(home, stream)
     deadline = time.monotonic() + 15.0  # Control startup only, never an engine deadline.
     while time.monotonic() < deadline:
         endpoint = _read_endpoint(home)
@@ -209,6 +234,8 @@ def ensure_control() -> dict:
             try:
                 if _request(endpoint, {"operation": "session_health", "arguments": {}, "execution": {}}, 0.5).get("success"):
                     return endpoint
+            except ControlPrivacyError:
+                raise
             except Exception:
                 pass
         time.sleep(0.05)
@@ -229,6 +256,36 @@ def ensure_control() -> dict:
     )
 
 
+def _not_submitted(exc, execution):
+    error = {
+        "code": "CONTROL_REQUEST_NOT_SUBMITTED",
+        "type": type(exc).__name__,
+        "message": (
+            str(exc)
+            if isinstance(exc, ControlStartupError)
+            else "Control preflight failed; the requested operation was not submitted."
+        ),
+        "safe_retry": False,
+    }
+    if isinstance(exc, ControlStartupError) and exc.action:
+        error["action"] = exc.action
+    return {
+        "success": False,
+        "error": error,
+        "execution": {"request_id": execution["request_id"], "idempotency_key": execution["idempotency_key"]},
+        "data": {
+            "status": "NOT_SUBMITTED",
+            "operation_dispatched": False,
+            "execution_state_unknown": False,
+            "dispatch_stage": "pre_dispatch",
+            # ensure_control may have started a daemon before discovering
+            # that it is not ready. This describes the requested operation
+            # only and makes no claim about control-daemon startup effects.
+            "control_startup_outcome": "NOT_ATTEMPTED" if isinstance(exc, (ScmAttachError, LocalAttachOnlyError)) else "UNRESOLVED",
+        },
+    }
+
+
 def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
     execution = dict(execution)
     execution.setdefault("request_id", str(uuid4()))
@@ -240,36 +297,13 @@ def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
     try:
         endpoint = ensure_control()
     except Exception as exc:
-        error = {
-            "code": "CONTROL_REQUEST_NOT_SUBMITTED",
-            "type": type(exc).__name__,
-            "message": (
-                str(exc)
-                if isinstance(exc, ControlStartupError)
-                else "Control preflight failed; the requested operation was not submitted."
-            ),
-            "safe_retry": False,
-        }
-        if isinstance(exc, ControlStartupError) and exc.action:
-            error["action"] = exc.action
-        return {
-            "success": False,
-            "error": error,
-            "execution": {"request_id": execution["request_id"], "idempotency_key": execution["idempotency_key"]},
-            "data": {
-                "status": "NOT_SUBMITTED",
-                "operation_dispatched": False,
-                "execution_state_unknown": False,
-                "dispatch_stage": "pre_dispatch",
-                # ensure_control may have started a daemon before discovering
-                # that it is not ready. This describes the requested operation
-                # only and makes no claim about control-daemon startup effects.
-                "control_startup_outcome": "NOT_ATTEMPTED" if isinstance(exc, (ScmAttachError, LocalAttachOnlyError)) else "UNRESOLVED",
-            },
-        }
+        return _not_submitted(exc, execution)
 
     try:
         return _request(endpoint, {"operation": operation, "arguments": arguments, "execution": execution}, rpc_timeout + 5.0)
+    except ControlPrivacyError as exc:
+        # This verifier failed before constructing/submitting the HTTP request.
+        return _not_submitted(exc, execution)
     except Exception as exc:
         return {
             "success": False,

@@ -1,47 +1,128 @@
 {
   "active_current_entrypoint": {
-    "revision": 411,
-    "status": "WINDOWS_PUBLIC_MCP_NOT_RUN_SOURCE_BLOCKED_PRIVATE_REPAIR_IN_PROGRESS",
-    "published_head": "f1c9a12982e4af7d574b22e0eff5067ee7174aca",
+    "revision": 412,
+    "status": "SOURCE_016_ACCEPTED_INTEGRATED_UNCOMMITTED_ARTIFACT_RUNTIME_NOT_RUN",
+    "published_head": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
     "current_source": {
-      "version": "0.1.15",
-      "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
-      "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_PUBLISHED",
+      "version": "0.1.16",
+      "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_CANONICAL_INTEGRATED_UNCOMMITTED",
+      "source_commit": null,
+      "source_tree": null,
+      "integration_base_commit": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
       "acceptance": {
-        "path": "_state/universal-main-review/20261028-windows-empty-file-integration-independent-review-r1/MAIN_CANONICAL_015_SOURCE_SOFTWARE_ACCEPTANCE.json",
-        "bytes": 2938,
-        "sha256": "d56d3fe7c528560dff103e2519c32ab75f105f3493fe526b384c7e0a8d28721a"
+        "path": "_state/universal-main-review/20261029-windows-control-privacy-main-source-review-r2/MAIN_SOURCE_ACCEPTANCE.json",
+        "bytes": 6310,
+        "sha256": "4412eee6137fec092f71a7fccd2c16f09bf509db37479f09e832cabcd825603b",
+        "mode": "0o644"
       },
-      "accepted_files": [
+      "independent_review": {
+        "path": "_state/universal-main-review/20261029-windows-control-privacy-independent-source-review-r2/REVIEW_RESULT.json",
+        "bytes": 8682,
+        "sha256": "9d85ef22fd0833ceb417ef9935cd425479813a829ec25caab9362697f7164e48",
+        "mode": "0o644"
+      },
+      "source_fingerprint": "628038aa04cb5d872a7128366b57b00c395567077df9a6c21d2effcb4356451b",
+      "integration": {
+        "path": "_state/universal-main-review/20261029-checkpoint-r412/ACTUAL_INTEGRATION.json",
+        "bytes": 11726,
+        "sha256": "cf283e01a266f9f2cb4962d0f2c507d28317066eecbda8e7173a1df87117c82e",
+        "mode": "0o644"
+      },
+      "exact_source_test_files": 8,
+      "own_version_slots": 3,
+      "accepted_postimages": [
         {
-          "path": "comsol_mcp/_windows_host_bootstrap.py",
-          "bytes": 116633,
-          "sha256": "172fa9c708c7b352504de98b3983ba745b1193db949a1f55bacad393e501f16c"
+          "path": "comsol_mcp/_control_client.py",
+          "bytes": 13827,
+          "sha256": "d8ffe7521ef0ff244e445b0019b87db30f4cd47c1dc486346c16d9ff844d8216",
+          "mode": "0o644",
+          "relative_path": "comsol_mcp/_control_client.py"
         },
         {
-          "path": "tests/test_windows_empty_runtime_data.py",
-          "bytes": 7326,
-          "sha256": "950e2da10d50729b0fd8e8150f24daa6654b51b3c1b844c70feecbd9e527055b"
+          "path": "comsol_mcp/_control_daemon.py",
+          "bytes": 880005,
+          "sha256": "5f9f21bc4b6c685107353695c4f2ccf09503e2d278c12b022d3d193842b70bbd",
+          "mode": "0o644",
+          "relative_path": "comsol_mcp/_control_daemon.py"
         },
         {
-          "path": "comsol_mcp/_server.py",
-          "bytes": 11704,
-          "sha256": "101965b28cb2c6d194516e6227022637182b5e43b35b6d35ec39434618cc758b"
+          "path": "comsol_mcp/_control_privacy.py",
+          "bytes": 11227,
+          "sha256": "1da29ddcd517ae88251049d5b6a3ef73fa238ba3e3cb921a2fa9364198789768",
+          "mode": "0o644",
+          "relative_path": "comsol_mcp/_control_privacy.py"
+        },
+        {
+          "path": "comsol_mcp/_host_scoped_provider.py",
+          "bytes": 77959,
+          "sha256": "b2400d6e2ed47a1a6fac18f0ab3e7aa5207b70ef11714af797a0d078e6144c80",
+          "mode": "0o644",
+          "relative_path": "comsol_mcp/_host_scoped_provider.py"
+        },
+        {
+          "path": "comsol_mcp/_windows_host_preflight_owner.py",
+          "bytes": 9773,
+          "sha256": "d9ac6a9b2fedb6fbfabbd48ede8f237183632cd72c97fbc39f49b195c553950f",
+          "mode": "0o644",
+          "relative_path": "comsol_mcp/_windows_host_preflight_owner.py"
+        },
+        {
+          "path": "tests/test_control_client.py",
+          "bytes": 17291,
+          "sha256": "6856974a857ee46aa03d344bf1b8f096b34a9c489f6a74e7575240068e3ee2ad",
+          "mode": "0o644",
+          "relative_path": "tests/test_control_client.py"
+        },
+        {
+          "path": "tests/test_control_privacy.py",
+          "bytes": 15421,
+          "sha256": "1d3c7e9ea5dfea3752d4cbb0f78ade8c1ccb8f65001f7fd1e2be53b1adba8fae",
+          "mode": "0o644",
+          "relative_path": "tests/test_control_privacy.py"
+        },
+        {
+          "path": "tests/test_control_privacy_native.py",
+          "bytes": 14210,
+          "sha256": "6afb4a68df72289c07079342a33f1bdb2d2c9a9423e69d95727da7c728bd0737",
+          "mode": "0o644",
+          "relative_path": "tests/test_control_privacy_native.py"
         },
         {
           "path": "pyproject.toml",
           "bytes": 1989,
-          "sha256": "deb7d1e63a1ef5474f3dbe97b0bc7e5a8955652a3011615499955a1f659b6390"
+          "sha256": "6165a0d412171b755551a58d04bfd5c360d135383301cd7e21a63a2ce0ed6830",
+          "mode": "0o644",
+          "relative_path": "pyproject.toml"
+        },
+        {
+          "path": "comsol_mcp/_server.py",
+          "bytes": 11704,
+          "sha256": "8893403069e1a604039e9860fedc6f9edc31c6d22958e7b2bca89afa25d515b5",
+          "mode": "0o644",
+          "relative_path": "comsol_mcp/_server.py"
         },
         {
           "path": "uv.lock",
           "bytes": 307301,
-          "sha256": "30230b0b65467e0bba56c5bcdc44aef5e4e131435171e1f87ccbc49b50fe010d"
+          "sha256": "d3dc467949c87be983201fa8440772b99e3aec45c4a0e4e2631b2a024b9ec1fe",
+          "mode": "0o644",
+          "relative_path": "uv.lock"
         }
       ],
-      "build_install_runtime": "SCOPED_MAC_ARM64_NORMAL_INSTALL_PUBLIC_MCP_AND_WINDOWS_ORDINARY_NORMAL_PREFIX_INSTALL_ACCEPTED_WINDOWS_PUBLIC_MCP_NATIVE_NOT_RUN",
-      "prior_014_source": "previous_source_candidate_014_r374",
-      "source_tree": "ebbdf9ae784a851fdb68176cf45fac96d2774020"
+      "software_tests": 442,
+      "independent_checks": 15,
+      "counts_not_cumulative": true,
+      "build_install_runtime": "0.1.16 artifacts/build/normal-install/public-MCP/Windows actual/native NOT_RUN",
+      "prior_source_identity": {
+        "snapshot": {
+          "path": "_state/universal-main-review/20261029-checkpoint-r412/prior-main3/docs/universal_mcp_execution/state/RESUME.json",
+          "bytes": 1564831,
+          "sha256": "3416fb68c4b782dd4163eb5417fc85b1b6e290646222afa115f6cfe92ad664fe",
+          "mode": "0o644"
+        },
+        "json_pointer": "/active_current_entrypoint/current_source",
+        "role": "IMMUTABLE_PRIOR_VALUE_NOT_CURRENT_SOURCE_OR_AUTHORITY"
+      }
     },
     "latest_artifacts_runtime": ".15 five artifact bytes, scoped Mac ARM64 normal install/public MCP, and scoped Windows ordinary normal-prefix install accepted; Windows public MCP and generalized native qualification NOT_RUN",
     "build_source_acceptance": {
@@ -72,8 +153,8 @@
     "r6_fence": "current_R6_original_UNKNOWN_fence_r359",
     "r7_fence": "current_R7_original_UNKNOWN_fence_r361",
     "old_fences": "retained_owner_fences and legacy_unknown_preserved",
-    "current_leases": "orchestration.current_active_leases_r411",
-    "next_action": "Newton continuously implements and self-tests the private shared-clone control-privacy Source candidate at the fixed location/base. Reuse read-only Windows handle/DACL verification, preserve POSIX and retained-owner barriers, then Main/affected Source review. No canonical Source/version/build/runtime change from this checkpoint.",
+    "current_leases": "orchestration.current_active_leases_r412",
+    "next_action": "Main reviews exact11 integrated Source plus four r412 public drafts, then separately releases any ordinary publication. Source0.1.16 is accepted/integrated but uncommitted; new coherent artifacts/build and fresh normal-install/public-MCP/Windows actual remain NOT_RUN. Preserve scoped .15 installation/runtime and all old owners; no build/runtime authority or replay follows Source acceptance.",
     "bound_source_canary_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-bound-source-canary-independent-review-r1/MAIN_BOUND_SOURCE_CANARY_PREP_ACCEPTANCE.json",
       "bytes": 2555,
@@ -134,7 +215,7 @@
       "claim_name": "BUILD_DISPATCH_ONCE_CLAIM"
     },
     "normal_prefix_materializer": {
-      "status": "NORMAL_INSTALL_ACCEPTED_SCOPED_PUBLIC_MCP_NOT_RUN_SOURCE_BLOCKED",
+      "status": "015_NORMAL_INSTALL_ACCEPTED_016_SOURCE_CLOSED_ARTIFACT_PUBLIC_MCP_NOT_RUN",
       "r5_source_acceptance": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-independent-review-r2/MAIN_R5_SOURCE_ACCEPTANCE.json",
         "bytes": 3970,
@@ -164,7 +245,7 @@
         "bytes": 6120,
         "sha256": "0af8e8ecd36d2b85d168f246c3a97e1c1e54a70d88216e794f55cb3decce7348"
       },
-      "packet": "PUBLIC_MCP_PRIVATE_SOURCE_REPAIR_IN_PROGRESS_NO_RUNTIME",
+      "packet": "016_SOURCE_INTEGRATED_NO_BUILD_RUNTIME_AUTHORITY",
       "authority": "NO_RETRY_NO_CLEANUP_NO_REUSE_OLD_OWNER",
       "entry_integration_decision": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-packet-prep-r2/MAIN_ENTRY_INTEGRATION_DECISION.json",
@@ -668,7 +749,7 @@
         "scope": "Only DETACHED plus binary-LF combination; no attribution of previous 0xc0000142; no normal installation or Goal acceptance"
       },
       "next_normal_pipeline": {
-        "status": "NORMAL_INSTALL_ACCEPTED_SCOPED_PUBLIC_MCP_NOT_RUN_SOURCE_BLOCKED",
+        "status": "015_NORMAL_INSTALL_ACCEPTED_016_SOURCE_CLOSED_ARTIFACT_PUBLIC_MCP_NOT_RUN",
         "normal_source_acceptance": {
           "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-install-detached-source-prep-r1/MAIN_SOURCE_ACCEPTANCE.json",
           "bytes": 664,
@@ -725,23 +806,27 @@
           "old_stage2_grant": "EXPIRED_SPENT_NO_REUSE"
         },
         "next_public_MCP": {
-          "status": "NOT_RUN_SOURCE_BLOCKED",
-          "main_counterexample_acceptance": {
-            "path": "_state/universal-main-review/20261029-windows-normal-public-mcp-source-prep-r1/MAIN_COUNTEREXAMPLE_ACCEPTANCE.json",
-            "bytes": 766,
-            "sha256": "c5649bcb109d211757776f8e8bee51725113d131e91c9b366e8f09452c13290b",
+          "status": "016_NOT_RUN_PENDING_NEW_ARTIFACT_AND_SEPARATE_RUNTIME_RELEASE",
+          "Source_acceptance": {
+            "path": "_state/universal-main-review/20261029-windows-control-privacy-main-source-review-r2/MAIN_SOURCE_ACCEPTANCE.json",
+            "bytes": 6310,
+            "sha256": "4412eee6137fec092f71a7fccd2c16f09bf509db37479f09e832cabcd825603b",
             "mode": "0o644"
           },
-          "main_repair_plan": {
-            "path": "_state/universal-main-review/20261029-windows-normal-public-mcp-source-prep-r1/MAIN_REPAIR_PLAN.json",
-            "bytes": 2933,
-            "sha256": "23d9d4524123a64e26c7d75bc74d3ab63d368ee05f61f3450ad7517568c7854a",
-            "mode": "0o644"
-          },
-          "candidate_path": "_state/windows-control-privacy-candidate-r1/checkout",
-          "candidate_base": "f1c9a12982e4af7d574b22e0eff5067ee7174aca",
-          "implementation": "PRIVATE_SOURCE_TESTS_IN_PROGRESS",
-          "runtime_authority": false
+          "source_version": "0.1.16",
+          "build": "NOT_RUN",
+          "ordinary_install_015": "ACCEPTED_SCOPED_UNCHANGED",
+          "runtime_authority": false,
+          "previous_source_evidence": {
+            "snapshot": {
+              "path": "_state/universal-main-review/20261029-checkpoint-r412/prior-main3/docs/universal_mcp_execution/state/RESUME.json",
+              "bytes": 1564831,
+              "sha256": "3416fb68c4b782dd4163eb5417fc85b1b6e290646222afa115f6cfe92ad664fe",
+              "mode": "0o644"
+            },
+            "json_pointer": "/active_current_entrypoint/normal_prefix_materializer/next_normal_pipeline/next_public_MCP",
+            "role": "IMMUTABLE_PRIOR_VALUE_NOT_CURRENT_SOURCE_OR_AUTHORITY"
+          }
         }
       },
       "public_binary_lf_actual_evidence": "docs/universal_mcp_execution/evidence/windows-operator-binary-lf-diagnostic-20261028.json",
@@ -958,7 +1043,7 @@
         "new_runtime_authority": false
       },
       "public_current_normal_install_evidence": "docs/universal_mcp_execution/evidence/windows-normal-install-scoped-20261029.json",
-      "public_control_home_source_evidence": "docs/universal_mcp_execution/evidence/windows-public-mcp-control-home-source-20261029.json"
+      "public_control_home_source_evidence": "docs/universal_mcp_execution/evidence/windows-control-privacy-source-0.1.16-20261029.json"
     },
     "artifacts": {
       "status": "FIVE_ARTIFACT_BYTES_MAIN_ACCEPTED_PUBLISHED",
@@ -1039,137 +1124,150 @@
     "publication": {
       "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
       "acceptance": {
-        "path": "_state/universal-main-review/20261029-checkpoint-r410/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-        "bytes": 581,
-        "sha256": "6cee077a481de15ee9ab973589d86d126047fbdfcc05fd436bb03c117a052eba",
+        "path": "_state/universal-main-review/20261029-checkpoint-r411/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+        "bytes": 656,
+        "sha256": "f21a1e44747b0af5266b1105729480980ce9f9f1525cbdf13b47a409217d4c52",
         "mode": "0o644"
       },
-      "metadata_commit": "f1c9a12982e4af7d574b22e0eff5067ee7174aca",
-      "metadata_tree": "0b317ae6fa904b6d4136fe1f1f38b718c46a86b4",
+      "metadata_commit": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
+      "metadata_tree": "b1545606ca942b1b26e2a96673d3baf3421f6cbe",
       "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
+      "current_016_source_commit": null,
       "previous_publication": {
         "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
         "acceptance": {
-          "path": "_state/universal-main-review/20261029-checkpoint-r409/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-          "bytes": 521,
-          "sha256": "bd29b1b66fdf1a645f9a269bc91472f1385b16f1729576e7202727144a44034a",
+          "path": "_state/universal-main-review/20261029-checkpoint-r410/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+          "bytes": 581,
+          "sha256": "6cee077a481de15ee9ab973589d86d126047fbdfcc05fd436bb03c117a052eba",
           "mode": "0o644"
         },
-        "metadata_commit": "6e0290af5224a2d3f76be96dec66ace6a567eddd",
-        "metadata_tree": "d084b1fa59b3134178eca0072455f9bb1c51595d",
+        "metadata_commit": "f1c9a12982e4af7d574b22e0eff5067ee7174aca",
+        "metadata_tree": "0b317ae6fa904b6d4136fe1f1f38b718c46a86b4",
         "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
         "previous_publication": {
           "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
           "acceptance": {
-            "path": "_state/universal-main-review/20261028-checkpoint-r408/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-            "bytes": 514,
-            "sha256": "d7dddc69ce2b48298018a4a329b964bae3bc42d9a4450411c39eae426a74a0cd",
+            "path": "_state/universal-main-review/20261029-checkpoint-r409/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+            "bytes": 521,
+            "sha256": "bd29b1b66fdf1a645f9a269bc91472f1385b16f1729576e7202727144a44034a",
             "mode": "0o644"
           },
-          "metadata_commit": "675d347140d61ca8203182f0a17b3da2c5fe57e7",
-          "metadata_tree": "80902689e301dea87d6950de08c2728bbb6d6f21",
+          "metadata_commit": "6e0290af5224a2d3f76be96dec66ace6a567eddd",
+          "metadata_tree": "d084b1fa59b3134178eca0072455f9bb1c51595d",
           "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
           "previous_publication": {
             "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
             "acceptance": {
-              "path": "_state/universal-main-review/20261028-checkpoint-r407/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-              "bytes": 657,
-              "sha256": "b7c84df3ef6003ba39227a5c6ab83f9d9fe35e8cf40545ce5940fe0ebc53ed98",
+              "path": "_state/universal-main-review/20261028-checkpoint-r408/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+              "bytes": 514,
+              "sha256": "d7dddc69ce2b48298018a4a329b964bae3bc42d9a4450411c39eae426a74a0cd",
               "mode": "0o644"
             },
-            "metadata_commit": "6b8aed529a78131cde81edb70d6d8fef244e1fa5",
-            "metadata_tree": "c9af7f9b03486bee85d6a32c87cfa14aad7ab6ed",
+            "metadata_commit": "675d347140d61ca8203182f0a17b3da2c5fe57e7",
+            "metadata_tree": "80902689e301dea87d6950de08c2728bbb6d6f21",
             "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
             "previous_publication": {
               "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
               "acceptance": {
-                "path": "_state/universal-main-review/20261028-checkpoint-r405/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                "bytes": 600,
-                "sha256": "a109f9e7ab6265b6ae310d82f45ac4882721be85bd16ba0cb1f6bf33cd99c24c",
+                "path": "_state/universal-main-review/20261028-checkpoint-r407/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                "bytes": 657,
+                "sha256": "b7c84df3ef6003ba39227a5c6ab83f9d9fe35e8cf40545ce5940fe0ebc53ed98",
                 "mode": "0o644"
               },
-              "metadata_commit": "e77bd27faa90affb9141ef2faff0414e82c996b0",
-              "metadata_tree": "a8bb037367bee17d9285837278ee3915e4a0bb4c",
+              "metadata_commit": "6b8aed529a78131cde81edb70d6d8fef244e1fa5",
+              "metadata_tree": "c9af7f9b03486bee85d6a32c87cfa14aad7ab6ed",
               "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
               "previous_publication": {
                 "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                 "acceptance": {
-                  "path": "_state/universal-main-review/20261028-checkpoint-r403/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                  "bytes": 590,
-                  "sha256": "f52e19c13c1ce469a120838daf7a9b422ef0a8e6142dc407022baceb886dc1c5"
+                  "path": "_state/universal-main-review/20261028-checkpoint-r405/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                  "bytes": 600,
+                  "sha256": "a109f9e7ab6265b6ae310d82f45ac4882721be85bd16ba0cb1f6bf33cd99c24c",
+                  "mode": "0o644"
                 },
-                "metadata_commit": "d47edc85945e5263706a123ffa6df89a17c27228",
-                "metadata_tree": "9094b3cd6f936b7ab84bc8c1e5a3720022664b5d",
+                "metadata_commit": "e77bd27faa90affb9141ef2faff0414e82c996b0",
+                "metadata_tree": "a8bb037367bee17d9285837278ee3915e4a0bb4c",
                 "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                 "previous_publication": {
                   "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                   "acceptance": {
-                    "path": "_state/universal-main-review/20261028-checkpoint-r402/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                    "bytes": 591,
-                    "sha256": "6a089c2e8bebe66633db927c5e033b73f2e653abad3bb0a054e106c7e14d800e"
+                    "path": "_state/universal-main-review/20261028-checkpoint-r403/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                    "bytes": 590,
+                    "sha256": "f52e19c13c1ce469a120838daf7a9b422ef0a8e6142dc407022baceb886dc1c5"
                   },
-                  "metadata_commit": "1da566517e957314a586619017efea896d9bcf19",
-                  "metadata_tree": "8d1553506f5abf03b6c0ade6b355662e3c250a2e",
+                  "metadata_commit": "d47edc85945e5263706a123ffa6df89a17c27228",
+                  "metadata_tree": "9094b3cd6f936b7ab84bc8c1e5a3720022664b5d",
                   "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                   "previous_publication": {
                     "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                     "acceptance": {
-                      "path": "_state/universal-main-review/20261028-checkpoint-r401/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                      "bytes": 758,
-                      "sha256": "0e74ad8aef69c4844e76d980a4857cd8751521954be7340f122e467ece4e22ab"
+                      "path": "_state/universal-main-review/20261028-checkpoint-r402/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                      "bytes": 591,
+                      "sha256": "6a089c2e8bebe66633db927c5e033b73f2e653abad3bb0a054e106c7e14d800e"
                     },
-                    "metadata_commit": "6a41f604aee1445d0c2a53db415f622665bc9ee8",
-                    "metadata_tree": "b105724d2d16ccb9baecc6e95fea1fc5cd76c2c9",
+                    "metadata_commit": "1da566517e957314a586619017efea896d9bcf19",
+                    "metadata_tree": "8d1553506f5abf03b6c0ade6b355662e3c250a2e",
                     "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                     "previous_publication": {
                       "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                       "acceptance": {
-                        "path": "_state/universal-main-review/20261028-checkpoint-r398/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                        "bytes": 782,
-                        "sha256": "752bfa8d9b8df28e137b87f9a4ef9c4859a12fbc3c2b0ad341f71766484b062f"
+                        "path": "_state/universal-main-review/20261028-checkpoint-r401/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                        "bytes": 758,
+                        "sha256": "0e74ad8aef69c4844e76d980a4857cd8751521954be7340f122e467ece4e22ab"
                       },
-                      "metadata_commit": "f9edb41689ded85c4f7998d2a887769a3b418238",
-                      "metadata_tree": "b2d4b8e8057ddef03bac4a80f912544ac8ae3ef9",
+                      "metadata_commit": "6a41f604aee1445d0c2a53db415f622665bc9ee8",
+                      "metadata_tree": "b105724d2d16ccb9baecc6e95fea1fc5cd76c2c9",
                       "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                       "previous_publication": {
                         "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                         "acceptance": {
-                          "path": "_state/universal-main-review/20261028-checkpoint-r393/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                          "bytes": 1996,
-                          "sha256": "e00ab04563c327a8a937e20c1cafefa335de6b8902e651d7a1e48291ed7afefa"
+                          "path": "_state/universal-main-review/20261028-checkpoint-r398/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                          "bytes": 782,
+                          "sha256": "752bfa8d9b8df28e137b87f9a4ef9c4859a12fbc3c2b0ad341f71766484b062f"
                         },
-                        "metadata_commit": "f0eb6bcc0ad45d14f7b61d3e5ef8ecfbb89d69d8",
-                        "metadata_tree": "435f3b10200353e165220722ef5d5b53d8912174",
+                        "metadata_commit": "f9edb41689ded85c4f7998d2a887769a3b418238",
+                        "metadata_tree": "b2d4b8e8057ddef03bac4a80f912544ac8ae3ef9",
                         "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                         "previous_publication": {
                           "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                           "acceptance": {
-                            "path": "_state/universal-main-review/20261028-checkpoint-r389/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                            "bytes": 2066,
-                            "sha256": "5c3b4d562675220b385c0e9eceaae6114c1894aea5e0c406c5e63b4def72498a"
+                            "path": "_state/universal-main-review/20261028-checkpoint-r393/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                            "bytes": 1996,
+                            "sha256": "e00ab04563c327a8a937e20c1cafefa335de6b8902e651d7a1e48291ed7afefa"
                           },
-                          "metadata_commit": "74c284fb6bc83f81c87b8645d300038d7eb88524",
-                          "metadata_tree": "9cf520f5f0d30d8da5204bd8911c2bc0bc48dc68",
+                          "metadata_commit": "f0eb6bcc0ad45d14f7b61d3e5ef8ecfbb89d69d8",
+                          "metadata_tree": "435f3b10200353e165220722ef5d5b53d8912174",
                           "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                           "previous_publication": {
                             "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                             "acceptance": {
-                              "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                              "bytes": 2464,
-                              "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
+                              "path": "_state/universal-main-review/20261028-checkpoint-r389/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                              "bytes": 2066,
+                              "sha256": "5c3b4d562675220b385c0e9eceaae6114c1894aea5e0c406c5e63b4def72498a"
                             },
-                            "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
-                            "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+                            "metadata_commit": "74c284fb6bc83f81c87b8645d300038d7eb88524",
+                            "metadata_tree": "9cf520f5f0d30d8da5204bd8911c2bc0bc48dc68",
                             "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                             "previous_publication": {
                               "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                               "acceptance": {
-                                "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
-                                "bytes": 1796,
-                                "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+                                "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                                "bytes": 2464,
+                                "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
                               },
-                              "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
-                              "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+                              "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
+                              "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+                              "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
+                              "previous_publication": {
+                                "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
+                                "acceptance": {
+                                  "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
+                                  "bytes": 1796,
+                                  "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+                                },
+                                "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+                                "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+                              }
                             }
                           }
                         }
@@ -1373,56 +1471,46 @@
       "new_required": false
     },
     "windows_public_MCP_source_stage": {
-      "status": "NOT_RUN_SOURCE_BLOCKED",
-      "scope": "Windows ordinary public-MCP launch Source contract only; not a Windows actual failure or global Goal blockage",
-      "current_product_source": {
-        "path": "comsol_mcp/_control_client.py",
-        "bytes": 12631,
-        "sha256": "e9020793753896bf762b5ad4070fea0a437301a062c75d39198d87d8bfb8c4cb",
+      "status": "SOURCE_BLOCKER_CLOSED_016_INTEGRATED_NEW_ARTIFACT_AND_RUNTIME_NOT_RUN",
+      "scope": "Generic Windows control privacy Source/software only; actual Windows public MCP is NOT_RUN",
+      "version": "0.1.16",
+      "main_acceptance": {
+        "path": "_state/universal-main-review/20261029-windows-control-privacy-main-source-review-r2/MAIN_SOURCE_ACCEPTANCE.json",
+        "bytes": 6310,
+        "sha256": "4412eee6137fec092f71a7fccd2c16f09bf509db37479f09e832cabcd825603b",
         "mode": "0o644"
       },
-      "counterexample": {
-        "path": "_state/universal-main-review/20261029-windows-normal-public-mcp-source-prep-r1/CONTROL_HOME_COUNTEREXAMPLE.json",
-        "bytes": 990,
-        "sha256": "74ad8479f0053f8c1193ab998ccb6e45b052cda8b62d8771a75adefa6cf0e4f6",
+      "independent_review": {
+        "path": "_state/universal-main-review/20261029-windows-control-privacy-independent-source-review-r2/REVIEW_RESULT.json",
+        "bytes": 8682,
+        "sha256": "9d85ef22fd0833ceb417ef9935cd425479813a829ec25caab9362697f7164e48",
         "mode": "0o644"
       },
-      "source_prep_freeze": {
-        "path": "_state/universal-main-review/20261029-windows-normal-public-mcp-source-prep-r1/FREEZE.json",
-        "bytes": 6880,
-        "sha256": "e2059e850b7c2681bdcd9b6c425150377f3d15309fbcddff2b902dc07b9721ec",
+      "canonical_source_integration": {
+        "path": "_state/universal-main-review/20261029-checkpoint-r412/ACTUAL_INTEGRATION.json",
+        "bytes": 11726,
+        "sha256": "cf283e01a266f9f2cb4962d0f2c507d28317066eecbda8e7173a1df87117c82e",
         "mode": "0o644"
       },
-      "main_counterexample_acceptance": {
-        "path": "_state/universal-main-review/20261029-windows-normal-public-mcp-source-prep-r1/MAIN_COUNTEREXAMPLE_ACCEPTANCE.json",
-        "bytes": 766,
-        "sha256": "c5649bcb109d211757776f8e8bee51725113d131e91c9b366e8f09452c13290b",
-        "mode": "0o644"
+      "public_evidence": "docs/universal_mcp_execution/evidence/windows-control-privacy-source-0.1.16-20261029.json",
+      "r1_findings": "0P1/2P2; borrowed-output ownership and default kwargs repaired in r2",
+      "r2_review": "0P1/0P2; independent15 separate from442 author software",
+      "source_commit": null,
+      "build_ready": false,
+      "artifact_build_normal_install_public_MCP_Windows_actual_016": "NOT_RUN",
+      "current_normal_installation_015": "ACCEPTED_SCOPED_UNCHANGED",
+      "previous_source_blocker": {
+        "snapshot": {
+          "path": "_state/universal-main-review/20261029-checkpoint-r412/prior-main3/docs/universal_mcp_execution/state/RESUME.json",
+          "bytes": 1564831,
+          "sha256": "3416fb68c4b782dd4163eb5417fc85b1b6e290646222afa115f6cfe92ad664fe",
+          "mode": "0o644"
+        },
+        "json_pointer": "/active_current_entrypoint/windows_public_MCP_source_stage",
+        "role": "IMMUTABLE_PRIOR_VALUE_NOT_CURRENT_SOURCE_OR_AUTHORITY"
       },
-      "main_repair_plan": {
-        "path": "_state/universal-main-review/20261029-windows-normal-public-mcp-source-prep-r1/MAIN_REPAIR_PLAN.json",
-        "bytes": 2933,
-        "sha256": "23d9d4524123a64e26c7d75bc74d3ab63d368ee05f61f3450ad7517568c7854a",
-        "mode": "0o644"
-      },
-      "source_fact": "control_home(create=False) applies POSIX group/other mode bits; fixed CPython 3.12.10 Windows directory 0777/0555 mappings are rejected in synthetic cases",
-      "current_normal_installation": "ACCEPTED_SCOPED_UNCHANGED",
-      "implementation": "NEWTON_PRIVATE_CANDIDATE_IN_PROGRESS_NOT_REVIEW_ACCEPTED",
-      "candidate_path": "_state/windows-control-privacy-candidate-r1/checkout",
-      "candidate_base": "f1c9a12982e4af7d574b22e0eff5067ee7174aca",
-      "candidate_role": "Source implementation/tests only; canonical .15/95 unchanged",
-      "repair_method": "Reuse _host_scoped_provider read-only Windows handle/DACL checks for directory and endpoint used-object privacy; POSIX rules unchanged",
-      "prohibited": [
-        "blanket Windows bypass",
-        "ACL mutation",
-        "canonical product edit before Source acceptance",
-        "version bump/build/runtime before separate authorization",
-        "old owner query/retry/cleanup/adoption"
-      ],
-      "workspace_method": "Main managed worktree unsupported by nested-repository workspace rule; fixed private local shared clone chosen. Not authorization or auto-review blockage.",
-      "goal": "ACTIVE_NOT_COMPLETE",
-      "new_required": false,
-      "runtime_authority": false
+      "runtime_authority": false,
+      "new_required": false
     }
   },
   "current_checkpoint_r374": {
@@ -9612,10 +9700,10 @@
   "schema_version": 1,
   "baseline_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
   "baseline_tree": "120ceb6568d22614f7548d4eb96b822fe53f88ba",
-  "state_revision": 411,
+  "state_revision": 412,
   "phase": "015_SOURCE_PUBLISHED_BUILD_BINDING_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Newton continuously implements and self-tests the private shared-clone control-privacy Source candidate at the fixed location/base. Reuse read-only Windows handle/DACL verification, preserve POSIX and retained-owner barriers, then Main/affected Source review. No canonical Source/version/build/runtime change from this checkpoint.",
+  "next_action": "Main reviews exact11 integrated Source plus four r412 public drafts, then separately releases any ordinary publication. Source0.1.16 is accepted/integrated but uncommitted; new coherent artifacts/build and fresh normal-install/public-MCP/Windows actual remain NOT_RUN. Preserve scoped .15 installation/runtime and all old owners; no build/runtime authority or replay follows Source acceptance.",
   "active_job_refs": [
     {
       "scope": "015_MAC_NORMAL_INSTALL_PUBLIC_MCP_ONCE",
@@ -9763,12 +9851,12 @@
     },
     {
       "id": "WINDOWS_CPYTHON_EMPTY_RUNTIME_INTERFACE",
-      "state": ".15 source/software fix accepted and published; .15 build/install/runtime NOT_RUN."
+      "state": "Prior .15 empty-file Source fix and scoped normal-prefix installation remain accepted. Current .16 generic privacy Source repair is accepted/integrated; new .16 artifacts and normal/public-MCP/Windows actual NOT_RUN."
     }
   ],
   "completed_groups": [],
   "scope_decision": "SCOPE_RESET.md",
-  "updated_utc": "2026-10-27T22:31:58.110797+00:00",
+  "updated_utc": "2026-10-28T20:12:15.793459+00:00",
   "native_execution_claimed": true,
   "recovery_checkpoint": {
     "scope": "workpack recovery repair, synthetic workpack tests, pinned source and candidate restoration, new-state initialization only",
@@ -9853,7 +9941,7 @@
     "current_status": "PASS_SCOPED_SOFTWARE_MAIN_REVIEWED_NATIVE_NOT_RUN",
     "main_review": "evidence/M1_MAIN_STAGE_REVIEW.json"
   },
-  "working_tree": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository",
+  "working_tree": "Canonical exact11 Source/version0.1.16 integrated, uncommitted/index empty; r412 Main3+compact are private drafts, canonical Main3 unchanged.",
   "orchestration": {
     "main_session_id": "01a1632a-74fd-7e22-aff5-86680aedb2d8",
     "implementation_agent_id": "01a17b42-2eae-7772-b7ad-881babcfa21a",
@@ -9884,9 +9972,10 @@
       "recovery_state": "RECOVERED_AGENTS_EXECUTING; completed delivery/prep evidence reviewed after recovery"
     },
     "current_roles": {
-      "Main": "review current binding and JDK source PREP",
-      "active": "current_active_leases_r375",
-      "review": "unbound source accepted; final reviewer NOT_STARTED"
+      "Main": "Review fifteen exact Source+draft paths before any publication/build decision",
+      "active": "current_active_leases_r412",
+      "review": "Source r2 accepted0P1/P2; final unified Reviewer NOT_STARTED",
+      "implementation_agent_id": "01a17b42-2eae-7772-b7ad-881babcfa21a"
     },
     "last_goal_turn_audit": {
       "utc": "2026-10-26T04:33:57.809288+00:00",
@@ -9944,7 +10033,7 @@
       "Luna_maintenance": "HumeMain3leaseclosedatlocalr192; exact3snapshotpreserved externally, Mainmadeonlyscope/rolecorrectionr193.",
       "final_Reviewer": "NOT_STARTED; no finalcandidate/heldouttasks assigned."
     },
-    "current_active_lease_key": "current_active_leases_r411",
+    "current_active_lease_key": "current_active_leases_r412",
     "current_scope_correction": {
       "path": "_state/universal-main-review/20261024-result-unit-contract-scope/MAIN_CONTRACT_SCOPE_CORRECTION.json",
       "bytes": 2585,
@@ -11726,7 +11815,7 @@
       },
       "fresh_final_reviewer": "NOT_STARTED"
     },
-    "active_published_head": "f1c9a12982e4af7d574b22e0eff5067ee7174aca",
+    "active_published_head": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
     "current_active_leases_r353": {
       "Aristotle": {
         "agent_id": "01a17c4d-f85a-7b53-b505-cd4e85422d1e",
@@ -12690,6 +12779,18 @@
       "original_detached_40869": "UNVERIFIED_NO_FURTHER_RECEIVE_EXCEPTION_TRANSCRIPT_NOT_TOOL_RETURN",
       "binary_lf_actual": "ACCEPTED_DETACHED_COMBINATION_DIAGNOSTIC_ONLY",
       "next_normal_pipeline": "NORMAL_INSTALL_ACCEPTED_SCOPED_PUBLIC_MCP_SOURCE_BLOCKED_PRIVATE_REPAIR_ONLY",
+      "fences": "unchanged from r410",
+      "u12_provenance": "SOURCE_SUPPLEMENT_ACCEPTED_ONLY_NO_RUNTIME_OR_ROUTE_UPGRADE",
+      "fresh_normal_stage1": "62419_TERMINAL0_SPENT_NO_RECEIVE_LEASE_EXPIRED_NOT_EXTENDED",
+      "fresh_normal_stage2": "22392_TERMINAL0_SPENT_NEVER_RECEIVE_EXPIRED_GRANT_NO_REUSE"
+    },
+    "current_active_leases_r412": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "previous_windows_sessions": "93707_86384_71534_19143_4584_SPENT_NEVER_REPOLL",
+      "original_stage1_75965": "EXTERNAL_TERMINAL_UNVERIFIED_NO_FOLLOWUP",
+      "original_detached_40869": "UNVERIFIED_NO_FURTHER_RECEIVE_EXCEPTION_TRANSCRIPT_NOT_TOOL_RETURN",
+      "binary_lf_actual": "ACCEPTED_DETACHED_COMBINATION_DIAGNOSTIC_ONLY",
+      "next_normal_pipeline": "SOURCE_016_ACCEPTED_INTEGRATED_NO_BUILD_RUNTIME_RELEASE",
       "fences": "unchanged from r410",
       "u12_provenance": "SOURCE_SUPPLEMENT_ACCEPTED_ONLY_NO_RUNTIME_OR_ROUTE_UPGRADE",
       "fresh_normal_stage1": "62419_TERMINAL0_SPENT_NO_RECEIVE_LEASE_EXPIRED_NOT_EXTENDED",
@@ -14646,7 +14747,16 @@
       "local_Main3_revision_after_publication": 297
     },
     "current_published_head": "21cdfb6f24606ffe8be1262e07395353613de76a",
-    "current_local_head": "21cdfb6f24606ffe8be1262e07395353613de76a"
+    "current_local_head": "21cdfb6f24606ffe8be1262e07395353613de76a",
+    "current_r412": {
+      "HEAD": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
+      "index_empty": true,
+      "source_paths_uncommitted": 11,
+      "private_public_draft_paths": 4,
+      "source_commit_016": null,
+      "commit_push_executed": false,
+      "remote_fact": "Main r411 readback acceptance, no new network under r412"
+    }
   },
   "remaining_core_findings": [
     {
@@ -18901,7 +19011,7 @@
     "main_review_path": "_state/universal-main-review/20261023-windows-observers/MAIN_REVIEW_FINAL.json",
     "main_review_sha256": "f3560355e8765ddcb5850cccd0b1020afa61c9ce15e762dcea3a8ea0c073e1ff"
   },
-  "goal_turn_classification": "R375_PUBLICATION_ACCEPTED_UNBOUND_BUILD_SOURCE_ACCEPTED",
+  "goal_turn_classification": "R412_SOURCE_016_ACCEPTED_CANONICAL_INTEGRATED_LOCAL_PUBLICATION_DRAFT",
   "canonical_handoff_refresh": {
     "state_revision": 326,
     "reason": "EBA4ordinarypublicationverified,ownerP2closed,matchingQ6materials+actualbindingprep andWindowsA6architecturepersisted",
@@ -19466,13 +19576,13 @@
     "mac_013": "Scoped real install/public MCP software accepted; no COMSOL/JDK/Core/native; session 41807 spent.",
     "windows": "Joint finite readonly discovery accepted SPENT, native/qualification not established; R6/R7 original UNKNOWN fenced.",
     "new_service_WFP_SYSTEM": "Concrete material and Main review then human authorization required.",
-    "publication": "r374 11-file ordinary publication independently read back and Main accepted; r375 local only.",
+    "publication": "c3716b7 Main accepted public checkpoint; .16 exact11 Source uncommitted and r412 four-file drafts await Main candidate gate. No future commit or push accepted.",
     "resource": "Historical strict free 142901248B; Server 2GiB/Worker 1GiB unchanged, no resampling.",
     "old_records": "historical_global_aliases_before_r352.values.current_execution_gates",
-    "netsh": ".14 source and evidence published; .14 artifact bytes privately accepted and Mac software runtime accepted; .15 artifacts/install/native NOT_RUN.",
-    "coherent_app_build": ".15 unbound source PREP Strong/Main accepted; actual 958970 binding and canary source preparation in progress; no canary/build/sourceZIP/install/native release.",
+    "netsh": "Prior .15 implementation/flags and scoped installation remain accepted. Generic control privacy .16 Source/software integrated; .16 artifacts/build/install/public-MCP/Windows actual/native NOT_RUN.",
+    "coherent_app_build": ".15 artifacts privately accepted. .16 Source/software accepted and canonical version metadata integrated; .16 artifacts/build/normal install/public MCP NOT_RUN, no BuildReady.",
     "mac_014": "Scoped actual normal install/fixed public MCP software accepted; session5914 SPENT; COMSOL/JDK/Core/native NOT_RUN.",
-    "windows_bootstrap": ".15 source/software fix published and accepted; .15 build/install/runtime NOT_RUN."
+    "windows_bootstrap": ".15 ordinary normal-prefix installation ACCEPTED_SCOPED. .16 control-privacy Source blocker closed; .16 Windows public MCP/normal installation/actual/native NOT_RUN pending new coherent artifacts and separate release."
   },
   "current_checkpoint_r256": {
     "utc": "2026-10-25T09:48:05.797002+00:00",
@@ -22174,44 +22284,125 @@
     "final_Reviewer": "NOT_STARTED; no finalcandidate/heldoutsselected"
   },
   "current_source_candidate": {
-    "version": "0.1.15",
-    "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
-    "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_PUBLISHED",
+    "version": "0.1.16",
+    "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_CANONICAL_INTEGRATED_UNCOMMITTED",
+    "source_commit": null,
+    "source_tree": null,
+    "integration_base_commit": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
     "acceptance": {
-      "path": "_state/universal-main-review/20261028-windows-empty-file-integration-independent-review-r1/MAIN_CANONICAL_015_SOURCE_SOFTWARE_ACCEPTANCE.json",
-      "bytes": 2938,
-      "sha256": "d56d3fe7c528560dff103e2519c32ab75f105f3493fe526b384c7e0a8d28721a"
+      "path": "_state/universal-main-review/20261029-windows-control-privacy-main-source-review-r2/MAIN_SOURCE_ACCEPTANCE.json",
+      "bytes": 6310,
+      "sha256": "4412eee6137fec092f71a7fccd2c16f09bf509db37479f09e832cabcd825603b",
+      "mode": "0o644"
     },
-    "accepted_files": [
+    "independent_review": {
+      "path": "_state/universal-main-review/20261029-windows-control-privacy-independent-source-review-r2/REVIEW_RESULT.json",
+      "bytes": 8682,
+      "sha256": "9d85ef22fd0833ceb417ef9935cd425479813a829ec25caab9362697f7164e48",
+      "mode": "0o644"
+    },
+    "source_fingerprint": "628038aa04cb5d872a7128366b57b00c395567077df9a6c21d2effcb4356451b",
+    "integration": {
+      "path": "_state/universal-main-review/20261029-checkpoint-r412/ACTUAL_INTEGRATION.json",
+      "bytes": 11726,
+      "sha256": "cf283e01a266f9f2cb4962d0f2c507d28317066eecbda8e7173a1df87117c82e",
+      "mode": "0o644"
+    },
+    "exact_source_test_files": 8,
+    "own_version_slots": 3,
+    "accepted_postimages": [
       {
-        "path": "comsol_mcp/_windows_host_bootstrap.py",
-        "bytes": 116633,
-        "sha256": "172fa9c708c7b352504de98b3983ba745b1193db949a1f55bacad393e501f16c"
+        "path": "comsol_mcp/_control_client.py",
+        "bytes": 13827,
+        "sha256": "d8ffe7521ef0ff244e445b0019b87db30f4cd47c1dc486346c16d9ff844d8216",
+        "mode": "0o644",
+        "relative_path": "comsol_mcp/_control_client.py"
       },
       {
-        "path": "tests/test_windows_empty_runtime_data.py",
-        "bytes": 7326,
-        "sha256": "950e2da10d50729b0fd8e8150f24daa6654b51b3c1b844c70feecbd9e527055b"
+        "path": "comsol_mcp/_control_daemon.py",
+        "bytes": 880005,
+        "sha256": "5f9f21bc4b6c685107353695c4f2ccf09503e2d278c12b022d3d193842b70bbd",
+        "mode": "0o644",
+        "relative_path": "comsol_mcp/_control_daemon.py"
       },
       {
-        "path": "comsol_mcp/_server.py",
-        "bytes": 11704,
-        "sha256": "101965b28cb2c6d194516e6227022637182b5e43b35b6d35ec39434618cc758b"
+        "path": "comsol_mcp/_control_privacy.py",
+        "bytes": 11227,
+        "sha256": "1da29ddcd517ae88251049d5b6a3ef73fa238ba3e3cb921a2fa9364198789768",
+        "mode": "0o644",
+        "relative_path": "comsol_mcp/_control_privacy.py"
+      },
+      {
+        "path": "comsol_mcp/_host_scoped_provider.py",
+        "bytes": 77959,
+        "sha256": "b2400d6e2ed47a1a6fac18f0ab3e7aa5207b70ef11714af797a0d078e6144c80",
+        "mode": "0o644",
+        "relative_path": "comsol_mcp/_host_scoped_provider.py"
+      },
+      {
+        "path": "comsol_mcp/_windows_host_preflight_owner.py",
+        "bytes": 9773,
+        "sha256": "d9ac6a9b2fedb6fbfabbd48ede8f237183632cd72c97fbc39f49b195c553950f",
+        "mode": "0o644",
+        "relative_path": "comsol_mcp/_windows_host_preflight_owner.py"
+      },
+      {
+        "path": "tests/test_control_client.py",
+        "bytes": 17291,
+        "sha256": "6856974a857ee46aa03d344bf1b8f096b34a9c489f6a74e7575240068e3ee2ad",
+        "mode": "0o644",
+        "relative_path": "tests/test_control_client.py"
+      },
+      {
+        "path": "tests/test_control_privacy.py",
+        "bytes": 15421,
+        "sha256": "1d3c7e9ea5dfea3752d4cbb0f78ade8c1ccb8f65001f7fd1e2be53b1adba8fae",
+        "mode": "0o644",
+        "relative_path": "tests/test_control_privacy.py"
+      },
+      {
+        "path": "tests/test_control_privacy_native.py",
+        "bytes": 14210,
+        "sha256": "6afb4a68df72289c07079342a33f1bdb2d2c9a9423e69d95727da7c728bd0737",
+        "mode": "0o644",
+        "relative_path": "tests/test_control_privacy_native.py"
       },
       {
         "path": "pyproject.toml",
         "bytes": 1989,
-        "sha256": "deb7d1e63a1ef5474f3dbe97b0bc7e5a8955652a3011615499955a1f659b6390"
+        "sha256": "6165a0d412171b755551a58d04bfd5c360d135383301cd7e21a63a2ce0ed6830",
+        "mode": "0o644",
+        "relative_path": "pyproject.toml"
+      },
+      {
+        "path": "comsol_mcp/_server.py",
+        "bytes": 11704,
+        "sha256": "8893403069e1a604039e9860fedc6f9edc31c6d22958e7b2bca89afa25d515b5",
+        "mode": "0o644",
+        "relative_path": "comsol_mcp/_server.py"
       },
       {
         "path": "uv.lock",
         "bytes": 307301,
-        "sha256": "30230b0b65467e0bba56c5bcdc44aef5e4e131435171e1f87ccbc49b50fe010d"
+        "sha256": "d3dc467949c87be983201fa8440772b99e3aec45c4a0e4e2631b2a024b9ec1fe",
+        "mode": "0o644",
+        "relative_path": "uv.lock"
       }
     ],
-    "build_install_runtime": "NOT_RUN",
-    "prior_014_source": "previous_source_candidate_014_r374",
-    "source_tree": "ebbdf9ae784a851fdb68176cf45fac96d2774020"
+    "software_tests": 442,
+    "independent_checks": 15,
+    "counts_not_cumulative": true,
+    "build_install_runtime": "0.1.16 artifacts/build/normal-install/public-MCP/Windows actual/native NOT_RUN",
+    "prior_source_identity": {
+      "snapshot": {
+        "path": "_state/universal-main-review/20261029-checkpoint-r412/prior-main3/docs/universal_mcp_execution/state/RESUME.json",
+        "bytes": 1564831,
+        "sha256": "3416fb68c4b782dd4163eb5417fc85b1b6e290646222afa115f6cfe92ad664fe",
+        "mode": "0o644"
+      },
+      "json_pointer": "/active_current_entrypoint/current_source",
+      "role": "IMMUTABLE_PRIOR_VALUE_NOT_CURRENT_SOURCE_OR_AUTHORITY"
+    }
   },
   "current_checkpoint_r299": {
     "revision": 299,
@@ -24894,5 +25085,24 @@
       }
     ],
     "goal_complete": false
+  },
+  "current_source_roles_r412": {
+    "authoritative_entrypoint": "active_current_entrypoint; current_source_candidate is .16 Source only",
+    "latest_accepted_artifacts": "active_current_entrypoint.artifacts: .15 private bytes; no .16 artifacts",
+    "latest_scoped_Mac_software": "active_current_entrypoint.normal_mcp_actual: .15 scoped acceptance unchanged",
+    "latest_Windows_normal_installation": "active_current_entrypoint.current_windows_normal_installation: .15 ACCEPTED_SCOPED",
+    "older_top_level_current_candidate_artifact_runtime_aliases": "Historical .14 objects retained unchanged; r412 scoped entrypoint takes precedence",
+    "prior_top_level_source_candidate": {
+      "snapshot": {
+        "path": "_state/universal-main-review/20261029-checkpoint-r412/prior-main3/docs/universal_mcp_execution/state/RESUME.json",
+        "bytes": 1564831,
+        "sha256": "3416fb68c4b782dd4163eb5417fc85b1b6e290646222afa115f6cfe92ad664fe",
+        "mode": "0o644"
+      },
+      "json_pointer": "/current_source_candidate",
+      "role": "IMMUTABLE_PRIOR_VALUE_NOT_CURRENT_SOURCE_OR_AUTHORITY"
+    },
+    "source_commit_016": null,
+    "public_metadata_head": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a"
   }
 }

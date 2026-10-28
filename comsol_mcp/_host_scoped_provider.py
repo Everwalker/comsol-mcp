@@ -30,6 +30,7 @@ MAX_CONFIG_BYTES = 1024 * 1024
 MAX_DESTINATIONS = 64
 MAX_GRANTS = 1024
 WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS = "windows-read-control-owner-dacl-persistent-acls"
+_CONTROL_PRIVACY_ACCESS = object()
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _QUALIFIED_CLASS = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$")
@@ -423,7 +424,10 @@ def _file_fingerprint(info: os.stat_result) -> tuple[int, int, int, int, int]:
 
 
 def _assert_opened_path_security(path: Path, fd: int, info: os.stat_result, *, directory: bool,
-                                 expected_identity: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                                 expected_identity: Mapping[str, Any] | None = None,
+                                 _control_access=None) -> dict[str, Any]:
+    if _control_access is not None and _control_access is not _CONTROL_PRIVACY_ACCESS:
+        raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "invalid private control access")
     if os.name == "nt":
         import msvcrt
         from ._windows_host_preflight_owner import scalar
@@ -434,11 +438,16 @@ def _assert_opened_path_security(path: Path, fd: int, info: os.stat_result, *, d
             fstat = os.fstat
             before = fstat(fd)
             handle = ctypes.c_void_p(get_handle(fd))
+            borrowed_getter = (full_getter.borrowed
+                               if _control_access is _CONTROL_PRIVACY_ACCESS else full_getter)
             pinned = full_getter(leaf, directory=directory)
-            borrowed = full_getter(handle, directory=directory)
+            borrowed = borrowed_getter(handle, directory=directory)
+            if (_control_access is _CONTROL_PRIVACY_ACCESS and not directory
+                    and (pinned[5] != 1 or borrowed[5] != 1 or info.st_nlink != 1)):
+                raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "private control file must have one link")
             if pinned[0] != borrowed[0]:
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows stdio and pinned leaf full identities differ")
-            if full_getter(leaf, directory=directory) != pinned or full_getter(handle, directory=directory) != borrowed:
+            if full_getter(leaf, directory=directory) != pinned or borrowed_getter(handle, directory=directory) != borrowed:
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows original object metadata changed during stdio observation")
             after = fstat(fd)
             fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
@@ -446,6 +455,12 @@ def _assert_opened_path_security(path: Path, fd: int, info: os.stat_result, *, d
             if (signature(info) != signature(before) or signature(before) != signature(after)
                     or get_handle(fd) != handle.value):
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows original stdio descriptor changed or was reused")
+        if _control_access is _CONTROL_PRIVACY_ACCESS:
+            return _verify_windows_private_path(path, directory=directory,
+                                                 expected_identity=expected_identity,
+                                                 _internal_stdio_observer=observe,
+                                                 _control_access=_control_access,
+                                                 _identity_mode=_HOST_CONTROL_FULL_IDENTITY)
         return _verify_windows_private_path(path, directory=directory,
                                              expected_identity=expected_identity,
                                              _internal_stdio_observer=observe)
@@ -722,6 +737,19 @@ def _windows_volume_has_persistent_acls(api, path: Path) -> tuple[bool, int]:
 _HOST_CONTROL_FULL_IDENTITY = object()
 
 
+def _with_control_private_path(value, *, directory, consume, expected_identity=None):
+    """Internal continuation: retain original ACL/name chains through use.
+
+    This adds no ACL setter or SDK declaration. The control route retains the
+    original preflight on uncertainty rather than unwinding further native calls.
+    """
+    path = _safe_absolute(os.fspath(value), "private control path")
+    return _verify_windows_private_path(path, directory=directory,
+        expected_identity=expected_identity, _control_callback=consume,
+        _control_access=_CONTROL_PRIVACY_ACCESS,
+        _identity_mode=_HOST_CONTROL_FULL_IDENTITY)
+
+
 def _verify_windows_host_control_root(path: str | os.PathLike[str]) -> dict[str, Any]:
     """Complete installer identity for the normal host-control root only.
 
@@ -735,9 +763,15 @@ def _verify_windows_host_control_root(path: str | os.PathLike[str]) -> dict[str,
 def _verify_windows_private_path(path: Path, *, directory: bool,
                                  expected_identity: Mapping[str, Any] | None,
                                  _retained_callback=None, _original_owner_callback=None,
-                                 _internal_stdio_observer=None, _identity_mode=None) -> dict[str, Any]:
+                                 _internal_stdio_observer=None, _identity_mode=None,
+                                 _control_callback=None, _control_access=None) -> dict[str, Any]:
+    if (_control_access is not None and _control_access is not _CONTROL_PRIVACY_ACCESS
+            or _control_callback is not None and _control_access is not _CONTROL_PRIVACY_ACCESS):
+        raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "invalid private control continuation")
     if (_identity_mode is not None and (_identity_mode is not _HOST_CONTROL_FULL_IDENTITY
-            or directory is not True or _retained_callback is not None or _internal_stdio_observer is not None)):
+            or _retained_callback is not None
+            or (_control_access is not _CONTROL_PRIVACY_ACCESS
+                and (directory is not True or _internal_stdio_observer is not None)))):
         raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "full root identity requires the private directory-only route")
     try:
         from ._windows_parameter_publish import PublishError, _API
@@ -746,6 +780,8 @@ def _verify_windows_private_path(path: Path, *, directory: bool,
         raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows handle-based ACL verifier is unavailable") from exc
     from ._windows_host_preflight_owner import hold_original, finish_original
     actual_owner = hold_original(api)
+    if _control_access is _CONTROL_PRIVACY_ACCESS:
+        actual_owner._control_strict = True
     if _original_owner_callback is not None:
         _original_owner_callback(actual_owner)
     if _retained_callback is not None:
@@ -763,7 +799,8 @@ def _verify_windows_private_path(path: Path, *, directory: bool,
                                                      expected_identity=expected_identity,
                                                      _retained_callback=_retained_callback,
                                                      _internal_stdio_observer=_internal_stdio_observer,
-                                                     _identity_mode=_identity_mode)
+                                                     _identity_mode=_identity_mode,
+                                                     _control_callback=_control_callback)
         except BaseException as error:
             primary = error
             actual_owner.remember(error)
@@ -779,10 +816,10 @@ def _windows_original_full_getter(api, *, _retain_outputs=False):
     from ._windows_host_preflight_owner import hold_original, scalar
     owner = hold_original(api)
     getter = owner.function("GetFileInformationByHandleEx", api.k)
-    def read(handle, *, directory):
+    def query(handle, *, directory, retain):
         full, basic, standard = _FullIdInfo(), _BasicInfo(), _StandardInfo()
         if _retain_outputs:
-            owner.hold(handle, full, basic, standard)
+            retain(handle, full, basic, standard)
         for kind, output in ((18, full), (0, basic), (1, standard)):
             if not scalar(getter(handle, kind, ctypes.byref(output), ctypes.sizeof(output)), "BOOL"):
                 raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "original full identity SDK query failed")
@@ -793,11 +830,17 @@ def _windows_original_full_getter(api, *, _retain_outputs=False):
             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "full identity requires an ordinary non-pending object")
         return ((int(full.volume), file_id), int(standard.size), int(basic.created),
                 int(basic.changed), int(basic.written), int(standard.links))
+    def read(handle, *, directory):
+        return query(handle, directory=directory, retain=owner.hold)
+    def borrowed(handle, *, directory):
+        return query(handle, directory=directory, retain=owner.retain_borrowed_outputs)
+    read.borrowed = borrowed
     return read
 
 
 def _verify_windows_private_path_owned(api, path, *, directory, expected_identity, _retained_callback=None,
-                                      _internal_stdio_observer=None, _identity_mode=None):
+                                      _internal_stdio_observer=None, _identity_mode=None,
+                                      _control_callback=None):
     from ._windows_parameter_publish import PublishError
     persistent_acls, expected_volume = _windows_volume_has_persistent_acls(api, path)
     if not persistent_acls:
@@ -876,6 +919,16 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                     if (full_getter(handle, directory=is_directory) != before[index]
                             or digest != descriptors[index]["descriptor_sha256"]):
                         raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "original private path changed across stdio observation")
+        if _control_callback is not None:
+            answer = _control_callback(api, handles[-1], metadata)
+            # The same complete verifier repeats while original chains are
+            # retained. Only directory content/mtime may change, not identity/ACL.
+            after = _verify_windows_private_path_owned(api, path, directory=directory,
+                                                       expected_identity=identity,
+                                                       _identity_mode=_identity_mode)
+            if after != metadata:
+                raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "private control path changed during use")
+            return answer
         if _retained_callback is not None:
             if directory:
                 raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "retained backup read requires an ordinary file")

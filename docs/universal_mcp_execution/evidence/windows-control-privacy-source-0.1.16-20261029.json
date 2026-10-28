@@ -1,0 +1,89 @@
+{
+  "schema": "windows-control-privacy-source-evidence/1",
+  "status": "STRONG_MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_CANONICAL_INTEGRATED",
+  "version": "0.1.16",
+  "source_commit": null,
+  "integration_base": "c3716b7ca782cbe2acaa13e14d6e4d429fdbaa4a",
+  "scope": "Generic local control privacy; SOURCE/software only",
+  "source_paths": [
+    "comsol_mcp/_control_client.py",
+    "comsol_mcp/_control_daemon.py",
+    "comsol_mcp/_control_privacy.py",
+    "comsol_mcp/_host_scoped_provider.py",
+    "comsol_mcp/_windows_host_preflight_owner.py",
+    "tests/test_control_client.py",
+    "tests/test_control_privacy.py",
+    "tests/test_control_privacy_native.py"
+  ],
+  "own_version_slots": [
+    "pyproject project.version",
+    "_server VERSION",
+    "uv.lock own comsol-mcp version"
+  ],
+  "integration_counts": {
+    "source_test_files": 8,
+    "own_version_files": 3,
+    "thirdparty_lock_objects_unchanged": 52
+  },
+  "Main_Source_acceptance": {
+    "bytes": 6310,
+    "sha256": "4412eee6137fec092f71a7fccd2c16f09bf509db37479f09e832cabcd825603b"
+  },
+  "independent_affected_review": {
+    "bytes": 8682,
+    "sha256": "9d85ef22fd0833ceb417ef9935cd425479813a829ec25caab9362697f7164e48",
+    "P1": 0,
+    "P2": 0,
+    "checks": 15
+  },
+  "author_software": {
+    "whole_test_files": 12,
+    "passed": 442,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "original_tool_terminal": 0
+  },
+  "counts_are_separate_not_cumulative": true,
+  "findings": [
+    {
+      "r1": "P2-01 retaining owned getter rejected distinct borrowed CRT handle",
+      "r2": "Borrowed-query output buffers strongly retained before SDK under original preflight owner; no borrowed handle acquire/adopt/close; full128/link/attribute checks preserved"
+    },
+    {
+      "r1": "P2-02 default Windows path added private control kwargs to a narrow hook",
+      "r2": "Default kwargs contract restored; private selector alone enables extra control/full-identity kwargs; original mapped test unchanged"
+    }
+  ],
+  "safety": "Reuse read-only DACL/owner/persistent-ACL/retained-handle verification. POSIX and SCM/profile branches remain distinct; no ACL repair or blanket Windows bypass.",
+  "historical_evidence": {
+    "r1_FREEZE_sha256": "2d9b7c07473f4890eaa3c6ca951a9c3dad1f7a44baad2f1da7de52c586ca6738",
+    "r1_broader_regression": "268passed14failed74errors retained as failures",
+    "intermediate_r2": "428passed retained separately before the borrowed-output repair"
+  },
+  "r2_source_fingerprint": "628038aa04cb5d872a7128366b57b00c395567077df9a6c21d2effcb4356451b",
+  "current_normal_install_015": "ACCEPTED_SCOPED_UNCHANGED",
+  "new_016": {
+    "artifacts": "NOT_RUN",
+    "build": "NOT_RUN",
+    "normal_install": "NOT_RUN",
+    "public_MCP": "NOT_RUN",
+    "Windows_actual": "NOT_RUN",
+    "native": "NOT_RUN"
+  },
+  "limits": [
+    "Trusted owner/admin and cooperative singleton scope, not hostile same-UID isolation.",
+    "Software shims/local loopback do not establish Windows ABI/runtime acceptance.",
+    "Private artifact archives and commercial bytes are not uploaded by this Source stage.",
+    "Old failures, UNKNOWN owners, external terminal gaps and historical Mac resource limits unchanged."
+  ],
+  "Goal": "ACTIVE_NOT_COMPLETE",
+  "frozen_counts": [
+    273,
+    60,
+    427
+  ],
+  "completed_groups": [],
+  "heldouts": "NOT_SELECTED",
+  "final_unified_Reviewer": "NOT_STARTED"
+}
