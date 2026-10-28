@@ -1,13 +1,7 @@
-# Progress — r407 local six-file candidate
+# Progress — r408 local four-file Source candidate
 
-Main accepted a portable U12 current-provenance SOURCE supplement only: 58 publicly tracked sources plus the frozen coverage baseline; 10 changed fingerprints, 455 current AST definition-location differences, 12 unresolved retained. The stdlib-only [generator](tools/generate_current_coverage_provenance.py) and [sidecar](docs/universal_mcp_execution/state/GENERAL_COVERAGE_CURRENT_PROVENANCE.json) are the only new U12 deliverables. GENERAL_COVERAGE remains the historical ledger; definitions are not historical interior-callsite replacements. No route/status/count or U12 whole-group/native/Goal upgrade.
+Main separately accepted normal-child DETACHED source (20 software checks) and thin-forward R2 P2 repair (16 software checks; independent 0 P1/P2). The counts are not added. Normal child changes only the private Native flags literal to 0x0008040c; seven other runtime drivers remain byte-equal. Thin R2 enforces typed actor validation in raw and outer views; Main's three old alias counterexamples are rejected in isolated AST checks. These are SOURCE/software results, not Windows ABI or installation PASS.
 
-From the repository root, using a new output path:
+Finite source/data preparation continues locally under directive R2: only the source packet may be a sibling; runtime controls remain inside the material root. No assembled dispatch, new remote, actor, RootID, producer, READY or GO is authorized. Windows normal installation remains FAIL; prior pip entry/root postimage and original external-terminal gaps remain UNVERIFIED, with no owner followup.
 
-```text
-python3 -I -B tools/generate_current_coverage_provenance.py . NEW_EXCLUSIVE_OUTPUT.json
-```
-
-Main's accepted finite DETACHED + binary-LF diagnostic remains unchanged: Tool0/child0, 414B strict UTF-8/LF marker binding, dual EOF, Job0 and aggregate close reports; no full inventory/per-handle table or explanation of old 0xc0000142. Windows normal installation remains FAIL, prior pip/root postimage UNVERIFIED; 40869 external terminal UNVERIFIED_NO_FURTHER_RECEIVE. Fresh normal-pipeline source/data remain local preparation, no new remote/runtime dispatch.
-
-Publication e77bd27f and scoped Mac .15 actual remain accepted. Five fences/frozen 273-60-427/completed_groups=[]/heldouts NOT_SELECTED/final Reviewer NOT_STARTED and historical Mac Core block remain unchanged. Six-file candidate awaits Main gate; no commit/push.
+Publication 6b8aed52 is Main remote accepted. U12 generator/sidecar remain a published SOURCE supplement only; scoped Mac .15 actual remains accepted/SPENT. Five fences/frozen readbacks/273-60-427/completed_groups=[]/heldouts NOT_SELECTED/final Reviewer NOT_STARTED and historical Mac Core block remain unchanged. Four-file candidate awaits Main gate; no commit/push.
