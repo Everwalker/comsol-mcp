@@ -1,8 +1,8 @@
 {
   "active_current_entrypoint": {
-    "revision": 379,
-    "status": "LOCAL_SEVEN_FILE_PUBLICATION_CANDIDATE_PENDING_MAIN_REVIEW",
-    "published_head": "958970b605b746d2593dd5a3c65965b960864d46",
+    "revision": 384,
+    "status": "MAIN_ACCEPTED_SCOPED_015_NORMAL_INSTALL_PUBLIC_MCP_PUBLICATION_PENDING",
+    "published_head": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
     "current_source": {
       "version": "0.1.15",
       "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
@@ -39,11 +39,11 @@
           "sha256": "30230b0b65467e0bba56c5bcdc44aef5e4e131435171e1f87ccbc49b50fe010d"
         }
       ],
-      "build_install_runtime": "NOT_RUN",
+      "build_install_runtime": "SCOPED_MAC_ARM64_NORMAL_INSTALL_PUBLIC_MCP_ACCEPTED_NATIVE_NOT_RUN",
       "prior_014_source": "previous_source_candidate_014_r374",
       "source_tree": "ebbdf9ae784a851fdb68176cf45fac96d2774020"
     },
-    "latest_artifacts_runtime": ".14/Y accepted; .15 build/install/runtime NOT_RUN",
+    "latest_artifacts_runtime": "0.1.15 five artifact bytes and scoped Mac ARM64 normal install/public MCP accepted; native NOT_RUN",
     "build_source_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-build-source-independent-review-r1/MAIN_UNBOUND_BUILD_SOURCE_PREP_ACCEPTANCE.json",
       "bytes": 2100,
@@ -72,8 +72,8 @@
     "r6_fence": "current_R6_original_UNKNOWN_fence_r359",
     "r7_fence": "current_R7_original_UNKNOWN_fence_r361",
     "old_fences": "retained_owner_fences and legacy_unknown_preserved",
-    "current_leases": "orchestration.current_active_leases_r379",
-    "next_action": "Main reviews seven-file candidate and r379 local durable state; public stage publication remains pending explicit nonforce release and readback. Review .15 normal MCP source candidate and Windows materializer r5; no runtime authority.",
+    "current_leases": "orchestration.current_active_leases_r384",
+    "next_action": "Main reviews r384 corrected five-file publication candidate; Newton prepares fresh Stage1 packet DATA-r2 from accepted source. Actual Windows authority and identities remain unbound; no owner replay.",
     "bound_source_canary_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-bound-source-canary-independent-review-r1/MAIN_BOUND_SOURCE_CANARY_PREP_ACCEPTANCE.json",
       "bytes": 2555,
@@ -96,7 +96,7 @@
       }
     },
     "build": {
-      "status": "TASK_SIGNED_PURE_IO_BOUND_NOT_RUN_PENDING_MAIN_REVIEW_DURABLE_EXPLICIT_DISPATCH",
+      "status": "KNOWN_ZERO_FOUR_ARTIFACT_BUILD_SPENT_NEVER_REPOLL",
       "refs": {
         "task": {
           "path": "_state/universal-main-review/20261028-coherent-015-build-prep-r1/build-activation-data-r1/MAIN_BUILD_TASK.json",
@@ -134,30 +134,41 @@
       "claim_name": "BUILD_DISPATCH_ONCE_CLAIM"
     },
     "normal_prefix_materializer": {
-      "status": "P1_OPEN_R5_SOURCE_REVIEW_IN_PROGRESS",
-      "source_pins": {
-        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/adapted-source-r5/SOURCE_PINS_REVIEW.json",
-        "bytes": 4872,
-        "sha256": "678f80b16b66af5000395155b06f51c73f0dcd3a032b19a0b2d185580d1b165b"
+      "status": "R5_STAGE2_AND_STAGE1_R2_SOURCE_MAIN_ACCEPTED_PACKET_DATA_R2_IN_PROGRESS",
+      "r5_source_acceptance": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-independent-review-r2/MAIN_R5_SOURCE_ACCEPTANCE.json",
+        "bytes": 3970,
+        "sha256": "89e6d40f36c3d9b34b276612b8e6224a118b1a870d780cc4b3532a1e6953dbe8"
       },
-      "architecture": {
-        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-architecture-review-r1/MAIN_ARCHITECTURE_DECISION.json",
-        "bytes": 5205,
-        "sha256": "a26d21367b38476e3d069db99f10877ce65e1ab38322f33e8adbce635643ac7c"
+      "stage1_source_pins": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-source-r2/SOURCE_PINS.json",
+        "bytes": 4032,
+        "sha256": "0da3077fb04193e7ac2293c817915439f9732225df5d151f80b27c58580d3e25"
       },
-      "interface_supplement": {
-        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-architecture-review-r1/MAIN_SOURCE_INTERFACE_SUPPLEMENT.json",
-        "bytes": 3392,
-        "sha256": "b7da1a74ece4daa7ac60b296e3fa69f1527b096b4e9e11064c7158e05b2b5c71"
+      "software_counts": "r2: 24 software cases; r5 regression separate",
+      "actual_producer_windows_ABI_material_root": "NOT_RUN / UNBOUND",
+      "agent": "Newton",
+      "agent_id": "01a17b42-2eae-7772-b7ad-881babcfa21a",
+      "repair_decision": {
+        "path": "_state/universal-main-review/20261028-windows-normal-stage1-creator-independent-review-r1/MAIN_SOURCE_REPAIR_DECISION.json",
+        "bytes": 3456,
+        "sha256": "a9f294e161571000b6296babca1761838c12b6d6d19a6cfd86dc7567b9b4a68b"
       },
-      "bootstrap_unbound_drafts_acceptance": {
-        "path": "_state/universal-main-review/20261028-windows-bootstrap-input-drafts-independent-review-r1/MAIN_UNBOUND_DRAFTS_ACCEPTANCE.json",
-        "bytes": 2000,
-        "sha256": "87582a43fbd6f9058777f7c87cfca940af76ffae9211d31b842a9bdcbebfde2f"
-      }
+      "stage1_source_acceptance": {
+        "path": "_state/universal-main-review/20261028-windows-normal-stage1-creator-independent-review-r2/MAIN_R2_SOURCE_ACCEPTANCE.json",
+        "bytes": 4320,
+        "sha256": "bd2ae51f4762977cfecb737cc521450fad37153cbbdeeadfe689e4d10c126df7"
+      },
+      "existing_facts": {
+        "path": "_state/universal-main-review/20261028-windows-stage1-existing-facts-r1/FACTS.json",
+        "bytes": 6120,
+        "sha256": "0af8e8ecd36d2b85d168f246c3a97e1c1e54a70d88216e794f55cb3decce7348"
+      },
+      "packet": "FRESH_DATA_R2_IN_PROGRESS; R1_PACKET_NOT_ACCEPTED",
+      "authority": "ACTUAL_CREATOR_WINDOWS_ABI_TASK_IDENTITIES_GO_LEASE_UNBOUND; SYSTEM_SCM_WFP_NOT_AUTHORIZED"
     },
     "artifacts": {
-      "status": "FIVE_ARTIFACT_BYTES_MAIN_ACCEPTED_PUBLICATION_PENDING",
+      "status": "FIVE_ARTIFACT_BYTES_MAIN_ACCEPTED_PUBLISHED",
       "acceptance": {
         "path": "_state/universal-main-review/20261028-coherent-015-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
         "bytes": 5634,
@@ -181,17 +192,161 @@
         }
       ],
       "product_source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
-      "metadata_head_after_publication": "FUTURE_NOT_YET_PUBLISHED",
-      "install_public_mcp_native_015": "NOT_RUN",
-      "latest_accepted_normal_runtime": ".14/Y scoped"
+      "metadata_head_after_publication": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+      "install_public_mcp_native_015": "SCOPED_MAC_ARM64_NORMAL_INSTALL_PUBLIC_MCP_ACCEPTED_NATIVE_NOT_RUN",
+      "latest_accepted_normal_runtime": "0.1.15 scoped; prior 0.1.14 preserved"
     },
     "normal_mcp_source": {
-      "status": "PRIVATE_SOURCE_CANDIDATE_INDEPENDENT_REVIEW_IN_PROGRESS",
-      "candidate": {
-        "path": "_state/universal-public-mcp-readiness-prep-20261027/owner-015-materials-r1/REVIEW_READY.json",
-        "bytes": 5852,
-        "sha256": "67be4050ee05c91bd87bf18ff6b6d7653abfa883e70b647248b5c970af35dfea"
-      }
+      "status": "MAIN_ACCEPTED_SOURCE_MATERIALS_ACTUAL_ONCE_SPENT",
+      "acceptance": {
+        "path": "_state/universal-main-review/20261028-public-mcp-015-source-independent-review-r1/MAIN_SOURCE_DATA_ACCEPTANCE.json",
+        "bytes": 6125,
+        "sha256": "f8d1356d680df768ef8caf356926723dcee30ea93b64cefeb8b2eb806d820c2a"
+      },
+      "refs": {
+        "release": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/MAIN_RUNTIME_RELEASE.json",
+          "bytes": 4772,
+          "sha256": "41791afc102248c7fd0be5930c63959ab7f6e022095d67c7f19e698f371f4790"
+        },
+        "binding": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/ACTUAL_BOUND_BINDING.json",
+          "bytes": 4650,
+          "sha256": "97e6783f7605efc2f53a0cac608277f009db55935648248b35c6131b17e5fd27"
+        },
+        "argv": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/EXACT_ONCE_ARGV.json",
+          "bytes": 1384,
+          "sha256": "530161e2b2ff9816bc5f9e832005576ce779f5a04578315cfe4b4ab704461bcd"
+        },
+        "task": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/EXACT_ONCE_TASK.json",
+          "bytes": 3281,
+          "sha256": "b4f6ee109e177f870f3aafea47856788243986227f165b62725a7a6e5b1a30ac"
+        },
+        "closure": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/ACTUAL_BINDING_CLOSURE.json",
+          "bytes": 2897,
+          "sha256": "e85a14716fe2caaa99f41f6aefd7db6927366866d3c1e47a5185a818a94afb8d"
+        },
+        "inert_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/inert.tool-return.json",
+          "bytes": 282,
+          "sha256": "b173656f2b1a1c39d32d82c317cb9f01ae81233570c86d254e9aac1908181f11"
+        },
+        "activation_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/activation.tool-return.json",
+          "bytes": 1384,
+          "sha256": "44323cccff32d6826f14724769eb6d85e187c050b4486ab86f2a8d5291b382b6"
+        }
+      },
+      "agent": "Euler",
+      "agent_id": "01a17b4a-c315-70a1-859c-7d16c2e32fb3"
+    },
+    "publication": {
+      "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
+      "acceptance": {
+        "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
+        "bytes": 1796,
+        "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+      },
+      "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+      "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+    },
+    "normal_mcp_actual": {
+      "status": "MAIN_ACCEPTED_SCOPED_ACTUAL_SOFTWARE_SESSION_SPENT_NEVER_REPOLL",
+      "refs": {
+        "handoff": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/ACTUAL_HANDOFF.json",
+          "bytes": 7781,
+          "sha256": "834efc1d078b06c43c583a1bc558a2616998ffa9e030df9ff90161e5ffa6bdaf"
+        },
+        "terminal": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-wait01.tool-return.json",
+          "bytes": 210,
+          "sha256": "5e52267a526f192524e39d64c7be8d2dfbbd0a938303218530a0c01298b1dc7b"
+        },
+        "start": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-start.tool-return.json",
+          "bytes": 110,
+          "sha256": "79bf50794a24712830327a00910ddbb03d54b193c1ed4295104bab812a4846da"
+        },
+        "preflight": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/dispatch-preflight.tool-return.json",
+          "bytes": 2326,
+          "sha256": "b0377e1676b26029f21aa1eee8cecc3dc88eb6dde6d022afb96f1a08b0b02ba2"
+        },
+        "claim_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/dispatch-claim.tool-return.json",
+          "bytes": 367,
+          "sha256": "74bbd0a5cea355d476390489ac0ff5b8e206ab5f6eca79d39cb8565aa6e30640"
+        },
+        "claim": {
+          "path": "_state/universal-public-mcp-readiness-prep-20261027/owner-015-materials-r1/dispatch-once.claim.json",
+          "bytes": 333,
+          "sha256": "4be92a2bf999a05868daefde4a2660c2df40c87e0a49a96c3873ccb16c88f94d"
+        },
+        "capture_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-capture.tool-return.json",
+          "bytes": 2233,
+          "sha256": "8d22c0c90904a6b3ddcee4f37a47bae4ee94a5ac421d1371e860923c73ca689b"
+        },
+        "events": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/known0-capture/normal-command-events.jsonl",
+          "bytes": 487062,
+          "sha256": "e59b1d6a6c9441c66d0fa11326605f4bb3035e6c3e4b766503badf26e619aa81"
+        },
+        "install_result": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/known0-capture/install-evidence/offline-install-result.json",
+          "bytes": 28782,
+          "sha256": "66c31de193f3706f636def07bc6326c063035dc316642dcb0fdea70b926485b6"
+        },
+        "install_log": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/known0-capture/install-evidence/offline-install-process.log.json",
+          "bytes": 30056,
+          "sha256": "58b9f5265870fc37acd3294ea1adefd26ab48ec9e112bb54e7460683632146f2"
+        },
+        "parse_failure": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-parse02-failed.tool-return.json",
+          "bytes": 3032,
+          "sha256": "5e7f3f106743ba41de1cfe9b7e479c24d974174a33f62fa97fca14aadc39d647"
+        },
+        "corrected_parse": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-parse03.tool-return.json",
+          "bytes": 1072,
+          "sha256": "6af75a8d46c04c4c1261aff803a779312209d24893635ad8afa85eb3230f0141"
+        },
+        "protocol_metadata": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-parse05.tool-return.json",
+          "bytes": 703,
+          "sha256": "3a76b2ec4b37757ef2f8833e57a1ef23153d2e0b8c93ec6ec13573ac6b0bdc94"
+        },
+        "pip_count": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-pipcount.tool-return.json",
+          "bytes": 186,
+          "sha256": "07278911c159b4f4d0e9c701267a302b867171e5f6413e57c8c343b1a9cf6e55"
+        },
+        "handoff_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/handoff.tool-return.json",
+          "bytes": 640,
+          "sha256": "33a0ddf34a5a1e30edb164e707ffde996430e395bdc0873402dec0db4ed86b07"
+        }
+      },
+      "durable_main_acceptance": {
+        "path": "_state/universal-main-review/20261028-checkpoint-r380/MAIN_DURABLE_ONCE_DATA_ACCEPTANCE.json",
+        "bytes": 2906,
+        "sha256": "8b93d4348986014ac44ba7c44f47e2e2a9fa9c1d683f258c62c11c8b8b621542"
+      },
+      "session": "68037 TERMINAL0 SPENT NEVER_REPOLL",
+      "release_and_claim": "SPENT_NO_REPLAY",
+      "limits": "112 schemas listed not executed; 274 metadata versus frozen 273; stdio numeric wait and outgoing initialized inferred from source; 1805 SourceBase helper interval and parent environment dispatch/capture only; HTTP inferred from source/client, not wire; native NOT_RUN",
+      "latest_accepted_normal_runtime": ".14/Y scoped",
+      "main_acceptance": {
+        "path": "_state/universal-main-review/20261028-public-mcp-015-actual-independent-review-r1/MAIN_ACTUAL_NORMAL_INSTALL_PUBLIC_MCP_ACCEPTANCE_r2.json",
+        "bytes": 5391,
+        "sha256": "51b8e6fee74bb9145d9c1a09b3dfe10f6961ed41125bdab89fda27c79ac6d301"
+      },
+      "public_evidence": "docs/universal_mcp_execution/evidence/public-mcp-0.1.15-macos-arm64-20261028.json"
     }
   },
   "current_checkpoint_r374": {
@@ -8381,36 +8536,98 @@
   "schema_version": 1,
   "baseline_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
   "baseline_tree": "120ceb6568d22614f7548d4eb96b822fe53f88ba",
-  "state_revision": 379,
+  "state_revision": 384,
   "phase": "015_SOURCE_PUBLISHED_BUILD_BINDING_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Main reviews seven-file candidate and r379 local durable state; public stage publication remains pending explicit nonforce release and readback. Review .15 normal MCP source candidate and Windows materializer r5; no runtime authority.",
+  "next_action": "Main reviews r384 corrected five-file publication candidate; Newton prepares fresh Stage1 packet DATA-r2 from accepted source. Actual Windows authority and identities remain unbound; no owner replay.",
   "active_job_refs": [
     {
-      "scope": "015_FIVE_ARTIFACT_PUBLICATION",
-      "status": "MAIN_ACCEPTED_BYTES_PUBLICATION_PENDING_MAIN_REVIEW",
-      "acceptance": {
-        "path": "_state/universal-main-review/20261028-coherent-015-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
-        "bytes": 5634,
-        "sha256": "cf36edb2cef2b17b56f3368bd31f581a0c5dae49016cc76148a010ad256da6f1"
-      },
-      "evidence": [
-        {
-          "path": "docs/universal_mcp_execution/evidence/distribution-0.1.15-20261028.json",
-          "bytes": 2742,
-          "sha256": "565b05480e3d3d695a068f8f99c3e46e7d04ac39de5647446527b3739a4cd110"
+      "scope": "015_MAC_NORMAL_INSTALL_PUBLIC_MCP_ONCE",
+      "status": "MAIN_ACCEPTED_SCOPED_ACTUAL_SOFTWARE_SESSION_68037_SPENT_NEVER_REPOLL",
+      "refs": {
+        "handoff": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/ACTUAL_HANDOFF.json",
+          "bytes": 7781,
+          "sha256": "834efc1d078b06c43c583a1bc558a2616998ffa9e030df9ff90161e5ffa6bdaf"
         },
-        {
-          "path": "docs/universal_mcp_execution/evidence/windows-jdk-fixed-metadata-20261028.json",
-          "bytes": 1902,
-          "sha256": "df0591c14247c8f267260be604fd364de5f0cec956f61de65d9de141e01553fd"
+        "terminal": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-wait01.tool-return.json",
+          "bytes": 210,
+          "sha256": "5e52267a526f192524e39d64c7be8d2dfbbd0a938303218530a0c01298b1dc7b"
         },
-        {
-          "path": "docs/universal_mcp_execution/evidence/policy-canary-0.1.15-20261028.json",
-          "bytes": 1688,
-          "sha256": "6478c8fd99f5f9b01d688fc977f7f2ef9a1c1de6f8866bca659b6879a80299b1"
+        "start": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-start.tool-return.json",
+          "bytes": 110,
+          "sha256": "79bf50794a24712830327a00910ddbb03d54b193c1ed4295104bab812a4846da"
+        },
+        "preflight": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/dispatch-preflight.tool-return.json",
+          "bytes": 2326,
+          "sha256": "b0377e1676b26029f21aa1eee8cecc3dc88eb6dde6d022afb96f1a08b0b02ba2"
+        },
+        "claim_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/dispatch-claim.tool-return.json",
+          "bytes": 367,
+          "sha256": "74bbd0a5cea355d476390489ac0ff5b8e206ab5f6eca79d39cb8565aa6e30640"
+        },
+        "claim": {
+          "path": "_state/universal-public-mcp-readiness-prep-20261027/owner-015-materials-r1/dispatch-once.claim.json",
+          "bytes": 333,
+          "sha256": "4be92a2bf999a05868daefde4a2660c2df40c87e0a49a96c3873ccb16c88f94d"
+        },
+        "capture_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-capture.tool-return.json",
+          "bytes": 2233,
+          "sha256": "8d22c0c90904a6b3ddcee4f37a47bae4ee94a5ac421d1371e860923c73ca689b"
+        },
+        "events": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/known0-capture/normal-command-events.jsonl",
+          "bytes": 487062,
+          "sha256": "e59b1d6a6c9441c66d0fa11326605f4bb3035e6c3e4b766503badf26e619aa81"
+        },
+        "install_result": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/known0-capture/install-evidence/offline-install-result.json",
+          "bytes": 28782,
+          "sha256": "66c31de193f3706f636def07bc6326c063035dc316642dcb0fdea70b926485b6"
+        },
+        "install_log": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/known0-capture/install-evidence/offline-install-process.log.json",
+          "bytes": 30056,
+          "sha256": "58b9f5265870fc37acd3294ea1adefd26ab48ec9e112bb54e7460683632146f2"
+        },
+        "parse_failure": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-parse02-failed.tool-return.json",
+          "bytes": 3032,
+          "sha256": "5e7f3f106743ba41de1cfe9b7e479c24d974174a33f62fa97fca14aadc39d647"
+        },
+        "corrected_parse": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-parse03.tool-return.json",
+          "bytes": 1072,
+          "sha256": "6af75a8d46c04c4c1261aff803a779312209d24893635ad8afa85eb3230f0141"
+        },
+        "protocol_metadata": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-parse05.tool-return.json",
+          "bytes": 703,
+          "sha256": "3a76b2ec4b37757ef2f8833e57a1ef23153d2e0b8c93ec6ec13573ac6b0bdc94"
+        },
+        "pip_count": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/runtime-pipcount.tool-return.json",
+          "bytes": 186,
+          "sha256": "07278911c159b4f4d0e9c701267a302b867171e5f6413e57c8c343b1a9cf6e55"
+        },
+        "handoff_tool": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/handoff.tool-return.json",
+          "bytes": 640,
+          "sha256": "33a0ddf34a5a1e30edb164e707ffde996430e395bdc0873402dec0db4ed86b07"
         }
-      ]
+      },
+      "agent": "Euler",
+      "agent_id": "01a17b4a-c315-70a1-859c-7d16c2e32fb3",
+      "main_acceptance": {
+        "path": "_state/universal-main-review/20261028-public-mcp-015-actual-independent-review-r1/MAIN_ACTUAL_NORMAL_INSTALL_PUBLIC_MCP_ACCEPTANCE_r2.json",
+        "bytes": 5391,
+        "sha256": "51b8e6fee74bb9145d9c1a09b3dfe10f6961ed41125bdab89fda27c79ac6d301"
+      }
     },
     {
       "scope": "WINDOWS_JDK_FIXED_METADATA",
@@ -8651,7 +8868,7 @@
       "Luna_maintenance": "HumeMain3leaseclosedatlocalr192; exact3snapshotpreserved externally, Mainmadeonlyscope/rolecorrectionr193.",
       "final_Reviewer": "NOT_STARTED; no finalcandidate/heldouttasks assigned."
     },
-    "current_active_lease_key": "current_active_leases_r375",
+    "current_active_lease_key": "current_active_leases_r384",
     "current_scope_correction": {
       "path": "_state/universal-main-review/20261024-result-unit-contract-scope/MAIN_CONTRACT_SCOPE_CORRECTION.json",
       "bytes": 2585,
@@ -11128,6 +11345,92 @@
         "status": "015 unbound source review complete; no runtime authority"
       },
       "final_reviewer": "NOT_STARTED"
+    },
+    "current_active_leases_r380": {
+      "Euler": {
+        "agent_id": "01a17b4a-c315-70a1-859c-7d16c2e32fb3",
+        "status": "015_MAC_ONCE_RELEASE_SIGNED_NOT_RUN_PENDING_MAIN_DURABLE_EXPLICIT_DISPATCH",
+        "task": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/EXACT_ONCE_TASK.json",
+          "bytes": 3281,
+          "sha256": "b4f6ee109e177f870f3aafea47856788243986227f165b62725a7a6e5b1a30ac"
+        },
+        "release": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/MAIN_RUNTIME_RELEASE.json",
+          "bytes": 4772,
+          "sha256": "41791afc102248c7fd0be5930c63959ab7f6e022095d67c7f19e698f371f4790"
+        }
+      },
+      "Aristotle": {
+        "agent_id": "01a17c4d-f85a-7b53-b505-cd4e85422d1e",
+        "status": "JDK_FINITE_ACCEPTED_SESSION_50876_SPENT_NO_REPOLL"
+      },
+      "Newton": {
+        "agent_id": "01a17b42-2eae-7772-b7ad-881babcfa21a",
+        "status": "R5_SOURCE_ACCEPTED_STAGE1_FRESH_CREATOR_SOURCE_IN_PROGRESS_ACTUAL_UNBOUND",
+        "acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-independent-review-r2/MAIN_R5_SOURCE_ACCEPTANCE.json",
+          "bytes": 3970,
+          "sha256": "89e6d40f36c3d9b34b276612b8e6224a118b1a870d780cc4b3532a1e6953dbe8"
+        }
+      },
+      "Huygens": {
+        "agent_id": "01a17c25-dc77-7b32-a3ea-49a37b8625dc",
+        "status": "source review role; no runtime authority"
+      },
+      "Volta": {
+        "agent_id": "01a17b3f-d13b-7af3-b99e-16f07e206d5a",
+        "status": "015 unbound source review complete; no runtime authority"
+      },
+      "final_reviewer": "NOT_STARTED"
+    },
+    "current_active_leases_r381": {
+      "Euler": {
+        "agent_id": "01a17b4a-c315-70a1-859c-7d16c2e32fb3",
+        "status": "015_MAC_ACTUAL_TERMINAL0_SPENT_NEVER_REPOLL_PENDING_H_MAIN",
+        "handoff": {
+          "path": "_state/universal-main-review/20261028-public-mcp-015-runtime-once-prep-r1/ACTUAL_HANDOFF.json",
+          "bytes": 7781,
+          "sha256": "834efc1d078b06c43c583a1bc558a2616998ffa9e030df9ff90161e5ffa6bdaf"
+        }
+      },
+      "Aristotle": {
+        "agent_id": "01a17c4d-f85a-7b53-b505-cd4e85422d1e",
+        "status": "JDK_FINITE_ACCEPTED_SESSION_50876_SPENT_NO_REPOLL"
+      },
+      "Newton": {
+        "agent_id": "01a17b42-2eae-7772-b7ad-881babcfa21a",
+        "status": "STAGE1_SOURCE_CANDIDATE_PENDING_INDEPENDENT_REVIEW_NO_ACTUAL_AUTHORITY",
+        "source_pins": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-source-r1/SOURCE_PINS.json",
+          "bytes": 3284,
+          "sha256": "3500a3a617e99ee20a767d8e3ebe4ef65fe0ae6cd483f90c1bbc822454f7e190"
+        }
+      },
+      "Huygens": {
+        "agent_id": "01a17c25-dc77-7b32-a3ea-49a37b8625dc",
+        "status": "source review role; no runtime authority"
+      },
+      "Volta": {
+        "agent_id": "01a17b3f-d13b-7af3-b99e-16f07e206d5a",
+        "status": "015 unbound source review complete; no runtime authority"
+      },
+      "final_reviewer": "NOT_STARTED"
+    },
+    "current_active_leases_r382": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_stage1": "R2_SOURCE_REREVIEW_IN_PROGRESS_NO_RUNTIME_AUTHORITY",
+      "fences": "unchanged from r381"
+    },
+    "current_active_leases_r383": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_stage1": "R2_SOURCE_ACCEPTED_PACKET_DATA_R2_IN_PROGRESS_RUNTIME_UNBOUND",
+      "fences": "unchanged from r382"
+    },
+    "current_active_leases_r384": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_stage1": "R2_SOURCE_ACCEPTED_PACKET_DATA_R2_IN_PROGRESS_RUNTIME_UNBOUND",
+      "fences": "unchanged from r382"
     }
   },
   "current_changes": {

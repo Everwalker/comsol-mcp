@@ -1,5 +1,5 @@
-# Progress — r379 local candidate
+# Progress — r384 local
 
-.15 source 958970 and five artifact bytes are Main accepted; compact evidence publication awaits Main review, explicit nonforce release and remote readback. .15 install/public MCP/native NOT_RUN; .14/Y remains latest accepted scoped normal runtime. Source95 is product provenance; this metadata candidate changes README separately.
+0.1.15 Mac ARM64 normal offline installation and the fixed public MCP sequence are scoped accepted by independent review and Main; public evidence publication is pending. The prior 0.1.14 acceptance remains historical. Five 0.1.15 artifact bytes and metadata publication 9a1e61e8 are accepted; product source is 958970b6. The actual session and release/claim are SPENT.
 
-.15 Mac normal MCP SOURCE/DATA candidate is under independent review. Windows normal materializer P1 OPEN; r5 source under independent review, bootstrap input drafts accepted UNBOUND. No Windows/SCM/privilege action. Old UNKNOWN fences, frozen 273/60/427 and completed groups empty remain.
+112 schemas were listed, not executed; registry total 274 is metadata and does not change frozen 273. Windows r5 Stage2 and Stage1 r2 source are accepted; fresh packet DATA-r2 is in progress. Actual creator, producer, Windows ABI and material root remain NOT_RUN/UNBOUND. Existing UNKNOWN fences, Mac Core historical block, 273/60/427 and empty completed groups remain.
