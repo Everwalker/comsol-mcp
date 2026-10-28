@@ -1,0 +1,47 @@
+{
+  "schema": "windows-normal-source-prep-evidence/1",
+  "status": "SCOPED_SOURCE_SOFTWARE_ACCEPTED_ACTUAL_NOT_RUN",
+  "product_source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
+  "entry_r2": {
+    "main_acceptance_sha256": "3dc921395ea468ad3b1727c3a50e5b17163d24834bc5a9d80049ac2dc6009a97",
+    "self_software_tests": 62,
+    "independent_software_tests": 45,
+    "independent_findings": {
+      "P1": 0,
+      "P2": 0
+    },
+    "prior_r1_findings": "1 P1 / 3 P2; failures preserved"
+  },
+  "transport_r3": {
+    "main_acceptance_sha256": "7e20d8548034bda61917c295c03a522cbaecce78d13d1cb2c2489f8cdb9f03f6",
+    "source_manifest_sha256": "a34f68e5cdf85695370a7b7912e00ff16206feac332e61708f3b5efb109f4cb3",
+    "self_software_tests": 19,
+    "independent_software_tests": 23,
+    "independent_findings": {
+      "P1": 0,
+      "P2": 0
+    },
+    "method": "qualified Windows CPython 3.12.10 private _wait once; original foreground Popen and fixed inner flags 0x01000208",
+    "limits": "constructor is opaque trusted CPython TCB; complete inner raw handles, image and noJob are not established; no change to product Worker ownership or r5 SDK guards; stdio is not independent EOF proof"
+  },
+  "expected_product_outputs": {
+    "files": 200,
+    "bytes": 15471771,
+    "main_acceptance_sha256": "c6b64c8c9a4359fd7ce1cc38b2b5b2741224acff124b99f575dafa17e231d26a",
+    "status": "EXPECTED_DATA_NOT_INSTALLED"
+  },
+  "limits": [
+    "Windows creator, root identity, SDK ABI, pip, installation, PowerShell syntax and atomicity NOT_RUN; actual authority and lease UNBOUND.",
+    "DATA-r3 preparation only; dynamic actual fields are unbound and no runtime release exists.",
+    "Source and software acceptance is not native, platform, full-matrix or goal acceptance.",
+    "Test counts are distinct and not additive."
+  ],
+  "coverage_contract": {
+    "actions": 273,
+    "tests": 60,
+    "subassertions": 427,
+    "completed_groups": [],
+    "heldout": "NOT_SELECTED",
+    "final_review": "NOT_STARTED"
+  }
+}

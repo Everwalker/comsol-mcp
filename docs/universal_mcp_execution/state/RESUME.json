@@ -1,8 +1,8 @@
 {
   "active_current_entrypoint": {
-    "revision": 384,
+    "revision": 389,
     "status": "MAIN_ACCEPTED_SCOPED_015_NORMAL_INSTALL_PUBLIC_MCP_PUBLICATION_PENDING",
-    "published_head": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+    "published_head": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
     "current_source": {
       "version": "0.1.15",
       "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
@@ -72,8 +72,8 @@
     "r6_fence": "current_R6_original_UNKNOWN_fence_r359",
     "r7_fence": "current_R7_original_UNKNOWN_fence_r361",
     "old_fences": "retained_owner_fences and legacy_unknown_preserved",
-    "current_leases": "orchestration.current_active_leases_r384",
-    "next_action": "Main reviews r384 corrected five-file publication candidate; Newton prepares fresh Stage1 packet DATA-r2 from accepted source. Actual Windows authority and identities remain unbound; no owner replay.",
+    "current_leases": "orchestration.current_active_leases_r389",
+    "next_action": "Main reviews r389 four-file publication candidate and complete DATA-r3 when ready; actual task/claim/time binding and READY require separate authorization.",
     "bound_source_canary_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-bound-source-canary-independent-review-r1/MAIN_BOUND_SOURCE_CANARY_PREP_ACCEPTANCE.json",
       "bytes": 2555,
@@ -134,7 +134,7 @@
       "claim_name": "BUILD_DISPATCH_ONCE_CLAIM"
     },
     "normal_prefix_materializer": {
-      "status": "R5_STAGE2_AND_STAGE1_R2_SOURCE_MAIN_ACCEPTED_PACKET_DATA_R2_IN_PROGRESS",
+      "status": "ENTRY_R2_AND_TRANSPORT_R3_SOURCE_MAIN_ACCEPTED_DATA_R3_PREPARATION_IN_PROGRESS",
       "r5_source_acceptance": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-independent-review-r2/MAIN_R5_SOURCE_ACCEPTANCE.json",
         "bytes": 3970,
@@ -164,8 +164,150 @@
         "bytes": 6120,
         "sha256": "0af8e8ecd36d2b85d168f246c3a97e1c1e54a70d88216e794f55cb3decce7348"
       },
-      "packet": "FRESH_DATA_R2_IN_PROGRESS; R1_PACKET_NOT_ACCEPTED",
-      "authority": "ACTUAL_CREATOR_WINDOWS_ABI_TASK_IDENTITIES_GO_LEASE_UNBOUND; SYSTEM_SCM_WFP_NOT_AUTHORIZED"
+      "packet": "DATA_R3_PREPARATION_IN_PROGRESS_DYNAMIC_ACTUAL_FIELDS_UNBOUND_NOT_EXECUTABLE",
+      "authority": "ACTUAL_TRANSFER_CREATOR_PRODUCER_ROOT_SDK_ABI_TASK_IDENTITIES_GO_LEASE_NOT_RUN_UNBOUND; SYSTEM_SCM_WFP_NOT_AUTHORIZED",
+      "entry_integration_decision": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-packet-prep-r2/MAIN_ENTRY_INTEGRATION_DECISION.json",
+        "bytes": 5048,
+        "sha256": "3b5463e9a6174a85b4427bbe07d5ac9217b82538db9cd76ad6692938742f76f6"
+      },
+      "entry_source": {
+        "status": "R2_SOURCE_MAIN_ACCEPTED_ACTUAL_NOT_RUN",
+        "refs": {
+          "HANDOFF.md": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r1/HANDOFF.md",
+            "bytes": 3566,
+            "sha256": "a18076050146ced302ff032d3cda40dea87ef49f4db761522e53d16c989cbb3b"
+          },
+          "SOURCE_PINS.json": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r1/SOURCE_PINS.json",
+            "bytes": 11543,
+            "sha256": "83c9de714e491ddc7c7b1c1d5bc419a1873f51f18434743385bf4a6f9e3e793b"
+          },
+          "SOURCE_DELTA.diff": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r1/SOURCE_DELTA.diff",
+            "bytes": 55471,
+            "sha256": "97dfea4da0c4c42c678eb9a155d07e43e8abbf102d5b3f70b2a50820397f39c6"
+          },
+          "original-returns/entry_test21.json": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r1/original-returns/entry_test21.json",
+            "bytes": 5743,
+            "sha256": "7f416125b74fff7d06ac5dcd31b6ec036e8d8d9a41aac3fabbea11c7bdc9091d"
+          }
+        },
+        "software_tests": "44 passed; not added to previous 24/32",
+        "independent_review": {
+          "refs": {
+            "MAIN_FINDINGS_ADOPTION_AND_REPAIR_DECISION.json": {
+              "path": "_state/universal-main-review/20261028-windows-normal-entry-source-independent-review-r1/MAIN_FINDINGS_ADOPTION_AND_REPAIR_DECISION.json",
+              "bytes": 2107,
+              "sha256": "da4a469b3776619c6229937c359d87ec6b2cbdde81cd4f3e5377f07d4faf2a18"
+            },
+            "REVIEW_RESULT.json": {
+              "path": "_state/universal-main-review/20261028-windows-normal-entry-source-independent-review-r1/REVIEW_RESULT.json",
+              "bytes": 15988,
+              "sha256": "d592a544540c74983c758c6c740eff78f606faefd97a5ec1652b2142d5babced"
+            },
+            "REVIEW.md": {
+              "path": "_state/universal-main-review/20261028-windows-normal-entry-source-independent-review-r1/REVIEW.md",
+              "bytes": 10639,
+              "sha256": "93ece10f3fbb60fd5f63d45decb5cfb9c5aabe14fd476c71fb7d0111f8af47a5"
+            },
+            "EXACT_INPUT_PINS.json": {
+              "path": "_state/universal-main-review/20261028-windows-normal-entry-source-independent-review-r1/EXACT_INPUT_PINS.json",
+              "bytes": 82504,
+              "sha256": "3e2b138b6915c569c3b6935a27ef13215bcc502c198b27b2fa847c953ae7058e"
+            }
+          },
+          "findings": "1 P1 READY RW vs shareREAD; 3 P2 task typed gate before DLL, expiry before READY, component spelling collision before effects",
+          "independent_fake_tests": "27 cases: 23 PASS, 4 FAIL, 0 errors; separate from prior 44/24/32",
+          "reviewer_interrupted_then_resumed": "same source review; terminal synthetic test 21769 exit1 SPENT no repoll"
+        },
+        "repair": "two entry control READY typed writer known-close then readonly pin same identity/attributes/links/size/bytes; UNKNOWN zero followup; r5 unchanged; typed/time and component spelling checks before effects",
+        "r2_refs": {
+          "SOURCE_PINS.json": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r2/SOURCE_PINS.json",
+            "bytes": 7570,
+            "sha256": "191c36551a3e5bd80df5aa6f002c7e8c14ad93bd60678345dfb3e2bad6cd6d3d"
+          },
+          "HANDOFF.md": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r2/HANDOFF.md",
+            "bytes": 2991,
+            "sha256": "948b58dbce87302282c5eebefef09200146a12e16b716c76a632e0acedb2c3c0"
+          },
+          "SOURCE_DELTA_FROM_R1.diff": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r2/SOURCE_DELTA_FROM_R1.diff",
+            "bytes": 24042,
+            "sha256": "9ffee74b39d0f1a2643972c363683d0ae565177c1ccc6daea5ab4269c7f5fc0b"
+          },
+          "original-returns/er2_test11.json": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/entry-source-r2/original-returns/er2_test11.json",
+            "bytes": 8147,
+            "sha256": "cb2fe299d3d04205f835fbb6fe39d39a0010a4aaddb50d29223efd5e49c41c96"
+          }
+        },
+        "r2_independent_result": {
+          "path": "_state/universal-main-review/20261028-windows-normal-entry-source-independent-review-r2/REVIEW_RESULT.json",
+          "bytes": 29733,
+          "sha256": "9d95dffea07be16be6f8063616829955e1f33323b64331e160cb1bc2e34d14f6"
+        },
+        "r2_software": "62 candidate tests; Lin 45 independent tests; counts separate",
+        "r2_main_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-entry-source-independent-review-r2/MAIN_ENTRY_R2_SOURCE_ACCEPTANCE.json",
+          "bytes": 1833,
+          "sha256": "3dc921395ea468ad3b1727c3a50e5b17163d24834bc5a9d80049ac2dc6009a97"
+        }
+      },
+      "control_transport_source": {
+        "status": "R1_AND_R3_SOURCE_MAIN_ACCEPTED_ACTUAL_NOT_RUN",
+        "task_id": "01a1803e-60b2-7622-b00d-3a24f095f986",
+        "design": "foreground original SSH/tool owner; closed-file Stage1 GO and Stage2 activation, GO, descriptor publisher; reuse R6 source pattern only",
+        "source_pins": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/control-transport-source-r1/SOURCE_PINS.json",
+          "bytes": 4491,
+          "sha256": "cea9daf3c5a6ff5c31129d2b3ee7c03a629306f1dd7cab6a11b77bfee46f4f41"
+        },
+        "review_path": "_state/universal-main-review/20261028-windows-normal-control-transport-independent-review-r1",
+        "r1_effective_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-control-transport-independent-review-r1/MAIN_CONTROL_TRANSPORT_SOURCE_ACCEPTANCE_r2.json",
+          "bytes": 1930,
+          "sha256": "025716e3932d13be4b64ee2c489c897cab51ecaa0863741f011866577b8842b3"
+        },
+        "coordination_note_r2": {
+          "path": "_state/universal-main-review/20261028-windows-normal-control-transport-independent-review-r1/CROSS_SOURCE_BOUNDARY_NOTE_r2.json",
+          "bytes": 1192,
+          "sha256": "bf284daf3c388d9ad172e00c5f9158294e00e34a0db28dff3d5a5bab1df113a8"
+        },
+        "r3_source_pins": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/control-transport-source-r3/SOURCE_PINS.json",
+          "bytes": 10166,
+          "sha256": "a34f68e5cdf85695370a7b7912e00ff16206feac332e61708f3b5efb109f4cb3"
+        },
+        "r3_software": "19 software tests using accepted Windows _wait with fake WinAPI; separate from r2 12 and r1 13",
+        "r3_constraints": "qualified CPython 3.12.10 private _wait once; foreground original Popen and fixed SDK-parent flags; constructor opaque trusted CPython TCB, not full handle or raw close proof; UNKNOWN no later process-resource calls",
+        "r3_main_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-control-transport-independent-review-r2/MAIN_TRANSPORT_R3_SOURCE_ACCEPTANCE.json",
+          "bytes": 2106,
+          "sha256": "7e20d8548034bda61917c295c03a522cbaecce78d13d1cb2c2489f8cdb9f03f6"
+        }
+      },
+      "expected_product_outputs": {
+        "data": {
+          "path": "_state/universal-main-review/20261028-windows-normal-required-outputs-data-r1/REQUIRED_PRODUCT_OUTPUTS.relative.json",
+          "bytes": 41268,
+          "sha256": "be384ea2d93a7fcd9e1a073c6b09cf8118a2c528ce62dea102e4b1fcd09592ca"
+        },
+        "main_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-required-outputs-data-r1/MAIN_EXPECTED_OUTPUT_DATA_ACCEPTANCE.json",
+          "bytes": 2005,
+          "sha256": "c6b64c8c9a4359fd7ce1cc38b2b5b2741224acff124b99f575dafa17e231d26a"
+        },
+        "expected_relative_files": 200,
+        "expected_bytes": 15471771,
+        "wheel_zip_metadata_only": "35 wheels, 2778 files, 98937669 bytes; not installed and not a hard cap",
+        "future_slots": "UNBOUND"
+      },
+      "public_source_evidence": "docs/universal_mcp_execution/evidence/windows-normal-source-prep-20261028.json"
     },
     "artifacts": {
       "status": "FIVE_ARTIFACT_BYTES_MAIN_ACCEPTED_PUBLISHED",
@@ -192,7 +334,7 @@
         }
       ],
       "product_source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
-      "metadata_head_after_publication": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+      "metadata_head_after_publication": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
       "install_public_mcp_native_015": "SCOPED_MAC_ARM64_NORMAL_INSTALL_PUBLIC_MCP_ACCEPTED_NATIVE_NOT_RUN",
       "latest_accepted_normal_runtime": "0.1.15 scoped; prior 0.1.14 preserved"
     },
@@ -246,12 +388,23 @@
     "publication": {
       "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
       "acceptance": {
-        "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
-        "bytes": 1796,
-        "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+        "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+        "bytes": 2464,
+        "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
       },
-      "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
-      "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+      "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
+      "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+      "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
+      "previous_publication": {
+        "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
+        "acceptance": {
+          "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
+          "bytes": 1796,
+          "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+        },
+        "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+        "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+      }
     },
     "normal_mcp_actual": {
       "status": "MAIN_ACCEPTED_SCOPED_ACTUAL_SOFTWARE_SESSION_SPENT_NEVER_REPOLL",
@@ -346,7 +499,8 @@
         "bytes": 5391,
         "sha256": "51b8e6fee74bb9145d9c1a09b3dfe10f6961ed41125bdab89fda27c79ac6d301"
       },
-      "public_evidence": "docs/universal_mcp_execution/evidence/public-mcp-0.1.15-macos-arm64-20261028.json"
+      "public_evidence": "docs/universal_mcp_execution/evidence/public-mcp-0.1.15-macos-arm64-20261028.json",
+      "publication": "PUBLISHED_AND_MAIN_REMOTE_READBACK_ACCEPTED"
     }
   },
   "current_checkpoint_r374": {
@@ -8536,10 +8690,10 @@
   "schema_version": 1,
   "baseline_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
   "baseline_tree": "120ceb6568d22614f7548d4eb96b822fe53f88ba",
-  "state_revision": 384,
+  "state_revision": 389,
   "phase": "015_SOURCE_PUBLISHED_BUILD_BINDING_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Main reviews r384 corrected five-file publication candidate; Newton prepares fresh Stage1 packet DATA-r2 from accepted source. Actual Windows authority and identities remain unbound; no owner replay.",
+  "next_action": "Main reviews r389 four-file publication candidate and complete DATA-r3 when ready; actual task/claim/time binding and READY require separate authorization.",
   "active_job_refs": [
     {
       "scope": "015_MAC_NORMAL_INSTALL_PUBLIC_MCP_ONCE",
@@ -8868,7 +9022,7 @@
       "Luna_maintenance": "HumeMain3leaseclosedatlocalr192; exact3snapshotpreserved externally, Mainmadeonlyscope/rolecorrectionr193.",
       "final_Reviewer": "NOT_STARTED; no finalcandidate/heldouttasks assigned."
     },
-    "current_active_lease_key": "current_active_leases_r384",
+    "current_active_lease_key": "current_active_leases_r389",
     "current_scope_correction": {
       "path": "_state/universal-main-review/20261024-result-unit-contract-scope/MAIN_CONTRACT_SCOPE_CORRECTION.json",
       "bytes": 2585,
@@ -11431,6 +11585,35 @@
       "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
       "windows_stage1": "R2_SOURCE_ACCEPTED_PACKET_DATA_R2_IN_PROGRESS_RUNTIME_UNBOUND",
       "fences": "unchanged from r382"
+    },
+    "current_active_leases_r385": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_stage1": "SOURCE_ACCEPTED_DATA_R2_INACTIVE_ENTRY_SUPPLEMENT_SOURCE_IN_PROGRESS_NO_RUNTIME_LEASE",
+      "fences": "unchanged from r384"
+    },
+    "current_active_leases_r386": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_stage1": "ENTRY_SOURCE_REVIEW_AND_TRANSPORT_SOURCE_IN_PROGRESS_NO_RUNTIME_RELEASE",
+      "fences": "unchanged from r385"
+    },
+    "current_active_leases_r387": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_entry": "R1_CHANGES_REQUIRED_R2_REPAIR_IN_PROGRESS",
+      "windows_transport": "R1_SOURCE_INDEPENDENT_REVIEW_IN_PROGRESS",
+      "fences": "unchanged from r386"
+    },
+    "current_active_leases_r388": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_entry": "R2_FROZEN_LIN_0P_PENDING_MAIN",
+      "windows_transport": "R1_ACCEPTED_R3_FROZEN_H_REVIEW",
+      "fences": "unchanged from r387"
+    },
+    "current_active_leases_r389": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_entry": "R2_SOURCE_MAIN_ACCEPTED",
+      "windows_transport": "R3_SOURCE_MAIN_ACCEPTED",
+      "windows_data": "DATA_R3_PREPARATION_NO_RUNTIME_RELEASE",
+      "fences": "unchanged from r388"
     }
   },
   "current_changes": {
