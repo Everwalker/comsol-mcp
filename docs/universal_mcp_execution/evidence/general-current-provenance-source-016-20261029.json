@@ -1,0 +1,87 @@
+{
+  "schema": "portable-current-coverage-provenance-data-migration/1",
+  "status": "LOCAL_DATA_CANDIDATE_STOCK_CLI_REBUILT_NOT_PUBLISHED",
+  "product_source_commit": "660eda981360144973fd208bd73847a6ba237799",
+  "product_source_tree": "e2bfa1bd273c2af2fb8f36a4875125f48ca6c2dd",
+  "version": "0.1.16",
+  "r412_publication_Main_acceptance": {
+    "bytes": 1230,
+    "sha256": "528774c47abaa974b1b5a510981133679633669a70fa59152dd1f782cd14bee7"
+  },
+  "generator": {
+    "path": "tools/generate_current_coverage_provenance.py",
+    "bytes": 11112,
+    "sha256": "6c907734f9761d696582e8d8bd5d17c44d13a8bb9dbe8c1a8dc9f7a212ac8b9f"
+  },
+  "sidecar": {
+    "path": "docs/universal_mcp_execution/state/GENERAL_COVERAGE_CURRENT_PROVENANCE.json",
+    "bytes": 183003,
+    "sha256": "0eb2f37458f2695a8f17b34c111838896e4e91865c1ec607beb99881fc5dda1e"
+  },
+  "historical_GENERAL_COVERAGE": {
+    "bytes": 2950510,
+    "sha256": "00af26d7ab492a49521109a4c4a9b2a79a36e3fe19cbbafbd268e3922b095858",
+    "modified": false
+  },
+  "allowed_data_delta": {
+    "PRODUCT_SOURCE": "660eda981360144973fd208bd73847a6ba237799",
+    "SOURCE_SHA256_updated_paths": [
+      "comsol_mcp/_control_daemon.py"
+    ],
+    "existing_roster": 58,
+    "roster_unchanged": true,
+    "_server_in_roster": false,
+    "functions_schema_route_status_unchanged": true
+  },
+  "portable_input_contract": "58 exact public Source/data files plus frozen GENERAL_COVERAGE baseline; no Git history, installed product, private _state or RESTORE receipt required.",
+  "checks": {
+    "stock_CLI_outputs_byte_equal": 2,
+    "negative_rejections": 4,
+    "negative_cases": [
+      "source tamper",
+      "baseline tamper",
+      "missing source",
+      "missing baseline"
+    ],
+    "audit_distinct_data_inputs": 59,
+    "no_product_import_process_network_native_in_audited_generator": true
+  },
+  "source_view": {
+    "fingerprint_changes": 10,
+    "definition_span_differences": 455,
+    "METADATA_LOCATION_UNRESOLVED": 12,
+    "unresolved_values_unchanged": true,
+    "unresolved_are_not_implementation_defects": true,
+    "interior_callsites_equivalent_to_definition_spans": false,
+    "historical_overlay": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+  },
+  "prior_Source_checks": {
+    "author_software": 442,
+    "independent_Source_review": 15,
+    "counts_not_cumulative": true
+  },
+  "future_builder_snapshot": {
+    "version": "0.1.16",
+    "BuilderSnapshotCommit": null,
+    "receipt": null,
+    "file_count": null,
+    "status": "UNBOUND_NOT_BUILD_READY",
+    "limit": "Bind the actual future public builder snapshot and real file count at build time; product Source S is not substituted."
+  },
+  "actual_015_artifacts_Mac_software_Windows_install": "ACCEPTED_SCOPED_UNCHANGED",
+  "actual_016_artifacts_build_normal_install_publicMCP_Windows_native": "NOT_RUN",
+  "limits": [
+    "Data/Source location view only, not software or native qualification or route execution.",
+    "No new required, status upgrade or historical Source diff claimed.",
+    "Old FAIL/UNKNOWN/gaps, owner fences and historical Mac resource block unchanged."
+  ],
+  "frozen_counts": [
+    273,
+    60,
+    427
+  ],
+  "completed_groups": [],
+  "heldouts": "NOT_SELECTED",
+  "final_Reviewer": "NOT_STARTED",
+  "Goal": "ACTIVE_NOT_COMPLETE"
+}
