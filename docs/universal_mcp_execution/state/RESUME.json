@@ -1,8 +1,8 @@
 {
   "active_current_entrypoint": {
-    "revision": 389,
+    "revision": 391,
     "status": "MAIN_ACCEPTED_SCOPED_015_NORMAL_INSTALL_PUBLIC_MCP_PUBLICATION_PENDING",
-    "published_head": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
+    "published_head": "74c284fb6bc83f81c87b8645d300038d7eb88524",
     "current_source": {
       "version": "0.1.15",
       "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
@@ -72,8 +72,8 @@
     "r6_fence": "current_R6_original_UNKNOWN_fence_r359",
     "r7_fence": "current_R7_original_UNKNOWN_fence_r361",
     "old_fences": "retained_owner_fences and legacy_unknown_preserved",
-    "current_leases": "orchestration.current_active_leases_r389",
-    "next_action": "Main reviews r389 four-file publication candidate and complete DATA-r3 when ready; actual task/claim/time binding and READY require separate authorization.",
+    "current_leases": "orchestration.current_active_leases_r391",
+    "next_action": "Newton executes authorized READY-only launch; await original result and Main review. GO requires separately released Main decision after actual READY; no retry or owner adoption.",
     "bound_source_canary_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-bound-source-canary-independent-review-r1/MAIN_BOUND_SOURCE_CANARY_PREP_ACCEPTANCE.json",
       "bytes": 2555,
@@ -134,7 +134,7 @@
       "claim_name": "BUILD_DISPATCH_ONCE_CLAIM"
     },
     "normal_prefix_materializer": {
-      "status": "ENTRY_R2_AND_TRANSPORT_R3_SOURCE_MAIN_ACCEPTED_DATA_R3_PREPARATION_IN_PROGRESS",
+      "status": "TRANSFER_AND_READY_ACCEPTED; OLD_STAGE1_TASK_KNOWN_EXPIRED_SPENT; ORIGINAL_TOOL_EXIT1_OBSERVED",
       "r5_source_acceptance": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-independent-review-r2/MAIN_R5_SOURCE_ACCEPTANCE.json",
         "bytes": 3970,
@@ -164,8 +164,8 @@
         "bytes": 6120,
         "sha256": "0af8e8ecd36d2b85d168f246c3a97e1c1e54a70d88216e794f55cb3decce7348"
       },
-      "packet": "DATA_R3_PREPARATION_IN_PROGRESS_DYNAMIC_ACTUAL_FIELDS_UNBOUND_NOT_EXECUTABLE",
-      "authority": "ACTUAL_TRANSFER_CREATOR_PRODUCER_ROOT_SDK_ABI_TASK_IDENTITIES_GO_LEASE_NOT_RUN_UNBOUND; SYSTEM_SCM_WFP_NOT_AUTHORIZED",
+      "packet": "DATA_R3_MAIN_CLOSED; TRANSFER_AND_READY_ACCEPTED; OLD GO TASK EXPIRED AND NOT EXECUTED; ORIGINAL TOOL TERMINAL EXIT1 SPENT",
+      "authority": "NO_OLD_TASK_REPLAY_RETRY_ADOPTION_CLEANUP_OR_POLL; no new lease or remote action; fresh namespace DATA rebind requires Main review",
       "entry_integration_decision": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-packet-prep-r2/MAIN_ENTRY_INTEGRATION_DECISION.json",
         "bytes": 5048,
@@ -307,7 +307,109 @@
         "wheel_zip_metadata_only": "35 wheels, 2778 files, 98937669 bytes; not installed and not a hard cap",
         "future_slots": "UNBOUND"
       },
-      "public_source_evidence": "docs/universal_mcp_execution/evidence/windows-normal-source-prep-20261028.json"
+      "public_source_evidence": "docs/universal_mcp_execution/evidence/windows-normal-source-prep-20261028.json",
+      "data_r3_acceptance": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-packet-prep-r3-DATA-CANDIDATE/MAIN_DATA_CLOSURE_ACCEPTANCE.json",
+        "bytes": 1403,
+        "sha256": "a5314f442d9ff05d36e3e7f056a5bc8e651f9dc7db734a92948e2c8f8b3b2e11"
+      },
+      "stage1_local_binding_freeze": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/stage1-bound-packet-prep-r1/FINAL_FREEZE.json",
+        "bytes": 944,
+        "sha256": "7244b016b751f2adf5ec1e85c7fb5df62db86eb9d689fbffb6c311f34a82a632"
+      },
+      "binding_directive": "06:23:24–07:23:24 LOCAL_BIND_ONLY; not dispatch authorization",
+      "bound_source_acceptance": {
+        "path": "_state/universal-main-review/20261028-windows-normal-stage1-bound-packet-independent-review-r1/MAIN_BOUND_SOURCE_ACCEPTANCE.json",
+        "bytes": 965,
+        "sha256": "2e14f1bedaa3542df167f5de25dc9c89ce9c8fc0fe0938f4541812ec14e87c9b"
+      },
+      "execution_r3_source_acceptance": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/stage1-execution-prep-r3/MAIN_EXECUTION_SOURCE_ACCEPTANCE.json",
+        "bytes": 738,
+        "sha256": "dede36ee4df8c2236f99143de7edaa571b264936de72b8f26994dcd6373d78ff"
+      },
+      "transfer_acceptance": {
+        "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-transfer-r1/MAIN_ACTUAL_TRANSFER_ACCEPTANCE.json",
+        "bytes": 798,
+        "sha256": "27ceed9f5c40e8c0d555d0ddcf8ee9332b2349ab99fb40e355c9dddb59549a80"
+      },
+      "transfer_scope": "29 files 46524935 bytes; closed byte hash readback only; original session 86384 terminal0 SPENT NEVER_REPOLL; stderr 222-byte SSH warning; parent/JDK/root identity unobserved",
+      "ready_only_task": {
+        "task_pin": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-launch-r1/TASK.json",
+          "bytes": 2826,
+          "sha256": "3995fee9058d6a745d8540830e910978b082dfc9ab36f6a7d50392b1316ebbd9"
+        },
+        "status": "DISPATCHED_TO_NEWTON_RESULT_PENDING_NOT_READY_PROVEN",
+        "deadline": "07:23:24",
+        "scope": "READY_ONLY_NO_GO_NO_ROOT_NO_PIP",
+        "retry": "PROHIBITED"
+      },
+      "actual_stage1_r392": {
+        "transfer_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-transfer-r1/MAIN_ACTUAL_TRANSFER_ACCEPTANCE.json",
+          "bytes": 798,
+          "sha256": "27ceed9f5c40e8c0d555d0ddcf8ee9332b2349ab99fb40e355c9dddb59549a80"
+        },
+        "transfer": "29 files / 46524935 bytes; exact once, closed byte hash readback",
+        "ready_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-readback-r1/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+          "bytes": 2982,
+          "sha256": "7e2394d4a80847a67d40ef3d1bb5a88f324743323fb32fd7f132f2fba6d584a3"
+        },
+        "ready_sha256": "ae9fcd907662fc9d27bd1b143414e61b123c1c61af12b9ff859620747c222b37",
+        "ready_scope": "original Popen identity and metadata/source pins matched; SDK/source-backed actor report only, not raw per-API ABI/image-object proof",
+        "control_file_transfer": "two files exact closed readback; original ParseFile returned PARSE_OK",
+        "go_task": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/TASK.json",
+          "bytes": 4366,
+          "sha256": "f37b09db5340d9be21aab14f3841d6eb4b283c86562a068e148474f5f2a9e108"
+        },
+        "go_status": "KNOWN_NOT_EXECUTED_BY_ORIGINAL_OWNER; expired WAIT refusal; no publisher/GO receipt",
+        "original_tool_terminal": {
+          "status": "OBSERVED_ONCE_EXIT1_EMPTY_OUTPUT_SPENT_NEVER_POLL",
+          "observation": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/original-session-93707-single-observation.json",
+            "bytes": 126,
+            "sha256": "e4fc82a4fee9fc7de7e57e307fa30a92b1bbe955cff3b21dee31e82cdb8e7309"
+          },
+          "closeout": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/MAIN_EXPIRED_WAIT_CLOSEOUT.json",
+            "bytes": 2987,
+            "sha256": "28ad1a2ca03e8e432c588f3e538b9f5c4252e84e08baefc2cfeeca53558ea268",
+            "gate_return": {
+              "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/main-expired-closeout-gate01.tool-return.json",
+              "bytes": 366,
+              "sha256": "3ba8f1c6373733cd76ef3fbdf198582a78c3f78cad1d53602de5c94531fb98cf"
+            }
+          },
+          "gate_return": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/main-expired-closeout-gate01.tool-return.json",
+            "bytes": 126,
+            "sha256": "3ba8f1c6373733cd76ef3fbdf198582a78c3f78cad1d53602de5c94531fb98cf"
+          }
+        },
+        "material_root_creator_postimage_jdk_at_use_pip_native": "NOT_ESTABLISHED_OR_NOT_RUN",
+        "continuation_blocker": "executor model capacity and expired lease; Main preparing fresh namespace/time binding for independent review",
+        "local_evidence_candidate": "docs/universal_mcp_execution/evidence/windows-normal-stage1-ready-20261028.json",
+        "source_result": "CreatorRefusal at the GO-wait deadline guard, before continue/apply; this invocation did not reach continue/apply and did not create material root; current filesystem absence and full native cleanup not asserted",
+        "stdout": {
+          "bytes": 1042,
+          "sha256": "f087b3750dbaaffc7553023d61a701ccc1ac2bda8ad60fb274cd4b6c00684cee",
+          "scope": "READY only"
+        },
+        "stderr": {
+          "bytes": 1539,
+          "sha256": "6f93cedb887c22c9ee908a0a87ff9589061ebe19b156311f7e432935bdf67ef2",
+          "scope": "CreatorRefusal at the GO-wait deadline guard, before continue/apply"
+        },
+        "continuation": {
+          "next": "new NM / fresh-namespace-data-rebind-r1",
+          "owner": "Luna Socrates for fresh-namespace DATA rebind; Terra N local binder preparation only",
+          "status": "preparatory; Main review required; no new lease or remote action"
+        }
+      }
     },
     "artifacts": {
       "status": "FIVE_ARTIFACT_BYTES_MAIN_ACCEPTED_PUBLISHED",
@@ -388,22 +490,33 @@
     "publication": {
       "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
       "acceptance": {
-        "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-        "bytes": 2464,
-        "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
+        "path": "_state/universal-main-review/20261028-checkpoint-r389/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+        "bytes": 2066,
+        "sha256": "5c3b4d562675220b385c0e9eceaae6114c1894aea5e0c406c5e63b4def72498a"
       },
-      "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
-      "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+      "metadata_commit": "74c284fb6bc83f81c87b8645d300038d7eb88524",
+      "metadata_tree": "9cf520f5f0d30d8da5204bd8911c2bc0bc48dc68",
       "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
       "previous_publication": {
         "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
         "acceptance": {
-          "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
-          "bytes": 1796,
-          "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+          "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+          "bytes": 2464,
+          "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
         },
-        "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
-        "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+        "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
+        "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+        "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
+        "previous_publication": {
+          "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
+          "acceptance": {
+            "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
+            "bytes": 1796,
+            "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+          },
+          "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+          "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+        }
       }
     },
     "normal_mcp_actual": {
@@ -8690,10 +8803,10 @@
   "schema_version": 1,
   "baseline_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
   "baseline_tree": "120ceb6568d22614f7548d4eb96b822fe53f88ba",
-  "state_revision": 389,
+  "state_revision": 393,
   "phase": "015_SOURCE_PUBLISHED_BUILD_BINDING_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Main reviews r389 four-file publication candidate and complete DATA-r3 when ready; actual task/claim/time binding and READY require separate authorization.",
+  "next_action": "Terra N prepares the new local binder only. Luna Socrates performs the DATA rebind in a new NM/fresh-namespace-data-rebind-r1 after Main review; no new lease or remote action before that review.",
   "active_job_refs": [
     {
       "scope": "015_MAC_NORMAL_INSTALL_PUBLIC_MCP_ONCE",
@@ -9022,7 +9135,7 @@
       "Luna_maintenance": "HumeMain3leaseclosedatlocalr192; exact3snapshotpreserved externally, Mainmadeonlyscope/rolecorrectionr193.",
       "final_Reviewer": "NOT_STARTED; no finalcandidate/heldouttasks assigned."
     },
-    "current_active_lease_key": "current_active_leases_r389",
+    "current_active_lease_key": "current_active_leases_r391",
     "current_scope_correction": {
       "path": "_state/universal-main-review/20261024-result-unit-contract-scope/MAIN_CONTRACT_SCOPE_CORRECTION.json",
       "bytes": 2585,
@@ -11614,6 +11727,18 @@
       "windows_transport": "R3_SOURCE_MAIN_ACCEPTED",
       "windows_data": "DATA_R3_PREPARATION_NO_RUNTIME_RELEASE",
       "fences": "unchanged from r388"
+    },
+    "current_active_leases_r390": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_data": "DATA_R3_MAIN_ACCEPTED",
+      "windows_stage1": "LOCAL_BIND_ONLY_INDEPENDENT_AND_MAIN_REVIEW_NO_DISPATCH",
+      "fences": "unchanged from r389"
+    },
+    "current_active_leases_r391": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "windows_transfer": "ACCEPTED_TERMINAL_SPENT",
+      "windows_stage1": "READY_ONLY_TASK_DISPATCHED_RESULT_PENDING_NO_GO",
+      "fences": "unchanged from r390"
     }
   },
   "current_changes": {
@@ -23745,5 +23870,74 @@
       "bytes": 2100,
       "sha256": "0ee6515c0a27c18bcd4d945f72ebe44ab2f78fc8ef467097d82780e2b81265d8"
     }
+  },
+  "current_active_leases_r392": {
+    "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+    "windows_transfer": "ACCEPTED_TERMINAL_SPENT",
+    "windows_stage1": "READY_ACCEPTED; GO_NOT_ESTABLISHED; ORIGINAL_TOOL_TERMINAL_NOT_OBSERVED; OLD_OWNER_FENCED",
+    "fences": "unchanged from r391"
+  },
+  "current_checkpoint_r392": {
+    "path": "_state/universal-main-review/20261028-checkpoint-r392/CHECKPOINT.json",
+    "status": "PRESERVED_INTERMEDIATE_LOCAL_CANDIDATE_NOT_MAIN_FINAL_ACCEPTED",
+    "prior_main3": [
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r391/prior-main3/PROGRESS.md",
+        "bytes": 1046,
+        "sha256": "4d046cdceef435ab627e355fbe7dfea358218d48ae399a53719ace1b98404ad9"
+      },
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r391/prior-main3/CURRENT_HANDOFF.md",
+        "bytes": 2813,
+        "sha256": "a318b34116c8efa5670aecb80bfbbb6e85d3a8f11fff5b838973b7d8bde34e9c"
+      },
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r391/prior-main3/RESUME.json",
+        "bytes": 1498123,
+        "sha256": "1682f38905574cf1aec966ec777a50db74be7c3326741fdf3dca4c87e0c839fb"
+      }
+    ],
+    "evidence_candidate": {
+      "path": "docs/universal_mcp_execution/evidence/windows-normal-stage1-ready-20261028.json",
+      "bytes": 3754,
+      "sha256": "efa0c98e515dfc6df3e76363b9f6add5866d058a6998f4785fcb09c00f56ec4f"
+    },
+    "scope": "local checkpoint only; five fences, frozen scope, completed_groups empty; no production source, network/SSH/SDK/GO/Toolwait/push/commit",
+    "goal_complete": false,
+    "final_acceptance": "NOT_RECEIVED; superseded by r393 canonical local update, not deleted or rewritten"
+  },
+  "current_active_leases_r393": {
+    "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+    "windows_transfer": "ACCEPTED_TERMINAL_SPENT",
+    "windows_stage1_old_namespace": "EXPIRED_NOT_EXECUTED; original Tool exit1 observed once SPENT; never poll; no old task replay",
+    "new_namespace": "NO_NEW_LEASE_NO_REMOTE_ACTION",
+    "fences": "unchanged from r391 Main3 snapshot"
+  },
+  "current_checkpoint_r393": {
+    "path": "_state/universal-main-review/20261028-checkpoint-r393/CHECKPOINT.json",
+    "status": "LOCAL_CANDIDATE_PENDING_MAIN_REVIEW",
+    "prior_r392_snapshot": [
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r393/prior-r392-candidate/PROGRESS.md",
+        "bytes": 1005,
+        "sha256": "0e4d623f3e9d2245ab4c4ecac73899b043d746f030411074903100bbe4853897"
+      },
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r393/prior-r392-candidate/CURRENT_HANDOFF.md",
+        "bytes": 2487,
+        "sha256": "9469a80f5c18f7c990c33a1ac00eee6d2a4b500c5b1c9070d1f52536ea84ad98"
+      },
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r393/prior-r392-candidate/RESUME.json",
+        "bytes": 1503827,
+        "sha256": "1e272a088a4d389350928dcb63c1e58c160be9ed7efbb60a04230bae407b6ef0"
+      },
+      {
+        "path": "_state/universal-main-review/20261028-checkpoint-r393/prior-r392-candidate/windows-normal-stage1-ready-20261028.json",
+        "bytes": 3754,
+        "sha256": "efa0c98e515dfc6df3e76363b9f6add5866d058a6998f4785fcb09c00f56ec4f"
+      }
+    ],
+    "goal_complete": false
   }
 }

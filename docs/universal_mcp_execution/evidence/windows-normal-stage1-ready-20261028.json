@@ -1,0 +1,94 @@
+{
+  "schema": "windows-normal-stage1-ready-evidence-candidate/1",
+  "revision": "r393-local-candidate",
+  "base": {
+    "git_commit": "74c284fb6bc83f81c87b8645d300038d7eb88524",
+    "git_tree": "9cf520f5f0d30d8da5204bd8911c2bc0bc48dc68",
+    "main_publication": "r389 accepted; r391 local snapshot retained"
+  },
+  "status": {
+    "transfer": "MAIN_ACCEPTED_EXACT_ONCE_CLOSED_BYTE_HASH_READBACK",
+    "ready": "MAIN_ACCEPTED_ACTUAL_READY_AND_BOUND_METADATA; original owner/Popen identity matched",
+    "go": "KNOWN_NOT_EXECUTED_BY_ORIGINAL_OWNER; expired WAIT refusal; no publisher/GO receipt",
+    "material_root": "NOT_CREATED_BY_THIS_INVOCATION; current filesystem absence is not asserted",
+    "creator_postimage": "NOT_CREATED_BY_THIS_INVOCATION; no current resource-inventory or full cleanup claim",
+    "original_tool_terminal": "OBSERVED_ONCE_EXIT_1_EMPTY_OUTPUT; SPENT_DO_NOT_POLL; Main cross-namespace lookup failure is non-native handle failure",
+    "completed_groups": []
+  },
+  "pins": {
+    "transfer_acceptance": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-transfer-r1/MAIN_ACTUAL_TRANSFER_ACCEPTANCE.json",
+      "bytes": 798,
+      "sha256": "27ceed9f5c40e8c0d555d0ddcf8ee9332b2349ab99fb40e355c9dddb59549a80"
+    },
+    "ready_acceptance": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-readback-r1/MAIN_ACTUAL_READY_ACCEPTANCE.json",
+      "bytes": 2982,
+      "sha256": "7e2394d4a80847a67d40ef3d1bb5a88f324743323fb32fd7f132f2fba6d584a3"
+    },
+    "go_task": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/TASK.json",
+      "bytes": 4366,
+      "sha256": "f37b09db5340d9be21aab14f3841d6eb4b283c86562a068e148474f5f2a9e108"
+    },
+    "go_dropper_tool_return": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-control-r1/dropper-tool0-original.json",
+      "bytes": 627,
+      "sha256": "bfdbab9a4f238c92de26eb275f2b336b87d07cf2ce93f8707abdb72a64cbbd54"
+    },
+    "go_parse_tool_return": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-control-r1/parse-tool0-original.json",
+      "bytes": 369,
+      "sha256": "9ed5080417cc182691e5de3d802f3b76342c628d082ae8e84a7fcb3dc345f3f7"
+    },
+    "main_tool_handle_observation_failure": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-launch-r1/MAIN_TOOL_HANDLE_OBSERVATION_FAILURE.json",
+      "bytes": 473,
+      "sha256": "883e8afa69e3073956df36c3f78d880ed9e183d5ac2888e484c29875b23354d4"
+    },
+    "saved_original_traceback": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-launch-r1/ssh-stderr.raw",
+      "sha256": "6f93cedb887c22c9ee908a0a87ff9589061ebe19b156311f7e432935bdf67ef2",
+      "bytes": 1539
+    },
+    "main_expired_wait_closeout": {
+      "bytes": 2987,
+      "sha256": "28ad1a2ca03e8e432c588f3e538b9f5c4252e84e08baefc2cfeeca53558ea268"
+    },
+    "closeout_gate_return": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/main-expired-closeout-gate01.tool-return.json",
+      "bytes": 366,
+      "sha256": "3ba8f1c6373733cd76ef3fbdf198582a78c3f78cad1d53602de5c94531fb98cf"
+    },
+    "original_tool_observation": {
+      "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/actual-stage1-go-publish-r1/original-session-93707-single-observation.json",
+      "bytes": 126,
+      "sha256": "e4fc82a4fee9fc7de7e57e307fa30a92b1bbe955cff3b21dee31e82cdb8e7309"
+    },
+    "saved_original_stdout": {
+      "bytes": 1042,
+      "sha256": "f087b3750dbaaffc7553023d61a701ccc1ac2bda8ad60fb274cd4b6c00684cee",
+      "scope": "READY frame only"
+    },
+    "saved_original_stderr": {
+      "bytes": 1539,
+      "sha256": "6f93cedb887c22c9ee908a0a87ff9589061ebe19b156311f7e432935bdf67ef2",
+      "scope": "CreatorRefusal at the GO-wait deadline guard, before continue/apply"
+    }
+  },
+  "measured_transfer": {
+    "files": 29,
+    "bytes": 46524935
+  },
+  "ready_digest": "ae9fcd907662fc9d27bd1b143414e61b123c1c61af12b9ff859620747c222b37",
+  "parse": "actual PowerShell ParseFile returned PARSE_OK; syntax evidence only",
+  "limitations": [
+    "SDK/source-backed actor report is not raw per-API ABI or image-object proof",
+    "JDK-at-use, materialization, pip and native execution remain NOT_RUN",
+    "Main closeout establishes this invocation did not reach continue/apply and did not create its material root; current filesystem absence and complete native cleanup are not asserted",
+    "Original Tool exit 1 is directly observed once and is SPENT; never poll again. Main namespace handle failure is only a local lookup failure, not Nativeunknown",
+    "The expired task and model-capacity condition are closed for the old namespace; no replay, retry, adoption, cleanup or old-task activation",
+    "Next: fresh namespace DATA rebind under new Main review; Terra executor local binder preparation only, with no new lease or remote action"
+  ],
+  "provenance": "r393 compact candidate; detailed original returns remain in local review evidence. r392 was an intermediate candidate and did not receive Main final acceptance."
+}
