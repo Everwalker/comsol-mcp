@@ -1,0 +1,6445 @@
+{
+  "schema": "general-coverage-portable-current-provenance/1",
+  "product_source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
+  "historical_coverage_sha256": "00af26d7ab492a49521109a4c4a9b2a79a36e3fe19cbbafbd268e3922b095858",
+  "tracked_source_count": 58,
+  "source_hashes": {
+    "comsol_mcp/_artifact_store.py": "c7ee8c61036176dad499769fa3274f610d956e34d53d8a6bffd61e3afff253bd",
+    "comsol_mcp/_control_daemon.py": "4459e1e790ea4f47e1ee532dd71d3b08887e74d55ede4e559ddccf50a6feaa4c",
+    "comsol_mcp/_desktop_macos.py": "f1f3b3bebf6029e00d6f05ec40285ed9dbba0fb16e0b28198231841128ae84e6",
+    "comsol_mcp/_desktop_platforms.py": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+    "comsol_mcp/_desktop_selector_profile.py": "c29d6a439e3d2fb1e2b0e55b04486335d3ec22c15527e16d3e72ef67855b6c6c",
+    "comsol_mcp/_desktop_service.py": "00691307ad6b2c780f7086b4a306b4adbb5360e986754c3e9e97e2a4ea38dcf1",
+    "comsol_mcp/_desktop_windows.py": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+    "comsol_mcp/_g2_checkpoint_diff.py": "a331bae7b145f5d35194ab543e13d594641d5323bae97d3a3e33d0b522c77cb7",
+    "comsol_mcp/_g2_checkpoint_ops.py": "b566d9132fd87c103e1179811eb4c554af2389741b91064f223faeaf10d4c08d",
+    "comsol_mcp/_g2_engine.py": "71f1e21bb8219d4be9f61a6a850adeb1af5161de294ff17ed486798c37abcbb9",
+    "comsol_mcp/_g2_model_compare.py": "96a5750d8c7760d9a20244585e0a9b0d97a5b04840e690a8283d25dfd4e83597",
+    "comsol_mcp/_g2_public_api.py": "a9b1a2a7dcaf94860d424b66fb01d468f5bd2f9a50201bfe2befc40e9b243505",
+    "comsol_mcp/_g2_registry.py": "c8480d773315881da15f2ee1787f951db421b0cb0a2133c9645e0d09d6c56040",
+    "comsol_mcp/_g2_tools.py": "d62451b60a529d146c91849f47b9f51be6d19788962131e3ea24386e7a2a04f9",
+    "comsol_mcp/_g2_transactions.py": "d8c5d84d58f205627df5e31489360b4ef2e7759d7ef67b916dc4fc5318cfba80",
+    "comsol_mcp/_g3_definition_validation.py": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce",
+    "comsol_mcp/_g3_exports.py": "519625eb060ab847fc76ec2b44c51679dfcdfe697a30bb82faba61bd3841cd7c",
+    "comsol_mcp/_g3_managed_models.py": "ed9ef412f42a050f70fb492ad835bdf8244b76d8738a11b7331393dae95a31a9",
+    "comsol_mcp/_g3_metrics.py": "89e9297c13ac8f42c5260c61e723ffbdb24d3a46858b0d9abf8729ac62241d87",
+    "comsol_mcp/_g3_model_delivery.py": "9c6aa7c1de31e325dca21f49bec1df9351a642952869b215f47e50b092a65e80",
+    "comsol_mcp/_g3_model_domains.py": "ea789f9d2e48e1e32254d2f2c346d2c27440bfb6f6e2f8af6a54469172210df8",
+    "comsol_mcp/_g3_ops.py": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+    "comsol_mcp/_g3_parameter_io.py": "6a447e14bd3ae5b03b268562769593d0e530000284463729ddb95e4487937369",
+    "comsol_mcp/_g3_results.py": "f37353ee6419cffc45bb940cdcc0321a714e05727b4a4dbdd0eff520e707706f",
+    "comsol_mcp/_g3_runtime.py": "663af8ffdd7b6d99a915acfb4bad768a5c2227e18088511a375dcb7d7e75ae52",
+    "comsol_mcp/_g3_solver_ops.py": "bf8188154c68d08dcc64c23a11004d9360267951ccabcafe608cd0cdbcd0ee27",
+    "comsol_mcp/_g3_w13.py": "9556b74bf44e5b0b0849e732c34f407210fa60e7c6a95b486c2a5e1b40111928",
+    "comsol_mcp/_g3_w14.py": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+    "comsol_mcp/_g3_w15.py": "c267190f280c8f712ed177d0f3be2382e0dd8250479476ba4ebb9bd0a2091ff1",
+    "comsol_mcp/_g3_w16.py": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+    "comsol_mcp/_g3_w18.py": "378376fe50e4dcf14a55a7e1b03ed807ef29b1472ce342475044b83893ed09fd",
+    "comsol_mcp/_g3_w20_validation.py": "77ec0f38f2da8b3d7cb53f2fe72bcb247d3d5568e027c19cda515e98a67aafc3",
+    "comsol_mcp/_g3_w21.py": "bf567f34257d58e931f457d211182fddf04f1d94c6c0771fb4c69833fd2886a6",
+    "comsol_mcp/_java_worker.py": "50b6cc49e566d642035f3fc091133eea36ea1ed4ae0dd0ef9a588c81360bb286",
+    "comsol_mcp/_managed_backend.py": "23ace5c66e545786b0ee3ea2cde3832ec346c2e8c5d82ad6c14ce50ac36af24a",
+    "comsol_mcp/_mcp_gateway.py": "ff40a6f0f4a472a4950bb698c3d8a0b05330ed4ffa186538cffcb3edccade16f",
+    "comsol_mcp/_operation_store.py": "e5113c45da1ebbfbe9a52d77b8bf0635c4347bea76ca43b865a969c4146e486a",
+    "comsol_mcp/_probe_manage.py": "447b45d5bc3fdcee6a2ec3935f32a140d18fa1b02af23814fb92ef0027adcf1e",
+    "comsol_mcp/_w23_basis_v2_results.py": "ef06db7a645dc79ec6a9898d47952fbec75ea27b046221b026a5825135ea6eef",
+    "comsol_mcp/_w23_results.py": "fae3ddcc4abab9866eaa3a667b418ef2fe8a70c4fba651bc62ab323316c991ca",
+    "comsol_mcp/data/g2/02_ACTION_CATALOG.json": "c49201c72932ac87b799da7bdbea9a982912e24bde9c3c9887c2916a1fea3b10",
+    "comsol_mcp/mcp_server.py": "daa3972ca26b8e1ba72b07f3d346a1523b390bb556197aede0b8d58f4231a0a4",
+    "docs/comsol_mcp_design_v1/03_ACCEPTANCE.md": "d6de6f68e2f7faf208522ebfb4faa7e0d2b564ee909ec02ff216ea3f1acdfa5e",
+    "docs/full_project_execution/USER_SCOPE_DECISIONS.json": "072b40bf06e0984a1b590977fd318e7a519a731f468ab85eed41a9caa191cf5f",
+    "docs/full_project_execution/state/ACCEPTANCE_MATRIX.json": "e51cf517d55c9af9797d8bbeaa0615048167af0bad0ed80a3e5888578aa7b3a4",
+    "docs/full_project_execution/state/ACTION_COVERAGE.json": "7767bea658ffe76b6f6513c608c38d711e8c00d24b19104d037fb89f2e42b236",
+    "docs/universal_mcp_execution/ARCHITECTURE.md": "077fd2c15d081096d4368c647b9b937669d22002ced4b8e54eb9bc712e653060",
+    "docs/universal_mcp_execution/MASTER_GOAL.md": "4ff2c75ffc2a0478e8ddeb2d7b672623d394b88109e3445ba5773b2b9e0eecaa",
+    "docs/universal_mcp_execution/PIN.json": "963b9672988e7c397f730b0f37e6cce1ba1557f8c4a04592f0bff1e4d27d533e",
+    "docs/universal_mcp_execution/RELEASE_DOD.md": "939294d0dd0623b305b9e564a8f113d86b169957b7333d70dc9856b44ca5bdef",
+    "docs/universal_mcp_execution/SCOPE_RESET.md": "7d2b7b14fded3426f9da1163e3d4378d66f52ea5da4fc003f54e0c80947041ee",
+    "docs/universal_mcp_execution/config/TARGETS.json": "d0ce39de90834c4cddb58b1238a8b68ca2aa2f39ead1d851a68a962651d4ad53",
+    "docs/universal_mcp_execution/evidence/unit-default/affected-junit.xml": "ad08847147916ba0dc26632fcf721380c157b9a9e9d94157f871439fd9819798",
+    "docs/universal_mcp_execution/evidence/unit-default/first-regression.json": "81f4b75ab16b3deb67548383c42f4175921deb38586d7bfd81a202838439bad7",
+    "docs/universal_mcp_execution/evidence/unit-default/initial.json": "61515d5441281d5d2bba809da6515c80dfc1dd97a55c65d5e9e305940c011f6f",
+    "docs/universal_mcp_execution/evidence/unit-default/junit.xml": "ec2af314a00b71b62dc2f222d516c9bef2285b6161c86ba66b7d016cd48fed75",
+    "tests/test_g3_results.py": "a1fe81d10cd583584eef37c15b3bbf6b45621b0327b2e91c29b913048ba2058c",
+    "tests/test_interp_native_default_units.py": "e92a4719b86fff7b7245da5140dca8f822cf1103e7611856d55b8e9cd2fd0290"
+  },
+  "nonproduct_fingerprint": {
+    "path": "docs/universal_mcp_execution/RESTORE_RECEIPT.json",
+    "status": "NOT_IN_PRODUCT_NOT_READ"
+  },
+  "fingerprint_changes": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "historical_sha256": "e0a680802a25c4939525381ab6f732ed7cc657f62e3c0e871d42b85b0731627c",
+      "current_sha256": "4459e1e790ea4f47e1ee532dd71d3b08887e74d55ede4e559ddccf50a6feaa4c",
+      "current_bytes": 879185,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "historical_sha256": "b69b9cbc30e161ffb85f6cfc11d634b8bf4dbfb34142159e0f58dd9ecdaaa8c1",
+      "current_sha256": "a331bae7b145f5d35194ab543e13d594641d5323bae97d3a3e33d0b522c77cb7",
+      "current_bytes": 63531,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "historical_sha256": "9e0d72f32d6d825d8550c6c7e01f6b36a59f06c457309fa0a06da010f5b25bcb",
+      "current_sha256": "71f1e21bb8219d4be9f61a6a850adeb1af5161de294ff17ed486798c37abcbb9",
+      "current_bytes": 113418,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "historical_sha256": "f1a795e311d3c12c387312bbe9c329311056e11dee93f0c251506a56aef4cc58",
+      "current_sha256": "c8480d773315881da15f2ee1787f951db421b0cb0a2133c9645e0d09d6c56040",
+      "current_bytes": 137139,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "historical_sha256": "82261b51e7562b3bedb7bf5b7acf27e7bc8caaa7f5c0249fe6cb94cac445c4f0",
+      "current_sha256": "f37353ee6419cffc45bb940cdcc0321a714e05727b4a4dbdd0eff520e707706f",
+      "current_bytes": 539707,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "historical_sha256": "29bf5de2eef5ec4f0b6a701a7b797ce17206a42971317175eec9265600772a12",
+      "current_sha256": "50b6cc49e566d642035f3fc091133eea36ea1ed4ae0dd0ef9a588c81360bb286",
+      "current_bytes": 89234,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "historical_sha256": "3baf238dbef82da894adc4f9531ea90287505d11ce5bd6a6baeaf65a0b7c37a9",
+      "current_sha256": "23ace5c66e545786b0ee3ea2cde3832ec346c2e8c5d82ad6c14ce50ac36af24a",
+      "current_bytes": 253941,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "historical_sha256": "135dd6d809f160ccccf200a03c83b77399b2621619f8b9bde674f5e557f1370d",
+      "current_sha256": "e5113c45da1ebbfbe9a52d77b8bf0635c4347bea76ca43b865a969c4146e486a",
+      "current_bytes": 321224,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "tests/test_g3_results.py",
+      "historical_sha256": "b038e88cbeab0483ce3e37f23c05bd449a5791eb4618c9764909d3c819d71949",
+      "current_sha256": "a1fe81d10cd583584eef37c15b3bbf6b45621b0327b2e91c29b913048ba2058c",
+      "current_bytes": 145421,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    },
+    {
+      "path": "tests/test_interp_native_default_units.py",
+      "historical_sha256": "89da6bf657abb72fd3f358ee3b3604ebe7459c3f66cf9c514a0bdf9113ed58d3",
+      "current_sha256": "e92a4719b86fff7b7245da5140dca8f822cf1103e7611856d55b8e9cd2fd0290",
+      "current_bytes": 26875,
+      "historical_overlay_bytes": "UNAVAILABLE_IN_PUBLIC_INPUTS"
+    }
+  ],
+  "handler_location_differences": [
+    {
+      "path": "comsol_mcp/_artifact_store.py",
+      "symbol": "_artifact_store.OPERATIONS",
+      "historical_line": 2097,
+      "historical_end_line": null,
+      "current_line": 2096,
+      "current_end_line": 2098,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.read"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._authorize_project_execution",
+      "historical_line": 12010,
+      "historical_end_line": null,
+      "current_line": 12301,
+      "current_end_line": 12362,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._authorize_project_execution",
+      "historical_line": 12032,
+      "historical_end_line": null,
+      "current_line": 12301,
+      "current_end_line": 12362,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.probe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._cached_registry_control",
+      "historical_line": 1263,
+      "historical_end_line": null,
+      "current_line": 1281,
+      "current_end_line": 1371,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._cached_registry_control",
+      "historical_line": 1267,
+      "historical_end_line": null,
+      "current_line": 1281,
+      "current_end_line": 1371,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt",
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_engine_queue",
+      "historical_line": 4802,
+      "historical_end_line": null,
+      "current_line": 4877,
+      "current_end_line": 4921,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_engine_queue",
+      "historical_line": 4803,
+      "historical_end_line": null,
+      "current_line": 4877,
+      "current_end_line": 4921,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_engine_queue",
+      "historical_line": 4805,
+      "historical_end_line": null,
+      "current_line": 4877,
+      "current_end_line": 4921,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_engine_queue",
+      "historical_line": 4819,
+      "historical_end_line": null,
+      "current_line": 4877,
+      "current_end_line": 4921,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.migrate_standalone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_owned_ref_guard",
+      "historical_line": 4543,
+      "historical_end_line": null,
+      "current_line": 4624,
+      "current_end_line": 4640,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_parent_claim",
+      "historical_line": 4405,
+      "historical_end_line": null,
+      "current_line": 4485,
+      "current_end_line": 4506,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.migrate_standalone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_queued_read",
+      "historical_line": 4845,
+      "historical_end_line": null,
+      "current_line": 4935,
+      "current_end_line": 5049,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_queued_read",
+      "historical_line": 4846,
+      "historical_end_line": null,
+      "current_line": 4935,
+      "current_end_line": 5049,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_queued_read",
+      "historical_line": 4849,
+      "historical_end_line": null,
+      "current_line": 4935,
+      "current_end_line": 5049,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_queued_read",
+      "historical_line": 4873,
+      "historical_end_line": null,
+      "current_line": 4935,
+      "current_end_line": 5049,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_queued_read",
+      "historical_line": 4879,
+      "historical_end_line": null,
+      "current_line": 4935,
+      "current_end_line": 5049,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.migrate_standalone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._desktop_queued_read",
+      "historical_line": 4889,
+      "historical_end_line": null,
+      "current_line": 4935,
+      "current_end_line": 5049,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 1041,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt",
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 1053,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 1054,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 1071,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt",
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 1072,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 803,
+      "historical_end_line": 1184,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.log_read"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 847,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 866,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe",
+        "api.invoke",
+        "api.probe",
+        "checkpoint.branch",
+        "checkpoint.diff",
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_admitted",
+      "historical_line": 878,
+      "historical_end_line": null,
+      "current_line": 894,
+      "current_end_line": 1279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.invoke"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_artifact_control_read",
+      "historical_line": 1278,
+      "historical_end_line": 1284,
+      "current_line": 1373,
+      "current_end_line": 1379,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.inspect",
+        "artifact.list",
+        "artifact.preview",
+        "artifact.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_catalog_job_control_impl",
+      "historical_line": 11586,
+      "historical_end_line": 11678,
+      "current_line": 11883,
+      "current_end_line": 11975,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.cancel",
+        "job.cleanup",
+        "job.list",
+        "job.log",
+        "job.reconcile",
+        "job.result",
+        "job.resume",
+        "job.status",
+        "job.wait"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_catalog_job_resume_impl",
+      "historical_line": 12074,
+      "historical_end_line": null,
+      "current_line": 12453,
+      "current_end_line": 12637,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_catalog_job_resume_impl",
+      "historical_line": 12078,
+      "historical_end_line": null,
+      "current_line": 12453,
+      "current_end_line": 12637,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_catalog_job_resume_impl",
+      "historical_line": 12082,
+      "historical_end_line": null,
+      "current_line": 12453,
+      "current_end_line": 12637,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_catalog_job_resume_impl",
+      "historical_line": 12090,
+      "historical_end_line": null,
+      "current_line": 12453,
+      "current_end_line": 12637,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_desktop_control",
+      "historical_line": 4322,
+      "historical_end_line": 4369,
+      "current_line": 4417,
+      "current_end_line": 4464,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.action",
+        "desktop.bind",
+        "desktop.capture",
+        "desktop.migrate_standalone",
+        "desktop.select_node",
+        "desktop.shell_execute",
+        "desktop.show_model",
+        "desktop.status"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_desktop_control",
+      "historical_line": 4351,
+      "historical_end_line": null,
+      "current_line": 4417,
+      "current_end_line": 4464,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.migrate_standalone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_desktop_control",
+      "historical_line": 4362,
+      "historical_end_line": null,
+      "current_line": 4417,
+      "current_end_line": 4464,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.migrate_standalone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_experiment_durable_read",
+      "historical_line": 3897,
+      "historical_end_line": 4320,
+      "current_line": 3992,
+      "current_end_line": 4415,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.case_result",
+        "experiment.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_experiment_stage_define",
+      "historical_line": 2435,
+      "historical_end_line": 2671,
+      "current_line": 2530,
+      "current_end_line": 2766,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.stage_define"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_experiment_stage_run",
+      "historical_line": 2673,
+      "historical_end_line": 3064,
+      "current_line": 2768,
+      "current_end_line": 3159,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.stage_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_project_control",
+      "historical_line": 11680,
+      "historical_end_line": 11772,
+      "current_line": 11977,
+      "current_end_line": 12069,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "project.contract_set",
+        "project.create",
+        "project.inspect",
+        "project.permissions",
+        "project.policy_set",
+        "project.state_export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_session_control",
+      "historical_line": 11283,
+      "historical_end_line": 11376,
+      "current_line": 11580,
+      "current_end_line": 11673,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "session.connect",
+        "session.disconnect",
+        "session.health",
+        "session.inspect",
+        "session.list",
+        "session.reconnect",
+        "session.recover",
+        "session.start",
+        "session.stop"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._dispatch_session_control",
+      "historical_line": 11333,
+      "historical_end_line": null,
+      "current_line": 11580,
+      "current_end_line": 11673,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._publish_desktop_capture",
+      "historical_line": 5040,
+      "historical_end_line": null,
+      "current_line": 5125,
+      "current_end_line": 5206,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.capture"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._publish_desktop_capture",
+      "historical_line": 5041,
+      "historical_end_line": null,
+      "current_line": 5125,
+      "current_end_line": 5206,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.capture"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._publish_desktop_save_copy",
+      "historical_line": 5128,
+      "historical_end_line": null,
+      "current_line": 5217,
+      "current_end_line": 5279,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.migrate_standalone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon._resolve_desktop_artifact",
+      "historical_line": 5004,
+      "historical_end_line": null,
+      "current_line": 5077,
+      "current_end_line": 5123,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.shell_execute"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "symbol": "ControlDaemon.dispatch",
+      "historical_line": 568,
+      "historical_end_line": 587,
+      "current_line": 579,
+      "current_end_line": 598,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.inspect",
+        "artifact.list",
+        "artifact.preview",
+        "artifact.verify",
+        "desktop.action",
+        "desktop.bind",
+        "desktop.capture",
+        "desktop.migrate_standalone",
+        "desktop.select_node",
+        "desktop.shell_execute",
+        "desktop.show_model",
+        "desktop.status",
+        "experiment.case_result",
+        "experiment.inspect",
+        "experiment.stage_define",
+        "experiment.stage_run",
+        "job.cancel",
+        "job.cleanup",
+        "job.list",
+        "job.log",
+        "job.reconcile",
+        "job.result",
+        "job.resume",
+        "job.status",
+        "job.wait",
+        "project.contract_set",
+        "project.create",
+        "project.inspect",
+        "project.permissions",
+        "project.policy_set",
+        "project.state_export",
+        "session.connect",
+        "session.disconnect",
+        "session.health",
+        "session.inspect",
+        "session.list",
+        "session.reconnect",
+        "session.recover",
+        "session.start",
+        "session.stop",
+        "solver.log_read"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "symbol": "UnknownObservationStop",
+      "historical_line": 80,
+      "historical_end_line": null,
+      "current_line": 114,
+      "current_end_line": 115,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "symbol": "data_schema",
+      "historical_line": 70,
+      "historical_end_line": null,
+      "current_line": 101,
+      "current_end_line": 110,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "symbol": "input_schema",
+      "historical_line": 58,
+      "historical_end_line": null,
+      "current_line": 91,
+      "current_end_line": 99,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.probe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "symbol": "invoke_diff",
+      "historical_line": 659,
+      "historical_end_line": 697,
+      "current_line": 696,
+      "current_end_line": 734,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "symbol": "normalize",
+      "historical_line": 31,
+      "historical_end_line": null,
+      "current_line": 64,
+      "current_end_line": 89,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "symbol": "run_diff",
+      "historical_line": 646,
+      "historical_end_line": null,
+      "current_line": 612,
+      "current_end_line": 694,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "data_schema",
+      "historical_line": 37,
+      "historical_end_line": null,
+      "current_line": 35,
+      "current_end_line": 56,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.branch"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "data_schema",
+      "historical_line": 40,
+      "historical_end_line": null,
+      "current_line": 35,
+      "current_end_line": 56,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.branch"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "data_schema",
+      "historical_line": 50,
+      "historical_end_line": null,
+      "current_line": 35,
+      "current_end_line": 56,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.branch"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "inner_permission",
+      "historical_line": 102,
+      "historical_end_line": null,
+      "current_line": 101,
+      "current_end_line": 103,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.probe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "input_schema",
+      "historical_line": 23,
+      "historical_end_line": null,
+      "current_line": 18,
+      "current_end_line": 33,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.branch"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "invoke_owned",
+      "historical_line": 386,
+      "historical_end_line": null,
+      "current_line": 378,
+      "current_end_line": 437,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.probe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "normalize",
+      "historical_line": 64,
+      "historical_end_line": null,
+      "current_line": 61,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.branch"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "normalize",
+      "historical_line": 95,
+      "historical_end_line": null,
+      "current_line": 61,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "run_owned",
+      "historical_line": 293,
+      "historical_end_line": null,
+      "current_line": 214,
+      "current_end_line": 376,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_ops.py",
+      "symbol": "run_owned",
+      "historical_line": 294,
+      "historical_end_line": null,
+      "current_line": 214,
+      "current_end_line": 376,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "_solver_feature_order_witness",
+      "historical_line": 668,
+      "historical_end_line": null,
+      "current_line": 720,
+      "current_end_line": 842,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 260,
+      "historical_end_line": 397,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set",
+        "node.children",
+        "node.copy",
+        "node.create",
+        "node.find",
+        "node.inspect",
+        "node.label_set",
+        "node.move",
+        "node.property_entry_set",
+        "node.property_get",
+        "node.property_index_set",
+        "node.property_schema",
+        "node.property_set",
+        "node.remove",
+        "node.selection_get",
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 266,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 283,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.copy"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 316,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set",
+        "node.label_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 317,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.label_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 324,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 328,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.move"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 336,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 345,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_get",
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 348,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 378,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 387,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.copy"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "execute_node_action",
+      "historical_line": 389,
+      "historical_end_line": null,
+      "current_line": 262,
+      "current_end_line": 399,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 122,
+      "historical_end_line": 249,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set",
+        "node.children",
+        "node.copy",
+        "node.create",
+        "node.find",
+        "node.inspect",
+        "node.label_set",
+        "node.move",
+        "node.property_entry_set",
+        "node.property_get",
+        "node.property_index_set",
+        "node.property_schema",
+        "node.property_set",
+        "node.remove",
+        "node.selection_get",
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 127,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 146,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 159,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.copy"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 187,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set",
+        "node.label_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 189,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.label_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 195,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.move"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "prepare_node_action",
+      "historical_line": 222,
+      "historical_end_line": null,
+      "current_line": 124,
+      "current_end_line": 251,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "property_entry_set",
+      "historical_line": 1553,
+      "historical_end_line": null,
+      "current_line": 1632,
+      "current_end_line": 1697,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "property_index_set",
+      "historical_line": 1448,
+      "historical_end_line": null,
+      "current_line": 1525,
+      "current_end_line": 1602,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 47,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 51,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set",
+        "node.copy",
+        "node.create",
+        "node.label_set",
+        "node.selection_get",
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 55,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 68,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 70,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.label_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 72,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 76,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.move"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_engine.py",
+      "symbol": "validate_node_action",
+      "historical_line": 79,
+      "historical_end_line": null,
+      "current_line": 39,
+      "current_end_line": 94,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_model_compare.py",
+      "symbol": "normalize",
+      "historical_line": 125,
+      "historical_end_line": null,
+      "current_line": 121,
+      "current_end_line": 186,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_model_compare.py",
+      "symbol": "normalize",
+      "historical_line": 127,
+      "historical_end_line": null,
+      "current_line": 121,
+      "current_end_line": 186,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_model_compare.py",
+      "symbol": "normalize",
+      "historical_line": 131,
+      "historical_end_line": null,
+      "current_line": 121,
+      "current_end_line": 186,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_model_compare.py",
+      "symbol": "normalize",
+      "historical_line": 134,
+      "historical_end_line": null,
+      "current_line": 121,
+      "current_end_line": 186,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_public_api.py",
+      "symbol": "_controlled_alternative",
+      "historical_line": 333,
+      "historical_end_line": null,
+      "current_line": 605,
+      "current_end_line": 615,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_index_set",
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_public_api.py",
+      "symbol": "_controlled_alternative",
+      "historical_line": 334,
+      "historical_end_line": null,
+      "current_line": 605,
+      "current_end_line": 615,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_public_api.py",
+      "symbol": "describe_api",
+      "historical_line": 682,
+      "historical_end_line": null,
+      "current_line": 680,
+      "current_end_line": 711,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_public_api.py",
+      "symbol": "describe_api",
+      "historical_line": 698,
+      "historical_end_line": null,
+      "current_line": 680,
+      "current_end_line": 711,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "ActionEntry.as_dict",
+      "historical_line": 330,
+      "historical_end_line": null,
+      "current_line": 269,
+      "current_end_line": 659,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "ActionEntry.as_dict",
+      "historical_line": 360,
+      "historical_end_line": null,
+      "current_line": 269,
+      "current_end_line": 659,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "ActionEntry.as_dict",
+      "historical_line": 593,
+      "historical_end_line": null,
+      "current_line": 269,
+      "current_end_line": 659,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.status"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "ActionEntry.as_dict",
+      "historical_line": 600,
+      "historical_end_line": null,
+      "current_line": 269,
+      "current_end_line": 659,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 85,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.list",
+        "job.log",
+        "job.reconcile",
+        "job.result",
+        "job.status"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 86,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.cancel",
+        "job.cleanup",
+        "job.wait"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 87,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.inspect",
+        "artifact.list",
+        "artifact.preview",
+        "artifact.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 88,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "project.contract_set",
+        "project.create",
+        "project.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 89,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "project.permissions",
+        "project.policy_set",
+        "project.state_export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 90,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.case_result",
+        "experiment.inspect",
+        "experiment.stage_define",
+        "experiment.stage_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 91,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.log_read"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 94,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "session.connect",
+        "session.health",
+        "session.inspect",
+        "session.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "CONTROL_IMPLEMENTED_OPERATIONS",
+      "historical_line": 95,
+      "historical_end_line": null,
+      "current_line": 84,
+      "current_end_line": 96,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "session.disconnect",
+        "session.reconnect",
+        "session.recover",
+        "session.start",
+        "session.stop"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "DESKTOP_COORDINATOR_ONLY_OPERATIONS",
+      "historical_line": 103,
+      "historical_end_line": null,
+      "current_line": 102,
+      "current_end_line": 105,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.bind",
+        "desktop.capture",
+        "desktop.select_node",
+        "desktop.show_model"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "DESKTOP_COORDINATOR_ONLY_OPERATIONS",
+      "historical_line": 104,
+      "historical_end_line": null,
+      "current_line": 102,
+      "current_end_line": 105,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.action",
+        "desktop.migrate_standalone",
+        "desktop.shell_execute"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 66,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.call",
+        "registry.describe",
+        "registry.list",
+        "registry.manifest",
+        "registry.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 67,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register",
+        "job.resume",
+        "model.adopt",
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 68,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 69,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.status"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 70,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children",
+        "node.find",
+        "node.inspect",
+        "node.property_get",
+        "node.property_schema"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 71,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set",
+        "node.property_index_set",
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 72,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set",
+        "node.copy",
+        "node.create",
+        "node.label_set",
+        "node.move",
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 73,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe",
+        "api.invoke",
+        "api.probe",
+        "checkpoint.branch",
+        "node.selection_get",
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 74,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.compile_java",
+        "code.execute_java",
+        "code.inspect_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 75,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.create",
+        "checkpoint.diff",
+        "checkpoint.inspect",
+        "checkpoint.list",
+        "checkpoint.restore"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 76,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.apply",
+        "transaction.preview",
+        "transaction.recover",
+        "transaction.trial",
+        "transaction.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "IMPLEMENTED_OPERATIONS",
+      "historical_line": 77,
+      "historical_end_line": null,
+      "current_line": 65,
+      "current_end_line": 78,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.error_search",
+        "docs.examples",
+        "docs.get",
+        "docs.index",
+        "docs.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 829,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 866,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 878,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 880,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.move"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 898,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.index"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 933,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.preview"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 938,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children",
+        "node.find"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_effective_input_schema",
+      "historical_line": 947,
+      "historical_end_line": null,
+      "current_line": 827,
+      "current_end_line": 1036,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.find"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 723,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.copy"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 724,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 725,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.label_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 726,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.active_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 727,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.move"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 728,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_get"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_unit_a_data_schema",
+      "historical_line": 729,
+      "historical_end_line": null,
+      "current_line": 704,
+      "current_end_line": 824,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 1961,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children",
+        "node.inspect",
+        "node.property_get",
+        "node.property_schema"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 1962,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set",
+        "node.property_index_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 1963,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "desktop.select_node"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 1990,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 1996,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2004,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_get"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2010,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_index_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2017,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2022,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.apply",
+        "transaction.preview",
+        "transaction.trial"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2025,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.index"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2056,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.find"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "_validate_operation_shape",
+      "historical_line": 2069,
+      "historical_end_line": null,
+      "current_line": 1907,
+      "current_end_line": 2076,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.find"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "symbol": "registry_*",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "registry.call",
+        "registry.describe",
+        "registry.list",
+        "registry.manifest",
+        "registry.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "symbol": "_g3_definition_validation.OPERATIONS",
+      "historical_line": 1147,
+      "historical_end_line": null,
+      "current_line": 1146,
+      "current_end_line": 1150,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "symbol": "_g3_definition_validation.OPERATIONS",
+      "historical_line": 1148,
+      "historical_end_line": null,
+      "current_line": 1146,
+      "current_end_line": 1150,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.rebind"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "symbol": "_g3_definition_validation.OPERATIONS",
+      "historical_line": 1149,
+      "historical_end_line": null,
+      "current_line": 1146,
+      "current_end_line": 1150,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "definition.mapping_validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_exports.py",
+      "symbol": "_g3_exports.OPERATIONS",
+      "historical_line": 1123,
+      "historical_end_line": null,
+      "current_line": 1130,
+      "current_end_line": 1130,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.report"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_exports.py",
+      "symbol": "_g3_exports.OPERATIONS",
+      "historical_line": 1124,
+      "historical_end_line": null,
+      "current_line": 1130,
+      "current_end_line": 1130,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.evidence_bundle"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_exports.py",
+      "symbol": "_g3_exports.OPERATIONS",
+      "historical_line": 1125,
+      "historical_end_line": null,
+      "current_line": 1130,
+      "current_end_line": 1130,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.publish"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1750,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1751,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1752,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.load"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1753,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.tree"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1754,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.save"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1755,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.clone"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1756,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.close"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1757,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.recipe_register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "symbol": "_g3_managed_models.OPERATIONS",
+      "historical_line": 1758,
+      "historical_end_line": null,
+      "current_line": 1749,
+      "current_end_line": 1759,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.recipe_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_metrics.py",
+      "symbol": "_g3_metrics.OPERATIONS",
+      "historical_line": 1056,
+      "historical_end_line": null,
+      "current_line": 1055,
+      "current_end_line": 1061,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "metric.define"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_metrics.py",
+      "symbol": "_g3_metrics.OPERATIONS",
+      "historical_line": 1057,
+      "historical_end_line": null,
+      "current_line": 1055,
+      "current_end_line": 1061,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "metric.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_metrics.py",
+      "symbol": "_g3_metrics.OPERATIONS",
+      "historical_line": 1058,
+      "historical_end_line": null,
+      "current_line": 1055,
+      "current_end_line": 1061,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "metric.evaluate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_metrics.py",
+      "symbol": "_g3_metrics.OPERATIONS",
+      "historical_line": 1059,
+      "historical_end_line": null,
+      "current_line": 1055,
+      "current_end_line": 1061,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "metric.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_metrics.py",
+      "symbol": "_g3_metrics.OPERATIONS",
+      "historical_line": 1060,
+      "historical_end_line": null,
+      "current_line": 1055,
+      "current_end_line": 1061,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "metric.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_delivery.py",
+      "symbol": "_g3_model_delivery.OPERATIONS",
+      "historical_line": 1228,
+      "historical_end_line": null,
+      "current_line": 1227,
+      "current_end_line": 1231,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.dependencies"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_delivery.py",
+      "symbol": "_g3_model_delivery.OPERATIONS",
+      "historical_line": 1229,
+      "historical_end_line": null,
+      "current_line": 1227,
+      "current_end_line": 1231,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.package"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_delivery.py",
+      "symbol": "_g3_model_delivery.OPERATIONS",
+      "historical_line": 1230,
+      "historical_end_line": null,
+      "current_line": 1227,
+      "current_end_line": 1231,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.rebuild_target"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1262,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1263,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.repair"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1264,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.import"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1265,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.pde_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1266,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.import"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1267,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_model_domains.py",
+      "symbol": "_g3_model_domains.OPERATIONS",
+      "historical_line": 1268,
+      "historical_end_line": null,
+      "current_line": 1261,
+      "current_end_line": 1269,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.convergence_study"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "symbol": "DISPATCH",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.read",
+        "code.recipe_register",
+        "code.recipe_run",
+        "dataset.create",
+        "dataset.inspect",
+        "dataset.list",
+        "dataset.remove",
+        "dataset.solution_indices",
+        "dataset.update",
+        "definition.component_manage",
+        "definition.coordinate_manage",
+        "definition.coupling_manage",
+        "definition.mapping_validate",
+        "definition.pair_manage",
+        "experiment.design",
+        "experiment.run",
+        "experiment.state_map",
+        "export.create",
+        "export.evidence_bundle",
+        "export.list",
+        "export.remove",
+        "export.report",
+        "export.run",
+        "export.update",
+        "function.create",
+        "function.data_import",
+        "function.data_reload",
+        "function.evaluate",
+        "function.inspect",
+        "function.list",
+        "function.remove",
+        "function.update",
+        "function.validate",
+        "geometry.array_create",
+        "geometry.build",
+        "geometry.export",
+        "geometry.feature_create",
+        "geometry.feature_remove",
+        "geometry.feature_update",
+        "geometry.finalize",
+        "geometry.import",
+        "geometry.inspect",
+        "geometry.measure",
+        "geometry.repair",
+        "geometry.sequence_create",
+        "geometry.validate",
+        "geometry.workplane_create",
+        "geometry.workplane_edit",
+        "material.create",
+        "material.group_manage",
+        "material.import",
+        "material.inspect",
+        "material.list",
+        "material.remove",
+        "material.selection_set",
+        "material.set_properties",
+        "material.validate",
+        "mesh.build",
+        "mesh.clear",
+        "mesh.convergence_study",
+        "mesh.create",
+        "mesh.export",
+        "mesh.feature_create",
+        "mesh.feature_remove",
+        "mesh.feature_update",
+        "mesh.import",
+        "mesh.inspect",
+        "mesh.list",
+        "mesh.quality",
+        "mesh.statistics",
+        "mesh.validate",
+        "metric.compare",
+        "metric.define",
+        "metric.evaluate",
+        "metric.list",
+        "metric.remove",
+        "model.clone",
+        "model.close",
+        "model.create",
+        "model.dependencies",
+        "model.list",
+        "model.load",
+        "model.package",
+        "model.rebuild_target",
+        "model.save",
+        "model.tree",
+        "parameter.case_manage",
+        "parameter.export",
+        "parameter.get",
+        "parameter.group_manage",
+        "parameter.import",
+        "parameter.list",
+        "parameter.remove",
+        "parameter.set",
+        "physics.create",
+        "physics.feature_create",
+        "physics.feature_remove",
+        "physics.feature_update",
+        "physics.initial_values_set",
+        "physics.inspect",
+        "physics.list",
+        "physics.multiphysics_manage",
+        "physics.pde_manage",
+        "physics.remove",
+        "physics.selection_set",
+        "physics.validate",
+        "plot.feature_create",
+        "plot.geometry_render",
+        "plot.group_create",
+        "plot.list",
+        "plot.remove",
+        "plot.render",
+        "plot.update",
+        "plot.view_manage",
+        "probe.create",
+        "probe.history",
+        "probe.list",
+        "probe.remove",
+        "probe.update",
+        "result.at_points",
+        "result.evaluate",
+        "result.field_export",
+        "result.mode_overlap",
+        "result.mode_overlap_basis_v2",
+        "result.numerical_manage",
+        "result.sample_grid",
+        "result.sample_path",
+        "result.table_manage",
+        "runtime.capabilities",
+        "runtime.compatibility_report",
+        "runtime.discover",
+        "runtime.doctor",
+        "runtime.inspect",
+        "runtime.license_checkout",
+        "runtime.license_inspect",
+        "runtime.render_probe",
+        "selection.adjacency",
+        "selection.create",
+        "selection.entities",
+        "selection.inspect",
+        "selection.list",
+        "selection.measure",
+        "selection.query_spatial",
+        "selection.rebind",
+        "selection.remove",
+        "selection.update",
+        "selection.validate",
+        "solver.create",
+        "solver.feature_create",
+        "solver.feature_remove",
+        "solver.feature_update",
+        "solver.inspect",
+        "solver.list",
+        "solver.resource_configure",
+        "solver.run",
+        "solver.solution_clear",
+        "solver.solution_inspect",
+        "solver.solution_transfer",
+        "study.create",
+        "study.initial_solution_set",
+        "study.inspect",
+        "study.list",
+        "study.physics_activation",
+        "study.remove",
+        "study.run",
+        "study.solver_generate",
+        "study.step_create",
+        "study.step_remove",
+        "study.step_update",
+        "study.sweep_manage",
+        "validate.boundary_conditions",
+        "validate.conservation",
+        "validate.convergence",
+        "validate.expressions",
+        "validate.preflight",
+        "validate.report",
+        "validate.solution",
+        "validate.structure",
+        "variable.get",
+        "variable.group_create",
+        "variable.list",
+        "variable.remove",
+        "variable.selection_set",
+        "variable.set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_parameter_io.py",
+      "symbol": "_g3_parameter_io.OPERATIONS",
+      "historical_line": 707,
+      "historical_end_line": null,
+      "current_line": 706,
+      "current_end_line": 709,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.import"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_parameter_io.py",
+      "symbol": "_g3_parameter_io.OPERATIONS",
+      "historical_line": 708,
+      "historical_end_line": null,
+      "current_line": 706,
+      "current_end_line": 709,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8146,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8147,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8148,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8149,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8150,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8151,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.solution_indices"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8152,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.evaluate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8153,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.at_points"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8154,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.sample_path"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8155,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.numerical_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8156,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.table_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "_g3_results.OPERATIONS",
+      "historical_line": 8157,
+      "historical_end_line": null,
+      "current_line": 10319,
+      "current_end_line": 10332,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.field_export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "dataset_create",
+      "historical_line": 2303,
+      "historical_end_line": null,
+      "current_line": 2436,
+      "current_end_line": 2495,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "dataset_inspect",
+      "historical_line": 2415,
+      "historical_end_line": null,
+      "current_line": 2548,
+      "current_end_line": 2699,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "dataset_list",
+      "historical_line": 2265,
+      "historical_end_line": null,
+      "current_line": 2398,
+      "current_end_line": 2433,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "dataset_remove",
+      "historical_line": 2589,
+      "historical_end_line": null,
+      "current_line": 2722,
+      "current_end_line": 2738,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "dataset_solution_indices",
+      "historical_line": 2608,
+      "historical_end_line": null,
+      "current_line": 2741,
+      "current_end_line": 3077,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.solution_indices"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "dataset_update",
+      "historical_line": 2569,
+      "historical_end_line": null,
+      "current_line": 2702,
+      "current_end_line": 2719,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "dataset.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "result_at_points",
+      "historical_line": 7273,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_AMBIGUOUS_AST_SYMBOL",
+      "operation_ids": [
+        "result.at_points"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "result_evaluate",
+      "historical_line": 4935,
+      "historical_end_line": null,
+      "current_line": 8750,
+      "current_end_line": 8772,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.evaluate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "result_field_export",
+      "historical_line": 8110,
+      "historical_end_line": null,
+      "current_line": 10284,
+      "current_end_line": 10315,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.field_export"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "result_numerical_manage",
+      "historical_line": 7781,
+      "historical_end_line": null,
+      "current_line": 9955,
+      "current_end_line": 10069,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.numerical_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "result_table_manage",
+      "historical_line": 7898,
+      "historical_end_line": null,
+      "current_line": 10072,
+      "current_end_line": 10277,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.table_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "symbol": "sample_path",
+      "historical_line": 1720,
+      "historical_end_line": null,
+      "current_line": 1853,
+      "current_end_line": 1988,
+      "resolution": "HANDLER_EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.sample_path"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1172,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.discover"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1173,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1174,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.doctor"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1175,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.capabilities"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1176,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.license_inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1177,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.compatibility_report"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1178,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.license_checkout"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_runtime.py",
+      "symbol": "_g3_runtime.OPERATIONS",
+      "historical_line": 1179,
+      "historical_end_line": null,
+      "current_line": 1171,
+      "current_end_line": 1180,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.render_probe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_solver_ops.py",
+      "symbol": "_g3_solver_ops.OPERATIONS",
+      "historical_line": 972,
+      "historical_end_line": null,
+      "current_line": 971,
+      "current_end_line": 977,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.solution_inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_solver_ops.py",
+      "symbol": "_g3_solver_ops.OPERATIONS",
+      "historical_line": 973,
+      "historical_end_line": null,
+      "current_line": 971,
+      "current_end_line": 977,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.solution_clear"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_solver_ops.py",
+      "symbol": "_g3_solver_ops.OPERATIONS",
+      "historical_line": 974,
+      "historical_end_line": null,
+      "current_line": 971,
+      "current_end_line": 977,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.resource_configure"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_solver_ops.py",
+      "symbol": "_g3_solver_ops.OPERATIONS",
+      "historical_line": 975,
+      "historical_end_line": null,
+      "current_line": 971,
+      "current_end_line": 977,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.initial_solution_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_solver_ops.py",
+      "symbol": "_g3_solver_ops.OPERATIONS",
+      "historical_line": 976,
+      "historical_end_line": null,
+      "current_line": 971,
+      "current_end_line": 977,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "result.sample_grid"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2796,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2797,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.get"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2798,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2799,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2800,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.group_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2801,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "variable.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2802,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "variable.get"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2803,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "variable.set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2804,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "variable.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2805,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "variable.group_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2806,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "variable.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2807,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2808,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2809,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2810,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2811,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2812,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.data_import"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2813,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.data_reload"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2814,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "function.evaluate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2815,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2816,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2817,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2818,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2819,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2820,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.entities"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2821,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.measure"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2822,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.query_spatial"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2823,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.adjacency"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w13.py",
+      "symbol": "_g3_w13.OPERATIONS",
+      "historical_line": 2824,
+      "historical_end_line": null,
+      "current_line": 2795,
+      "current_end_line": 2825,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "selection.validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3062,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.sequence_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3063,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3064,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.feature_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3065,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.feature_update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3066,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.feature_remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3067,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.workplane_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3068,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.workplane_edit"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3069,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.array_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3070,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.build"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3071,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.finalize"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3072,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.import"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3073,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.measure"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3074,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "geometry.validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3075,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "definition.component_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3076,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "definition.coordinate_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3077,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "definition.pair_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "symbol": "_g3_w14.OPERATIONS",
+      "historical_line": 3078,
+      "historical_end_line": null,
+      "current_line": 3061,
+      "current_end_line": 3079,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "definition.coupling_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3680,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3681,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3682,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3683,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.set_properties"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3684,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.group_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3685,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3686,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3687,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "material.validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3688,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3689,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3690,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3691,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3692,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.feature_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3693,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.feature_update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3694,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.feature_remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3695,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.selection_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3696,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.multiphysics_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3697,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.initial_values_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w15.py",
+      "symbol": "_g3_w15.OPERATIONS",
+      "historical_line": 3698,
+      "historical_end_line": null,
+      "current_line": 3679,
+      "current_end_line": 3699,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "physics.validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3300,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3301,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3302,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3303,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.feature_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3304,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.feature_update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3305,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.feature_remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3306,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.build"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3307,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.clear"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3308,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.statistics"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3309,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.quality"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3310,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "mesh.validate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3311,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3312,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3313,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3314,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3315,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.step_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3316,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.step_update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3317,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.step_remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3318,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.physics_activation"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3319,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.solver_generate"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3320,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3321,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3322,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3323,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3324,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.feature_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3325,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.feature_update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3326,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.feature_remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "symbol": "_g3_w16.OPERATIONS",
+      "historical_line": 3327,
+      "historical_end_line": null,
+      "current_line": 3299,
+      "current_end_line": 3328,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1263,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1264,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.group_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1265,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.feature_create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1266,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1267,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1268,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.render"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1269,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.geometry_render"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1270,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "plot.view_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1271,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1272,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1273,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1274,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w18.py",
+      "symbol": "_g3_w18.OPERATIONS",
+      "historical_line": 1275,
+      "historical_end_line": null,
+      "current_line": 1262,
+      "current_end_line": 1276,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "export.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1571,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.preflight"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1572,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.structure"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1573,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.expressions"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1574,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.boundary_conditions"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1575,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.solution"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1576,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.conservation"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1577,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.convergence"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w20_validation.py",
+      "symbol": "_g3_w20_validation.OPERATIONS",
+      "historical_line": 1578,
+      "historical_end_line": null,
+      "current_line": 1570,
+      "current_end_line": 1579,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "validate.report"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "_g3_w21.OPERATIONS",
+      "historical_line": 623,
+      "historical_end_line": null,
+      "current_line": 622,
+      "current_end_line": 632,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.case_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "_g3_w21.OPERATIONS",
+      "historical_line": 624,
+      "historical_end_line": null,
+      "current_line": 622,
+      "current_end_line": 632,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "study.sweep_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "_g3_w21.OPERATIONS",
+      "historical_line": 625,
+      "historical_end_line": null,
+      "current_line": 622,
+      "current_end_line": 632,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "solver.solution_transfer"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "_g3_w21.OPERATIONS",
+      "historical_line": 626,
+      "historical_end_line": null,
+      "current_line": 622,
+      "current_end_line": 632,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.state_map"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "_g3_w21.OPERATIONS",
+      "historical_line": 630,
+      "historical_end_line": null,
+      "current_line": 622,
+      "current_end_line": 632,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.design"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "_g3_w21.OPERATIONS",
+      "historical_line": 631,
+      "historical_end_line": null,
+      "current_line": 622,
+      "current_end_line": 632,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "op_experiment_design",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.design"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "op_experiment_run",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "op_experiment_state_map",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "experiment.state_map"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "op_parameter_case_manage",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "parameter.case_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "op_solver_solution_transfer",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "solver.solution_transfer"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_g3_w21.py",
+      "symbol": "op_study_sweep_manage",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "HANDLER_MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "study.sweep_manage"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "symbol": "PersistentJavaWorker.compile_java",
+      "historical_line": 768,
+      "historical_end_line": 780,
+      "current_line": 966,
+      "current_end_line": 978,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.compile_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "symbol": "PersistentJavaWorker.execute_java",
+      "historical_line": 782,
+      "historical_end_line": 789,
+      "current_line": 980,
+      "current_end_line": 987,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._checkpoint_via_service",
+      "historical_line": 3527,
+      "historical_end_line": 3545,
+      "current_line": 3582,
+      "current_end_line": 3600,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1686,
+      "historical_end_line": 1748,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.inspect",
+        "checkpoint.list",
+        "code.compile_java",
+        "code.inspect_run",
+        "docs.error_search",
+        "docs.examples",
+        "docs.get",
+        "docs.index",
+        "docs.search",
+        "transaction.preview"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1687,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.index"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1693,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.error_search",
+        "docs.examples",
+        "docs.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1695,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.error_search",
+        "docs.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1697,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.examples"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1699,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.error_search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1701,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.examples"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1715,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.compile_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1727,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.inspect_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1733,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.preview"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1736,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.inspect",
+        "checkpoint.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1738,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_control",
+      "historical_line": 1740,
+      "historical_end_line": null,
+      "current_line": 1691,
+      "current_end_line": 1753,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2084,
+      "historical_end_line": 2500,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe",
+        "api.invoke",
+        "api.probe",
+        "artifact.read",
+        "checkpoint.branch",
+        "checkpoint.create",
+        "checkpoint.diff",
+        "checkpoint.restore",
+        "code.execute_java",
+        "code.recipe_register",
+        "code.recipe_run",
+        "dataset.create",
+        "dataset.inspect",
+        "dataset.list",
+        "dataset.remove",
+        "dataset.solution_indices",
+        "dataset.update",
+        "definition.component_manage",
+        "definition.coordinate_manage",
+        "definition.coupling_manage",
+        "definition.mapping_validate",
+        "definition.pair_manage",
+        "experiment.design",
+        "experiment.run",
+        "experiment.state_map",
+        "export.create",
+        "export.evidence_bundle",
+        "export.list",
+        "export.remove",
+        "export.report",
+        "export.run",
+        "export.update",
+        "function.create",
+        "function.data_import",
+        "function.data_reload",
+        "function.evaluate",
+        "function.inspect",
+        "function.list",
+        "function.remove",
+        "function.update",
+        "function.validate",
+        "geometry.array_create",
+        "geometry.build",
+        "geometry.export",
+        "geometry.feature_create",
+        "geometry.feature_remove",
+        "geometry.feature_update",
+        "geometry.finalize",
+        "geometry.import",
+        "geometry.inspect",
+        "geometry.measure",
+        "geometry.repair",
+        "geometry.sequence_create",
+        "geometry.validate",
+        "geometry.workplane_create",
+        "geometry.workplane_edit",
+        "material.create",
+        "material.group_manage",
+        "material.import",
+        "material.inspect",
+        "material.list",
+        "material.remove",
+        "material.selection_set",
+        "material.set_properties",
+        "material.validate",
+        "mesh.build",
+        "mesh.clear",
+        "mesh.convergence_study",
+        "mesh.create",
+        "mesh.export",
+        "mesh.feature_create",
+        "mesh.feature_remove",
+        "mesh.feature_update",
+        "mesh.import",
+        "mesh.inspect",
+        "mesh.list",
+        "mesh.quality",
+        "mesh.statistics",
+        "mesh.validate",
+        "metric.compare",
+        "metric.define",
+        "metric.evaluate",
+        "metric.list",
+        "metric.remove",
+        "model.adopt",
+        "model.clone",
+        "model.close",
+        "model.compare",
+        "model.create",
+        "model.dependencies",
+        "model.inspect",
+        "model.list",
+        "model.load",
+        "model.package",
+        "model.rebuild_target",
+        "model.save",
+        "model.tree",
+        "node.active_set",
+        "node.children",
+        "node.copy",
+        "node.create",
+        "node.find",
+        "node.inspect",
+        "node.label_set",
+        "node.move",
+        "node.property_entry_set",
+        "node.property_get",
+        "node.property_index_set",
+        "node.property_schema",
+        "node.property_set",
+        "node.remove",
+        "node.selection_get",
+        "node.selection_set",
+        "parameter.case_manage",
+        "parameter.export",
+        "parameter.get",
+        "parameter.group_manage",
+        "parameter.import",
+        "parameter.list",
+        "parameter.remove",
+        "parameter.set",
+        "physics.create",
+        "physics.feature_create",
+        "physics.feature_remove",
+        "physics.feature_update",
+        "physics.initial_values_set",
+        "physics.inspect",
+        "physics.list",
+        "physics.multiphysics_manage",
+        "physics.pde_manage",
+        "physics.remove",
+        "physics.selection_set",
+        "physics.validate",
+        "plot.feature_create",
+        "plot.geometry_render",
+        "plot.group_create",
+        "plot.list",
+        "plot.remove",
+        "plot.render",
+        "plot.update",
+        "plot.view_manage",
+        "probe.create",
+        "probe.history",
+        "probe.list",
+        "probe.remove",
+        "probe.update",
+        "result.at_points",
+        "result.evaluate",
+        "result.field_export",
+        "result.mode_overlap",
+        "result.mode_overlap_basis_v2",
+        "result.numerical_manage",
+        "result.sample_grid",
+        "result.sample_path",
+        "result.table_manage",
+        "selection.adjacency",
+        "selection.create",
+        "selection.entities",
+        "selection.inspect",
+        "selection.list",
+        "selection.measure",
+        "selection.query_spatial",
+        "selection.rebind",
+        "selection.remove",
+        "selection.update",
+        "selection.validate",
+        "solver.create",
+        "solver.feature_create",
+        "solver.feature_remove",
+        "solver.feature_update",
+        "solver.inspect",
+        "solver.list",
+        "solver.resource_configure",
+        "solver.run",
+        "solver.solution_clear",
+        "solver.solution_inspect",
+        "solver.solution_transfer",
+        "study.create",
+        "study.initial_solution_set",
+        "study.inspect",
+        "study.list",
+        "study.physics_activation",
+        "study.remove",
+        "study.run",
+        "study.solver_generate",
+        "study.step_create",
+        "study.step_remove",
+        "study.step_update",
+        "study.sweep_manage",
+        "transaction.apply",
+        "transaction.preview",
+        "transaction.recover",
+        "transaction.trial",
+        "transaction.verify",
+        "validate.boundary_conditions",
+        "validate.conservation",
+        "validate.convergence",
+        "validate.expressions",
+        "validate.preflight",
+        "validate.report",
+        "validate.solution",
+        "validate.structure",
+        "variable.get",
+        "variable.group_create",
+        "variable.list",
+        "variable.remove",
+        "variable.selection_set",
+        "variable.set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2097,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2100,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.diff"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2103,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.probe",
+        "checkpoint.branch"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2138,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe",
+        "api.invoke"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2153,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2235,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.invoke"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2236,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe",
+        "node.selection_get"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2249,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.invoke"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2257,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2262,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2404,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set",
+        "node.property_index_set",
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2405,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.create",
+        "checkpoint.restore",
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2406,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.apply",
+        "transaction.recover",
+        "transaction.trial"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2413,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.trial"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2418,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.recover"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2423,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.restore"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2424,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.restore"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2428,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2433,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.apply"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2438,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2449,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.invoke"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2451,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2461,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set",
+        "node.property_index_set",
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2462,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children",
+        "node.find",
+        "node.inspect",
+        "node.property_get",
+        "node.property_schema"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2463,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_g2_model",
+      "historical_line": 2465,
+      "historical_end_line": null,
+      "current_line": 2127,
+      "current_end_line": 2555,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._invoke_runtime_scoped",
+      "historical_line": 1821,
+      "historical_end_line": 1888,
+      "current_line": 1826,
+      "current_end_line": 1893,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "runtime.capabilities",
+        "runtime.compatibility_report",
+        "runtime.discover",
+        "runtime.doctor",
+        "runtime.inspect",
+        "runtime.license_checkout",
+        "runtime.license_inspect",
+        "runtime.render_probe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._preflight_nested_actions",
+      "historical_line": 1605,
+      "historical_end_line": null,
+      "current_line": 1597,
+      "current_end_line": 1631,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children",
+        "node.find",
+        "node.inspect",
+        "node.property_get",
+        "node.property_schema"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._preflight_nested_actions",
+      "historical_line": 1606,
+      "historical_end_line": null,
+      "current_line": 1597,
+      "current_end_line": 1631,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java",
+        "node.property_entry_set",
+        "node.property_index_set",
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2013,
+      "historical_end_line": 2082,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2023,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2024,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2028,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2030,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2033,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2036,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._register_project_artifact",
+      "historical_line": 2045,
+      "historical_end_line": null,
+      "current_line": 2018,
+      "current_end_line": 2087,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._restore_checkpoint",
+      "historical_line": 3882,
+      "historical_end_line": 3952,
+      "current_line": 3937,
+      "current_end_line": 4007,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.restore",
+        "transaction.recover"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3387,
+      "historical_end_line": 3432,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3388,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3392,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.children"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3393,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.find"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3394,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_schema"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3395,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_get"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3396,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3397,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_index_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3398,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3399,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3422,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_g2_action",
+      "historical_line": 3427,
+      "historical_end_line": null,
+      "current_line": 3442,
+      "current_end_line": 3487,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._run_trial",
+      "historical_line": 3745,
+      "historical_end_line": 3880,
+      "current_line": 3800,
+      "current_end_line": 3935,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.trial"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._transaction_via_service",
+      "historical_line": 3680,
+      "historical_end_line": 3743,
+      "current_line": 3735,
+      "current_end_line": 3798,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.apply"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._transaction_via_service.callback",
+      "historical_line": 3712,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._trial_checkpoint",
+      "historical_line": 3583,
+      "historical_end_line": null,
+      "current_line": 3635,
+      "current_end_line": 3670,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.trial"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._trial_scope_plan",
+      "historical_line": 1649,
+      "historical_end_line": null,
+      "current_line": 1647,
+      "current_end_line": 1663,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._trial_scope_plan",
+      "historical_line": 1652,
+      "historical_end_line": null,
+      "current_line": 1647,
+      "current_end_line": 1663,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_index_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._trial_scope_plan",
+      "historical_line": 1654,
+      "historical_end_line": null,
+      "current_line": 1647,
+      "current_end_line": 1663,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "node.property_entry_set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._trial_scope_plan",
+      "historical_line": 1656,
+      "historical_end_line": null,
+      "current_line": 1647,
+      "current_end_line": 1663,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._validate_java_mode",
+      "historical_line": 1589,
+      "historical_end_line": null,
+      "current_line": 1592,
+      "current_end_line": 1595,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.execute_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._verify_transaction_record",
+      "historical_line": 3434,
+      "historical_end_line": 3525,
+      "current_line": 3489,
+      "current_end_line": 3580,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._verify_transaction_record",
+      "historical_line": 3447,
+      "historical_end_line": null,
+      "current_line": 3489,
+      "current_end_line": 3580,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.verify"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend._verify_transaction_record",
+      "historical_line": 3518,
+      "historical_end_line": null,
+      "current_line": 3489,
+      "current_end_line": 3580,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "transaction.apply"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1004,
+      "historical_end_line": 1321,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.publish",
+        "artifact.read",
+        "artifact.register",
+        "code.recipe_register",
+        "code.recipe_run",
+        "dataset.create",
+        "dataset.inspect",
+        "dataset.list",
+        "dataset.remove",
+        "dataset.solution_indices",
+        "dataset.update",
+        "definition.component_manage",
+        "definition.coordinate_manage",
+        "definition.coupling_manage",
+        "definition.mapping_validate",
+        "definition.pair_manage",
+        "experiment.design",
+        "experiment.run",
+        "experiment.state_map",
+        "export.create",
+        "export.evidence_bundle",
+        "export.list",
+        "export.remove",
+        "export.report",
+        "export.run",
+        "export.update",
+        "function.create",
+        "function.data_import",
+        "function.data_reload",
+        "function.evaluate",
+        "function.inspect",
+        "function.list",
+        "function.remove",
+        "function.update",
+        "function.validate",
+        "geometry.array_create",
+        "geometry.build",
+        "geometry.export",
+        "geometry.feature_create",
+        "geometry.feature_remove",
+        "geometry.feature_update",
+        "geometry.finalize",
+        "geometry.import",
+        "geometry.inspect",
+        "geometry.measure",
+        "geometry.repair",
+        "geometry.sequence_create",
+        "geometry.validate",
+        "geometry.workplane_create",
+        "geometry.workplane_edit",
+        "material.create",
+        "material.group_manage",
+        "material.import",
+        "material.inspect",
+        "material.list",
+        "material.remove",
+        "material.selection_set",
+        "material.set_properties",
+        "material.validate",
+        "mesh.build",
+        "mesh.clear",
+        "mesh.convergence_study",
+        "mesh.create",
+        "mesh.export",
+        "mesh.feature_create",
+        "mesh.feature_remove",
+        "mesh.feature_update",
+        "mesh.import",
+        "mesh.inspect",
+        "mesh.list",
+        "mesh.quality",
+        "mesh.statistics",
+        "mesh.validate",
+        "metric.compare",
+        "metric.define",
+        "metric.evaluate",
+        "metric.list",
+        "metric.remove",
+        "model.clone",
+        "model.close",
+        "model.create",
+        "model.dependencies",
+        "model.list",
+        "model.load",
+        "model.package",
+        "model.rebuild_target",
+        "model.save",
+        "model.tree",
+        "parameter.case_manage",
+        "parameter.export",
+        "parameter.get",
+        "parameter.group_manage",
+        "parameter.import",
+        "parameter.list",
+        "parameter.remove",
+        "parameter.set",
+        "physics.create",
+        "physics.feature_create",
+        "physics.feature_remove",
+        "physics.feature_update",
+        "physics.initial_values_set",
+        "physics.inspect",
+        "physics.list",
+        "physics.multiphysics_manage",
+        "physics.pde_manage",
+        "physics.remove",
+        "physics.selection_set",
+        "physics.validate",
+        "plot.feature_create",
+        "plot.geometry_render",
+        "plot.group_create",
+        "plot.list",
+        "plot.remove",
+        "plot.render",
+        "plot.update",
+        "plot.view_manage",
+        "probe.create",
+        "probe.history",
+        "probe.list",
+        "probe.remove",
+        "probe.update",
+        "registry.call",
+        "registry.describe",
+        "registry.list",
+        "registry.manifest",
+        "registry.search",
+        "result.at_points",
+        "result.evaluate",
+        "result.field_export",
+        "result.mode_overlap",
+        "result.mode_overlap_basis_v2",
+        "result.numerical_manage",
+        "result.sample_grid",
+        "result.sample_path",
+        "result.table_manage",
+        "runtime.capabilities",
+        "runtime.compatibility_report",
+        "runtime.discover",
+        "runtime.doctor",
+        "runtime.inspect",
+        "runtime.license_checkout",
+        "runtime.license_inspect",
+        "runtime.render_probe",
+        "selection.adjacency",
+        "selection.create",
+        "selection.entities",
+        "selection.inspect",
+        "selection.list",
+        "selection.measure",
+        "selection.query_spatial",
+        "selection.rebind",
+        "selection.remove",
+        "selection.update",
+        "selection.validate",
+        "solver.create",
+        "solver.feature_create",
+        "solver.feature_remove",
+        "solver.feature_update",
+        "solver.inspect",
+        "solver.list",
+        "solver.resource_configure",
+        "solver.run",
+        "solver.solution_clear",
+        "solver.solution_inspect",
+        "solver.solution_transfer",
+        "study.create",
+        "study.initial_solution_set",
+        "study.inspect",
+        "study.list",
+        "study.physics_activation",
+        "study.remove",
+        "study.run",
+        "study.solver_generate",
+        "study.step_create",
+        "study.step_remove",
+        "study.step_update",
+        "study.sweep_manage",
+        "validate.boundary_conditions",
+        "validate.conservation",
+        "validate.convergence",
+        "validate.expressions",
+        "validate.preflight",
+        "validate.report",
+        "validate.solution",
+        "validate.structure",
+        "variable.get",
+        "variable.group_create",
+        "variable.list",
+        "variable.remove",
+        "variable.selection_set",
+        "variable.set"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1006,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.describe",
+        "api.invoke",
+        "api.probe",
+        "checkpoint.branch",
+        "checkpoint.diff",
+        "model.compare"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1011,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "api.invoke"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1016,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "artifact.register"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1018,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1021,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "job.resume"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1053,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "model.adopt",
+        "model.inspect"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1093,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1095,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.describe"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1097,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1099,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.manifest"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1111,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "docs.error_search",
+        "docs.examples",
+        "docs.get",
+        "docs.index",
+        "docs.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1112,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.compile_java"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1113,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "code.inspect_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1114,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "checkpoint.inspect",
+        "checkpoint.list",
+        "transaction.preview"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "symbol": "ManagedBackend.invoke",
+      "historical_line": 1122,
+      "historical_end_line": null,
+      "current_line": 1004,
+      "current_end_line": 1326,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "registry.call",
+        "registry.describe",
+        "registry.list",
+        "registry.manifest",
+        "registry.search"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "symbol": "events",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "code.inspect_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "symbol": "job",
+      "historical_line": null,
+      "historical_end_line": null,
+      "current_line": null,
+      "current_end_line": null,
+      "resolution": "MISSING_AST_SYMBOL",
+      "operation_ids": [
+        "code.inspect_run"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_probe_manage.py",
+      "symbol": "_probe_manage.OPERATIONS",
+      "historical_line": 1216,
+      "historical_end_line": null,
+      "current_line": 1215,
+      "current_end_line": 1221,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "probe.list"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_probe_manage.py",
+      "symbol": "_probe_manage.OPERATIONS",
+      "historical_line": 1217,
+      "historical_end_line": null,
+      "current_line": 1215,
+      "current_end_line": 1221,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "probe.create"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_probe_manage.py",
+      "symbol": "_probe_manage.OPERATIONS",
+      "historical_line": 1218,
+      "historical_end_line": null,
+      "current_line": 1215,
+      "current_end_line": 1221,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "probe.update"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_probe_manage.py",
+      "symbol": "_probe_manage.OPERATIONS",
+      "historical_line": 1219,
+      "historical_end_line": null,
+      "current_line": 1215,
+      "current_end_line": 1221,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "probe.remove"
+      ]
+    },
+    {
+      "path": "comsol_mcp/_probe_manage.py",
+      "symbol": "_probe_manage.OPERATIONS",
+      "historical_line": 1220,
+      "historical_end_line": null,
+      "current_line": 1215,
+      "current_end_line": 1221,
+      "resolution": "EXACT_AST_SYMBOL",
+      "operation_ids": [
+        "probe.history"
+      ]
+    }
+  ],
+  "scope": "Pure source view, not software or native acceptance. AST current definition spans are not replacements for historical interior callsites. Historical overlay bytes unavailable in public inputs; no old diff claimed. No route, status or frozen count changes.",
+  "frozen_contract": {
+    "actions": 273,
+    "tests": 60,
+    "subassertions": 427,
+    "status_changes": false
+  }
+}

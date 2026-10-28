@@ -1,0 +1,32 @@
+{
+  "schema": "windows-operator-binary-lf-diagnostic-evidence/1",
+  "status": "MAIN_ACCEPTED_DIAGNOSTIC_ONLY_CLOSED_EXIT_ZERO",
+  "product_source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
+  "main_acceptance_sha256": "e19f7162757e20f44bb34522ae6dd237fd77456a8c20818106a30c0a7e5921d4",
+  "accepted_combination": "DETACHED plus binary-LF probe",
+  "observed": {
+    "original_outer_tool_exit": 0,
+    "sdk_reported_state": "CLOSED_EXIT_ZERO",
+    "child_exit": 0,
+    "reported_wait_dual_EOF_Job_zero": true,
+    "aggregate_child_pipes_and_job_close_reported": true,
+    "child_stdout_bytes": 414,
+    "child_stdout_sha256": "ede70e8ba240405f472bd4c3fb139cd516fe7eef1014c255cbaafb1fef4b29a9",
+    "child_stderr_bytes": 0,
+    "strict_UTF8_LF_marker_metadata_binding_accepted": true
+  },
+  "evidence_limits": [
+    "Postimage success is supported by the source success gate; no complete inventory is serialized.",
+    "Close evidence is aggregate reporting, without an independent per-handle close table.",
+    "Only the DETACHED plus binary-LF combination passed this finite diagnostic; neither change is isolated as a cause.",
+    "Previous 0xc0000142 failures remain preserved and their cause is undetermined.",
+    "Windows normal installation remains FAIL; previous pip entry and material postimage remain UNVERIFIED.",
+    "No normal producer, COMSOL, license, product capability matrix or overall Goal acceptance.",
+    "New normal-materialization and normal-consumer source/data are local preparation only; this summary grants no execution."
+  ],
+  "prior_failure_evidence": [
+    "windows-independent-consumer-prep-20261028.json",
+    "windows-operator-readonly-diagnostic-result-20261028.json"
+  ],
+  "goal_complete": false
+}
