@@ -1,8 +1,8 @@
 {
   "active_current_entrypoint": {
-    "revision": 408,
-    "status": "NORMAL_CHILD_AND_THIN_R2_SOURCE_ACCEPTED_FINITE_LOCAL_DATA_PREPARATION",
-    "published_head": "6b8aed529a78131cde81edb70d6d8fef244e1fa5",
+    "revision": 409,
+    "status": "FRESH_STAGE1_MATERIALIZATION_MAIN_ACCEPTED_STAGE2_LOCAL_DATA_ONLY",
+    "published_head": "675d347140d61ca8203182f0a17b3da2c5fe57e7",
     "current_source": {
       "version": "0.1.15",
       "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
@@ -72,8 +72,8 @@
     "r6_fence": "current_R6_original_UNKNOWN_fence_r359",
     "r7_fence": "current_R7_original_UNKNOWN_fence_r361",
     "old_fences": "retained_owner_fences and legacy_unknown_preserved",
-    "current_leases": "orchestration.current_active_leases_r408",
-    "next_action": "Complete finite fresh normal-pipeline LOCAL source/data preparation under directive R2: source-packet sibling only, runtime controls inside the material root; Main exact packet and separate assembled dispatch/READY/GO gates remain required. No new remote or actor authorized.",
+    "current_leases": "orchestration.current_active_leases_r409",
+    "next_action": "Complete new Stage2 LOCAL data binding to the Main-accepted fresh Stage1 materialization. Main exact packet gate and separate dispatch/READY/GO authorization remain required before remote execution; Stage1 lease expired, owner SPENT, no replay or further receive.",
     "bound_source_canary_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-bound-source-canary-independent-review-r1/MAIN_BOUND_SOURCE_CANARY_PREP_ACCEPTANCE.json",
       "bytes": 2555,
@@ -134,7 +134,7 @@
       "claim_name": "BUILD_DISPATCH_ONCE_CLAIM"
     },
     "normal_prefix_materializer": {
-      "status": "NORMAL_CHILD_AND_THIN_R2_SOURCE_SOFTWARE_ACCEPTED_ONLY_NORMAL_INSTALL_REMAINS_FAIL",
+      "status": "FRESH_STAGE1_MATERIALIZATION_ACCEPTED_NORMAL_INSTALL_REMAINS_FAIL_STAGE2_NOT_RUN",
       "r5_source_acceptance": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-independent-review-r2/MAIN_R5_SOURCE_ACCEPTANCE.json",
         "bytes": 3970,
@@ -146,7 +146,7 @@
         "sha256": "0da3077fb04193e7ac2293c817915439f9732225df5d151f80b27c58580d3e25"
       },
       "software_counts": "r2: 24 software cases; r5 regression separate",
-      "actual_producer_windows_ABI_material_root": "PRIOR_MATERIAL_CONTENT_ACCEPTED_WITH_EXTERNAL_TERMINAL_GAP; NO_COMPLETE_NEW_NORMAL_PRODUCER; NORMAL_INSTALL_FAIL_ROOT_POSTIMAGE_UNVERIFIED",
+      "actual_producer_windows_ABI_material_root": "FRESH_STAGE1_MATERIALIZATION_MAIN_ACCEPTED; no generalized ABI or per-handle-close proof; normal installation remains FAIL",
       "agent": "Newton",
       "agent_id": "01a17b42-2eae-7772-b7ad-881babcfa21a",
       "repair_decision": {
@@ -164,7 +164,7 @@
         "bytes": 6120,
         "sha256": "0af8e8ecd36d2b85d168f246c3a97e1c1e54a70d88216e794f55cb3decce7348"
       },
-      "packet": "FINITE_LOCAL_SOURCE_DATA_PREPARATION_ONLY_NO_ASSEMBLED_DISPATCH",
+      "packet": "STAGE1_SPENT_MAIN_ACCEPTED_NEW_STAGE2_LOCAL_DATA_PREPARATION_ONLY",
       "authority": "NO_RETRY_NO_CLEANUP_NO_REUSE_OLD_OWNER",
       "entry_integration_decision": {
         "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/staging-packet-prep-r2/MAIN_ENTRY_INTEGRATION_DECISION.json",
@@ -668,7 +668,7 @@
         "scope": "Only DETACHED plus binary-LF combination; no attribution of previous 0xc0000142; no normal installation or Goal acceptance"
       },
       "next_normal_pipeline": {
-        "status": "SOURCE_ACCEPTED_FINITE_LOCAL_DATA_PREPARATION_IN_PROGRESS",
+        "status": "FRESH_STAGE1_MAIN_ACCEPTED_STAGE2_LOCAL_DATA_ONLY",
         "normal_source_acceptance": {
           "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-install-detached-source-prep-r1/MAIN_SOURCE_ACCEPTANCE.json",
           "bytes": 664,
@@ -694,18 +694,46 @@
           "thin_r2": 16,
           "not_aggregated": true
         },
-        "assembled_dispatch": "NOT_AUTHORIZED",
-        "new_remote": "NOT_RUN",
-        "actual_actor": null,
-        "actual_root_identity": null,
-        "actual_READY": null,
-        "actual_producer": null,
-        "GO": null,
-        "runtime_release": null,
+        "assembled_dispatch": "STAGE1_SPENT_STAGE2_NOT_AUTHORIZED",
+        "new_remote": "STAGE1_COMPLETED_STAGE2_NOT_RUN",
         "prior_75965_external_gap": "UNVERIFIED_NO_FOLLOWUP",
         "prior_normal_install": "FAIL",
         "prior_pip_entry_and_root_postimage": "UNVERIFIED",
-        "new_runtime_authority": false
+        "new_runtime_authority": false,
+        "accepted_stage1": {
+          "acceptance": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/MAIN_ACTUAL_STAGE1_ACCEPTANCE.json",
+            "bytes": 2250,
+            "sha256": "8f69284108e1d1f9e52b0b0bcbae8fceaef889819b0bc2dbcc429da066012fc3",
+            "mode": "0o644"
+          },
+          "owner_status": "62419 SPENT NEVER_POLL",
+          "result": "CREATOR_CLOSED_KNOWN_ZERO_AND_ORIGINAL_OUTER_WAIT_ZERO",
+          "lease": "EXPIRED_NOT_EXTENDED_NO_REPLAY"
+        },
+        "stage2": {
+          "status": "LOCAL_DATA_ONLY_NOT_RUN",
+          "local_directive_ref": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/MAIN_NEW_STAGE2_LOCAL_DATA_DIRECTIVE_r1.json",
+            "bytes": 2506,
+            "sha256": "dbfc9b2ad1ca1253a94e5b8897d7038a4389a3606497c330ccf27fde9c0d1a98",
+            "mode": "0o644"
+          },
+          "stage1_input_acceptance": {
+            "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/MAIN_ACTUAL_STAGE1_ACCEPTANCE.json",
+            "bytes": 2250,
+            "sha256": "8f69284108e1d1f9e52b0b0bcbae8fceaef889819b0bc2dbcc429da066012fc3",
+            "mode": "0o644"
+          },
+          "input_producer_record_sha256": "66c155e347e40fcfd5f990262a66da68de3d8771902cd2dfbbb91e7fcd94880c",
+          "actual_stage2_actor": null,
+          "actual_stage2_READY": null,
+          "actual_stage2_GO": null,
+          "runtime_release": null,
+          "execution_authorized": false,
+          "remote_execution": "NOT_RUN",
+          "normal_install_accepted": false
+        }
       },
       "public_binary_lf_actual_evidence": "docs/universal_mcp_execution/evidence/windows-operator-binary-lf-diagnostic-20261028.json",
       "normal_detached_source": {
@@ -754,7 +782,89 @@
         "old_gap_reclassified": false,
         "new_runtime_authority": false
       },
-      "public_normal_detached_source_evidence": "docs/universal_mcp_execution/evidence/windows-normal-detached-source-20261028.json"
+      "public_normal_detached_source_evidence": "docs/universal_mcp_execution/evidence/windows-normal-detached-source-20261028.json",
+      "fresh_normal_stage1_materialization": {
+        "status": "MAIN_ACCEPTED_FRESH_STAGE1_MATERIALIZATION_COMPLETE",
+        "acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/MAIN_ACTUAL_STAGE1_ACCEPTANCE.json",
+          "bytes": 2250,
+          "sha256": "8f69284108e1d1f9e52b0b0bcbae8fceaef889819b0bc2dbcc429da066012fc3",
+          "mode": "0o644"
+        },
+        "handoff": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/ACTUAL_STAGE1_HANDOFF.json",
+          "bytes": 4187,
+          "sha256": "4c42b22ad700b97eef6cb0d84b20f3af0a3d2de51ef47baab863734cca92f9d5",
+          "mode": "0o644"
+        },
+        "full_sdk_stdout": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-launch-readback-prep-r1/launch-stdout.raw",
+          "bytes": 620051,
+          "sha256": "79f2af370f214068c6a535182e0a22a4f682ed0dcfd200ee844cfa9d0de98f4d",
+          "mode": "0o644"
+        },
+        "creator_frame": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/actual-creator-result-frame.raw",
+          "bytes": 619009,
+          "sha256": "9d739f020ec65ed9021273fb03efb5312a4758d5eef954e3ab307d3552c2e307",
+          "mode": "0o644"
+        },
+        "original_terminal": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/original62419-collect02-tool.json",
+          "bytes": 364,
+          "sha256": "6ccd8735c1b65501ca7b4e27051543811d3c116f837ebeed46efc8a01bd6e940",
+          "mode": "0o644"
+        },
+        "complete_content_receipt": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-launch-readback-prep-r1/MAIN_COMPLETE_SDK_CONTENT_READBACK.json",
+          "bytes": 1386,
+          "sha256": "65d848375c80f6118ad6f993d91973f1cef3a34375c451c43cf33930d205689b",
+          "mode": "0o644"
+        },
+        "session": "62419 TERMINAL0 SPENT NEVER_POLL",
+        "creator_reported_status": "CLOSED_KNOWN_ZERO",
+        "original_outer_tool_exit": 0,
+        "original_local_wait_exit": 0,
+        "postimage": {
+          "bytes": 436922428,
+          "directories": 209,
+          "files": 1870
+        },
+        "main_expected_postimage_hash_alignment": true,
+        "source_at_use_reads": 515,
+        "jdk_file_reads": 504,
+        "source_ancestor_records": 95,
+        "producer_record_bytes": 205,
+        "producer_record_sha256": "66c155e347e40fcfd5f990262a66da68de3d8771902cd2dfbbb91e7fcd94880c",
+        "close_evidence": "retire_known success gate source-backed; no individual raw handle-close table serialized",
+        "stage1_lease": "EXPIRED_NOT_EXTENDED_NO_REPLAY",
+        "older_external_gaps": "UNCHANGED_NO_CAUSAL_CLAIM",
+        "normal_install_accepted": false
+      },
+      "current_stage2_local_data": {
+        "status": "LOCAL_DATA_ONLY_NOT_RUN",
+        "local_directive_ref": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/MAIN_NEW_STAGE2_LOCAL_DATA_DIRECTIVE_r1.json",
+          "bytes": 2506,
+          "sha256": "dbfc9b2ad1ca1253a94e5b8897d7038a4389a3606497c330ccf27fde9c0d1a98",
+          "mode": "0o644"
+        },
+        "stage1_input_acceptance": {
+          "path": "_state/universal-main-review/20261028-windows-normal-source-materialization-prep-r1/normal-fresh-stage1-go-bound-prep-r1/MAIN_ACTUAL_STAGE1_ACCEPTANCE.json",
+          "bytes": 2250,
+          "sha256": "8f69284108e1d1f9e52b0b0bcbae8fceaef889819b0bc2dbcc429da066012fc3",
+          "mode": "0o644"
+        },
+        "input_producer_record_sha256": "66c155e347e40fcfd5f990262a66da68de3d8771902cd2dfbbb91e7fcd94880c",
+        "actual_stage2_actor": null,
+        "actual_stage2_READY": null,
+        "actual_stage2_GO": null,
+        "runtime_release": null,
+        "execution_authorized": false,
+        "remote_execution": "NOT_RUN",
+        "normal_install_accepted": false
+      },
+      "public_fresh_stage1_materialization_evidence": "docs/universal_mcp_execution/evidence/windows-normal-stage1-materialization-20261029.json"
     },
     "artifacts": {
       "status": "FIVE_ARTIFACT_BYTES_MAIN_ACCEPTED_PUBLISHED",
@@ -835,104 +945,116 @@
     "publication": {
       "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
       "acceptance": {
-        "path": "_state/universal-main-review/20261028-checkpoint-r407/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-        "bytes": 657,
-        "sha256": "b7c84df3ef6003ba39227a5c6ab83f9d9fe35e8cf40545ce5940fe0ebc53ed98",
+        "path": "_state/universal-main-review/20261028-checkpoint-r408/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+        "bytes": 514,
+        "sha256": "d7dddc69ce2b48298018a4a329b964bae3bc42d9a4450411c39eae426a74a0cd",
         "mode": "0o644"
       },
-      "metadata_commit": "6b8aed529a78131cde81edb70d6d8fef244e1fa5",
-      "metadata_tree": "c9af7f9b03486bee85d6a32c87cfa14aad7ab6ed",
+      "metadata_commit": "675d347140d61ca8203182f0a17b3da2c5fe57e7",
+      "metadata_tree": "80902689e301dea87d6950de08c2728bbb6d6f21",
       "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
       "previous_publication": {
         "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
         "acceptance": {
-          "path": "_state/universal-main-review/20261028-checkpoint-r405/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-          "bytes": 600,
-          "sha256": "a109f9e7ab6265b6ae310d82f45ac4882721be85bd16ba0cb1f6bf33cd99c24c",
+          "path": "_state/universal-main-review/20261028-checkpoint-r407/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+          "bytes": 657,
+          "sha256": "b7c84df3ef6003ba39227a5c6ab83f9d9fe35e8cf40545ce5940fe0ebc53ed98",
           "mode": "0o644"
         },
-        "metadata_commit": "e77bd27faa90affb9141ef2faff0414e82c996b0",
-        "metadata_tree": "a8bb037367bee17d9285837278ee3915e4a0bb4c",
+        "metadata_commit": "6b8aed529a78131cde81edb70d6d8fef244e1fa5",
+        "metadata_tree": "c9af7f9b03486bee85d6a32c87cfa14aad7ab6ed",
         "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
         "previous_publication": {
           "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
           "acceptance": {
-            "path": "_state/universal-main-review/20261028-checkpoint-r403/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-            "bytes": 590,
-            "sha256": "f52e19c13c1ce469a120838daf7a9b422ef0a8e6142dc407022baceb886dc1c5"
+            "path": "_state/universal-main-review/20261028-checkpoint-r405/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+            "bytes": 600,
+            "sha256": "a109f9e7ab6265b6ae310d82f45ac4882721be85bd16ba0cb1f6bf33cd99c24c",
+            "mode": "0o644"
           },
-          "metadata_commit": "d47edc85945e5263706a123ffa6df89a17c27228",
-          "metadata_tree": "9094b3cd6f936b7ab84bc8c1e5a3720022664b5d",
+          "metadata_commit": "e77bd27faa90affb9141ef2faff0414e82c996b0",
+          "metadata_tree": "a8bb037367bee17d9285837278ee3915e4a0bb4c",
           "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
           "previous_publication": {
             "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
             "acceptance": {
-              "path": "_state/universal-main-review/20261028-checkpoint-r402/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-              "bytes": 591,
-              "sha256": "6a089c2e8bebe66633db927c5e033b73f2e653abad3bb0a054e106c7e14d800e"
+              "path": "_state/universal-main-review/20261028-checkpoint-r403/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+              "bytes": 590,
+              "sha256": "f52e19c13c1ce469a120838daf7a9b422ef0a8e6142dc407022baceb886dc1c5"
             },
-            "metadata_commit": "1da566517e957314a586619017efea896d9bcf19",
-            "metadata_tree": "8d1553506f5abf03b6c0ade6b355662e3c250a2e",
+            "metadata_commit": "d47edc85945e5263706a123ffa6df89a17c27228",
+            "metadata_tree": "9094b3cd6f936b7ab84bc8c1e5a3720022664b5d",
             "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
             "previous_publication": {
               "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
               "acceptance": {
-                "path": "_state/universal-main-review/20261028-checkpoint-r401/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                "bytes": 758,
-                "sha256": "0e74ad8aef69c4844e76d980a4857cd8751521954be7340f122e467ece4e22ab"
+                "path": "_state/universal-main-review/20261028-checkpoint-r402/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                "bytes": 591,
+                "sha256": "6a089c2e8bebe66633db927c5e033b73f2e653abad3bb0a054e106c7e14d800e"
               },
-              "metadata_commit": "6a41f604aee1445d0c2a53db415f622665bc9ee8",
-              "metadata_tree": "b105724d2d16ccb9baecc6e95fea1fc5cd76c2c9",
+              "metadata_commit": "1da566517e957314a586619017efea896d9bcf19",
+              "metadata_tree": "8d1553506f5abf03b6c0ade6b355662e3c250a2e",
               "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
               "previous_publication": {
                 "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                 "acceptance": {
-                  "path": "_state/universal-main-review/20261028-checkpoint-r398/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                  "bytes": 782,
-                  "sha256": "752bfa8d9b8df28e137b87f9a4ef9c4859a12fbc3c2b0ad341f71766484b062f"
+                  "path": "_state/universal-main-review/20261028-checkpoint-r401/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                  "bytes": 758,
+                  "sha256": "0e74ad8aef69c4844e76d980a4857cd8751521954be7340f122e467ece4e22ab"
                 },
-                "metadata_commit": "f9edb41689ded85c4f7998d2a887769a3b418238",
-                "metadata_tree": "b2d4b8e8057ddef03bac4a80f912544ac8ae3ef9",
+                "metadata_commit": "6a41f604aee1445d0c2a53db415f622665bc9ee8",
+                "metadata_tree": "b105724d2d16ccb9baecc6e95fea1fc5cd76c2c9",
                 "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                 "previous_publication": {
                   "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                   "acceptance": {
-                    "path": "_state/universal-main-review/20261028-checkpoint-r393/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                    "bytes": 1996,
-                    "sha256": "e00ab04563c327a8a937e20c1cafefa335de6b8902e651d7a1e48291ed7afefa"
+                    "path": "_state/universal-main-review/20261028-checkpoint-r398/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                    "bytes": 782,
+                    "sha256": "752bfa8d9b8df28e137b87f9a4ef9c4859a12fbc3c2b0ad341f71766484b062f"
                   },
-                  "metadata_commit": "f0eb6bcc0ad45d14f7b61d3e5ef8ecfbb89d69d8",
-                  "metadata_tree": "435f3b10200353e165220722ef5d5b53d8912174",
+                  "metadata_commit": "f9edb41689ded85c4f7998d2a887769a3b418238",
+                  "metadata_tree": "b2d4b8e8057ddef03bac4a80f912544ac8ae3ef9",
                   "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                   "previous_publication": {
                     "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                     "acceptance": {
-                      "path": "_state/universal-main-review/20261028-checkpoint-r389/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                      "bytes": 2066,
-                      "sha256": "5c3b4d562675220b385c0e9eceaae6114c1894aea5e0c406c5e63b4def72498a"
+                      "path": "_state/universal-main-review/20261028-checkpoint-r393/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                      "bytes": 1996,
+                      "sha256": "e00ab04563c327a8a937e20c1cafefa335de6b8902e651d7a1e48291ed7afefa"
                     },
-                    "metadata_commit": "74c284fb6bc83f81c87b8645d300038d7eb88524",
-                    "metadata_tree": "9cf520f5f0d30d8da5204bd8911c2bc0bc48dc68",
+                    "metadata_commit": "f0eb6bcc0ad45d14f7b61d3e5ef8ecfbb89d69d8",
+                    "metadata_tree": "435f3b10200353e165220722ef5d5b53d8912174",
                     "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                     "previous_publication": {
                       "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                       "acceptance": {
-                        "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
-                        "bytes": 2464,
-                        "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
+                        "path": "_state/universal-main-review/20261028-checkpoint-r389/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                        "bytes": 2066,
+                        "sha256": "5c3b4d562675220b385c0e9eceaae6114c1894aea5e0c406c5e63b4def72498a"
                       },
-                      "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
-                      "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+                      "metadata_commit": "74c284fb6bc83f81c87b8645d300038d7eb88524",
+                      "metadata_tree": "9cf520f5f0d30d8da5204bd8911c2bc0bc48dc68",
                       "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
                       "previous_publication": {
                         "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
                         "acceptance": {
-                          "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
-                          "bytes": 1796,
-                          "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+                          "path": "_state/universal-main-review/20261028-checkpoint-r384/MAIN_PUBLICATION_REMOTE_READBACK_ACCEPTANCE.json",
+                          "bytes": 2464,
+                          "sha256": "ab53ab8672211028ad5ef164ed0b41766d68fcf68e0b630f1b5f585aaddd859d"
                         },
-                        "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
-                        "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+                        "metadata_commit": "a3c0580c431bf51e91b4ef5847557e9609a4e6a0",
+                        "metadata_tree": "388cb8c11e833c59ece32229eb2bbf6bce28fa5f",
+                        "product_source": "958970b605b746d2593dd5a3c65965b960864d46",
+                        "previous_publication": {
+                          "status": "MAIN_ACCEPTED_INDEPENDENT_REMOTE_READBACK",
+                          "acceptance": {
+                            "path": "_state/universal-main-review/20261028-checkpoint-r379/MAIN_PUBLICATION_ACCEPTANCE.json",
+                            "bytes": 1796,
+                            "sha256": "6a236675fba25bd911fd4d46ceacc7d219fd4fd8e9e2e81a7959fca4f82ce9f0"
+                          },
+                          "metadata_commit": "9a1e61e89b52000b397f54164dff2ca0e81fd5c9",
+                          "product_source": "958970b605b746d2593dd5a3c65965b960864d46"
+                        }
                       }
                     }
                   }
@@ -9265,10 +9387,10 @@
   "schema_version": 1,
   "baseline_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
   "baseline_tree": "120ceb6568d22614f7548d4eb96b822fe53f88ba",
-  "state_revision": 408,
+  "state_revision": 409,
   "phase": "015_SOURCE_PUBLISHED_BUILD_BINDING_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Complete finite fresh normal-pipeline LOCAL source/data preparation under directive R2: source-packet sibling only, runtime controls inside the material root; Main exact packet and separate assembled dispatch/READY/GO gates remain required. No new remote or actor authorized.",
+  "next_action": "Complete new Stage2 LOCAL data binding to the Main-accepted fresh Stage1 materialization. Main exact packet gate and separate dispatch/READY/GO authorization remain required before remote execution; Stage1 lease expired, owner SPENT, no replay or further receive.",
   "active_job_refs": [
     {
       "scope": "015_MAC_NORMAL_INSTALL_PUBLIC_MCP_ONCE",
@@ -9597,7 +9719,7 @@
       "Luna_maintenance": "HumeMain3leaseclosedatlocalr192; exact3snapshotpreserved externally, Mainmadeonlyscope/rolecorrectionr193.",
       "final_Reviewer": "NOT_STARTED; no finalcandidate/heldouttasks assigned."
     },
-    "current_active_lease_key": "current_active_leases_r408",
+    "current_active_lease_key": "current_active_leases_r409",
     "current_scope_correction": {
       "path": "_state/universal-main-review/20261024-result-unit-contract-scope/MAIN_CONTRACT_SCOPE_CORRECTION.json",
       "bytes": 2585,
@@ -11379,7 +11501,7 @@
       },
       "fresh_final_reviewer": "NOT_STARTED"
     },
-    "active_published_head": "6b8aed529a78131cde81edb70d6d8fef244e1fa5",
+    "active_published_head": "675d347140d61ca8203182f0a17b3da2c5fe57e7",
     "current_active_leases_r353": {
       "Aristotle": {
         "agent_id": "01a17c4d-f85a-7b53-b505-cd4e85422d1e",
@@ -12312,6 +12434,17 @@
       "next_normal_pipeline": "NORMAL_CHILD_AND_THIN_R2_SOURCE_ACCEPTED_FINITE_LOCAL_DATA_ONLY_NO_ASSEMBLED_DISPATCH",
       "fences": "unchanged from r407",
       "u12_provenance": "SOURCE_SUPPLEMENT_ACCEPTED_ONLY_NO_RUNTIME_OR_ROUTE_UPGRADE"
+    },
+    "current_active_leases_r409": {
+      "normal_mcp_015": "ACCEPTED_SPENT_NO_REPOLL",
+      "previous_windows_sessions": "93707_86384_71534_19143_4584_SPENT_NEVER_REPOLL",
+      "original_stage1_75965": "EXTERNAL_TERMINAL_UNVERIFIED_NO_FOLLOWUP",
+      "original_detached_40869": "UNVERIFIED_NO_FURTHER_RECEIVE_EXCEPTION_TRANSCRIPT_NOT_TOOL_RETURN",
+      "binary_lf_actual": "ACCEPTED_DETACHED_COMBINATION_DIAGNOSTIC_ONLY",
+      "next_normal_pipeline": "STAGE1_MATERIALIZATION_ACCEPTED_STAGE2_LOCAL_DATA_ONLY_NOT_RUN_NO_GO",
+      "fences": "unchanged from r408",
+      "u12_provenance": "SOURCE_SUPPLEMENT_ACCEPTED_ONLY_NO_RUNTIME_OR_ROUTE_UPGRADE",
+      "fresh_normal_stage1": "62419_TERMINAL0_SPENT_NO_RECEIVE_LEASE_EXPIRED_NOT_EXTENDED"
     }
   },
   "current_changes": {
