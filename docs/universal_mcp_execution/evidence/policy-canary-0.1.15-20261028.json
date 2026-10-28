@@ -1,0 +1,47 @@
+{
+  "status": "MAIN_ACCEPTED_FINITE_POLICY_CANARY",
+  "scope": "Policy canary observation for the identified source; not artifact build or product qualification.",
+  "source": {
+    "commit": "958970b605b746d2593dd5a3c65965b960864d46",
+    "before_after_leaf_count": 209,
+    "profile_sha256": "7f6cad10d7a2d8972d83dd576ef9490622f5d315d3888bb8c007ef811c004bf5"
+  },
+  "observed": {
+    "rows": 7,
+    "checks_passed": 6,
+    "owner_events": 8,
+    "original_tool_exit_code": 0,
+    "child_wait_exit_code": 0,
+    "stdout_eof": true,
+    "stderr_eof": true,
+    "terminal_tool_contains_session": false
+  },
+  "original_streams": {
+    "stdout": {
+      "bytes": 2783,
+      "sha256": "424ce12247e2a94a6189b4ad3c1591cb6bf9f9c62a904efc7db745f768bd3bbf"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "accepted_references": {
+    "main": {
+      "id": "20261028-coherent-015-build-prep-r1/bound-source-r1/canary-bound-r1/MAIN_ACTUAL_POLICY_CANARY_ACCEPTANCE.json",
+      "bytes": 3691,
+      "sha256": "7105c6e39d518cdffa9c3f8b44758a3b6b97a5437f7cd62932af76289bf86528"
+    },
+    "strong_result": {
+      "id": "20261028-coherent-015-canary-actual-independent-review-r1/RESULT.json",
+      "bytes": 8348,
+      "sha256": "66b94746619a2afadea09d8789c69684acfc1232d52eb4bb49850bea0fe4a8cd"
+    }
+  },
+  "limits": [
+    "The child environment was not compared in full.",
+    "OS process start UTC was not independently serialized.",
+    "This finite canary does not establish all inner proofs, product qualification, artifact build or packaging."
+  ],
+  "schema": "public-finite-observation-evidence/1"
+}

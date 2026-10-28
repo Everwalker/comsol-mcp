@@ -1,0 +1,90 @@
+{
+  "status": "ACCEPTED_FIVE_ARTIFACT_BYTES_ONLY",
+  "source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
+  "source_after_selected": {
+    "head_exact": true,
+    "selected_leaf_count": 209,
+    "outside_allowlist": "NOT_QUERIED_NOT_CLASSIFIED"
+  },
+  "build_observation": {
+    "outer_tool_exit": 0,
+    "original_wait": 0,
+    "stdout_eof": true,
+    "stderr_eof": true,
+    "profile_matches_preview": true
+  },
+  "artifacts": [
+    {
+      "name": "first_party_wheel",
+      "bytes": 3184726,
+      "sha256": "340f5566c2e5e147ebb47d2a7704888efae88d96138e7660ce11dc6c9d53afc6"
+    },
+    {
+      "name": "windows_amd64_offline_zip",
+      "bytes": 31424069,
+      "sha256": "e3e799cfef938b0594935844a500bd83d06b3d235fc5d5fc42335c1885288ea9"
+    },
+    {
+      "name": "macos_arm64_offline_zip",
+      "bytes": 31368711,
+      "sha256": "a9232354e10c066c2709960c0f2c6b5e0164c395b5be539dbee113155daea6cf"
+    },
+    {
+      "name": "macos_x86_64_offline_zip",
+      "bytes": 36544350,
+      "sha256": "1b394f3b96f17f0903faa2d5660b55ee7cd5c569f71af8c440c8e9aa3fe5ead6"
+    },
+    {
+      "name": "separate_application_rebuild_source_zip",
+      "bytes": 3288760,
+      "sha256": "36cbc7e119956c09ca280d1057c691b7773f08055ac32f4d717644c1b097a3cd"
+    }
+  ],
+  "reported_counts": {
+    "package": 200,
+    "source_subset": 203,
+    "wheel": 206,
+    "targets": {
+      "macos_arm64": {
+        "members": 54,
+        "wheels": 42
+      },
+      "macos_x86_64": {
+        "members": 56,
+        "wheels": 42
+      },
+      "win_amd64": {
+        "members": 47,
+        "wheels": 35
+      }
+    }
+  },
+  "review": {
+    "main_acceptance": {
+      "id": "20261028-coherent-015-actual-artifacts-independent-review-r1/MAIN_FIVE_ARTIFACT_ACCEPTANCE.json",
+      "bytes": 5634,
+      "sha256": "cf36edb2cef2b17b56f3368bd31f581a0c5dae49016cc76148a010ad256da6f1"
+    },
+    "independent_review": "0 P1 / 0 P2",
+    "scope": "bytes and metadata only"
+  },
+  "source_zip": {
+    "members": 209,
+    "prefix": "repository/",
+    "scope": "application rebuild source; complete test fixtures are in public Git, not claimed in ZIP",
+    "separate_from_original_four": true
+  },
+  "limits": [
+    ".15 installation, public MCP, COMSOL, JDK and native execution NOT_RUN.",
+    "All inner subprocess ownership NOT_ESTABLISHED.",
+    "Existing Rust/OpenSSL provenance limitations remain; no new toolchain qualification.",
+    "Latest accepted normal runtime remains .14."
+  ],
+  "source_handoff": {
+    "name": "ACTUAL_BUILD_HANDOFF.json",
+    "bytes": 11803,
+    "sha256": "7a776c084ca82992cb415bfabb9668928579757ef79f0290e35952120f31a6a5"
+  },
+  "schema": "public-distribution-byte-evidence/1",
+  "tree_oid": "ebbdf9ae784a851fdb68176cf45fac96d2774020"
+}
