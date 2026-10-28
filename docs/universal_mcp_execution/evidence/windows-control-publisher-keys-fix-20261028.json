@@ -1,0 +1,28 @@
+{
+  "schema": "windows-control-publisher-keys-fix-evidence/1",
+  "status": "SCOPED_SOURCE_AND_PURE_FIXTURE_ACCEPTED",
+  "source": {
+    "path": "docs/universal_mcp_execution/fixtures/publisher-keys-r2/publish_control_once.ps1",
+    "bytes": 11813,
+    "sha256": "fda86ef39fb7d28dc7826a21fe33dce14ae8effa6bc7e80ec69cbdb99b64a690",
+    "binding": "UNBOUND_THREE_NULL_LITERALS"
+  },
+  "fixture": {
+    "path": "docs/universal_mcp_execution/fixtures/publisher-keys-r2/fixture.ps1",
+    "bytes": 1679,
+    "sha256": "4849c7d4bcbee944f74b1c7f68796870583da4a8a881ea27297872b5468836a2",
+    "actual_pure_marker": "FIXTURE_OK",
+    "actual_exit": 0
+  },
+  "source_software_acceptance_sha256": "e316f15779cfc44dea171483a7257d2b88e678a9cf657796c1e3cc0271eca0d5",
+  "actual_pure_fixture_acceptance_sha256": "c4968dbe9dc83e1dcfbf93b8d4f4a7b93e4011fe4f2d0ebcc5350a769db17fe5",
+  "independent_review": "11 inputs and 20 static checks; 0 P1 / 0 P2; separate from actual fixture",
+  "prior_publisher": "Name failure retained as failure",
+  "limits": [
+    "The sole Name access before first GO CreateNew is a source-based conditional inference, not an observed actual callsite.",
+    "The failure does not prove present physical GO absence or absence of other effects.",
+    "Pure fixture does not establish target IO, GO, root, creator, SDK, native or installation success.",
+    "The unbound template is not a runtime grant."
+  ],
+  "goal": "ACTIVE_NOT_COMPLETE"
+}
