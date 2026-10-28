@@ -1,5 +1,5 @@
-# Progress — r398 local publication candidate
+# Progress — r401 local publication candidate
 
-Main validated the original Stage1 SDK-reported material content: 1,870 files, 209 directories and 436,922,430 bytes; reported creator status CLOSED_KNOWN_ZERO. The original external tool owner has not reached an observed terminal, so Stage1 double-condition acceptance remains incomplete. Preserve that owner without further read, query, cleanup or retry; do not infer NativeUNKNOWN or root absence. Stage2 is local PREP only, not run.
+Independent Windows consumer normal installation FAILED: SDK reported CLOSED_KNOWN_NONZERO child exit 0xc0000142; original outer Tool returned terminal0 and is SPENT. Pip entry and root changes are UNVERIFIED because postimage was skipped. This is not Native SDK UNKNOWN. Original Stage1 external terminal remains unverified.
 
-Publisher Keys r2 SOURCE and pure fixture remain Main accepted; original Name failure is retained. Publication f0eb6bcc and scoped Mac .15 actual remain accepted. Five fences, frozen 273/60/427, completed groups empty, heldouts NOT_SELECTED, final Reviewer NOT_STARTED and historical Mac Core block remain unchanged. Eight-file candidate awaits Main review.
+A fresh readonly operator-Python marker probe is local preparation only, not reviewed or run; no retry or cleanup of prior owners. Publication f9edb416 and scoped Mac .15 actual remain Main accepted. Five fences, frozen 273/60/427, empty groups, heldouts NOT_SELECTED, final Reviewer NOT_STARTED and historical Mac Core block remain unchanged. Four-file candidate awaits Main review.
