@@ -1,5 +1,5 @@
-# Progress — r403 local publication candidate
+# Progress — r405 local publication candidate
 
-The readonly operator diagnostic produced a known nonzero child exit 0xc0000142; the original outer Tool returned 0 and is SPENT. Marker was not observed and postimage was not accepted. Windows normal installation remains FAIL; pip entry and root postimage are unverified. Root cause remains undetermined.
+Main identified a Windows text-stdout newline mismatch between the operator probe and strict-LF adapter, supported by an offline counterexample. Binary-LF source repair has 35 software tests passed, independent 0 P1/P2 and Main SOURCE acceptance; Windows verification remains NOT_RUN. The earlier 0xc0000142 failure is not attributed to this newline defect.
 
-Strong Main reviews common startup conditions; NO_WINDOW to DETACHED has not been executed. Publication 1da56651 and scoped Mac .15 actual are Main accepted. Original Stage1 outer terminal remains unverified; five fences, frozen 273/60/427, empty groups, heldouts NOT_SELECTED, final Reviewer NOT_STARTED and historical Mac Core block remain unchanged. Four-file candidate awaits Main review.
+The new detached diagnostic parent was observed READY/PRE_GO; GO is withheld and the child has not run. Preserve the original owner without query, cleanup, adoption or fabricated GO. Publication d47edc85 and scoped Mac .15 actual are Main accepted. Five fences, frozen 273/60/427, empty groups, heldouts NOT_SELECTED, final Reviewer NOT_STARTED and historical Mac Core block remain unchanged. Fresh binary-LF 20-file data and once-task gate remain local preparation; no new runtime authority. Four-file candidate awaits Main review.

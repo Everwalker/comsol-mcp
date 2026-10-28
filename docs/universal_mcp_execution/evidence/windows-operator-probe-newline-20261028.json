@@ -1,0 +1,28 @@
+{
+  "schema": "windows-operator-probe-newline-evidence/1",
+  "status": "OFFLINE_COUNTEREXAMPLE_BINARY_LF_SOURCE_SOFTWARE_ACCEPTED",
+  "source": "CPython 3.12.10 Windows stdout newline semantics",
+  "counterexample_sha256": "35395bed9febc3580e34af5bb1081f1a9777aa38ffd2b943c73c973b1709eb42",
+  "offline_fixture": {
+    "write_through": true,
+    "actual_suffix_hex": "0d0a",
+    "strict_expected_suffix_hex": "0a",
+    "actual_matches_expected": false
+  },
+  "source_repair": {
+    "approach": "binary stdout preserves exact LF",
+    "software_tests": 35,
+    "independent_review": "0_P1_0_P2",
+    "main_source_acceptance_sha256": "d0c0a6fb28063194d972540d7563cb5154d5cb861e199e227477fbd2f5a242a2",
+    "scope": "only probe runtime source changed; native flags 0x0008040c and strict-LF adapter unchanged",
+    "windows_validation": "NOT_RUN"
+  },
+  "limits": [
+    "Offline TextIOWrapper simulation only, not native execution.",
+    "Detached child NOT_RUN and GO withheld.",
+    "Earlier 0xc0000142 failures are not attributed to this newline defect.",
+    "No installation, native qualification or overall goal acceptance.",
+    "Fresh 20-file data and once-task gate are local preparation only; no new runtime authority."
+  ],
+  "goal": "ACTIVE_NOT_COMPLETE"
+}
