@@ -1,0 +1,58 @@
+{
+  "schema": "windows-public-mcp-control-home-source-evidence/1",
+  "status": "NOT_RUN_SOURCE_BLOCKED_PRIVATE_REPAIR_IN_PROGRESS",
+  "current_product_version_unchanged": "0.1.15",
+  "current_product_source_commit": "958970b605b746d2593dd5a3c65965b960864d46",
+  "affected_source": {
+    "path": "comsol_mcp/_control_client.py",
+    "bytes": 12631,
+    "sha256": "e9020793753896bf762b5ad4070fea0a437301a062c75d39198d87d8bfb8c4cb"
+  },
+  "saved_source_evidence": {
+    "counterexample": {
+      "bytes": 990,
+      "sha256": "74ad8479f0053f8c1193ab998ccb6e45b052cda8b62d8771a75adefa6cf0e4f6"
+    },
+    "source_prep_freeze": {
+      "bytes": 6880,
+      "sha256": "e2059e850b7c2681bdcd9b6c425150377f3d15309fbcddff2b902dc07b9721ec"
+    },
+    "main_counterexample_acceptance": {
+      "bytes": 766,
+      "sha256": "c5649bcb109d211757776f8e8bee51725113d131e91c9b366e8f09452c13290b"
+    },
+    "main_repair_plan": {
+      "bytes": 2933,
+      "sha256": "23d9d4524123a64e26c7d75bc74d3ab63d368ee05f61f3450ad7517568c7854a"
+    }
+  },
+  "source_counterexample": {
+    "function": "control_home(create=False)",
+    "check": "POSIX group/other mode bits & 077",
+    "CPython": "3.12.10 Windows directory attribute-to-mode mapping",
+    "0777_case": "SYNTHETIC_REJECTED",
+    "0555_case": "SYNTHETIC_REJECTED",
+    "0700_positive": "SYNTHETIC_ACCEPTED",
+    "actual_windows_target_observed": false
+  },
+  "repair_plan_only": {
+    "method": "Reuse existing read-only _host_scoped_provider Windows handle/DACL verification",
+    "used_object_scope": "Directory and endpoint privacy verified before secret read/publication or request/spawn",
+    "POSIX_policy": "UNCHANGED",
+    "blanket_windows_bypass": "PROHIBITED",
+    "ACL_mutation": "PROHIBITED",
+    "source_implementation_and_tests": "PRIVATE_CANDIDATE_IN_PROGRESS",
+    "build_version_bump_runtime": "NOT_AUTHORIZED"
+  },
+  "accepted_normal_installation": "ACCEPTED_SCOPED_UNCHANGED",
+  "limits": [
+    "Source synthetic counterexample, not an actual Windows public-MCP failure.",
+    "No private repair acceptance or canonical product change is claimed.",
+    "Earlier failures/UNKNOWN owners and existing scoped installation acceptance remain unchanged.",
+    "Workspace setup fallback is not an authorization or auto-review blockage.",
+    "No new required gate, global Goal blockage, generalized native or whole capability acceptance."
+  ],
+  "goal": "ACTIVE_NOT_COMPLETE",
+  "new_required": false,
+  "runtime_authority": false
+}
