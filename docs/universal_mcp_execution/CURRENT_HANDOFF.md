@@ -1,4 +1,6 @@
-# Current handoff — r414 scoped .16 artifact bytes accepted
+# Current handoff — r415 Mac .16 Source/Data accepted
+
+The independently Main-accepted r414 publication is C=72984204761c7a0a8c80f041d10a038934fdd016 (four files, sole parent T). Five network chains terminal0; fresh bare full4blob readback, six refs and Source210 preservation verified. This checkpoint's synchronization is established by its actual ordinary-publication and independent readback receipt. CI NOT_OBSERVED.
 
 The current product Source is .16 S660eda981360144973fd208bd73847a6ba237799; builder snapshot T78d6ee7b153120c59359abee2f0df6513c8ab293 (tree c9367c8469612fd1bebcb5a8681dc9681d51193e), from the accepted r413 publication. Source privacy repair acceptance covers442 software tests and15 independent checks separately. PREP r2 covers38 author software and24 independent pure checks separately.
 
@@ -6,10 +8,12 @@ Five artifact deliveries are Strong/Main accepted for bytes and metadata only: t
 
 .16 installation/public MCP/Windows SDK/runtime/native remain NOT_RUN. Existing .15 artifact, Mac scoped normal/public-MCP software and Windows scoped ordinary-install branches retain their exact evidence and limits. Intel b749 original Rust-origin evidence is distinct from the963a current locator; no new Rust build is claimed. OpenSSL is4.0.3 with the inherited4.0.2 license filename. Full inner-subprocess ownership remains NOT_ESTABLISHED. Artifact acceptance grants no runtime authority.
 
-Windows loader r2 is now Strong/Main Source/software accepted (0P1/0P2):11 Source files; author103 and independent70 observations counted separately. The r1 P2 counterexamples and failed fixtures remain historical. Actual factory/transport/install/namespace/READY/GO/task/lease/claim are null; Windows SDK/runtime NOT_RUN. Euler's Mac .16 successor remains Source-only in progress and does not block this byte-evidence publication stage.
+Windows loader r2 is now Strong/Main Source/software accepted (0P1/0P2):11 Source files; author103 and independent70 observations counted separately. The r1 P2 counterexamples and failed fixtures remain historical. Actual factory/transport/install/namespace/READY/GO/task/lease/claim are null; Windows SDK/runtime NOT_RUN. Mac .16 is Strong/Main Source/Data accepted (0P1/0P2):9 Source files (5 identical,4 literal-only), author19 pure controls and17 independent static DATA negatives are separate. SourceBase is expected metadata only; runtime authority NONE. Windows Job2 minimal factory/READY/inbox Source wiring and the Windows .16 Stage1/Stage2 Source/DATA successor are in preparation.
 
 Mac Core is still NOT_STARTED_BLOCKED: latest permitted free-memory observation190.25MiB (199491584B) is below2GiB. Total/swap sysctl remains UNVERIFIED after sandbox refusal; no automatic sampling and no reinterpretation of the historical142901248B snapshot.
 
-Next:Complete the Mac .16 Source/DATA successor and qualified Windows factory/transport/install/namespace bindings; submit them for Main/Source review, then perform separately authorized normal-installation/public-MCP regression. This stage's synchronization is established by its actual ordinary-publication and independent readback receipt. Actual runtime bindings and Main dispatch remain required; .16 installation/public MCP/Windows SDK/runtime/native are NOT_RUN. Preserve the Mac Core190.25MiB resource block, .15 scoped records, old fences, heldouts NOT_SELECTED and final Reviewer NOT_STARTED.
+Next:Prepare separately reviewed fresh static CPython Base materialization and actual source-task literal rebinding. Complete Windows Job2 minimal factory/READY/inbox Source wiring and Windows .16 Stage1/Stage2 Source/DATA successor, then review and bind actual runtime. Actual .16 install/public MCP/Windows SDK/runtime/native NOT_RUN; Core resource block, heldouts NOT_SELECTED and final Reviewer NOT_STARTED persist.
 
 This checkpoint records accepted .16 artifact-byte/metadata and Source facts. Immutable prior Main3 and earlier draft snapshots remain preserved. All9 nested fences/frozen-readback/completed_groups occurrences remain value/type-equal, both completed_groups=[],273/60/427, prior FAIL/UNKNOWN/gaps and .15 scoped branches remain unchanged. Goal ACTIVE_NOT_COMPLETE.
+
+[Mac .16 Source/Data evidence](evidence/mac-016-source-data-20261029.json) binds the accepted Source/DATA scope; actual materialization and runtime require separate records.
