@@ -1,0 +1,59 @@
+{
+  "schema": "scoped-source-data-evidence/1",
+  "stage": "Windows normal 0.1.16 Stage1 local packet",
+  "status": "STRONG_MAIN_ACCEPTED_LOCAL_SOURCE_DATA_ONLY",
+  "source_fingerprint": "a2173ef1473b0e6a52cae30e195fa6ee3aab5deb00c9413757c3965c032ab1d8",
+  "candidate": {
+    "path": "_state/universal-main-review/20261029-windows-normal-016-stage1-packet-prep-r1/FREEZE.json",
+    "bytes": 62205,
+    "sha256": "95f024d60f42cc013bf51194b890b9e9e727c7a9d9e44ba6f78c6db12b40ca4c"
+  },
+  "Main_acceptance": {
+    "path": "_state/universal-main-review/20261029-windows-normal-016-stage1-packet-main-review-r1/MAIN_LOCAL_PACKET_ACCEPTANCE.json",
+    "bytes": 1733,
+    "sha256": "36c454cfefa994a94757e48aa72ff81ef0bb7d625a951abd3344367f42044276"
+  },
+  "independent_freeze": {
+    "path": "_state/universal-main-review/20261029-windows-normal-016-stage1-packet-independent-review-r1/FREEZE.json",
+    "bytes": 13180,
+    "sha256": "d0b239a75874619dcf429bdea8e11e34e40e12816673437f466fb255d5092217"
+  },
+  "independent_result": {
+    "path": "_state/universal-main-review/20261029-windows-normal-016-stage1-packet-independent-review-r1/RESULT.json",
+    "bytes": 5877,
+    "sha256": "bc3e5351216a1166d4c2bee10743969e4c6f3eed8f2bb813e02b22f2fe1f0c38"
+  },
+  "packet_scope": {
+    "Source_files": 24,
+    "fixed_initial_files": 22,
+    "deferred_initial_slots": 7,
+    "eventual_transfer_files": 29,
+    "expected_known_files": 1869,
+    "expected_directories": 209,
+    "producer_max_bytes": 220
+  },
+  "author_evidence": {
+    "fixed_metadata_refs": 86,
+    "scope": "Finite local metadata, hash, schema, path, roster and budget verification; historical suites not rerun"
+  },
+  "independent_evidence": {
+    "groups": 7,
+    "inputs": 107,
+    "P1": 0,
+    "P2": 0,
+    "scope": "Bounded read-only Source/Data review; separate from author evidence"
+  },
+  "history": {
+    "normal_Source_r1_P2": "The preserved normal.16 r1 publisher version mismatch was repaired in the accepted r2 Source successor. No historical failure is relabelled PASS.",
+    "raw_and_failures": "PRESERVED_PRIVATE"
+  },
+  "limits": [
+    "JDK504 is expected metadata only; full bytes and actual at-use identity are not established by this packet.",
+    "Local packet acceptance is not a transfer, materialization, pip installation, Stage2 actor or runtime acceptance.",
+    "Later exact execution bindings and runtime tasks are separate evidence outside this record.",
+    "Retained historical failures and UNKNOWN/SPENT boundaries remain unchanged."
+  ],
+  "Windows_runtime": "NOT_RUN",
+  "runtime_authority": "NONE",
+  "publication": "Synchronization is established by the actual stage publication/readback receipt; no execution permission follows from this evidence."
+}

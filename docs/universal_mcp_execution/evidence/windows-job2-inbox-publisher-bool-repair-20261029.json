@@ -1,0 +1,55 @@
+{
+  "schema": "scoped-source-evidence/1",
+  "stage": "Windows Job2 inbox publisher BOOL r2",
+  "status": "STRONG_MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE",
+  "source_fingerprint": "e3e0e86cc46de65c9483b66b210de8b568ffff9f6f2ef1532d7c0ea7c2fdb6ce",
+  "candidate": {
+    "path": "_state/universal-main-review/20261029-windows-job2-inbox-publisher-source-prep-r2/FREEZE.json",
+    "bytes": 17996,
+    "sha256": "d93fec0b9684f34a099f522685cbfbc56b168ff7e2d6b2c2f30b5f88302bdecd"
+  },
+  "Main_acceptance": {
+    "path": "_state/universal-main-review/20261029-windows-job2-inbox-publisher-main-source-review-r2/MAIN_SOURCE_SOFTWARE_ACCEPTANCE.json",
+    "bytes": 1515,
+    "sha256": "c375f63ea49c9ff0298aefc5a1e088f81e10019829ba6ecfc4b0c040f39d85af"
+  },
+  "independent_freeze": {
+    "path": "_state/universal-main-review/20261029-windows-job2-inbox-publisher-independent-source-review-r2/FREEZE.json",
+    "bytes": 8264,
+    "sha256": "10f950c3016ee79eb6edb3eb67b3b50525b4282f286ba21b68a041cefde87c71"
+  },
+  "independent_result": {
+    "path": "_state/universal-main-review/20261029-windows-job2-inbox-publisher-independent-source-review-r2/RESULT.json",
+    "bytes": 5071,
+    "sha256": "0c8ab17a4aac2f9866077111d6db6518cbff5fb9a8e57199dac9e59cecf8d90f"
+  },
+  "source_scope": {
+    "effective_files": 13,
+    "unchanged_core": 11,
+    "changed_predicates": 2
+  },
+  "repair": "Both consumers accept exact signed32 nonzero BOOL, preserving the original raw value. Handle, label, state, independent pins and other guards remain unchanged.",
+  "author_evidence": {
+    "focused_software_checks": 21,
+    "scope": "Synthetic in-memory core and pure/static checks; no Windows or PowerShell execution"
+  },
+  "independent_evidence": {
+    "groups": 9,
+    "inputs": 42,
+    "P1": 0,
+    "P2": 0,
+    "scope": "Affected pure/static review; counted separately from author checks"
+  },
+  "history": {
+    "r1": "0P1/1P2 retained: raw==1 rejected valid core success values. r2 repairs the Source interface; r1 is not retroactive PASS.",
+    "old_raw_and_failed_evidence": "PRESERVED_PRIVATE"
+  },
+  "limits": [
+    "PS5.1 parsing/effects NOT_RUN",
+    "Windows runtime/ABI/CLR owners/transport/target RootID and ACL NOT_RUN",
+    "All actual bindings remain null; no runtime dispatch or product authority"
+  ],
+  "Windows_runtime": "NOT_RUN",
+  "runtime_authority": "NONE",
+  "publication": "Synchronization is established by the actual stage publication/readback receipt; this summary grants no execution authority."
+}
