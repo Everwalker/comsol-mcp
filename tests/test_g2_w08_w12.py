@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import os
+from contextvars import ContextVar
 from pathlib import Path
 
 import pytest
@@ -12,6 +15,7 @@ from comsol_mcp._g2_engine import property_get, property_index_set, property_set
 from comsol_mcp._g2_contract import typed_value_from_engine
 from comsol_mcp._g2_registry import operation_describe, registry_manifest, validate_call
 from comsol_mcp._g2_transactions import TransactionStore, preview_transaction, run_transaction
+from comsol_mcp._managed_backend import ManagedBackend
 
 
 class _Node:
@@ -361,3 +365,200 @@ def test_java_describe_rejects_static_initializer(tmp_path):
     with pytest.raises(ExecutionContractError) as exc:
         describe_source(tmp_path, "Unsafe.java", "Unsafe")
     assert exc.value.code == "TRUSTED_CODE_REJECTED"
+
+
+def test_java_description_hashes_bounded_original_utf8_bytes_without_newline_translation(tmp_path):
+    cases = (
+        ("crlf", b"public class NewTask {\r\n  // task code\r\n}\r\n"),
+        ("lf", b"public class NewTask {\n  // task code\n}\n"),
+        ("mixed", "public class NewTask {\r\n  // 温度 Ω\n}\r".encode("utf-8")),
+    )
+    for name, raw in cases:
+        source = tmp_path / f"{name}.java"
+        source.write_bytes(raw)
+        described = describe_source(tmp_path, source.name, "NewTask")
+        assert described["bytes"] == len(raw)
+        assert described["source_sha256"] == hashlib.sha256(raw).hexdigest()
+        normalized = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        if name in {"crlf", "mixed"}:
+            assert described["source_sha256"] != hashlib.sha256(normalized).hexdigest()
+    assert cases[0][1] and len(cases[0][1]) == 43
+    assert hashlib.sha256(cases[0][1]).hexdigest() == "2bc2059d87cefd465f5f01125637b0cb93671e896c4e019cb7492bdb3dd8481b"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX dir_fd/no-follow race fixture; Windows native behavior is NOT_RUN")
+@pytest.mark.parametrize("replace_final", [False, True])
+def test_source_snapshot_rejects_symlink_replacement_after_path_selection(tmp_path, monkeypatch, replace_final):
+    import comsol_mcp._g2_code as code
+    from comsol_mcp._project_root import open_project_root_binding
+
+    project = tmp_path / "project"
+    source_dir = project / "sub"
+    source_dir.mkdir(parents=True)
+    source = source_dir / "NewTask.java"
+    source.write_bytes(b"public class NewTask {}\r\n")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    outside_source = outside / "NewTask.java"
+    marker = b"OUTSIDE_PROJECT_SOURCE_SECRET"
+    outside_source.write_bytes(b"public class OutsideProject { String marker = \"" + marker + b"\"; }")
+    binding = open_project_root_binding(project)
+    original_select = code._relative_source_path
+
+    def replace_after_selection(root, requested):
+        selected = original_select(root, requested)
+        if replace_final:
+            source.unlink()
+            source.symlink_to(outside_source)
+        else:
+            source_dir.rename(project / "sub-original")
+            source_dir.symlink_to(outside, target_is_directory=True)
+        return selected
+
+    monkeypatch.setattr(code, "_relative_source_path", replace_after_selection)
+    try:
+        with pytest.raises(ExecutionContractError) as raised:
+            code.read_source_snapshot(binding, "sub/NewTask.java")
+        assert raised.value.code in {"ACCESS_VIOLATION", "ARTIFACT_MISSING", "PERMISSION_DENIED"}
+        assert marker.decode() not in str(raised.value)
+    finally:
+        binding.close()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX dir_fd/no-follow root binding fixture; Windows native behavior is NOT_RUN")
+def test_dispatch_project_root_binding_rejects_replaced_workspace_root(tmp_path):
+    from comsol_mcp._project_root import open_project_root_binding
+
+    workspace_root = tmp_path / "workspaces"
+    project = workspace_root / "project"
+    project.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "NewTask.java").write_text("public class OutsideProject {}", encoding="utf-8")
+    authorized = open_project_root_binding(workspace_root)
+    identity = authorized.identity
+    authorized.close()
+    moved = tmp_path / "workspaces-original"
+    workspace_root.rename(moved)
+    workspace_root.symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ExecutionContractError):
+        open_project_root_binding(project, authorized_root=workspace_root,
+                                  expected_authorized_root_identity=identity)
+
+
+def test_java_result_helpers_reject_unbound_and_incomplete_worker_success():
+    description = {"source_sha256": "a" * 64, "entrypoint": "Recipe"}
+    bad_compile = compile_result(description=description, worker_reply={
+        "ok": True, "status": "SUCCEEDED",
+        "result": {"compiled": True, "source_sha256": "b" * 64, "entrypoint": "Recipe"},
+    })
+    assert bad_compile["success"] is False
+    assert bad_compile["error"]["worker_failure_code"] == "WORKER_SOURCE_BINDING_MISMATCH"
+    missing_compile_identity = compile_result(description=description, worker_reply={
+        "ok": True, "status": "SUCCEEDED", "result": {"compiled": True, "entrypoint": "Recipe"},
+    })
+    assert missing_compile_identity["success"] is False
+
+    for result in (
+        {"executed": True, "source_sha256": "b" * 64, "entrypoint": "Recipe", "model_tag": "m"},
+        {"executed": True, "source_sha256": "a" * 64, "entrypoint": "Other", "model_tag": "m"},
+        {"executed": True, "source_sha256": "a" * 64, "entrypoint": "Recipe"},
+    ):
+        execution = execution_result(
+            description=description, expected_model_tag="m",
+            worker_reply={"ok": True, "status": "SUCCEEDED", "result": result},
+            before={"fingerprint": "same"}, after={"fingerprint": "same"},
+        )
+        assert execution["success"] is False
+        assert execution["execution_success"] is False
+        assert execution["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert execution["error"]["safe_retry"] is False
+        assert execution["data"]["partial_change"] is True
+
+
+def test_managed_execute_mismatch_is_unknown_without_post_action_worker_reads(tmp_path):
+    source = tmp_path / "Recipe.java"
+    source.write_bytes(b"public class Recipe { public static Object run() { return 42; } }\r\n")
+
+    class Worker:
+        def __init__(self):
+            self.calls = []
+
+        def backend_snapshot(self, tag):
+            self.calls.append(("snapshot", tag))
+            return {"model_tag": tag, "fingerprint": "same"}
+
+        def execute_java(self, tag, path, entrypoint, arguments, **kwargs):
+            self.calls.append(("execute", tag))
+            assert kwargs["expected_source_sha256"] == hashlib.sha256(source.read_bytes()).hexdigest()
+            assert kwargs["source_bytes"] == source.read_bytes()
+            return {"ok": True, "status": "SUCCEEDED", "result": {
+                "executed": True, "model_tag": tag, "source_sha256": "b" * 64,
+                "entrypoint": entrypoint, "readback": 42,
+            }}
+
+    worker = Worker()
+    backend = object.__new__(ManagedBackend)
+    backend.worker = worker
+    backend._base_project_root = tmp_path
+    backend._project_root_context = ContextVar("managed_test_project_root", default=None)
+    backend._project_root_binding_context = ContextVar("managed_test_project_binding", default=None)
+    result = backend._run_g2_action("code.execute_java", "m", {
+        "source_artifact": source.name, "entrypoint": "Recipe", "arguments": {}, "mode": "trusted",
+    }, "mismatch-request")
+
+    assert result["success"] is False
+    assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+    assert result["error"]["engine_state"] == "UNKNOWN"
+    assert result["error"]["safe_retry"] is False
+    assert result["data"]["execution_state_unknown"] is True
+    assert result["data"]["partial_change"] is True
+    assert worker.calls == [("snapshot", "m"), ("execute", "m")]
+
+
+@pytest.mark.parametrize("failure_kind", ["pre_dispatch", "compile_error"])
+def test_managed_execute_preserves_proven_pre_model_failures_without_after_snapshot(tmp_path, failure_kind):
+    source = tmp_path / "Recipe.java"
+    source.write_text("public class Recipe {}\n", encoding="utf-8")
+
+    class WorkerFailure(Exception):
+        def __init__(self, reply):
+            super().__init__("synthetic Worker rejection")
+            self.reply = reply
+
+    class Worker:
+        def __init__(self):
+            self.calls = []
+
+        def backend_snapshot(self, tag):
+            self.calls.append(("snapshot", tag))
+            return {"model_tag": tag, "fingerprint": "same"}
+
+        def execute_java(self, tag, path, entrypoint, arguments, **kwargs):
+            self.calls.append(("execute", tag))
+            if failure_kind == "pre_dispatch":
+                raise WorkerFailure({"ok": False, "status": "FAILED", "code": "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    "source_operation_dispatched": False, "execution_state_unknown": False,
+                    "failure": {"code": "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                                "source_operation_dispatched": False, "execution_state_unknown": False}})
+            return {"ok": False, "status": "FAILED", "failure": {
+                "code": "COMPILE_ERROR", "message": "syntax error", "diagnostics": [],
+                "execution_state_unknown": False,
+            }}
+
+    worker = Worker()
+    backend = object.__new__(ManagedBackend)
+    backend.worker = worker
+    backend._base_project_root = tmp_path
+    backend._project_root_context = ContextVar("managed_test_project_root", default=None)
+    backend._project_root_binding_context = ContextVar("managed_test_project_binding", default=None)
+    result = backend._run_g2_action("code.execute_java", "m", {
+        "source_artifact": source.name, "entrypoint": "Recipe", "arguments": {}, "mode": "trusted",
+    }, f"known-{failure_kind}")
+
+    assert result["success"] is False
+    assert result["data"]["execution_state_unknown"] is False
+    assert result["error"]["safe_retry"] is (failure_kind == "compile_error")
+    assert result["error"]["code"] == ("COMPILE_ERROR" if failure_kind == "compile_error"
+                                         else "WORKER_SOURCE_BINDING_UNAVAILABLE")
+    assert worker.calls == [("snapshot", "m"), ("execute", "m")]

@@ -490,7 +490,17 @@ class _ProductionRouteWorker:
         return {"model_tag": model_tag, "fingerprint": "stable-synthetic-fingerprint",
                 "external_event_counter": 0}
 
-    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None):
+    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None,
+                     expected_source_sha256=None):
+        source_sha256 = hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest()
+        if expected_source_sha256 != source_sha256:
+            raise AssertionError("synthetic Worker received an unbound or changed Java source")
+
+        def success(readback):
+            return {"ok": True, "status": "SUCCEEDED", "result": {
+                "executed": True, "model_tag": model_tag, "source_sha256": source_sha256,
+                "entrypoint": entrypoint, "readback": readback}}
+
         if entrypoint == "W24StaticShapeReadback#run":
             with self.state["lock"]:
                 self.state["readback_calls"] = self.state.get("readback_calls", 0) + 1
@@ -503,8 +513,7 @@ class _ProductionRouteWorker:
             overrides = self.state.get("readback_configuration_overrides", {})
             configuration_id = overrides.get(model_tag, model["configuration_id"])
             readback = _shape_readback(model["case_id"], model_tag, configuration_id)
-            return {"ok": True, "status": "SUCCEEDED",
-                    "result": {"executed": True, "readback": readback}}
+            return success(readback)
         if arguments.get("sensitivity_campaign") is True:
             with self.state["lock"]:
                 self.state["calls"] += 1
@@ -542,8 +551,7 @@ class _ProductionRouteWorker:
                 "size_bytes": save_path.stat().st_size,
                 "sha256": _sha(save_path),
             }
-            return {"ok": True, "status": "SUCCEEDED",
-                    "result": {"executed": True, "readback": native_result}}
+            return success(native_result)
         with self.state["lock"]:
             self.state["calls"] += 1
         self.state["entered"].set()
@@ -562,8 +570,7 @@ class _ProductionRouteWorker:
             "save_path": arguments.get("save_path", "synthetic.mph"),
             "size_bytes": 1, "sha256": "0" * 64,
         }
-        return {"ok": True, "status": "SUCCEEDED",
-                "result": {"executed": True, "readback": native_result}}
+        return success(native_result)
 
     def client(self):
         def model(tag):

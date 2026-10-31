@@ -249,7 +249,8 @@ class _API:
         return handle
 
     def _open_relative(self, parent_handle, leaf, *, directory=False, create=False, add_file=False,
-                       add_directory=False, read_data=False, read_control=False, delete=False, metadata=False, deny_write=False, list_directory=False):
+                       add_directory=False, read_data=False, read_control=False, delete=False, metadata=False,
+                       deny_write=False, list_directory=False, snapshot_read=False):
         """Open exactly one child of a pinned directory object.
 
         A full path assembled from checked ancestor names can start traversing
@@ -287,7 +288,7 @@ class _API:
             if directory and add_directory:access |= 0x25  # traverse/list/add-subdirectory
             if directory and add_file:access |= 0x2
         if metadata:access = 0x00100080  # SYNCHRONIZE + READ_ATTRIBUTES for synchronous full-ID queries
-        share = (0x7 if metadata else 0x1 if deny_write else
+        share = (0x7 if metadata else 0x1 if deny_write or snapshot_read else
                  0x3 if directory or read_control or delete else (0x1 if create or read_data else 0x7))
         disposition = 2 if create else 1  # FILE_CREATE / FILE_OPEN
         options = (0x1 if directory else 0x40) | 0x20 | 0x00200000
@@ -367,6 +368,17 @@ class _API:
 
     def open_source(self, parent_handle, leaf):
         return self._open_relative(parent_handle, leaf, read_data=True)
+
+    def open_source_for_snapshot(self, parent_handle, leaf):
+        """Open one source object for a stable, bounded read snapshot.
+
+        The handle requests only read data/attributes/synchronize and shares
+        reads. It intentionally refuses a conflicting writer/delete handle
+        while the short bounded read is active, so the bytes cannot be a mix
+        of concurrent file versions. A sharing violation is a pre-dispatch
+        refusal; no write/delete access is requested.
+        """
+        return self._open_relative(parent_handle, leaf, read_data=True, snapshot_read=True)
 
     def open_security_path(self, path, *, directory, read_data=False):
         """Open a canonical drive path component-by-component for READ_CONTROL.

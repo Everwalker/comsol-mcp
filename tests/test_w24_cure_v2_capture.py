@@ -626,7 +626,11 @@ class _PublicRouteWorker:
     def backend_snapshot(self, model_tag):
         return _PublicRouteSnapshot().model_snapshot(model_tag)
 
-    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None):
+    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None,
+                     expected_source_sha256=None):
+        source_hash = hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest()
+        if expected_source_sha256 != source_hash:
+            raise AssertionError("synthetic Worker received an unbound or changed Java source")
         action = arguments["action"]
         path = Path(arguments["path"])
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -682,10 +686,10 @@ class _PublicRouteWorker:
             }
         java_result = {
             "executed": True, "model_tag": model_tag,
-            "source_sha256": hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest(),
+            "source_sha256": source_hash,
             "entrypoint": entrypoint, "readback": receipt,
         }
-        return {"ok": True, "status": "SUCCEEDED", "result": {"readback": java_result}}
+        return {"ok": True, "status": "SUCCEEDED", "result": {**java_result, "readback": java_result}}
 
 
 @pytest.mark.parametrize("action", ["capture_maxwell_control", "solution_snapshot_v2", "solution_snapshot_v3"])

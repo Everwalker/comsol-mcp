@@ -13,6 +13,7 @@ from typing import Any, Callable, Mapping
 from uuid import uuid4
 
 from comsol_mcp._execution_contract import ExecutionContractError
+from comsol_mcp._project_root import open_project_root_binding
 
 
 PROJECT_SCHEMA_VERSION = 1
@@ -96,6 +97,11 @@ class ProjectAuthority:
             raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "authorized workspace root is unavailable") from exc
         if not self.workspace_root.is_dir():
             raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "authorized workspace root must be a directory")
+        root_binding = open_project_root_binding(self.workspace_root)
+        try:
+            self.workspace_root_identity = root_binding.identity
+        finally:
+            root_binding.close()
         self.permission_provider = permission_provider
         if not isinstance(grant_ceiling, (set, frozenset)) or any(
                 not isinstance(item, str) or item not in PROJECT_PERMISSIONS for item in grant_ceiling):
@@ -243,6 +249,27 @@ class ProjectAuthority:
         if not isinstance(project_id, str) or not project_id or len(project_id) > 128:
             raise ExecutionContractError("INVALID_REQUEST", "project_id must be a nonempty string")
         return self._record(project_id)
+
+    def bind_project_workspace(self, record: Mapping[str, Any]):
+        """Open the exact project directory below this daemon's pinned root.
+
+        The returned object is passed through the dispatch scope and remains
+        open for the operation. It is not reconstructed from a later-resolved
+        path inside the backend.
+        """
+        if (not isinstance(record, Mapping) or not isinstance(record.get("project_id"), str)
+                or not isinstance(record.get("workspace"), str)):
+            raise ExecutionContractError("PROJECT_WORKSPACE_IDENTITY_UNKNOWN", "project workspace record is malformed")
+        try:
+            return open_project_root_binding(
+                record["workspace"], authorized_root=self.workspace_root,
+                expected_authorized_root_identity=self.workspace_root_identity,
+            )
+        except ExecutionContractError:
+            raise
+        except Exception as exc:
+            raise ExecutionContractError("PROJECT_WORKSPACE_IDENTITY_UNKNOWN",
+                                         "project workspace could not be bound to the authorized root") from exc
 
     def authorize_operation(self, project_id: str, permission: str) -> dict[str, Any]:
         """Require both the live host/service grant and project grant."""

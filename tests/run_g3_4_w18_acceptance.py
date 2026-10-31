@@ -597,6 +597,7 @@ public final class ModelAcceptanceV02Builder {
         reply = self.worker.submit("code_execute", {
             "tag": tag,
             "source_artifact": str(builder_file),
+            "expected_source_sha256": _sha256(builder_file),
             "entrypoint": "ModelAcceptanceV02Builder",
             "arguments": {},
         })
@@ -1239,6 +1240,7 @@ public final class ModelSaver {{
         reply = self.worker.submit("code_execute", {
             "tag": self.live_model_tag,
             "source_artifact": str(saver_file),
+            "expected_source_sha256": _sha256(saver_file),
             "entrypoint": "ModelSaver",
             "arguments": {},
         })

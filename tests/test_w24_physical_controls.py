@@ -381,7 +381,11 @@ class _HarmlessControlWorker:
     def backend_snapshot(self, model_tag):
         return _ControlRouteSnapshot().model_snapshot(model_tag)
 
-    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None):
+    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None,
+                     expected_source_sha256=None):
+        source_sha256 = hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest()
+        if expected_source_sha256 != source_sha256:
+            raise AssertionError("synthetic Worker received an unbound or changed Java source")
         action = arguments["action"]
         if action == "study_run_control":
             ledger = Path(arguments["ledger_path"])
@@ -417,10 +421,9 @@ class _HarmlessControlWorker:
                     "sha256": hashlib.sha256(save_path.read_bytes()).hexdigest(),
                 },
             }
-            java = {"executed": True, "model_tag": model_tag,
-                    "source_sha256": hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest(),
+            java = {"executed": True, "model_tag": model_tag, "source_sha256": source_sha256,
                     "entrypoint": entrypoint, "readback": receipt}
-            return {"ok": True, "status": "SUCCEEDED", "result": {"readback": java}}
+            return {"ok": True, "status": "SUCCEEDED", "result": {**java, "readback": java}}
         case_id = ("maxwell_ramp_hold_control" if action == "capture_maxwell_control"
                    else "gel_stress_free_control")
         artifact = _v2_control_artifact(case_id)
@@ -441,10 +444,9 @@ class _HarmlessControlWorker:
             "dataset_tag": artifact["dataset_tag"], "path": str(path),
             "size_bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
         }
-        java = {"executed": True, "model_tag": model_tag,
-                "source_sha256": hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest(),
+        java = {"executed": True, "model_tag": model_tag, "source_sha256": source_sha256,
                 "entrypoint": entrypoint, "readback": receipt}
-        return {"ok": True, "status": "SUCCEEDED", "result": {"readback": java}}
+        return {"ok": True, "status": "SUCCEEDED", "result": {**java, "readback": java}}
 
 
 @pytest.mark.parametrize("action", ["capture_maxwell_control", "capture_gel_control"])

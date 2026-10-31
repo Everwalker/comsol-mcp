@@ -779,6 +779,232 @@ def test_remote_client_load_serializes_path_objects_as_strings(tmp_path):
     assert worker.payload == ("modelutil", {"method": "load", "args": ["loaded", str(tmp_path / "model.mph")]})
 
 
+def test_java_worker_code_methods_forward_the_independently_observed_source_hash():
+    digest = "a" * 64
+
+    class Recorder:
+        def __init__(self):
+            self.calls = []
+
+        def submit(self, kind, payload, **kwargs):
+            self.calls.append((kind, dict(payload), dict(kwargs)))
+            return {"ok": True}
+
+    worker = Recorder()
+    PersistentJavaWorker.compile_java(worker, "/project/NewTask.java", "NewTask",
+                                      expected_source_sha256=digest, request_id="compile-1")
+    PersistentJavaWorker.execute_java(worker, "mcp1", "/project/NewTask.java", "NewTask", {},
+                                      expected_source_sha256=digest, request_id="execute-1")
+    assert worker.calls[0][0:2] == (
+        "code_compile", {"source_artifact": "/project/NewTask.java", "entrypoint": "NewTask",
+                         "expected_source_sha256": digest})
+    assert worker.calls[1][0:2] == (
+        "code_execute", {"tag": "mcp1", "source_artifact": "/project/NewTask.java",
+                         "entrypoint": "NewTask", "arguments": {}, "expected_source_sha256": digest})
+
+
+def test_code_submit_refuses_missing_hash_without_contacting_worker():
+    worker = object.__new__(PersistentJavaWorker)
+    worker._operation_context = threading.local()
+    worker._on_request_event = None
+    worker._known_requests = {}
+
+    def no_network(*_args, **_kwargs):
+        pytest.fail("a code request without an expected hash must stop before Worker contact")
+
+    original = java_worker.socket.create_connection
+    java_worker.socket.create_connection = no_network
+    try:
+        with pytest.raises(JavaWorkerError) as raised:
+            worker.submit("code_execute", {"source_artifact": "/project/NewTask.java"}, request_id="missing-hash")
+    finally:
+        java_worker.socket.create_connection = original
+    assert raised.value.reply["code"] == "SOURCE_HASH_REQUIRED"
+    assert raised.value.reply["source_operation_dispatched"] is False
+    assert raised.value.execution_state_unknown is False
+
+
+def test_old_worker_without_source_binding_capability_never_receives_code_request(monkeypatch, tmp_path):
+    writes = []
+
+    class ScriptedStream:
+        def __init__(self):
+            self.replies = [
+                b'{"ok":true,"type":"authenticated","generation":1}\n',
+                b'{"ok":false,"code":"UNKNOWN_COMMAND","message":"unsupported internal worker command"}\n',
+            ]
+
+        def write(self, value):
+            writes.append(json.loads(value.decode("utf-8")))
+            return len(value)
+
+        def flush(self):
+            return None
+
+        def readline(self):
+            return self.replies.pop(0)
+
+    stream = ScriptedStream()
+
+    class Connection:
+        def __enter__(self): return self
+        def __exit__(self, *_args): return False
+        def settimeout(self, _value): return None
+        def makefile(self, *_args): return stream
+
+    monkeypatch.setattr(java_worker.socket, "create_connection", lambda *_args, **_kwargs: Connection())
+    worker = object.__new__(PersistentJavaWorker)
+    worker._port = 51321
+    worker._token = "test-token"
+    worker._startup_unknown = None
+    worker._process_factory = None
+    worker._original_process_factory = None
+    worker._coupled_admission_owner = None
+    worker._known_requests = {}
+    worker._operation_context = threading.local()
+    worker._on_request_event = None
+
+    from comsol_mcp._domain_outcome import witness_scope
+    with witness_scope() as witness:
+        with pytest.raises(JavaWorkerError) as raised:
+            PersistentJavaWorker.execute_java(
+                worker, "mcp1", "/project/NewTask.java", "NewTask", {},
+                expected_source_sha256="a" * 64, request_id="old-worker-code")
+    assert raised.value.reply["code"] == "WORKER_SOURCE_BINDING_UNAVAILABLE"
+    assert raised.value.reply["source_operation_dispatched"] is False
+    assert [row.get("type") for row in writes] == [None, "source_binding_capabilities"]
+    assert witness.mutation_issued is False
+
+
+def test_source_binding_probe_and_code_request_share_one_authenticated_connection(monkeypatch, tmp_path):
+    writes = []
+    source_digest = "a" * 64
+
+    class ScriptedStream:
+        def __init__(self):
+            self.replies = [b'{"ok":true,"type":"authenticated","generation":1}\n']
+
+        def write(self, value):
+            row = json.loads(value.decode("utf-8"))
+            writes.append(row)
+            if row.get("type") == "source_binding_capabilities":
+                self.replies.append(json.dumps({"ok": True, "type": "source_binding_capabilities", "status": "SUCCEEDED",
+                    "request_id": row["request_id"], "result": {
+                        "source_binding_protocol": 1,
+                        "worker_build_id": java_worker._SOURCE_BINDING_WORKER_BUILD_ID,
+                        "instance_id": "worker-unique-7"}}).encode() + b"\n")
+            elif row.get("type") == "code_execute":
+                self.replies.append(json.dumps({"ok": True, "type": "code_execute", "status": "SUCCEEDED",
+                    "request_id": row["request_id"], "result": {"executed": True,
+                    "source_sha256": row["expected_source_sha256"], "entrypoint": row["entrypoint"],
+                    "model_tag": row["tag"]}}).encode() + b"\n")
+            return len(value)
+
+        def flush(self): return None
+        def readline(self): return self.replies.pop(0)
+
+    stream = ScriptedStream()
+
+    class Connection:
+        def __enter__(self): return self
+        def __exit__(self, *_args): return False
+        def settimeout(self, _value): return None
+        def makefile(self, *_args): return stream
+
+    monkeypatch.setattr(java_worker.socket, "create_connection", lambda *_args, **_kwargs: Connection())
+    worker = object.__new__(PersistentJavaWorker)
+    worker._port = 51322
+    worker._token = "test-token"
+    worker._startup_unknown = None
+    worker._process_factory = None
+    worker._original_process_factory = None
+    worker._coupled_admission_owner = None
+    worker._known_requests = {}
+    worker._operation_context = threading.local()
+    worker._on_request_event = None
+    worker.state_dir = tmp_path / "worker-state"
+    from comsol_mcp._domain_outcome import witness_scope
+    with witness_scope() as witness:
+        reply = PersistentJavaWorker.execute_java(
+            worker, "mcp1", "/project/NewTask.java", "NewTask", {},
+            expected_source_sha256=source_digest, request_id="bound-code")
+    assert reply["ok"] is True
+    assert [row.get("type") for row in writes] == [None, "source_binding_capabilities", "code_execute"]
+    code_request = writes[-1]
+    assert code_request["expected_worker_build_id"] == java_worker._SOURCE_BINDING_WORKER_BUILD_ID
+    assert code_request["expected_worker_instance_id"] == "worker-unique-7"
+    assert code_request["expected_source_sha256"] == source_digest
+    assert witness.mutation_issued is True
+
+
+def test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks(monkeypatch, tmp_path):
+    writes = []
+    events = []
+    source_digest = "a" * 64
+
+    class ScriptedStream:
+        def __init__(self):
+            self.replies = [b'{"ok":true,"type":"authenticated","generation":1}\n']
+
+        def write(self, value):
+            row = json.loads(value.decode("utf-8"))
+            writes.append(row)
+            if row.get("type") == "source_binding_capabilities":
+                self.replies.append(json.dumps({"ok": True, "type": "source_binding_capabilities", "status": "SUCCEEDED",
+                    "request_id": row["request_id"], "result": {
+                        "source_binding_protocol": 1,
+                        "worker_build_id": java_worker._SOURCE_BINDING_WORKER_BUILD_ID,
+                        "instance_id": "worker-unique-8"}}).encode() + b"\n")
+            elif row.get("type") == "code_execute":
+                self.replies.append(json.dumps({"ok": True, "type": "code_execute", "status": "SUCCEEDED",
+                    "request_id": row["request_id"], "source_operation_dispatched": False,
+                    "result": {"executed": True,
+                    "source_sha256": "b" * 64, "entrypoint": row["entrypoint"],
+                    "model_tag": row["tag"]}}).encode() + b"\n")
+            return len(value)
+
+        def flush(self): return None
+        def readline(self): return self.replies.pop(0)
+
+    stream = ScriptedStream()
+
+    class Connection:
+        def __enter__(self): return self
+        def __exit__(self, *_args): return False
+        def settimeout(self, _value): return None
+        def makefile(self, *_args): return stream
+
+    monkeypatch.setattr(java_worker.socket, "create_connection", lambda *_args, **_kwargs: Connection())
+    worker = object.__new__(PersistentJavaWorker)
+    worker._port = 51323
+    worker._token = "test-token"
+    worker._startup_unknown = None
+    worker._process_factory = None
+    worker._original_process_factory = None
+    worker._coupled_admission_owner = None
+    worker._known_requests = {}
+    worker._operation_context = threading.local()
+    worker._on_request_event = None
+    worker.state_dir = tmp_path / "worker-state"
+
+    from comsol_mcp._domain_outcome import witness_scope
+    with worker.operation_context("mismatched-receipt", on_request_event=events.append):
+        with witness_scope() as witness:
+            reply = PersistentJavaWorker.execute_java(
+                worker, "mcp1", "/project/NewTask.java", "NewTask", {},
+                expected_source_sha256=source_digest, request_id="mismatch-execute")
+
+    assert reply["ok"] is False and reply["status"] == "UNKNOWN"
+    assert reply["execution_state_unknown"] is True and reply["safe_retry"] is False
+    assert reply["failure"]["code"] == "WORKER_SOURCE_BINDING_MISMATCH"
+    assert worker._known_requests["mismatch-execute"]["status"] == "UNKNOWN"
+    observed = next(event for event in events if event["phase"] == "observed")
+    assert observed["status"] == "UNKNOWN"
+    assert observed["reply"]["failure"]["code"] == "WORKER_SOURCE_BINDING_MISMATCH"
+    assert [row.get("type") for row in writes] == [None, "source_binding_capabilities", "code_execute"]
+    assert witness.mutation_issued is True
+
+
 def test_two_workers_cannot_own_the_same_global_endpoint_lock(tmp_path):
     if not _worker_build_environment_available():
         pytest.skip("COMSOL 6.4/JDK 11 local Worker build environment unavailable")

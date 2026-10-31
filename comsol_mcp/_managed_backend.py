@@ -36,7 +36,7 @@ from ._g2_engine import (
     children_node, create_checkpoint, execute_transaction, find_nodes, inspect_node,
     property_entry_set, property_get, property_index_set, property_schema, property_set,
 )
-from ._g2_code import compile_result, describe_source, execution_result, read_source
+from ._g2_code import compile_result, execution_result
 from ._g2_transactions import TransactionStore, preview_transaction, validate_invariants
 from ._g2_isolation import configured_receipt, verify_owned_server
 from ._platform_paths import default_comsol_help_roots
@@ -265,6 +265,7 @@ class ManagedBackend:
                 raise ValueError("host_permission_ceiling must be a trusted permission set")
             self.host_permission_ceiling = set(host_permission_ceiling)
         self._project_root_context = ContextVar(f"comsol_project_root_{id(self)}", default=None)
+        self._project_root_binding_context = ContextVar(f"comsol_project_root_binding_{id(self)}", default=None)
         # Strict field/integral modes are available only to the backend-owned
         # W21 output reader. They are kept in a context variable instead of a
         # request flag, so public result.evaluate callers cannot enable them.
@@ -318,6 +319,11 @@ class ManagedBackend:
     @project_root.setter
     def project_root(self, value):
         self._base_project_root = Path(value).resolve()
+
+    @property
+    def project_root_binding(self):
+        context = getattr(self, "_project_root_binding_context", None)
+        return context.get(None) if context is not None else None
 
     def stage_native_admission(self, *, binding, plan, stage, event_callback=None,
                                authorize_callback=None):
@@ -384,9 +390,12 @@ class ManagedBackend:
 
     @contextmanager
     def project_root_scope(self, root):
-        """Apply one registered project path/workflow scope in this context."""
-        candidate = Path(root).resolve(strict=True)
+        """Carry one open project-root identity through a serialized dispatch."""
+        from ._project_root import ProjectRootBinding, open_project_root_binding
+        binding = open_project_root_binding(root) if not isinstance(root, ProjectRootBinding) else root
+        candidate = binding.path
         token = self._project_root_context.set(candidate)
+        binding_token = self._project_root_binding_context.set(binding)
         service = self.service
         service_scope = getattr(service, "project_root_scope", None)
         try:
@@ -394,12 +403,14 @@ class ManagedBackend:
 
             with project_workflow_state_scope(candidate):
                 if callable(service_scope):
-                    with service_scope(candidate):
+                    with service_scope(binding):
                         yield candidate
                 else:
                     yield candidate
         finally:
+            self._project_root_binding_context.reset(binding_token)
             self._project_root_context.reset(token)
+            binding.close()
 
     @staticmethod
     def _model_project_key(model_ref):
@@ -471,7 +482,8 @@ class ManagedBackend:
             # capability before touching artifacts.
             engine_host_identity = None
         context = {
-            "project_root": str(self.project_root), "project_id": project_id,
+            "project_root": str(self.project_root), "project_root_binding": self.project_root_binding,
+            "project_id": project_id,
             "operation_id": str(operation_id), "request_id": request_id,
             "idempotency_key": idempotency_key,
             "host_identity": local_artifact_host_identity(),
@@ -1361,7 +1373,8 @@ class ManagedBackend:
             raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
         body = self._g2_body(arguments, operation)
         context = {
-            "project_root": str(self.project_root), "project_id": project_id,
+            "project_root": str(self.project_root), "project_root_binding": self.project_root_binding,
+            "project_id": project_id,
             "operation_id": str(operation_id), "request_id": request_id,
             "idempotency_key": idempotency_key, "host_identity": local_artifact_host_identity(),
             "engine_host_identity": local_engine_host_identity(self.endpoint_key),
@@ -1715,13 +1728,22 @@ class ManagedBackend:
                 result = self.docs_index.get(document_ref=body.get("document_ref", ""), section=body.get("section"), offset=body.get("offset", 0), length=body.get("length", 6000))
             return {"success": True, "data": result, "execution": {"operation_id": operation_id}}
         if operation in {"code_describe_java", "code.describe_java"}:
-            description = describe_source(self.project_root, arguments.get("source_artifact", ""), arguments.get("entrypoint", ""))
+            from ._g2_code import describe_snapshot, read_source_snapshot
+            snapshot = read_source_snapshot(self.project_root_binding or self.project_root,
+                                            arguments.get("source_artifact", ""))
+            description = describe_snapshot(snapshot, arguments.get("entrypoint", ""))
             return {"success": True, "data": description, "execution": {"operation_id": operation_id}}
         if operation in {"code_compile_java", "code.compile_java"}:
+            from ._g2_code import describe_snapshot, read_source_snapshot
+            snapshot = read_source_snapshot(self.project_root_binding or self.project_root,
+                                            arguments.get("source_artifact", ""))
+            description = describe_snapshot(snapshot, arguments.get("entrypoint", ""))
             self._ensure_compile_worker()
-            description = describe_source(self.project_root, arguments.get("source_artifact", ""), arguments.get("entrypoint", ""))
             try:
-                reply = self.worker.compile_java(description["source_artifact"], description["entrypoint"], request_id=operation_id)
+                reply = self.worker.compile_java(snapshot.path.name, description["entrypoint"],
+                                                 source_bytes=snapshot.raw_bytes,
+                                                 expected_source_sha256=snapshot.sha256,
+                                                 request_id=operation_id)
                 return compile_result(description=description, worker_reply=reply)
             except Exception as exc:
                 preserved = getattr(exc, "reply", None)
@@ -3169,6 +3191,7 @@ class ManagedBackend:
                         raise ExecutionContractError("WORKER_BINDING_MISMATCH", "active SessionRuntimeContext does not match this exact model operation")
                     managed_context = {
                         "project_root": str(self.project_root),
+                        "project_root_binding": self.project_root_binding,
                         "project_id": project_id,
                         "operation_id": str(operation_id),
                         "request_id": str(execution.get("request_id") or operation_id),
@@ -3234,6 +3257,7 @@ class ManagedBackend:
                     try:
                         parameter_context = {
                             "project_root": str(self.project_root),
+                            "project_root_binding": self.project_root_binding,
                             "project_id": project_id,
                             "operation_id": str(operation_id),
                             "request_id": str(execution.get("request_id") or operation_id),
@@ -3452,28 +3476,47 @@ class ManagedBackend:
         elif operation == "node.property_index_set": data = property_index_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("indices", []), body.get("value", {}))
         elif operation == "node.property_entry_set": data = property_entry_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("key", ""), body.get("value", {}))
         elif operation == "code.execute_java":
-            description = describe_source(self.project_root, body.get("source_artifact", ""), body.get("entrypoint", ""))
+            from ._g2_code import describe_snapshot, read_source_snapshot
+            snapshot = read_source_snapshot(self.project_root_binding or self.project_root,
+                                            body.get("source_artifact", ""))
+            description = describe_snapshot(snapshot, body.get("entrypoint", ""))
             if body.get("mode") not in {"trusted", "execute"}:
                 raise ExecutionContractError("PERMISSION_DENIED", "code execution requires mode=trusted or mode=execute")
             before = self.worker.backend_snapshot(model_tag)
             try:
-                reply = self.worker.execute_java(model_tag, description["source_artifact"], description["entrypoint"], body.get("arguments", {}), request_id=operation_id)
+                reply = self.worker.execute_java(
+                    model_tag, snapshot.path.name, description["entrypoint"], body.get("arguments", {}),
+                    source_bytes=snapshot.raw_bytes, expected_source_sha256=snapshot.sha256,
+                    request_id=operation_id,
+                )
             except Exception as exc:
                 # Worker compilation is completed before ModelUtil.model(tag)
                 # and therefore proves no model write on a syntax failure.
                 preserved = getattr(exc, "reply", None)
                 failure = preserved.get("failure") if isinstance(preserved, Mapping) else None
                 code = failure.get("code") if isinstance(failure, Mapping) else None
-                if code != "COMPILE_ERROR":
+                pre_dispatch_refusal = (isinstance(preserved, Mapping)
+                                        and preserved.get("source_operation_dispatched") is False)
+                if code != "COMPILE_ERROR" and not pre_dispatch_refusal:
                     raise
-                reply = {"ok": False, "code": code, "message": str(exc),
+                reply = dict(preserved) if isinstance(preserved, Mapping) else {}
+                reply.update({"ok": False, "code": code or reply.get("code") or "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                         "message": str(exc),
                          "diagnostics": failure.get("diagnostics", []) if isinstance(failure, Mapping) else [],
-                         "execution_state_unknown": False}
+                         "execution_state_unknown": False})
+            # Validate the Worker receipt entirely in memory before asking the
+            # Worker/SDK for any post-execution state. An incomplete or
+            # mismatched success receipt is already UNKNOWN: a later snapshot
+            # cannot establish which source or entrypoint actually ran.
+            data = execution_result(description=description, worker_reply=reply, before=before,
+                                    expected_model_tag=model_tag)
+            if data.get("success") is not True:
+                if data.get("error", {}).get("code") == "COMPILE_ERROR":
+                    data["error"]["safe_retry"] = True
+                return data
             after = self.worker.backend_snapshot(model_tag)
-            data = execution_result(description=description, worker_reply=reply, before=before, after=after)
-            if not reply.get("ok") and reply.get("code") == "COMPILE_ERROR":
-                data.setdefault("error", {})["code"] = "COMPILE_ERROR"
-                data["error"]["safe_retry"] = True
+            data = execution_result(description=description, worker_reply=reply, before=before, after=after,
+                                    expected_model_tag=model_tag)
         elif operation == "transaction.verify":
             # A nested/legacy verify has no bound model identity, so it cannot
             # confirm that the durable record belongs to this model.  Refuse

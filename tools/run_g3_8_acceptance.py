@@ -808,6 +808,7 @@ public final class CopperBlockBuilder {
             worker.submit("code_execute", {
                 "tag": tag_copper,
                 "source_artifact": str(builder_file),
+                "expected_source_sha256": sha256_file(builder_file),
                 "entrypoint": "CopperBlockBuilder",
                 "arguments": {},
             })
@@ -1067,6 +1068,7 @@ public final class TransientDiffusionBuilder {
             worker.submit("code_execute", {
                 "tag": tag_trans,
                 "source_artifact": str(trans_file),
+                "expected_source_sha256": sha256_file(trans_file),
                 "entrypoint": "TransientDiffusionBuilder",
                 "arguments": {},
             })

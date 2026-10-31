@@ -23,9 +23,10 @@ from comsol_mcp._artifact_store import (
     register_project_artifact,
 )
 from comsol_mcp._control_daemon import ControlDaemon
-from comsol_mcp._execution_contract import SessionLedger
+from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger
 from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._host_scoped_provider import CONFIG_SCHEMA, scope_sha256
+from comsol_mcp._managed_backend import ManagedBackend
 from comsol_mcp._operation_store import OperationStore
 from comsol_mcp._runtime_installation import runtime_id_for_root
 
@@ -173,10 +174,13 @@ class _Worker:
 
     def execute_java(self, tag, path, entrypoint, arguments, **kwargs):
         self.executions.append((tag, path, entrypoint, dict(arguments), dict(kwargs)))
-        digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        digest = hashlib.sha256(kwargs["source_bytes"]).hexdigest()
+        if kwargs.get("expected_source_sha256") != digest:
+            raise AssertionError("managed Java execution did not bind the Worker to raw source bytes")
         request_id = kwargs.get("request_id") or f"worker-execute-{len(self.executions)}"
-        payload = {"tag": tag, "source_artifact": path, "entrypoint": entrypoint,
-                   "arguments": dict(arguments or {})}
+        payload = {"tag": tag, "source_name": path, "entrypoint": entrypoint,
+                   "arguments": dict(arguments or {}),
+                   "expected_source_sha256": kwargs["expected_source_sha256"]}
         request_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         event = {"request_id": request_id, "kind": "code_execute",
                  "operation_id": self._active_operation_id, "request_hash": request_hash,
@@ -184,7 +188,9 @@ class _Worker:
         if callable(self._active_event_callback):
             self._active_event_callback({"phase": "submitted", **event})
         reply = {"ok": True, "status": "SUCCEEDED", "result": {"executed": True, "model_tag": tag,
-                "source_sha256": digest, "entrypoint": entrypoint, "answer": 42}}
+                "source_sha256": digest, "entrypoint": entrypoint, "answer": 42,
+                "worker_build_id": "persistent-comsol-worker/source-snapshot-v2",
+                "worker_instance_id": self.instance_id}, "_source_binding_verified": True}
         if callable(self._active_event_callback):
             self._active_event_callback({"phase": "observed", "status": "SUCCEEDED", **event})
         return reply
@@ -776,6 +782,144 @@ def _register_source(env, payload: bytes, rel="src/Recipe.java"):
         registering_operation_id="artifact.register", artifact_type="text/x-java-source")
 
 
+def test_registered_crlf_recipe_source_retains_original_byte_identity(env):
+    payload = b"public class Recipe {\r\n  // registered source\r\n}\r\n"
+    source = _register_source(env, payload)
+    resolved, record, description, snapshot = models._resolve_recipe_source(
+        env["context"], source["artifact_id"], "Recipe")
+    assert record["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert resolved["sha256"] == record["sha256"]
+    assert description["source_sha256"] == record["sha256"]
+    assert description["bytes"] == len(payload)
+    assert description["entrypoint"] == "Recipe"
+    assert snapshot.raw_bytes == payload
+
+
+def test_recipe_run_mismatched_success_stops_before_any_post_action_worker_read(env, monkeypatch):
+    payload = b"public class Recipe { public static Object run() { return 42; } }\r\n"
+    registered = _register_source(env, payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    source_path = env["root"] / registered["path"]
+    description = {"source_artifact": str(source_path), "source_sha256": digest,
+                   "entrypoint": "Recipe", "bytes": len(payload)}
+    source = {"artifact_id": registered["artifact_id"], "sha256": digest,
+              "path": source_path, "relative_path": registered["path"]}
+    recipe_artifact_id = "c" * 64
+    recipe = {"schema": models.MODEL_RECIPE_SCHEMA, "version": 1,
+              "runtime": {"comsol_versions": ["6.4.0.293"]},
+              "source": {"artifact_id": registered["artifact_id"], "sha256": digest,
+                         "entrypoint": "Recipe"},
+              "input_schema": {"type": "object"}, "test_refs": [],
+              "accepted_test_evidence": []}
+    monkeypatch.setattr(models, "_read_code_recipe", lambda _context, _recipe_id: (
+        recipe, {"artifact_id": recipe_artifact_id}))
+    monkeypatch.setattr(models, "_resolve_recipe_source", lambda *_args: (
+        source, {}, description, type("Snapshot", (), {"path": source_path, "raw_bytes": payload,
+                                                        "sha256": digest})()))
+    monkeypatch.setattr(models, "_validate_test_refs", lambda *_args, **_kwargs: [])
+
+    worker = env["worker"]
+    worker_calls = []
+    original_snapshot = worker.backend_snapshot
+
+    def snapshot(tag):
+        worker_calls.append(("snapshot", tag))
+        return original_snapshot(tag)
+
+    def mismatched_execute(tag, path, entrypoint, arguments, **kwargs):
+        worker_calls.append(("execute", tag))
+        assert kwargs["expected_source_sha256"] == digest
+        assert kwargs["source_bytes"] == payload
+        assert Path(path).name == source_path.name
+        return {"ok": True, "status": "SUCCEEDED", "result": {
+            "executed": True, "model_tag": tag, "source_sha256": "a" * 64,
+            "entrypoint": entrypoint, "readback": 42,
+        }}
+
+    worker.backend_snapshot = snapshot
+    worker.execute_java = mismatched_execute
+    context = {**env["context"], "operation_id": "recipe-mismatch", "request_id": "recipe-mismatch"}
+    result = ManagedBackend._dispatch_with_witness("code.recipe_run", lambda: models.recipe_run(
+        worker, "m", _args(context, recipe_id=recipe_artifact_id, arguments={})), effect="project_write")
+
+    assert result["success"] is False
+    assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+    assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+    assert result["execution_state_unknown"] is True
+    assert result["safe_retry"] is False
+    assert result["data"]["worker_result"]["execution_state_unknown"] is True
+    assert worker_calls == [("snapshot", "m"), ("execute", "m")]
+
+
+@pytest.mark.parametrize("failure_kind", ["pre_dispatch", "compile_error"])
+def test_recipe_run_preserves_proven_pre_model_failures_without_after_snapshot(env, monkeypatch, failure_kind):
+    payload = b"public class Recipe { public static Object run() { return 42; } }\r\n"
+    registered = _register_source(env, payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    source_path = env["root"] / registered["path"]
+    description = {"source_artifact": str(source_path), "source_sha256": digest,
+                   "entrypoint": "Recipe", "bytes": len(payload)}
+    source = {"artifact_id": registered["artifact_id"], "sha256": digest,
+              "path": source_path, "relative_path": registered["path"]}
+    recipe_artifact_id = "d" * 64
+    recipe = {"schema": models.MODEL_RECIPE_SCHEMA, "version": 1,
+              "runtime": {"comsol_versions": ["6.4.0.293"]},
+              "source": {"artifact_id": registered["artifact_id"], "sha256": digest,
+                         "entrypoint": "Recipe"},
+              "input_schema": {"type": "object"}, "test_refs": [],
+              "accepted_test_evidence": []}
+    monkeypatch.setattr(models, "_read_code_recipe", lambda _context, _recipe_id: (
+        recipe, {"artifact_id": recipe_artifact_id}))
+    monkeypatch.setattr(models, "_resolve_recipe_source", lambda *_args: (
+        source, {}, description, type("Snapshot", (), {"path": source_path, "raw_bytes": payload,
+                                                        "sha256": digest})()))
+    monkeypatch.setattr(models, "_validate_test_refs", lambda *_args, **_kwargs: [])
+
+    class WorkerFailure(Exception):
+        def __init__(self, reply):
+            super().__init__("synthetic pre-dispatch refusal")
+            self.reply = reply
+
+    worker = env["worker"]
+    worker_calls = []
+    original_snapshot = worker.backend_snapshot
+
+    def snapshot(tag):
+        worker_calls.append(("snapshot", tag))
+        return original_snapshot(tag)
+
+    def known_failure(tag, path, entrypoint, arguments, **kwargs):
+        worker_calls.append(("execute", tag))
+        assert kwargs["expected_source_sha256"] == digest
+        if failure_kind == "pre_dispatch":
+            failure = {"code": "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                       "source_operation_dispatched": False, "execution_state_unknown": False}
+            raise WorkerFailure({"ok": False, "status": "FAILED", "code": failure["code"],
+                                 "source_operation_dispatched": False, "execution_state_unknown": False,
+                                 "failure": failure})
+        return {"ok": False, "status": "FAILED", "failure": {
+            "code": "COMPILE_ERROR", "message": "syntax error", "diagnostics": [],
+            "execution_state_unknown": False,
+        }}
+
+    worker.backend_snapshot = snapshot
+    worker.execute_java = known_failure
+    context = {**env["context"], "operation_id": f"recipe-{failure_kind}",
+               "request_id": f"recipe-{failure_kind}"}
+    result = ManagedBackend._dispatch_with_witness("code.recipe_run", lambda: models.recipe_run(
+        worker, "m", _args(context, recipe_id=recipe_artifact_id, arguments={})), effect="project_write")
+
+    expected_code = ("WORKER_SOURCE_BINDING_UNAVAILABLE" if failure_kind == "pre_dispatch"
+                     else "COMPILE_ERROR")
+    assert result["success"] is False
+    assert result["status"] == "FAILED"
+    assert result["error"]["code"] == expected_code
+    assert result["execution_state_unknown"] is False
+    assert result["safe_retry"] is False
+    assert result["data"]["status"] == "FAILED"
+    assert worker_calls == [("snapshot", "m"), ("execute", "m")]
+
+
 def _forged_durable_test(env, source_sha, *, test_ref="forged-test-1", project="project-1"):
     """A durable row with caller-authored claims, used only as a rejection control."""
     operation, _ = env["store"].begin(request_id=test_ref, idempotency_key=test_ref, request_hash="d" * 64,
@@ -917,6 +1061,7 @@ def test_control_daemon_dirty_close_requires_configured_exact_scope_provider(tmp
         }, project_id=project_id, session_id=session_id, model_ref=ref, revision=0,
             request_id="close-scope-java-execute", idempotency_key="close-scope-java-execute")
         assert executed["success"] is True, executed
+        assert worker.executions[0][4]["expected_source_sha256"] == source_record["sha256"]
         revision = service.ledger._models[tag].revision
         assert revision == 1
 
@@ -1195,7 +1340,9 @@ def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp
         assert run["success"] is True, run
         assert run["data"]["status"] == "EXECUTED"
         assert worker.executions[-1][3] == {"count": 3}
-        assert worker.executions[-1][1] == str(project_root / source_record["path"])
+        assert worker.executions[-1][1] == Path(source_record["path"]).name
+        assert worker.executions[-1][4]["source_bytes"] == (project_root / source_record["path"]).read_bytes()
+        assert worker.executions[-1][4]["expected_source_sha256"] == source_record["sha256"]
 
         invalid = _dispatch_managed(daemon, "code.recipe_run", {"recipe_id": recipe_id, "arguments": {"count": "bad"}},
             project_id=project_id, session_id=session_id, model_ref=ref,

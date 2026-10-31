@@ -1787,6 +1787,7 @@ public final class ModelAcceptanceG35Builder {
         reply = self.worker.submit("code_execute", {
             "tag": tag,
             "source_artifact": str(builder_file),
+            "expected_source_sha256": _sha256(builder_file),
             "entrypoint": "ModelAcceptanceG35Builder",
             "arguments": {},
         })

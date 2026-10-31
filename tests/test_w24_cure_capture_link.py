@@ -457,7 +457,11 @@ class _AuthenticatedLinkWorker:
     def backend_snapshot(self, model_tag):
         return _RouteSnapshot(self.server_instance_id).model_snapshot(model_tag)
 
-    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None):
+    def execute_java(self, model_tag, source_artifact, entrypoint, arguments, *, request_id=None,
+                     expected_source_sha256=None):
+        source_hash = hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest()
+        if expected_source_sha256 != source_hash:
+            raise AssertionError("synthetic Worker received an unbound or changed Java source")
         action = arguments["action"]
         self.actions.append(action)
         study_tag = arguments.get("study_tag", "stdUV")
@@ -604,10 +608,9 @@ class _AuthenticatedLinkWorker:
                         "sha256": hashlib.sha256(raw).hexdigest()}
         else:
             raise AssertionError(f"unexpected harmless route action: {action}")
-        source_hash = hashlib.sha256(Path(source_artifact).read_bytes()).hexdigest()
         java = {"executed": True, "model_tag": model_tag, "source_sha256": source_hash,
                 "entrypoint": entrypoint, "readback": readback}
-        return {"ok": True, "status": "SUCCEEDED", "result": {"readback": java}}
+        return {"ok": True, "status": "SUCCEEDED", "result": {**java, "readback": java}}
 
 
 def _real_daemon_adapter(tmp_path: Path, monkeypatch, times: list[float]):

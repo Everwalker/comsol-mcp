@@ -13,7 +13,7 @@ import json
 import os
 import ctypes
 import errno
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from pathlib import PurePosixPath, PureWindowsPath
 import re
 import stat
@@ -1244,28 +1244,47 @@ def _strict_json(raw: bytes, *, code: str) -> dict[str, Any]:
     return value
 
 
-def _resolve_recipe_source(context: Mapping[str, Any], source_id: Any, entrypoint: str = "") -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    resolved = _resolve_registered(context, source_id, max_size=2 * 1024 * 1024)
-    record = context["operation_store"].get_metadata("artifacts", resolved["artifact_id"])
+def _resolve_recipe_source(context: Mapping[str, Any], source_id: Any, entrypoint: str = ""):
+    if not isinstance(source_id, str) or _SHA256.fullmatch(source_id) is None:
+        raise PreWriteRefusal("ARTIFACT_NOT_FOUND", "recipe source must name a registered content digest")
+    record = context["operation_store"].get_metadata("artifacts", source_id)
     if (not isinstance(record, Mapping) or record.get("schema_version") != 2
-            or record.get("project_id") != context["project_id"] or record.get("role") not in _SOURCE_ROLES
-            or Path(resolved["relative_path"]).suffix.lower() != ".java"):
+            or record.get("artifact_id") != source_id or record.get("sha256") != source_id
+            or record.get("project_id") != context["project_id"] or record.get("role") not in _SOURCE_ROLES):
         raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "recipe source must be a schema-v2 registered Java source artifact")
-    handle, before = _open_registered_source(resolved)
+    relative = record.get("path")
+    portable = PurePosixPath(relative) if isinstance(relative, str) else None
+    if (portable is None or portable.is_absolute() or portable.as_posix() != relative
+            or len(portable.parts) != 3 or portable.parts[:2] != ("g2_artifacts", "registered")
+            or re.fullmatch(re.escape(source_id) + r"\.java", portable.name) is None):
+        raise PreWriteRefusal("ARTIFACT_IDENTITY_MISMATCH", "registered Java source path is not canonical content-addressed storage")
+    if (record.get("classification") != "project_local"
+            or type(record.get("size")) is not int or not 0 < record["size"] <= 2 * 1024 * 1024
+            or not isinstance(record.get("file_identity"), Mapping)):
+        raise PreWriteRefusal("ARTIFACT_IDENTITY_MISMATCH", "registered Java source metadata is invalid or exceeds 2 MiB")
+    from ._artifact_store import local_artifact_host_identity, local_engine_host_identity
+    root_text = str(context["project_root"])
+    expected_root_id = hashlib.sha256(os.path.normcase(os.path.normpath(root_text)).encode("utf-8")).hexdigest()
+    raw_ref = context.get("model_ref")
+    server_id = raw_ref.get("server_instance_id") if isinstance(raw_ref, Mapping) else None
+    server_id = server_id or getattr(getattr(context.get("execution_service"), "ledger", None), "server_instance_id", None)
+    if (record.get("project_root_identity") != expected_root_id
+            or record.get("host_identity") != local_artifact_host_identity()
+            or record.get("engine_host_identity") != local_engine_host_identity(context["backend"].endpoint_key)
+            or not isinstance(server_id, str) or not server_id):
+        raise PreWriteRefusal("ARTIFACT_SCOPE_MISMATCH", "registered Java source belongs to a different project or host")
+    from ._g2_code import describe_snapshot, read_source_snapshot
     try:
-        raw = handle.read(2 * 1024 * 1024 + 1)
-        _check_registered_identity(resolved, before, handle, raw)
-    finally:
-        handle.close()
-    if not raw or len(raw) > 2 * 1024 * 1024 or hashlib.sha256(raw).hexdigest() != resolved["sha256"]:
-        raise PreWriteRefusal("ARTIFACT_HASH_MISMATCH", "registered Java source bytes differ from its content address")
-    from ._g2_code import describe_source
-    try:
-        description = describe_source(context["project_root"], resolved["relative_path"], entrypoint)
+        snapshot = read_source_snapshot(context.get("project_root_binding") or context["project_root"], relative)
+        if (len(snapshot.raw_bytes) != record["size"] or snapshot.sha256 != source_id
+                or any(snapshot.file_identity.get(key) != record["file_identity"].get(key)
+                       for key in ("device", "inode", "size", "mtime_ns"))):
+            raise PreWriteRefusal("ARTIFACT_HASH_MISMATCH", "registered Java source bytes or identity changed")
+        description = describe_snapshot(snapshot, entrypoint)
         if entrypoint:
             # Comments/literals and nested declarations must not force an inferred
             # entrypoint. Explicit class identity still must exist in this source.
-            code = re.sub(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", raw.decode("utf-8"), flags=re.S)
+            code = re.sub(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", snapshot.source, flags=re.S)
             declared = set(re.findall(r"\b(?:class|interface|record)\s+([A-Za-z_$][\w$]*)", code))
             class_name = description["entrypoint"].split("#", 1)[0]
             package = re.search(r"\bpackage\s+([\w.]+)\s*;", code)
@@ -1274,9 +1293,11 @@ def _resolve_recipe_source(context: Mapping[str, Any], source_id: Any, entrypoin
                 raise PreWriteRefusal("INVALID_REQUEST", "explicit recipe entrypoint class is not declared in this source")
     except ExecutionContractError as exc:
         raise PreWriteRefusal(exc.code, str(exc), details=dict(exc.details)) from exc
-    if description["source_sha256"] != resolved["sha256"]:
-        raise PreWriteRefusal("ARTIFACT_CHANGED", "source changed between registered read and entrypoint inspection")
-    return resolved, dict(record), description
+    resolved = {"artifact_id": source_id, "path": snapshot.path, "relative_path": relative,
+                "sha256": source_id, "size": record["size"],
+                "file_identity": dict(record["file_identity"]), "role": record.get("role"),
+                "classification": record.get("classification"), "record_schema_version": 2}
+    return resolved, dict(record), description, snapshot
 
 
 def _open_registered_source(resolved: Mapping[str, Any]):
@@ -1581,7 +1602,8 @@ def recipe_register(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     _model_state(context, model_tag)
     _require_context(context, "project_root", "project_id", "operation_store", "host_identity",
                      "engine_host_identity", "request_id", "operation_id", "model_ref", "source_revision")
-    resolved, _record, description = _resolve_recipe_source(context, body.get("source_artifact"), body.get("entrypoint", ""))
+    resolved, _record, description, _snapshot = _resolve_recipe_source(
+        context, body.get("source_artifact"), body.get("entrypoint", ""))
     input_schema = _validate_input_schema(body.get("input_schema"))
     from ._g3_model_delivery import _current_version
     exact_version = _current_version(worker)
@@ -1708,7 +1730,8 @@ def recipe_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
                               details={"actual_comsol_version": actual_version,
                                        "admitted_comsol_versions": recipe["runtime"]["comsol_versions"]})
     source_id = recipe["source"]["artifact_id"]
-    source, _source_record, description = _resolve_recipe_source(context, source_id, recipe["source"]["entrypoint"])
+    source, _source_record, description, snapshot = _resolve_recipe_source(
+        context, source_id, recipe["source"]["entrypoint"])
     if description["source_sha256"] != recipe["source"]["sha256"] or description["entrypoint"] != recipe["source"]["entrypoint"]:
         raise PreWriteRefusal("ARTIFACT_HASH_MISMATCH", "recipe source no longer matches the registered source SHA/entrypoint")
     evidence = _validate_test_refs(context, recipe["test_refs"], source_sha256=source["sha256"],
@@ -1719,25 +1742,61 @@ def recipe_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
         raise PreWriteRefusal("RECIPE_TEST_UNVERIFIED", "registered execution-smoke evidence differs from current durable records")
     model = worker.client().model(model_tag)
     before = worker.backend_snapshot(model_tag)
+    from ._g2_code import execution_result
     try:
-        reply = worker.execute_java(model_tag, str(source["path"]), description["entrypoint"], dict(data),
+        reply = worker.execute_java(model_tag, snapshot.path.name, description["entrypoint"], dict(data),
+                                    source_bytes=snapshot.raw_bytes,
+                                    expected_source_sha256=snapshot.sha256,
                                     request_id=str(context["operation_id"]))
     except Exception as exc:
-        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "trusted recipe was dispatched; automatic replay is unsafe",
-                                     stage="post_dispatch", details={"cause_type": type(exc).__name__,
-                                                                      "safe_retry": False, "recipe_id": recipe_resolved["artifact_id"]}) from exc
-    after = worker.backend_snapshot(model_tag)
-    from ._g2_code import execution_result
-    result = execution_result(description=description, worker_reply=reply, before=before, after=after)
+        preserved = getattr(exc, "reply", None)
+        if isinstance(preserved, Mapping) and preserved.get("source_operation_dispatched") is False:
+            # Capability refusal happened before the code request frame; keep
+            # the explicit no-dispatch proof as structured data.
+            reply = dict(preserved)
+        else:
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "trusted recipe was dispatched; automatic replay is unsafe",
+                                         stage="post_dispatch", details={"cause_type": type(exc).__name__,
+                                                                          "safe_retry": False, "recipe_id": recipe_resolved["artifact_id"]}) from exc
+    # Worker identity is checked before any after-snapshot or other Worker
+    # read. Once a dispatched action has an incomplete/mismatched success
+    # receipt, the result is UNKNOWN and no later observation may downgrade it.
+    result = execution_result(description=description, worker_reply=reply, before=before,
+                              expected_model_tag=model_tag)
     if result.get("success") is not True:
         data_result = result.get("data", {})
         data_result.update({"recipe_id": recipe_resolved["artifact_id"], "safe_retry": False,
                             "model_ref": context["model_ref"], "source_revision": state.revision})
-        if result.get("error", {}).get("code") == "EXECUTION_STATE_UNKNOWN":
-            data_result["execution_state_unknown"] = True
-        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "trusted recipe did not produce a verified successful execution",
+        error = result.get("error") if isinstance(result.get("error"), Mapping) else {}
+        unknown = error.get("code") == "EXECUTION_STATE_UNKNOWN"
+        failure = {"code": error.get("code") or "ENGINE_CALL_FAILED",
+                   "message": str(error.get("message") or "trusted recipe did not produce a verified execution"),
+                   "safe_retry": False}
+        status = "EXECUTION_STATE_UNKNOWN" if unknown else "FAILED"
+        failure_data = {"status": status,
+                "recipe_id": recipe_resolved["artifact_id"],
+                "source_artifact": recipe["source"]["artifact_id"],
+                "source_sha256": description["source_sha256"],
+                "entrypoint": description["entrypoint"],
+                "worker_result": data_result,
+                "model_ref": context["model_ref"], "source_revision": state.revision}
+        return {"success": False, "status": status,
+                "error": failure,
+                "execution_state_unknown": unknown,
+                "partial_change": bool(data_result.get("partial_change", unknown)),
+                "safe_retry": False,
+                "data": failure_data}
+    after = worker.backend_snapshot(model_tag)
+    result = execution_result(description=description, worker_reply=reply, before=before, after=after,
+                              expected_model_tag=model_tag)
+    if result.get("success") is not True:
+        # Identity was valid, but the subsequent observation itself may have
+        # raced with the action; keep that outcome conservative.
+        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "trusted recipe outcome could not be observed safely",
                                      stage="post_dispatch", details={"source_sha256": description["source_sha256"],
-                                                                      "safe_retry": False, "reply": result})
+                                                                      "safe_retry": False,
+                                                                      "execution_state_unknown": True,
+                                                                      "reply": result})
     return {"status": "EXECUTED", "recipe_id": recipe_resolved["artifact_id"],
             "source_artifact": recipe["source"]["artifact_id"], "source_sha256": description["source_sha256"],
             "entrypoint": description["entrypoint"], "runtime": actual_version,

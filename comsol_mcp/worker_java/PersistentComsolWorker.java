@@ -62,7 +62,6 @@ import com.sun.source.util.Trees;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import java.nio.file.attribute.BasicFileAttributes;
 
 /**
  * A deliberately small, persistent, local-only COMSOL API worker.
@@ -77,6 +76,13 @@ public final class PersistentComsolWorker {
   private static final int PUBLIC_METADATA_INTERFACE_LIMIT = 1024;
   private static final int PUBLIC_METADATA_METHOD_LIMIT = 8192;
   private static final int PUBLIC_METADATA_SCAN_LIMIT = 65536;
+  private static final long SOURCE_BINDING_PROTOCOL = 2L;
+  private static final String SOURCE_BINDING_WORKER_BUILD_ID = "persistent-comsol-worker/source-snapshot-v2";
+  private static final java.util.regex.Pattern SOURCE_SHA256 = java.util.regex.Pattern.compile("[0-9a-f]{64}");
+  private static final int MAX_SOURCE_BYTES = 2 * 1024 * 1024;
+  private static final int MAX_SOURCE_BASE64_CHARS = ((MAX_SOURCE_BYTES + 2) / 3) * 4;
+  private static final java.util.regex.Pattern SOURCE_NAME = java.util.regex.Pattern.compile("[^/\\\\]+\\.java", java.util.regex.Pattern.CASE_INSENSITIVE);
+  private static final int MAX_REQUEST_LINE_CHARS = 8 * 1024 * 1024;
   private static final String D2_COMSOL_VERSION = "6.4.0.293";
   private static final String D2_VERSION_COMPONENT = "(?:0|[1-9][0-9]*)";
   private static final java.util.regex.Pattern D2_CANONICAL_VERSION = java.util.regex.Pattern.compile(
@@ -320,17 +326,30 @@ public final class PersistentComsolWorker {
     try (Socket ignored = socket;
          BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
          BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
-      String line = reader.readLine();
+      String line = readBoundedLine(reader);
       Map<String, Object> auth = object(line);
       if (!constantTimeEquals(token, string(auth.get("token")))) { reply(writer, error("AUTH_FAILED", "worker token rejected")); return; }
       reply(writer, map("ok", true, "type", "authenticated", "generation", generation.get()));
-      while ((line = reader.readLine()) != null) {
+      while ((line = readBoundedLine(reader)) != null) {
         try { reply(writer, dispatch(object(line))); }
         catch (Throwable t) { reply(writer, failure("WORKER_PROTOCOL_ERROR", t, false)); }
       }
     } catch (IOException | UncheckedIOException ignored) {
       // The controller may time out while the engine continues. That must not interrupt engine work.
     }
+  }
+  private static String readBoundedLine(BufferedReader reader) throws IOException {
+    StringBuilder line = new StringBuilder();
+    int value;
+    while ((value = reader.read()) != -1) {
+      if (value == '\n') return line.toString();
+      if (value != '\r') {
+        if (line.length() >= MAX_REQUEST_LINE_CHARS)
+          throw new IOException("Worker request line exceeds the protocol size limit");
+        line.append((char)value);
+      }
+    }
+    return line.length() == 0 ? null : line.toString();
   }
   private void reply(BufferedWriter writer, Map<String, Object> data) throws IOException {
     String payload;
@@ -353,12 +372,17 @@ public final class PersistentComsolWorker {
     String type = string(request.get("type"));
     if ("health".equals(type)) return health();
     if ("status".equals(type)) return status(string(request.get("request_id")));
+    if ("source_binding_capabilities".equals(type)) return sourceBindingCapabilities(request);
     if ("codec_selftest".equals(type)) return map("ok", true, "result", codecSelftest());
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("marshalling_selftest".equals(type)) return map("ok", true, "result", marshallingSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
     if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"progress_log".equals(type) && !"license_checkout".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type) && !"public_describe".equals(type) && !"g2_entity_identity".equals(type) && !"g2_nodegroup_read".equals(type) && !"g2_nodegroup_ungroup".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
+    if ("code_compile".equals(type) || "code_execute".equals(type)) {
+      Map<String,Object> refusal = sourceBindingRefusal(request);
+      if (refusal != null) return refusal;
+    }
     String id = requiredId(request);
     RequestState old = requests.get(id);
     String requestHash = hashRequest(request);
@@ -600,6 +624,7 @@ public final class PersistentComsolWorker {
     CompiledArtifact existing = compiledArtifacts.get(key);
     if (existing != null && Files.isDirectory(existing.classes)) {
       return map("compiled", true, "source_sha256", source.sha256, "entrypoint", source.entrypoint,
+          "worker_build_id", SOURCE_BINDING_WORKER_BUILD_ID, "worker_instance_id", instanceId,
           "artifact", existing.classes.toString(), "diagnostics", Collections.emptyList());
     }
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -612,14 +637,15 @@ public final class PersistentComsolWorker {
     if (!success) throw new WorkerFailure("COMPILE_ERROR", "Java compilation failed", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", diagnosticRows, "artifact", classes.toString()));
     compiledArtifacts.put(key, new CompiledArtifact(classes, source.sha256, source.entrypoint));
     return map("compiled", true, "source_sha256", source.sha256, "entrypoint", source.entrypoint,
+        "worker_build_id", SOURCE_BINDING_WORKER_BUILD_ID, "worker_instance_id", instanceId,
         "artifact", classes.toString(), "diagnostics", diagnosticRows);
   }
   @SuppressWarnings("unchecked")
   private Object executeJava(Map<String, Object> request) throws Exception {
+    SourceSpec source = sourceSpec(request);
     ensureConnected();
     String tag = string(request.get("tag"));
     if (tag.isEmpty()) throw new IllegalArgumentException("model tag required for Java execution");
-    SourceSpec source = sourceSpec(request);
     String key = source.sha256 + "|" + source.entrypoint;
     CompiledArtifact artifact = compiledArtifacts.get(key);
     if (artifact == null || !Files.isDirectory(artifact.classes)) { compileJava(source); artifact = compiledArtifacts.get(key); }
@@ -645,11 +671,13 @@ public final class PersistentComsolWorker {
       }
       if (selected == null) throw new WorkerFailure("ENTRYPOINT_REJECTED", "entrypoint must expose public static run(Model[, Map])");
       Object value = selected.getParameterCount() == 2 ? selected.invoke(null, model, arguments) : selected.invoke(null, model);
-      return map("executed", true, "model_tag", tag, "source_sha256", source.sha256, "entrypoint", source.entrypoint, "readback", encode(value));
+      return map("executed", true, "model_tag", tag, "source_sha256", source.sha256,
+          "entrypoint", source.entrypoint, "worker_build_id", SOURCE_BINDING_WORKER_BUILD_ID,
+          "worker_instance_id", instanceId, "readback", encode(value));
     }
   }
-  private static JavaFileObject snapshotFile(SourceSpec source, String filename) {
-    return new SimpleJavaFileObject(source.path.resolveSibling(filename).toUri(), JavaFileObject.Kind.SOURCE) {
+  private static JavaFileObject snapshotFile(SourceSpec source, String filename) throws Exception {
+    return new SimpleJavaFileObject(new URI("string", null, "/" + filename, null), JavaFileObject.Kind.SOURCE) {
       @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return source.text; }
     };
   }
@@ -657,7 +685,7 @@ public final class PersistentComsolWorker {
   private static Map<String,Object> compileSnapshot(SourceSpec source, Path classes) throws Exception {
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) throw new WorkerFailure("COMPILE_UNAVAILABLE", "the Worker JVM does not expose javac");
-    String filename = source.path.getFileName().toString();
+    String filename = source.sourceName;
     List<String> publicTypes = new ArrayList<>();
     try (StandardJavaFileManager manager = compiler.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8)) {
       DiagnosticCollector<JavaFileObject> parseDiagnostics = new DiagnosticCollector<>();
@@ -750,75 +778,59 @@ public final class PersistentComsolWorker {
   private static List<Object> sourceDiagnostics(SourceSpec source, DiagnosticCollector<JavaFileObject> diagnostics) {
     List<Object> rows = new ArrayList<>();
     for (Diagnostic<? extends JavaFileObject> item : diagnostics.getDiagnostics()) {
-      rows.add(map("kind", item.getKind().name(), "source", source.path.toString(),
-          "compilation_source", item.getSource() == null ? "" : item.getSource().getName(),
+      rows.add(map("kind", item.getKind().name(), "source", source.sourceName,
+          "compilation_source", item.getSource() == null ? "" : source.sourceName,
           "line", item.getLineNumber(), "column", item.getColumnNumber(), "start", item.getStartPosition(), "end", item.getEndPosition(),
-          "message", item.getMessage(Locale.ROOT)));
+          "message", item.getKind() == Diagnostic.Kind.ERROR
+              ? "Java compiler reported an error" : "Java compiler reported a diagnostic"));
     }
     return rows;
   }
-  private static boolean sameDirectoryIdentity(BasicFileAttributes a, BasicFileAttributes b) {
-    return a.isDirectory() && b.isDirectory() && !a.isSymbolicLink() && !b.isSymbolicLink()
-        && Objects.equals(a.fileKey(), b.fileKey()) && a.creationTime().equals(b.creationTime());
-  }
-  private static boolean sameSourceIdentity(BasicFileAttributes a, BasicFileAttributes b) {
-    return a.isRegularFile() == b.isRegularFile() && a.isDirectory() == b.isDirectory()
-        && Objects.equals(a.fileKey(), b.fileKey()) && a.size() == b.size()
-        && a.lastModifiedTime().equals(b.lastModifiedTime()) && a.creationTime().equals(b.creationTime());
-  }
   private static SourceSpec sourceSpec(Map<String, Object> request) throws Exception {
-    String raw = string(request.get("source_artifact"));
-    if (raw.isEmpty()) throw new WorkerFailure("ARTIFACT_MISSING", "source_artifact is required");
-    Path path = Paths.get(raw).toAbsolutePath().normalize();
-    Map<Path,BasicFileAttributes> parents = new LinkedHashMap<>();
-    for (Path parent = path.getParent(); parent != null; parent = parent.getParent()) {
-      BasicFileAttributes attrs = Files.readAttributes(parent, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      if (!attrs.isDirectory() || attrs.isSymbolicLink()) throw new WorkerFailure("ARTIFACT_MISSING", "source ancestry must be ordinary directories");
-      parents.put(parent, attrs);
-    }
-    BasicFileAttributes before = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-    if (!before.isRegularFile() || before.isSymbolicLink() || !path.getFileName().toString().endsWith(".java"))
-      throw new WorkerFailure("ARTIFACT_MISSING", "source artifact must be a regular Java file");
-    if (before.size() > 2 * 1024 * 1024) throw new WorkerFailure("INVALID_REQUEST", "source artifact exceeds the 2 MiB source limit");
+    Object expectedHash = request.get("expected_source_sha256");
+    if (!(expectedHash instanceof String) || !SOURCE_SHA256.matcher((String)expectedHash).matches())
+      throw new WorkerFailure("SOURCE_HASH_REQUIRED",
+          "code compilation/execution requires a lowercase SHA-256 of the source snapshot",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
+    String expectedSourceSha256 = (String)expectedHash;
+    String sourceName = string(request.get("source_name"));
+    if (sourceName.length() > 255 || sourceName.indexOf('\u0000') >= 0 || !SOURCE_NAME.matcher(sourceName).matches())
+      throw new WorkerFailure("SOURCE_SNAPSHOT_REQUIRED", "a Java basename is required for the source snapshot",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
+    String encoded = string(request.get("source_snapshot_b64"));
+    if (encoded.isEmpty() || encoded.length() > MAX_SOURCE_BASE64_CHARS)
+      throw new WorkerFailure("SOURCE_SNAPSHOT_REQUIRED", "bounded source snapshot is required",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
     byte[] bytes;
-    try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
-      if (channel.size() != before.size()) throw new WorkerFailure("ARTIFACT_MISSING", "source changed before snapshot");
-      ByteArrayOutputStream output = new ByteArrayOutputStream();
-      java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8192);
-      while (channel.read(buffer) != -1) {
-        buffer.flip(); output.write(buffer.array(), 0, buffer.remaining()); buffer.clear();
-        if (output.size() > 2 * 1024 * 1024) throw new WorkerFailure("INVALID_REQUEST", "source artifact exceeds the 2 MiB source limit");
-      }
-      bytes = output.toByteArray();
+    try { bytes = Base64.getDecoder().decode(encoded); }
+    catch (IllegalArgumentException invalid) {
+      throw new WorkerFailure("SOURCE_SNAPSHOT_INVALID", "source snapshot is not valid base64",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
     }
-    BasicFileAttributes after = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-    if (bytes.length != before.size() || !sameSourceIdentity(before, after))
-      throw new WorkerFailure("ARTIFACT_MISSING", "source changed during snapshot");
-    for (Map.Entry<Path,BasicFileAttributes> parent : parents.entrySet()) {
-      BasicFileAttributes afterParent = Files.readAttributes(parent.getKey(), BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      if (!sameDirectoryIdentity(parent.getValue(), afterParent)) throw new WorkerFailure("ARTIFACT_MISSING", "source ancestry changed during snapshot");
-    }
+    if (bytes.length == 0 || bytes.length > MAX_SOURCE_BYTES
+        || !Base64.getEncoder().encodeToString(bytes).equals(encoded))
+      throw new WorkerFailure("SOURCE_SNAPSHOT_INVALID", "source snapshot is empty, oversized or noncanonical",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
     String digest = sha256Bytes(bytes);
-    String basename = path.getFileName().toString();
-    if (basename.matches("[0-9a-f]{64}\\.java") && !basename.substring(0, 64).equals(digest))
-      throw new WorkerFailure("ARTIFACT_MISSING", "content-addressed source SHA does not match its bytes");
     String entrypoint = string(request.get("entrypoint"));
+    if (!expectedSourceSha256.equals(digest))
+      throw new WorkerFailure("SOURCE_HASH_MISMATCH",
+          "Worker source snapshot differs from the independently observed source SHA",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
     String text;
     try {
       text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
           .onUnmappableCharacter(CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes)).toString();
     } catch (CharacterCodingException invalidEncoding) {
-      throw new WorkerFailure("COMPILE_ERROR", "Java source contains invalid UTF-8", map(
-          "source_sha256", digest, "entrypoint", entrypoint,
-          "diagnostics", Collections.singletonList(map("kind", "ERROR", "source", path.toString(),
-              "line", -1L, "column", -1L, "start", -1L, "end", -1L, "message", "Java source contains invalid UTF-8"))));
+      throw new WorkerFailure("SOURCE_SNAPSHOT_INVALID", "source snapshot must contain valid UTF-8",
+          map("source_operation_dispatched", false, "execution_state_unknown", false, "safe_retry", false));
     }
     if (entrypoint.isEmpty()) {
       java.util.regex.Matcher cls = java.util.regex.Pattern.compile("(?:class|interface|record)\\s+([A-Za-z_$][\\w$]*)").matcher(text);
       if (!cls.find()) throw new WorkerFailure("INVALID_REQUEST", "source has no Java class entrypoint");
       entrypoint = cls.group(1);
     }
-    return new SourceSpec(path, text, digest, entrypoint);
+    return new SourceSpec(sourceName, text, digest, entrypoint);
   }
   @SuppressWarnings("unchecked")
   private Object modelUtil(Map<String, Object> request) throws Exception {
@@ -2403,7 +2415,69 @@ public final class PersistentComsolWorker {
     String id = "h-" + UUID.randomUUID(); handles.put(id, value);
     return map("$worker_handle", id, "generation", generation.get(), "java_type", value.getClass().getInterfaces().length > 0 ? value.getClass().getInterfaces()[0].getName() : value.getClass().getName());
   }
-  private Map<String, Object> health() { return map("ok", true, "status", "HEALTHY", "generation", generation.get(), "instance_id", instanceId, "connected", connected, "server", serverIdentity, "changed_count", changedCount.get(), "queued_or_running", requests.values().stream().filter(RequestState::active).count()); }
+  private Map<String, Object> health() { return map("ok", true, "status", "HEALTHY", "generation", generation.get(), "instance_id", instanceId, "worker_build_id", SOURCE_BINDING_WORKER_BUILD_ID, "source_binding_protocol", SOURCE_BINDING_PROTOCOL, "connected", connected, "server", serverIdentity, "changed_count", changedCount.get(), "queued_or_running", requests.values().stream().filter(RequestState::active).count()); }
+  private Map<String,Object> sourceBindingCapabilities(Map<String,Object> request) {
+    return map("ok", true, "request_id", string(request.get("request_id")), "type", "source_binding_capabilities",
+        "status", "SUCCEEDED", "result", map("source_binding_protocol", SOURCE_BINDING_PROTOCOL,
+            "worker_build_id", SOURCE_BINDING_WORKER_BUILD_ID, "instance_id", instanceId));
+  }
+  private Map<String,Object> sourceBindingRefusal(Map<String,Object> request) {
+    String build = string(request.get("expected_worker_build_id"));
+    String instance = string(request.get("expected_worker_instance_id"));
+    Object expectedHash = request.get("expected_source_sha256");
+    if (!(expectedHash instanceof String) || !SOURCE_SHA256.matcher((String)expectedHash).matches())
+      return sourceBindingFailure(request, "SOURCE_HASH_REQUIRED",
+          "code compilation/execution requires a lowercase SHA-256 of the source snapshot");
+    if (!SOURCE_BINDING_WORKER_BUILD_ID.equals(build) || !instanceId.equals(instance))
+      return sourceBindingFailure(request, "WORKER_SOURCE_BINDING_MISMATCH",
+          "request is not bound to this source-capable Worker build and instance");
+    if (request.containsKey("source_artifact"))
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_REQUIRED",
+          "Worker code requests cannot reopen project paths; send the bounded source snapshot");
+    String name = string(request.get("source_name"));
+    if (name.length() > 255 || name.indexOf('\u0000') >= 0 || !SOURCE_NAME.matcher(name).matches())
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_REQUIRED",
+          "Worker code requests require a Java basename for diagnostics");
+    String encoded = string(request.get("source_snapshot_b64"));
+    if (encoded.isEmpty() || encoded.length() > MAX_SOURCE_BASE64_CHARS)
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_REQUIRED",
+          "Worker code request source snapshot is missing or exceeds the encoded size limit");
+    byte[] bytes;
+    try { bytes = Base64.getDecoder().decode(encoded); }
+    catch (IllegalArgumentException invalid) {
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_INVALID",
+          "Worker code request source snapshot is not valid base64");
+    }
+    if (bytes.length == 0 || bytes.length > MAX_SOURCE_BYTES
+        || !Base64.getEncoder().encodeToString(bytes).equals(encoded))
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_INVALID",
+          "Worker code request source snapshot is empty, oversized or noncanonical");
+    String actualHash;
+    try { actualHash = sha256Bytes(bytes); }
+    catch (Exception impossible) {
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_INVALID",
+          "Worker could not validate the bounded source snapshot");
+    }
+    if (!expectedHash.equals(actualHash))
+      return sourceBindingFailure(request, "SOURCE_HASH_MISMATCH",
+          "Worker source snapshot differs from the independently observed source SHA");
+    try {
+      StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+          .onUnmappableCharacter(CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes));
+    } catch (CharacterCodingException invalidEncoding) {
+      return sourceBindingFailure(request, "SOURCE_SNAPSHOT_INVALID",
+          "Worker source snapshot must contain valid UTF-8");
+    }
+    return null;
+  }
+  private Map<String,Object> sourceBindingFailure(Map<String,Object> request, String code, String message) {
+    Map<String,Object> failure = map("code", code, "message", message, "source_operation_dispatched", false,
+        "execution_state_unknown", false, "safe_retry", false);
+    return map("ok", false, "request_id", string(request.get("request_id")),
+        "type", string(request.get("type")), "status", "FAILED", "code", code,
+        "message", message, "source_operation_dispatched", false,
+        "execution_state_unknown", false, "safe_retry", false, "failure", failure);
+  }
   private Map<String, Object> status(String id) {
     if (id.isEmpty()) { List<Object> all = new ArrayList<>(); for (RequestState state : requests.values()) all.add(state.snapshot()); return map("ok", true, "requests", all, "generation", generation.get()); }
     RequestState state = requests.get(id); return state == null ? error("REQUEST_NOT_FOUND", "unknown request_id") : state.snapshot();
@@ -2474,8 +2548,8 @@ public final class PersistentComsolWorker {
     WorkerFailure(String code,String message,Map<String,Object> details,Throwable cause){super(message,cause);this.code=code;this.details=details;}
   }
   private static final class SourceSpec {
-    final Path path; final String text, sha256, entrypoint;
-    SourceSpec(Path path,String text,String sha256,String entrypoint){this.path=path;this.text=text;this.sha256=sha256;this.entrypoint=entrypoint;}
+    final String sourceName, text, sha256, entrypoint;
+    SourceSpec(String sourceName,String text,String sha256,String entrypoint){this.sourceName=sourceName;this.text=text;this.sha256=sha256;this.entrypoint=entrypoint;}
   }
   private static final class CompiledArtifact {
     final Path classes; final String sha256, entrypoint;

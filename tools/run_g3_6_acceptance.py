@@ -589,6 +589,7 @@ public final class FullBenchmarkBuilder {
             build_rep = worker.submit("code_execute", {
                 "tag": tag,
                 "source_artifact": str(builder_file),
+                "expected_source_sha256": sha256_file(builder_file),
                 "entrypoint": "FullBenchmarkBuilder",
                 "arguments": {},
             })
@@ -666,6 +667,7 @@ public final class TransientSolver {
             worker.submit("code_execute", {
                 "tag": tag,
                 "source_artifact": str(trans_file),
+                "expected_source_sha256": sha256_file(trans_file),
                 "entrypoint": "TransientSolver",
                 "arguments": {},
             })
@@ -787,6 +789,7 @@ public final class ParamModifier {
             worker2.submit("code_execute", {
                 "tag": reloaded_tag,
                 "source_artifact": str(mod_file),
+                "expected_source_sha256": sha256_file(mod_file),
                 "entrypoint": "ParamModifier",
                 "arguments": {},
             })
@@ -816,6 +819,7 @@ public final class ParamModifier {
                     worker2.submit("code_execute", {
                         "tag": reloaded_tag,
                         "source_artifact": str(mod_file),
+                        "expected_source_sha256": sha256_file(mod_file),
                         "entrypoint": "ParamModifier",
                         "arguments": {},
                     })
@@ -1112,7 +1116,9 @@ public class FastSolve {
 """
         f_solve = shared_dir / "FastSolve.java"
         f_solve.write_text(code_solve, encoding="utf-8")
-        inst64_a.worker.submit("code_execute", {"tag": m64.tag(), "source_artifact": str(f_solve), "entrypoint": "FastSolve", "arguments": {}})
+        inst64_a.worker.submit("code_execute", {"tag": m64.tag(), "source_artifact": str(f_solve),
+                                                  "expected_source_sha256": sha256_file(f_solve),
+                                                  "entrypoint": "FastSolve", "arguments": {}})
         plot_64_a = inst64_a.work_dir / "switch_64_a.png"
         plot_render(inst64_a.worker, m64.tag(), {"path": "pg3d", "options": {"destination": str(plot_64_a), "allow_overwrite": True}})
         mph_64_a = inst64_a.work_dir / "switch_64_a.mph"
@@ -1123,7 +1129,9 @@ public class FastSolve {
         inst63 = LiveComsolServerInstance("6.3", self.root_63, self.jdk11, shared_dir / "step2_63")
         inst63.start()
         m63 = inst63.worker.client().create("Model63")
-        inst63.worker.submit("code_execute", {"tag": m63.tag(), "source_artifact": str(f_solve), "entrypoint": "FastSolve", "arguments": {}})
+        inst63.worker.submit("code_execute", {"tag": m63.tag(), "source_artifact": str(f_solve),
+                                                "expected_source_sha256": sha256_file(f_solve),
+                                                "entrypoint": "FastSolve", "arguments": {}})
         plot_63 = inst63.work_dir / "switch_63.png"
         plot_render(inst63.worker, m63.tag(), {"path": "pg3d", "options": {"destination": str(plot_63), "allow_overwrite": True}})
         mph_63 = inst63.work_dir / "switch_63.mph"

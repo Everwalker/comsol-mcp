@@ -3452,7 +3452,8 @@ class ControlDaemon:
             })
             solve_arguments = {"study_tag": study_tag}
             self._authorize_project_execution("run_study", solve_arguments, solve_execution)
-            with backend.project_root_scope(project["workspace"]):
+            workspace_binding = self.project_authority.bind_project_workspace(project)
+            with backend.project_root_scope(workspace_binding):
                 # Intent is committed above before entering the only solve call.
                 solve_result = backend.invoke(
                     "run_study", solve_arguments, solve_execution, solve_operation_id,
@@ -12848,7 +12849,8 @@ class ControlDaemon:
                 self._authorize_project_execution(operation, arguments, execution)
                 timeouts = self.project_authority.apply_timeout_caps(project_id, timeouts)
                 project_record = self.project_authority.get_project(project_id)
-                project_scope = self.backend.project_root_scope(project_record["workspace"])
+                workspace_binding = self.project_authority.bind_project_workspace(project_record)
+                project_scope = self.backend.project_root_scope(workspace_binding)
             else:
                 from contextlib import nullcontext
                 project_scope = nullcontext()

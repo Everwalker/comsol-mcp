@@ -7,9 +7,11 @@ through the execution service's per-server queue.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -34,6 +36,12 @@ _UNCORRELATED_PROTOCOL_REJECTIONS = frozenset({
 })
 
 _D2_COMSOL_VERSION = "6.4.0.293"
+_SOURCE_BINDING_PROTOCOL = 2
+_SOURCE_BINDING_WORKER_BUILD_ID = "persistent-comsol-worker/source-snapshot-v2"
+_SOURCE_SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+_SOURCE_NAME_RE = re.compile(r"[^/\\\x00]+\.java\Z", re.IGNORECASE)
+_MAX_SOURCE_BYTES = 2 * 1024 * 1024
+_MAX_SOURCE_BASE64_CHARS = ((_MAX_SOURCE_BYTES + 2) // 3) * 4
 _D2_READ_RECEIVERS = {
     "nodeGroup": ("com.comsol.model.Model", {(): "com.comsol.model.NodeGroupList",
                                                ("java.lang.String",): "com.comsol.model.NodeGroup"}),
@@ -69,6 +77,180 @@ class JavaWorkerError(RuntimeError):
         self.execution_state_unknown = _structured_true(
             self.reply, "execution_state_unknown"
         ) or _structured_true(self.failure, "execution_state_unknown")
+
+
+def _source_binding_refusal(request: Mapping[str, Any], code: str, message: str) -> JavaWorkerError:
+    """A code request refused before its operation frame reaches the Worker."""
+    request_id = request.get("request_id")
+    failure = {"code": code, "message": message, "source_operation_dispatched": False,
+               "execution_state_unknown": False, "safe_retry": False}
+    reply = {"ok": False, "status": "FAILED", "request_id": request_id,
+             "type": request.get("type"), "code": code, "message": message,
+             "source_operation_dispatched": False, "execution_state_unknown": False,
+             "safe_retry": False, "failure": failure}
+    return JavaWorkerError(message, reply=reply)
+
+
+def _validate_source_snapshot_fields(request: Mapping[str, Any]) -> bytes:
+    expected = request.get("expected_source_sha256")
+    if not isinstance(expected, str) or not _SOURCE_SHA256_RE.fullmatch(expected):
+        raise _source_binding_refusal(request, "SOURCE_HASH_REQUIRED",
+            "code compilation/execution requires a lowercase SHA-256 of the source snapshot")
+    if "source_artifact" in request:
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_REQUIRED",
+            "Worker code requests cannot reopen project paths; send the bounded source snapshot")
+    name = request.get("source_name")
+    if not isinstance(name, str) or not _SOURCE_NAME_RE.fullmatch(name):
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_REQUIRED",
+            "Worker code requests require a Java basename for diagnostics")
+    encoded = request.get("source_snapshot_b64")
+    if (not isinstance(encoded, str) or not encoded
+            or len(encoded) > _MAX_SOURCE_BASE64_CHARS):
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_REQUIRED",
+            "Worker code request source snapshot is missing or exceeds the encoded size limit")
+    try:
+        raw = base64.b64decode(encoded.encode("ascii"), validate=True)
+    except (UnicodeEncodeError, ValueError) as exc:
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_INVALID",
+            "Worker code request source snapshot is not canonical base64") from exc
+    if not raw or len(raw) > _MAX_SOURCE_BYTES:
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_INVALID",
+            "Worker code request source snapshot is empty or exceeds 2 MiB")
+    if base64.b64encode(raw).decode("ascii") != encoded:
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_INVALID",
+            "Worker code request source snapshot is not canonical base64")
+    if hashlib.sha256(raw).hexdigest() != expected:
+        raise _source_binding_refusal(request, "SOURCE_HASH_MISMATCH",
+            "Worker code request source bytes do not match the independently observed SHA-256")
+    try:
+        raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise _source_binding_refusal(request, "SOURCE_SNAPSHOT_INVALID",
+            "Worker code request source snapshot must be valid UTF-8") from exc
+    return raw
+
+
+def _encode_source_snapshot(source_name: str, source_bytes: bytes) -> dict[str, str]:
+    if not isinstance(source_name, str) or not _SOURCE_NAME_RE.fullmatch(source_name):
+        raise JavaWorkerError("source snapshot requires a Java basename")
+    if not isinstance(source_bytes, bytes) or not 0 < len(source_bytes) <= _MAX_SOURCE_BYTES:
+        raise JavaWorkerError("source snapshot must contain 1 byte to 2 MiB")
+    encoded = base64.b64encode(source_bytes).decode("ascii")
+    if len(encoded) > _MAX_SOURCE_BASE64_CHARS:
+        raise JavaWorkerError("encoded source snapshot exceeds the protocol limit")
+    return {"source_name": source_name, "source_snapshot_b64": encoded}
+
+
+def _source_failure_proves_no_model_dispatch(reply: Mapping[str, Any]) -> bool:
+    """Recognize only source/compiler failures that Worker guarantees precede Model use."""
+    failure = reply.get("failure") if isinstance(reply.get("failure"), Mapping) else {}
+    code = failure.get("code") or reply.get("code")
+    if (reply.get("ok") is not False or reply.get("status") != "FAILED"
+            or reply.get("execution_state_unknown") is True
+            or failure.get("execution_state_unknown") is True):
+        return False
+    if (reply.get("source_operation_dispatched") is False
+            or failure.get("source_operation_dispatched") is False):
+        return True
+    if code not in {"SOURCE_HASH_REQUIRED", "SOURCE_HASH_MISMATCH", "SOURCE_SNAPSHOT_REQUIRED",
+                    "SOURCE_SNAPSHOT_INVALID", "COMPILE_ERROR", "COMPILE_UNAVAILABLE",
+                    "TRUSTED_CODE_REJECTED"}:
+        return False
+    if code == "SOURCE_HASH_MISMATCH":
+        return (reply.get("execution_state_unknown") is False
+                or failure.get("execution_state_unknown") is False)
+    diagnostics = failure.get("diagnostics", reply.get("diagnostics"))
+    return ((reply.get("execution_state_unknown") is False
+             or failure.get("execution_state_unknown") is False)
+            or code in {"COMPILE_ERROR", "COMPILE_UNAVAILABLE", "TRUSTED_CODE_REJECTED"}
+            and isinstance(diagnostics, list))
+
+
+def _validate_code_execute_receipt(request: Mapping[str, Any], reply: Mapping[str, Any]) -> dict[str, Any]:
+    """Mark an incomplete claimed success UNKNOWN before callbacks or later reads."""
+    received = dict(reply)
+    claims_success = reply.get("ok") is True or reply.get("status") == "SUCCEEDED"
+    if not claims_success:
+        return received
+    result = reply.get("result")
+    valid = (
+        reply.get("ok") is True and reply.get("status") == "SUCCEEDED"
+        and reply.get("type") == "code_execute"
+        and reply.get("request_id") == request.get("request_id")
+        and isinstance(result, Mapping)
+        and result.get("executed") is True
+        and result.get("source_sha256") == request.get("expected_source_sha256")
+        and result.get("entrypoint") == request.get("entrypoint")
+        and result.get("model_tag") == request.get("tag")
+        and result.get("worker_build_id") == request.get("expected_worker_build_id")
+        and result.get("worker_instance_id") == request.get("expected_worker_instance_id")
+    )
+    if valid:
+        received["_source_binding_verified"] = True
+        return received
+    reason = "Worker success receipt omitted or mismatched its request/source/entrypoint/model identity"
+    received.update({
+        "ok": False,
+        "status": "UNKNOWN",
+        "code": "WORKER_SOURCE_BINDING_MISMATCH",
+        "message": reason,
+        "execution_state_unknown": True,
+        "partial_change": True,
+        "safe_retry": False,
+        "unverified_worker_reply": _code_reply_identity_summary(reply),
+        "failure": {
+            "code": "WORKER_SOURCE_BINDING_MISMATCH",
+            "message": reason,
+            "execution_state_unknown": True,
+            "partial_change": True,
+            "safe_retry": False,
+        },
+    })
+    return received
+
+
+def _code_reply_identity_summary(reply: Mapping[str, Any]) -> dict[str, Any]:
+    """Retain only identity fields from an untrusted success receipt."""
+    result = reply.get("result") if isinstance(reply.get("result"), Mapping) else {}
+    keys = ("request_id", "type", "status", "code")
+    summary = {key: reply[key] for key in keys
+               if isinstance(reply.get(key), (str, int, bool)) and len(str(reply[key])) <= 160}
+    identity_keys = ("compiled", "executed", "source_sha256", "entrypoint", "model_tag",
+                     "worker_build_id", "worker_instance_id")
+    if result:
+        summary["result_identity"] = {key: result[key] for key in identity_keys
+                                      if isinstance(result.get(key), (str, int, bool))}
+    return summary
+
+
+def _validate_code_compile_receipt(request: Mapping[str, Any], reply: Mapping[str, Any]) -> dict[str, Any]:
+    received = dict(reply)
+    claims_success = reply.get("ok") is True or reply.get("status") == "SUCCEEDED"
+    if not claims_success:
+        return received
+    result = reply.get("result")
+    valid = (
+        reply.get("ok") is True and reply.get("status") == "SUCCEEDED"
+        and reply.get("type") == "code_compile"
+        and reply.get("request_id") == request.get("request_id")
+        and isinstance(result, Mapping) and result.get("compiled") is True
+        and result.get("source_sha256") == request.get("expected_source_sha256")
+        and result.get("entrypoint") == request.get("entrypoint")
+        and result.get("worker_build_id") == request.get("expected_worker_build_id")
+        and result.get("worker_instance_id") == request.get("expected_worker_instance_id")
+    )
+    if valid:
+        received["_source_binding_verified"] = True
+        return received
+    reason = "Worker compile receipt omitted or mismatched its request/source/entrypoint/build identity"
+    received.update({"ok": False, "status": "FAILED", "code": "WORKER_SOURCE_BINDING_MISMATCH",
+                     "message": reason, "source_operation_dispatched": False,
+                     "execution_state_unknown": False, "safe_retry": False,
+                     "unverified_worker_reply": _code_reply_identity_summary(reply),
+                     "failure": {"code": "WORKER_SOURCE_BINDING_MISMATCH", "message": reason,
+                                 "source_operation_dispatched": False, "execution_state_unknown": False,
+                                 "safe_retry": False}})
+    return received
 
 
 class JavaWorkerTimeout(JavaWorkerError):
@@ -720,7 +902,9 @@ class PersistentJavaWorker:
         self._process = None
         return result
 
-    def _request(self, data: dict[str, Any], *, timeout_s: float | None) -> dict[str, Any]:
+    def _request(self, data: dict[str, Any], *, timeout_s: float | None,
+                 require_source_binding: bool = False,
+                 before_dispatch: Callable[[], None] | None = None) -> dict[str, Any]:
         if getattr(self, "_startup_unknown", None) is not None:
             raise self._startup_unknown
         self.endpoint  # Re-derive a T037 port from its original factory before any RPC.
@@ -731,6 +915,7 @@ class PersistentJavaWorker:
         if owner is not None:
             timeout_s = owner.worker_transport_cap(str(data.get("type")), 30.0 if timeout_s is None else timeout_s)
         transport_stage = "connect"
+        source_operation_dispatched = False
         try:
             with socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s) as conn:
                 conn.settimeout(timeout_s)
@@ -739,19 +924,57 @@ class PersistentJavaWorker:
                 stream.write((json.dumps({"token": self._token}) + "\n").encode()); stream.flush()
                 auth = json.loads(stream.readline())
                 if not auth.get("ok"):
+                    if require_source_binding:
+                        raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                            "Worker authentication did not establish a source-bound code channel")
                     raise JavaWorkerError(str(auth), reply={"status": "UNKNOWN", "execution_state_unknown": True,
                         "request_id": request_id, "transport_stage": transport_stage, "reason": "authentication_rejected"})
+                if require_source_binding:
+                    probe = {"type": "source_binding_capabilities", "request_id": f"bind-{uuid.uuid4().hex}"}
+                    transport_stage = "source_binding_probe_write"
+                    stream.write((json.dumps(probe, separators=(",", ":")) + "\n").encode()); stream.flush()
+                    transport_stage = "source_binding_probe_reply"
+                    capability = json.loads(stream.readline())
+                    try:
+                        correlated_probe = self._validate_request_reply(probe, capability)
+                    except JavaWorkerError as exc:
+                        raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                            "Worker source-binding capability reply was uncorrelated") from exc
+                    result = capability.get("result") if isinstance(capability, Mapping) else None
+                    if (not correlated_probe or not isinstance(capability, Mapping)
+                            or capability.get("type") != "source_binding_capabilities"
+                            or capability.get("ok") is not True or capability.get("status") != "SUCCEEDED"
+                            or not isinstance(result, Mapping)
+                            or type(result.get("source_binding_protocol")) is not int
+                            or result.get("source_binding_protocol") != _SOURCE_BINDING_PROTOCOL
+                            or result.get("worker_build_id") != _SOURCE_BINDING_WORKER_BUILD_ID
+                            or not isinstance(result.get("instance_id"), str) or not result["instance_id"]):
+                        raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                            "Worker does not prove the required source-binding protocol/build")
+                    data["expected_worker_build_id"] = _SOURCE_BINDING_WORKER_BUILD_ID
+                    data["expected_worker_instance_id"] = result["instance_id"]
+                    if before_dispatch is not None:
+                        before_dispatch()
                 transport_stage = "request_write"
+                # Once any part of the code request is written, a transport
+                # failure is an uncertain execution and must not be replayed.
+                source_operation_dispatched = require_source_binding
                 stream.write((json.dumps(data, separators=(",", ":")) + "\n").encode()); stream.flush()
                 transport_stage = "reply_read"
                 reply = json.loads(stream.readline())
         except (TimeoutError, socket.timeout) as exc:
+            if require_source_binding and not source_operation_dispatched:
+                raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    f"Worker source-binding capability probe timed out before code dispatch (stage={transport_stage})") from exc
             if request_id:
                 self._known_requests.setdefault(str(request_id), {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"})
             raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id",
                 reply={"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
                        "transport_stage": transport_stage, "errno": getattr(exc, "errno", None)}) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, TypeError, AttributeError) as exc:
+            if require_source_binding and not source_operation_dispatched:
+                raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    f"Worker source-binding capability probe was invalid (stage={transport_stage})") from exc
             diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
                           "reason": "protocol_error", "transport_stage": transport_stage,
                           "cause_type": type(exc).__name__}
@@ -759,6 +982,9 @@ class PersistentJavaWorker:
                 self._known_requests.setdefault(str(request_id), dict(diagnostic))
             raise JavaWorkerError(str(exc), reply=diagnostic) from exc
         except OSError as exc:
+            if require_source_binding and not source_operation_dispatched:
+                raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    f"Worker source-binding channel failed before code dispatch (stage={transport_stage})") from exc
             diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
                           "reason": "transport_error", "transport_stage": transport_stage, "errno": exc.errno}
             if request_id:
@@ -766,6 +992,12 @@ class PersistentJavaWorker:
             raise JavaWorkerError(f"ENGINE_UNRESPONSIVE: Worker endpoint could not be reached (stage={transport_stage}, errno={exc.errno})",
                                   reply=diagnostic) from exc
         correlated = self._validate_request_reply(data, reply)
+        if require_source_binding and data.get("type") == "code_execute":
+            # Inspect the correlated receipt entirely in memory before even
+            # synchronizing Worker metadata or invoking observed/audit hooks.
+            reply = _validate_code_execute_receipt(data, reply)
+        elif require_source_binding and data.get("type") == "code_compile":
+            reply = _validate_code_compile_receipt(data, reply)
         self._sync_generation(reply)
         if request_id is not None and correlated:
             self._known_requests[str(request_id)] = reply
@@ -895,18 +1127,39 @@ class PersistentJavaWorker:
             rpc_timeout_s = cap
             queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
         if queue_timeout_s is not None:
             body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
         identifier = str(body["request_id"])
         from ._ephemeral_result_ticket import before_submit, after_submit
-        ephemeral_audit = before_submit(self, kind, body)
-        self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
         try:
-            reply = self._request(body, timeout_s=rpc_timeout_s)
+            reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
         except JavaWorkerTimeout as exc:
             self._emit_request_event("unknown", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
             raise
         except JavaWorkerError as exc:
+            if source_binding_required and exc.reply.get("source_operation_dispatched") is False:
+                self._known_requests.setdefault(identifier, dict(exc.reply))
+                self._emit_request_event("binding_refused", request_id=identifier, kind=kind,
+                                         payload=body, status="FAILED", code=exc.reply.get("code"))
+                raise
             # No correlated return reached submit. Preserve the original cause,
             # but make its already-recorded UNKNOWN visible to every consumer.
             # Correlated SDK FAILED replies return normally and are observed.
@@ -915,8 +1168,18 @@ class PersistentJavaWorker:
             self._known_requests.setdefault(identifier, dict(exc.reply))
             self._emit_request_event("unresponsive", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
             raise
+        if source_binding_required and kind == "code_execute" and not _source_failure_proves_no_model_dispatch(reply):
+            # The Worker has returned a correlated response on the same
+            # capability-checked connection. Record potential model mutation
+            # here; explicit source/compiler refusals above are proven to
+            # occur before ModelUtil.model(tag).
+            from ._domain_outcome import record_engine_method
+            record_engine_method(str(body.get("entrypoint") or "execute_java"),
+                                 body.get("tag"), body.get("source_artifact"),
+                                 command="code_execute", receiver="trusted_java")
         self._emit_request_event("observed", request_id=identifier, kind=kind, payload=body, status=reply.get("status", ""), reply=_redact(reply))
-        after_submit(ephemeral_audit, self, reply)
+        if ephemeral_audit is not None:
+            after_submit(ephemeral_audit, self, reply)
         return reply
 
     def health(self, *, timeout_s: float = 1.0) -> dict[str, Any]:
@@ -963,7 +1226,9 @@ class PersistentJavaWorker:
     def model_snapshot(self, model_tag: str, *, request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
         return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
 
-    def compile_java(self, source_artifact: str, entrypoint: str, *, request_id: str | None = None,
+    def compile_java(self, source_name: str, entrypoint: str, *, source_bytes: bytes,
+                     expected_source_sha256: str,
+                     request_id: str | None = None,
                      rpc_timeout_s: float | None = None) -> dict[str, Any]:
         """Compile a source file inside the same Worker classpath.
 
@@ -973,17 +1238,19 @@ class PersistentJavaWorker:
         bound runtime.
         """
         from ._domain_outcome import record_engine_method
-        record_engine_method("compile", source_artifact, entrypoint, command="code_compile", receiver="trusted_java")
-        return self.submit("code_compile", {"source_artifact": source_artifact, "entrypoint": entrypoint},
+        record_engine_method("compile", source_name, entrypoint, command="code_compile", receiver="trusted_java")
+        return self.submit("code_compile", {**_encode_source_snapshot(source_name, source_bytes),
+                           "entrypoint": entrypoint, "expected_source_sha256": expected_source_sha256},
                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
 
-    def execute_java(self, model_tag: str, source_artifact: str, entrypoint: str, arguments: Mapping[str, Any], *,
-                     request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+    def execute_java(self, model_tag: str, source_name: str, entrypoint: str, arguments: Mapping[str, Any], *,
+                     source_bytes: bytes, expected_source_sha256: str,
+                     request_id: str | None = None,
+                     rpc_timeout_s: float | None = None) -> dict[str, Any]:
         """Execute a previously described source against the named Worker model."""
-        from ._domain_outcome import record_engine_method
-        record_engine_method(entrypoint, model_tag, source_artifact, command="code_execute", receiver="trusted_java")
-        return self.submit("code_execute", {"tag": model_tag, "source_artifact": source_artifact,
-                           "entrypoint": entrypoint, "arguments": dict(arguments or {})},
+        return self.submit("code_execute", {"tag": model_tag, **_encode_source_snapshot(source_name, source_bytes),
+                           "entrypoint": entrypoint, "arguments": dict(arguments or {}),
+                           "expected_source_sha256": expected_source_sha256},
                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
 
     def backend_snapshot(self, model_tag: str, *, request_id: str | None = None,
@@ -1469,7 +1736,9 @@ def _as_model(value: Any) -> RemoteModel:
 
 def _redact(value: Any) -> Any:
     if isinstance(value, Mapping):
-        result = {str(key): "<redacted>" if str(key).lower() in {"token", "password", "secret", "authorization"} else _redact(item)
+        sensitive = {"token", "password", "secret", "authorization", "source_snapshot_b64",
+                     "source_bytes", "source_bytes_b64", "source_text", "source_contents"}
+        result = {str(key): "<redacted>" if str(key).lower() in sensitive else _redact(item)
                   for key, item in value.items()}
         if value.get("type") == "progress_log" and "path" in result:
             result["path"] = "<private-progress-file>"

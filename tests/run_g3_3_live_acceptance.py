@@ -68,7 +68,12 @@ def _sha256_bytes(data: bytes) -> str:
 
 def _execute_checked(worker: PersistentJavaWorker, payload: Mapping[str, Any]) -> dict[str, Any]:
     """Fail at the actual compile/runtime error before inspecting an unchanged model."""
-    reply = worker.submit("code_execute", payload)
+    request = dict(payload)
+    source_artifact = request.get("source_artifact")
+    if not isinstance(source_artifact, str) or not source_artifact:
+        raise AssertionError("Java fixture operation requires a concrete source_artifact path")
+    request["expected_source_sha256"] = _sha256(Path(source_artifact))
+    reply = worker.submit("code_execute", request)
     if reply.get("ok") is not True or reply.get("status") != "SUCCEEDED":
         raise AssertionError(f"Java fixture operation failed: {reply!r}")
     return reply

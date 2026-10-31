@@ -32,7 +32,13 @@ public final class PersistentComsolWorkerSourceCompilerHarness {
     StringBuilder value=new StringBuilder(); for(byte b:MessageDigest.getInstance("SHA-256").digest(bytes)) value.append(String.format("%02x",b&255)); return value.toString();
   }
   static Object snapshot(Path path,String entry) throws Exception {
-    Map<String,Object> body=new HashMap<>();body.put("source_artifact",path.toString());body.put("entrypoint",entry);
+    return snapshot(path,entry,sha(Files.readAllBytes(path)));
+  }
+  static Object snapshot(Path path,String entry,String expectedSha) throws Exception {
+    byte[] bytes=Files.readAllBytes(path);
+    Map<String,Object> body=new HashMap<>();body.put("source_name",path.getFileName().toString());
+    body.put("source_snapshot_b64",Base64.getEncoder().encodeToString(bytes));body.put("entrypoint",entry);
+    body.put("expected_source_sha256",expectedSha);
     return source.invoke(null,body);
   }
   @SuppressWarnings("unchecked")
@@ -46,11 +52,37 @@ public final class PersistentComsolWorkerSourceCompilerHarness {
     try { snapshot(p,entry);throw new AssertionError("accepted "+message); }
     catch(InvocationTargetException e) { check(e.getCause().getClass().getSimpleName().equals("WorkerFailure"),message); }
   }
+  static void rejected(Path p,String entry,String expectedSha,String expectedCode,String message) throws Exception {
+    try { snapshot(p,entry,expectedSha);throw new AssertionError("accepted "+message); }
+    catch(InvocationTargetException e) {
+      check(e.getCause().getClass().getSimpleName().equals("WorkerFailure"),message+" failure type");
+      Field code=e.getCause().getClass().getDeclaredField("code");code.setAccessible(true);
+      check(expectedCode.equals(code.get(e.getCause())),message+" failure code");
+    }
+  }
   public static void main(String[] args) throws Exception {
     root=Paths.get(args[0]);Files.createDirectories(root);
     Class<?> spec=Class.forName("comsol_mcp.worker_java.PersistentComsolWorker$SourceSpec");
     source=PersistentComsolWorker.class.getDeclaredMethod("sourceSpec",Map.class);source.setAccessible(true);
     compile=PersistentComsolWorker.class.getDeclaredMethod("compileSnapshot",spec,Path.class);compile.setAccessible(true);
+    byte[] newlineAndUnicode=("public class SourceSnapshotProbe {\r\n"
+        +"  // mixed newline follows\n  public static String run(){ return \"温度 Ω\"; }\r\n}\r\n").getBytes(StandardCharsets.UTF_8);
+    Path rawProbe=root.resolve("SourceSnapshotProbe.java");Files.write(rawProbe,newlineAndUnicode);
+    Object rawSpec=snapshot(rawProbe,"SourceSnapshotProbe");
+    Field sourceSha=spec.getDeclaredField("sha256");sourceSha.setAccessible(true);
+    Field sourceText=spec.getDeclaredField("text");sourceText.setAccessible(true);
+    check(sha(newlineAndUnicode).equals(sourceSha.get(rawSpec)),"Worker snapshot preserves original CRLF/mixed/Unicode byte SHA");
+    check(((String)sourceText.get(rawSpec)).contains("\r\n") && ((String)sourceText.get(rawSpec)).contains("\n  public"),
+        "Worker snapshot decodes UTF-8 without newline normalization");
+    check(Boolean.TRUE.equals(compile(rawSpec).get("compiled")),"real javac compiles the captured CRLF/Unicode snapshot");
+    Path expectedRequired=root.resolve("ExpectedRequired.java");
+    Files.write(expectedRequired,"public class ExpectedRequired {}".getBytes(StandardCharsets.UTF_8));
+    rejected(expectedRequired,"ExpectedRequired",null,"SOURCE_HASH_REQUIRED","missing Worker expected source SHA rejected");
+    rejected(expectedRequired,"ExpectedRequired","bad-hash","SOURCE_HASH_REQUIRED","malformed Worker expected source SHA rejected");
+    String oldDigest=sha(Files.readAllBytes(expectedRequired));
+    byte[] changedBytes="public class ExpectedRequired { int changed; }".getBytes(StandardCharsets.UTF_8);
+    Files.write(expectedRequired,changedBytes);
+    rejected(expectedRequired,"ExpectedRequired",oldDigest,"SOURCE_HASH_MISMATCH","Worker rejects changed source snapshot");
     String[] texts={
       "public class Getter { public static int run(){return 1;} }",
       "package some.pkg; public class Packaged { public static int run(){return 1;} }",
@@ -71,16 +103,14 @@ public final class PersistentComsolWorkerSourceCompilerHarness {
       Path p=registered(text);Map<String,Object> result=compile(snapshot(p,"First"));
       check(Boolean.FALSE.equals(result.get("compiled")),"real compiler failure preserved");
       List<?> rows=(List<?>)result.get("diagnostics");check(!rows.isEmpty(),"diagnostics retained");
-      check(((Map<?,?>)rows.get(0)).get("source").equals(p.toString()),"registered source diagnostic association");
+      check(((Map<?,?>)rows.get(0)).get("source").equals(p.getFileName().toString()),"registered source diagnostic association");
     }
     Path stable=registered("public class Stable {}");Object snap=snapshot(stable,"Stable");
     Files.write(stable,"public class Replaced { !!! }".getBytes(StandardCharsets.UTF_8));
     check(Boolean.TRUE.equals(compile(snap).get("compiled")),"compile immutable snapshot after path changed");
     rejected(stable,"Stable","content address mutation rejected before compile");
-    Path good=registered("public class Good {}");Path link=root.resolve("Linked.java");Files.createSymbolicLink(link,good);
-    rejected(link,"Good","symlink source rejected");
-    Path parentLink=root.resolve("parentlink");Files.createSymbolicLink(parentLink,root);
-    rejected(parentLink.resolve(good.getFileName()),"Good","symlink parent rejected");
+    Path good=registered("public class Good {}");
+    check(Boolean.TRUE.equals(compile(snapshot(good,"Good")).get("compiled")),"Worker consumes bytes without path reopening");
     Path oversized=root.resolve("Large.java");Files.write(oversized,new byte[2*1024*1024+1]);rejected(oversized,"Large","bounded snapshot limit");
     Path old=root.resolve("Legacy.java");Files.write(old,"class Legacy {}".getBytes(StandardCharsets.UTF_8));
     check(Boolean.TRUE.equals(compile(snapshot(old,"Legacy")).get("compiled")),"ordinary legacy basename supported");
@@ -90,28 +120,77 @@ public final class PersistentComsolWorkerSourceCompilerHarness {
       Path p=root.resolve(sha(invalid)+".java");Files.write(p,invalid);
       try { snapshot(p,"X");throw new AssertionError("malformed UTF8 accepted"); }
       catch(InvocationTargetException ex) {
-        check(ex.getCause().getMessage().contains("invalid UTF-8"),"comment/string invalid UTF8 remains refused");
+        check(ex.getCause().getMessage().contains("valid UTF-8"),"comment/string invalid UTF8 remains refused");
         Field code=ex.getCause().getClass().getDeclaredField("code");code.setAccessible(true);
-        check(code.get(ex.getCause()).equals("COMPILE_ERROR"),"invalid UTF8 typed compiler error");
-        Field detailsField=ex.getCause().getClass().getDeclaredField("details");detailsField.setAccessible(true);
-        Map<?,?> details=(Map<?,?>)detailsField.get(ex.getCause());
-        check(details.get("source_sha256").equals(sha(invalid)) && details.get("entrypoint").equals("X"),"invalid UTF8 preserves original SHA and entrypoint");
-        check(((Map<?,?>)((List<?>)details.get("diagnostics")).get(0)).get("source").equals(p.toString()),"invalid UTF8 preserves original source diagnostic");
+        check(code.get(ex.getCause()).equals("SOURCE_SNAPSHOT_INVALID"),"invalid UTF8 typed snapshot refusal");
       }
     }
-    java.nio.file.attribute.BasicFileAttributes beforeDirectory=Files.readAttributes(root,java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
     Files.write(root.resolve("unrelated-sibling"),new byte[]{1});
-    java.nio.file.attribute.BasicFileAttributes afterDirectory=Files.readAttributes(root,java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
-    Method sameDirectory=PersistentComsolWorker.class.getDeclaredMethod("sameDirectoryIdentity",java.nio.file.attribute.BasicFileAttributes.class,java.nio.file.attribute.BasicFileAttributes.class);sameDirectory.setAccessible(true);
-    check(Boolean.TRUE.equals(sameDirectory.invoke(null,beforeDirectory,afterDirectory)),"actual unrelated sibling change preserves stable directory identity");
-    check(snapshot(good,"Good")!=null,"actual source snapshot remains valid after unrelated sibling changes");
+    check(snapshot(good,"Good")!=null,"actual immutable source bytes remain valid after unrelated sibling changes");
     // Exercise the actual instance compile/cache method without its socket-binding constructor.
     Field unsafeField=sun.misc.Unsafe.class.getDeclaredField("theUnsafe");unsafeField.setAccessible(true);
     sun.misc.Unsafe unsafe=(sun.misc.Unsafe)unsafeField.get(null);
     Object worker=unsafe.allocateInstance(PersistentComsolWorker.class);
-    Field codeRoot=PersistentComsolWorker.class.getDeclaredField("codeRoot");codeRoot.setAccessible(true);codeRoot.set(worker,root);
+    Path codeOutput=root.resolve("code-output");
+    Field codeRoot=PersistentComsolWorker.class.getDeclaredField("codeRoot");codeRoot.setAccessible(true);codeRoot.set(worker,codeOutput);
     Field cache=PersistentComsolWorker.class.getDeclaredField("compiledArtifacts");cache.setAccessible(true);
     cache.set(worker,new java.util.concurrent.ConcurrentHashMap<>());
+    Field connected=PersistentComsolWorker.class.getDeclaredField("connected");connected.setAccessible(true);connected.setBoolean(worker,true);
+    Field instanceId=PersistentComsolWorker.class.getDeclaredField("instanceId");instanceId.setAccessible(true);instanceId.set(worker,"worker-snapshot-harness");
+    Method capabilities=PersistentComsolWorker.class.getDeclaredMethod("sourceBindingCapabilities",Map.class);capabilities.setAccessible(true);
+    Map<String,Object> capabilityRequest=new HashMap<>();capabilityRequest.put("type","source_binding_capabilities");capabilityRequest.put("request_id","capability-harness");
+    Map<?,?> capabilityReply=(Map<?,?>)capabilities.invoke(worker,capabilityRequest);
+    Map<?,?> capabilityResult=(Map<?,?>)capabilityReply.get("result");
+    check("SUCCEEDED".equals(capabilityReply.get("status")) && "worker-snapshot-harness".equals(capabilityResult.get("instance_id")),
+        "actual Worker exposes its bound source protocol and unique instance");
+    Field buildId=PersistentComsolWorker.class.getDeclaredField("SOURCE_BINDING_WORKER_BUILD_ID");buildId.setAccessible(true);
+    String workerBuild=(String)buildId.get(null);
+    Method sourceRefusal=PersistentComsolWorker.class.getDeclaredMethod("sourceBindingRefusal",Map.class);sourceRefusal.setAccessible(true);
+    byte[] boundBytes="public class Bound {}".getBytes(StandardCharsets.UTF_8);
+    Map<String,Object> boundRequest=new HashMap<>();boundRequest.put("type","code_execute");
+    boundRequest.put("source_name","Bound.java");
+    boundRequest.put("source_snapshot_b64",Base64.getEncoder().encodeToString(boundBytes));
+    boundRequest.put("entrypoint","Bound");boundRequest.put("tag","mcp1");
+    boundRequest.put("expected_source_sha256",sha(boundBytes));
+    boundRequest.put("expected_worker_build_id",workerBuild);
+    boundRequest.put("expected_worker_instance_id","worker-snapshot-harness");
+    check(sourceRefusal.invoke(worker,boundRequest)==null,"actual Worker admits only the exact bound build/instance/hash");
+    Map<String,Object> unboundRequest=new HashMap<>(boundRequest);unboundRequest.remove("expected_worker_build_id");
+    Map<?,?> buildRefusal=(Map<?,?>)sourceRefusal.invoke(worker,unboundRequest);
+    check("WORKER_SOURCE_BINDING_MISMATCH".equals(buildRefusal.get("code"))
+        && Boolean.FALSE.equals(buildRefusal.get("source_operation_dispatched")),
+        "actual Worker refuses an old or unbound build before source dispatch");
+    Map<String,Object> wrongInstanceRequest=new HashMap<>(boundRequest);
+    wrongInstanceRequest.put("expected_worker_instance_id","another-worker");
+    Map<?,?> instanceRefusal=(Map<?,?>)sourceRefusal.invoke(worker,wrongInstanceRequest);
+    check("WORKER_SOURCE_BINDING_MISMATCH".equals(instanceRefusal.get("code"))
+        && Boolean.FALSE.equals(instanceRefusal.get("source_operation_dispatched")),
+        "actual Worker refuses a reconnect to a different Worker instance before source dispatch");
+    Map<String,Object> malformedHashRequest=new HashMap<>(boundRequest);malformedHashRequest.put("expected_source_sha256","not-a-hash");
+    Map<?,?> hashRefusal=(Map<?,?>)sourceRefusal.invoke(worker,malformedHashRequest);
+    check("SOURCE_HASH_REQUIRED".equals(hashRefusal.get("code"))
+        && Boolean.FALSE.equals(hashRefusal.get("source_operation_dispatched")),
+        "actual Worker refuses malformed source identity before source dispatch");
+    Method compileRequest=PersistentComsolWorker.class.getDeclaredMethod("compileJava",Map.class);compileRequest.setAccessible(true);
+    Method executeRequest=PersistentComsolWorker.class.getDeclaredMethod("executeJava",Map.class);executeRequest.setAccessible(true);
+    Path changedBeforeWorker=root.resolve("ChangedBeforeWorker.java");
+    byte[] describedBytes="public class ChangedBeforeWorker { public static int run(){return 1;} }".getBytes(StandardCharsets.UTF_8);
+    Files.write(changedBeforeWorker,describedBytes);
+    String describedSha=sha(describedBytes);
+    Files.write(changedBeforeWorker,"public class ChangedBeforeWorker { public static int run(){return 2;} }".getBytes(StandardCharsets.UTF_8));
+    byte[] changedAfterDescription="public class ChangedBeforeWorker { public static int run(){return 2;} }".getBytes(StandardCharsets.UTF_8);
+    Map<String,Object> changedRequest=new HashMap<>();changedRequest.put("source_name",changedBeforeWorker.getFileName().toString());
+    changedRequest.put("source_snapshot_b64",Base64.getEncoder().encodeToString(changedAfterDescription));
+    changedRequest.put("entrypoint","ChangedBeforeWorker");changedRequest.put("expected_source_sha256",describedSha);
+    changedRequest.put("tag","mcp1");changedRequest.put("arguments",Collections.emptyMap());
+    for(Method operation:new Method[]{compileRequest,executeRequest}) {
+      try { operation.invoke(worker,changedRequest);throw new AssertionError("changed source reached "+operation.getName()); }
+      catch(InvocationTargetException ex) {
+        Field code=ex.getCause().getClass().getDeclaredField("code");code.setAccessible(true);
+        check("SOURCE_HASH_MISMATCH".equals(code.get(ex.getCause())),operation.getName()+" refuses source drift before compile/model call");
+      }
+    }
+    check(!Files.exists(codeOutput),"source mismatch created no compiler output");
     Method actualCompile=PersistentComsolWorker.class.getDeclaredMethod("compileJava",spec);actualCompile.setAccessible(true);
     Map<?,?> actualResult=(Map<?,?>)actualCompile.invoke(worker,snap);
     check(Boolean.TRUE.equals(actualResult.get("compiled")),"actual compiler method reuses snapshot after source path mutation");

@@ -174,6 +174,7 @@ class ExecutionService:
         self.adapter = adapter
         self.project_root = Path(project_root)
         self._project_root_context = ContextVar(f"execution_project_root_{id(self)}", default=None)
+        self._project_root_binding_context = ContextVar(f"execution_project_root_binding_{id(self)}", default=None)
         self.on_state_change = on_state_change or (lambda _event: None)
         self._owned_branch_context = ContextVar(f"owned_branch_proof_{id(self)}", default=None)
 
@@ -186,15 +187,26 @@ class ExecutionService:
     def project_root(self, value: str | Path) -> None:
         self._base_project_root = Path(value)
 
+    @property
+    def project_root_binding(self):
+        return self._project_root_binding_context.get(None)
+
     @contextmanager
     def project_root_scope(self, root: str | Path):
-        """Thread-local project path scope used only by one serialized operation."""
-        candidate = Path(root).resolve(strict=True)
+        """Thread-local path plus its already-open project-root identity."""
+        from ._project_root import ProjectRootBinding, open_project_root_binding
+        owns_binding = not isinstance(root, ProjectRootBinding)
+        binding = open_project_root_binding(root) if owns_binding else root
+        candidate = binding.path
         token = self._project_root_context.set(candidate)
+        binding_token = self._project_root_binding_context.set(binding)
         try:
             yield candidate
         finally:
+            self._project_root_binding_context.reset(binding_token)
             self._project_root_context.reset(token)
+            if owns_binding:
+                binding.close()
 
     @contextmanager
     def _owned_branch_scope(self):
