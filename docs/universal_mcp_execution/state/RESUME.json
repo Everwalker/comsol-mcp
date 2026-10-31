@@ -1,8 +1,8 @@
 {
   "active_current_entrypoint": {
-    "revision": 455,
+    "revision": 457,
     "status": "JAVA_SOURCE_IDENTITY_REPAIR_AND_WINDOWS_UNKNOWN_FENCED",
-    "published_head": "221cd841faf15e354cd3678a16fe045514181978",
+    "published_head": "2923e02e8c8425641f41e38d8372244ed36187a7",
     "current_source": {
       "version": "0.1.16",
       "status": "MAIN_ACCEPTED_SCOPED_SOURCE_SOFTWARE_PUBLISHED_REMOTE_READBACK_ACCEPTED",
@@ -130,7 +130,7 @@
         "mode": "0o644"
       }
     },
-    "latest_artifacts_runtime": "Mac .16 normal offline install and public stdio MCP have scoped actual acceptance. Windows .16 Stage1 has scoped acceptance; Stage2 original transfer terminal is UNKNOWN and its owner/packet are fenced; Windows .16 cold/READY/GO/pip/public MCP remain NOT_RUN. Source .16 has a locally reproduced CRLF identity defect and source-inferred unbound Worker snapshot gap, with a repair in progress. Frozen .16 artifact documentation mislabels the current candidate .15. Native, license, .16 uninstall and final heldouts remain incomplete.",
+    "latest_artifacts_runtime": "Mac .16 normal offline installation/public stdio MCP and a separate .15→.16→.15 offline software transition with synthetic data are scoped actually accepted; neither proves .16 uninstall or native COMSOL. Windows .16 Stage1 has scoped acceptance; Stage2 transfer is UNKNOWN and its original owner/packet are fenced; Windows .16 cold/READY/GO/pip/public MCP remain NOT_RUN. Source .16 has a reproduced CRLF identity defect and source-inferred Worker binding gap under repair. Frozen .16 artifact documentation mislabels the then-current candidate .15. Native, license and final heldouts remain incomplete.",
     "build_source_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-build-source-independent-review-r1/MAIN_UNBOUND_BUILD_SOURCE_PREP_ACCEPTANCE.json",
       "bytes": 2100,
@@ -160,7 +160,7 @@
     "r7_fence": "current_R7_original_UNKNOWN_fence_r361",
     "old_fences": "retained_owner_fences and legacy_unknown_preserved",
     "current_leases": "orchestration.current_active_leases_r414",
-    "next_action": "Repair the reproduced Java source identity defect: Luna 01a1922d-62b0-79d0-8c8d-c37ae2d2fe22 is implementing exact raw-byte hashing and pre-effect Worker source binding; Main must review source identity, legacy Worker compatibility, tests and UNKNOWN handling before acceptance. Luna 01a19229-4f1b-7cc2-a779-a843919053fb is checking a new isolated Mac .15-to-.16 offline transition with no Core/COMSOL; accept only actual scoped evidence. Luna 01a191b4-acf5-7c83-8441-0f4aa622cdb3 is developing source-only Main pin transport. Preserve the original Stage2 UNKNOWN owner and packet without query, polling, retry, signal, close, cleanup or takeover; Stage2 cold/READY/GO/pip and Windows .16 public MCP remain NOT_RUN. Existing .16 wheel/source archive documentation contains stale .15 text; rebuild from corrected README in a future candidate, never alter frozen artifacts. Mac current resources remain UNVERIFIED; final independent heldouts remain NOT_SELECTED.",
+    "next_action": "Repair the reproduced Java source identity defect: Luna 01a1922d-62b0-79d0-8c8d-c37ae2d2fe22 is implementing exact raw-byte hashing and pre-effect Worker source binding; Main must review source identity, legacy Worker compatibility, tests and UNKNOWN handling before acceptance. Mac .15-to-.16-to-.15 offline software transition and synthetic data lifecycle are Main accepted in their limited scope; original success Tool 777007 terminal0 is spent, output truncated, and no native or real-user-data claim is made. Luna 01a191b4-acf5-7c83-8441-0f4aa622cdb3 is developing source-only Main pin transport. Preserve the original Stage2 UNKNOWN owner and packet without query, polling, retry, signal, close, cleanup or takeover; Stage2 cold/READY/GO/pip and Windows .16 public MCP remain NOT_RUN. Existing .16 wheel/source archive documentation contains stale .15 text; rebuild from corrected README in a future candidate, never alter frozen artifacts. Mac current resources remain UNVERIFIED; final independent heldouts remain NOT_SELECTED.",
     "bound_source_canary_acceptance": {
       "path": "_state/universal-main-review/20261028-coherent-015-bound-source-canary-independent-review-r1/MAIN_BOUND_SOURCE_CANARY_PREP_ACCEPTANCE.json",
       "bytes": 2555,
@@ -2456,9 +2456,31 @@
       }
     },
     "mac_transition_work": {
-      "status": "ASSIGNED_FRESH_NAMESPACE_SOFTWARE_ONLY",
-      "executor_agent_id": "01a19229-4f1b-7cc2-a779-a843919053fb",
-      "native_engine": "NOT_RUN"
+      "status": "MAIN_ACCEPTED_SCOPED_ACTUAL_OFFLINE_TRANSITION_SYNTHETIC_DATA",
+      "acceptance": {
+        "path": "_state/universal-main-review/20261031-m4-mac-015-016-main-review-r1/MAIN_ACTUAL_TRANSITION_ACCEPTANCE.json",
+        "bytes": 2930,
+        "sha256": "9763da36850e021e42e1c30b6de8cd9dda2ff193b84adc392363a2f9ac1d0e5b"
+      },
+      "public_compact_evidence": {
+        "path": "docs/universal_mcp_execution/evidence/mac-arm64-offline-transition-0.1.15-0.1.16-20261031.json",
+        "bytes": 2370,
+        "sha256": "4d59e9fe8da5a4d1632e5d2f619721c7aa87e4b907ab7c6a0bbb7ccdb0270b74"
+      },
+      "product_result": {
+        "path": "_state/universal-main-review/m4-015-to-016-offline-20261031T-jqanFZSN/transition-work-escalated-r1/transition-result.json",
+        "bytes": 213384,
+        "sha256": "c7184e6283e90f896523a43b69bad5af297b5f3f1056e528c6aa9d2eb3bfa1f4"
+      },
+      "original_tool_envelope": {
+        "path": "_state/universal-main-review/m4-015-to-016-offline-20261031T-jqanFZSN/ESCALATED_EXEC_COMMAND_RETURN_RETAINED.json",
+        "bytes": 76646,
+        "sha256": "49b07311280d1965358cc38bb8132583b98d32381891781a1dc582ea0c25c235"
+      },
+      "outer_tool": "777007 TERMINAL0 SPENT_NO_REPOLL_OUTPUT_TRUNCATED",
+      "first_attempt": "96dc1d TERMINAL2_PERMISSION_ERROR_SPENT_NO_REPOLL",
+      "native_engine": "NOT_RUN",
+      "full_matrix": "NOT_RUN"
     },
     "last_readme_publication": {
       "commit": "221cd841faf15e354cd3678a16fe045514181978",
@@ -2466,6 +2488,15 @@
         "path": "_state/universal-main-review/20261031-readme-016-publication-main-review-r1/MAIN_PUBLICATION_ACCEPTANCE.json",
         "bytes": 1585,
         "sha256": "960b76809ec9831538984b849b36dda073633c9461229c0ff7e66adfbf1eb338"
+      },
+      "CI": "NOT_OBSERVED"
+    },
+    "last_artifact_drift_publication": {
+      "commit": "2923e02e8c8425641f41e38d8372244ed36187a7",
+      "acceptance": {
+        "path": "_state/universal-main-review/20261031-artifact-drift-publication-main-review-r1/MAIN_PUBLICATION_ACCEPTANCE.json",
+        "bytes": 1719,
+        "sha256": "d59a277ed6dd6eabf435e873fbfc644c153aa46aa09a00b5af63688802c35b76"
       },
       "CI": "NOT_OBSERVED"
     }
@@ -10657,10 +10688,10 @@
   "schema_version": 1,
   "baseline_commit": "21cdfb6f24606ffe8be1262e07395353613de76a",
   "baseline_tree": "120ceb6568d22614f7548d4eb96b822fe53f88ba",
-  "state_revision": 455,
+  "state_revision": 457,
   "phase": "JAVA_SOURCE_IDENTITY_REPAIR_WINDOWS_UNKNOWN_FENCED",
   "status": "IN_PROGRESS",
-  "next_action": "Repair the reproduced Java source identity defect: Luna 01a1922d-62b0-79d0-8c8d-c37ae2d2fe22 is implementing exact raw-byte hashing and pre-effect Worker source binding; Main must review source identity, legacy Worker compatibility, tests and UNKNOWN handling before acceptance. Luna 01a19229-4f1b-7cc2-a779-a843919053fb is checking a new isolated Mac .15-to-.16 offline transition with no Core/COMSOL; accept only actual scoped evidence. Luna 01a191b4-acf5-7c83-8441-0f4aa622cdb3 is developing source-only Main pin transport. Preserve the original Stage2 UNKNOWN owner and packet without query, polling, retry, signal, close, cleanup or takeover; Stage2 cold/READY/GO/pip and Windows .16 public MCP remain NOT_RUN. Existing .16 wheel/source archive documentation contains stale .15 text; rebuild from corrected README in a future candidate, never alter frozen artifacts. Mac current resources remain UNVERIFIED; final independent heldouts remain NOT_SELECTED.",
+  "next_action": "Repair the reproduced Java source identity defect: Luna 01a1922d-62b0-79d0-8c8d-c37ae2d2fe22 is implementing exact raw-byte hashing and pre-effect Worker source binding; Main must review source identity, legacy Worker compatibility, tests and UNKNOWN handling before acceptance. Mac .15-to-.16-to-.15 offline software transition and synthetic data lifecycle are Main accepted in their limited scope; original success Tool 777007 terminal0 is spent, output truncated, and no native or real-user-data claim is made. Luna 01a191b4-acf5-7c83-8441-0f4aa622cdb3 is developing source-only Main pin transport. Preserve the original Stage2 UNKNOWN owner and packet without query, polling, retry, signal, close, cleanup or takeover; Stage2 cold/READY/GO/pip and Windows .16 public MCP remain NOT_RUN. Existing .16 wheel/source archive documentation contains stale .15 text; rebuild from corrected README in a future candidate, never alter frozen artifacts. Mac current resources remain UNVERIFIED; final independent heldouts remain NOT_SELECTED.",
   "active_job_refs": [
     {
       "scope": "015_MAC_NORMAL_INSTALL_PUBLIC_MCP_ONCE",
@@ -10813,7 +10844,7 @@
   ],
   "completed_groups": [],
   "scope_decision": "SCOPE_RESET.md",
-  "updated_utc": "2026-10-31T13:39:38.317529+00:00",
+  "updated_utc": "2026-10-31T14:01:13.881588+00:00",
   "native_execution_claimed": true,
   "recovery_checkpoint": {
     "scope": "workpack recovery repair, synthetic workpack tests, pinned source and candidate restoration, new-state initialization only",
@@ -20022,7 +20053,7 @@
     "main_review_path": "_state/universal-main-review/20261023-windows-observers/MAIN_REVIEW_FINAL.json",
     "main_review_sha256": "f3560355e8765ddcb5850cccd0b1020afa61c9ce15e762dcea3a8ea0c073e1ff"
   },
-  "goal_turn_classification": "PROGRESS_REPRODUCED_JAVA_SOURCE_IDENTITY_AND_PUBLISHED_README",
+  "goal_turn_classification": "PROGRESS_MAC_OFFLINE_VERSION_TRANSITION_SCOPED_ACCEPTED",
   "canonical_handoff_refresh": {
     "state_revision": 326,
     "reason": "EBA4ordinarypublicationverified,ownerP2closed,matchingQ6materials+actualbindingprep andWindowsA6architecturepersisted",
@@ -25065,11 +25096,11 @@
     "old_owners": "AllnativeUNKNOWNfenced;new65152knownterminal2notUNKNOWN,no sessionrepoll"
   },
   "last_verified_publication": {
-    "commit": "221cd841faf15e354cd3678a16fe045514181978",
+    "commit": "2923e02e8c8425641f41e38d8372244ed36187a7",
     "acceptance": {
-      "path": "_state/universal-main-review/20261031-readme-016-publication-main-review-r1/MAIN_PUBLICATION_ACCEPTANCE.json",
-      "bytes": 1585,
-      "sha256": "960b76809ec9831538984b849b36dda073633c9461229c0ff7e66adfbf1eb338"
+      "path": "_state/universal-main-review/20261031-artifact-drift-publication-main-review-r1/MAIN_PUBLICATION_ACCEPTANCE.json",
+      "bytes": 1719,
+      "sha256": "d59a277ed6dd6eabf435e873fbfc644c153aa46aa09a00b5af63688802c35b76"
     },
     "CI": "NOT_OBSERVED_FOR_THIS_COMMIT_NOT_PASS",
     "Source_S": "660eda981360144973fd208bd73847a6ba237799",
@@ -27508,5 +27539,38 @@
       "bytes": 1017,
       "sha256": "d47b19f2795ab60f83b107e1274be050d1a5e5f6535d8499989522574326bce9"
     }
+  },
+  "current_checkpoint_r456": {
+    "status": "ARTIFACT_DRIFT_PUBLICATION_VERIFIED_JAVA_AND_MAC_WORK_CONTINUE",
+    "updated_utc": "2026-10-31T13:47:48.140941+00:00",
+    "publication": {
+      "path": "_state/universal-main-review/20261031-artifact-drift-publication-main-review-r1/MAIN_PUBLICATION_ACCEPTANCE.json",
+      "bytes": 1719,
+      "sha256": "d59a277ed6dd6eabf435e873fbfc644c153aa46aa09a00b5af63688802c35b76"
+    },
+    "mac_first_attempt": {
+      "tool_chunk_id": "96dc1d",
+      "exit_code": 2,
+      "status": "KNOWN_PERMISSION_ERROR",
+      "preserved_root": "_state/universal-main-review/m4-015-to-016-offline-20261031T-jqanFZSN/transition-work"
+    },
+    "next_action": "Repair the reproduced Java source identity defect: Luna 01a1922d-62b0-79d0-8c8d-c37ae2d2fe22 is implementing exact raw-byte hashing and pre-effect Worker source binding; Main must review source identity, legacy Worker compatibility, tests and UNKNOWN handling before acceptance. Luna 01a19229-4f1b-7cc2-a779-a843919053fb is checking an isolated Mac .15-to-.16 offline transition with no Core/COMSOL; first attempt had known terminal2 PermissionError, and any formally approved continuation uses its distinct fresh work root. Accept only actual scoped evidence. Luna 01a191b4-acf5-7c83-8441-0f4aa622cdb3 is developing source-only Main pin transport. Preserve the original Stage2 UNKNOWN owner and packet without query, polling, retry, signal, close, cleanup or takeover; Stage2 cold/READY/GO/pip and Windows .16 public MCP remain NOT_RUN. Existing .16 wheel/source archive documentation contains stale .15 text; rebuild from corrected README in a future candidate, never alter frozen artifacts. Mac current resources remain UNVERIFIED; final independent heldouts remain NOT_SELECTED.",
+    "publication_of_this_update": "LOCAL_NOT_YET_PUBLISHED"
+  },
+  "current_checkpoint_r457": {
+    "status": "MAC_OFFLINE_VERSION_TRANSITION_SCOPED_ACCEPTED_JAVA_REPAIR_ACTIVE",
+    "updated_utc": "2026-10-31T14:01:13.881588+00:00",
+    "mac_transition_acceptance": {
+      "path": "_state/universal-main-review/20261031-m4-mac-015-016-main-review-r1/MAIN_ACTUAL_TRANSITION_ACCEPTANCE.json",
+      "bytes": 2930,
+      "sha256": "9763da36850e021e42e1c30b6de8cd9dda2ff193b84adc392363a2f9ac1d0e5b"
+    },
+    "mac_transition_public_compact": {
+      "path": "docs/universal_mcp_execution/evidence/mac-arm64-offline-transition-0.1.15-0.1.16-20261031.json",
+      "bytes": 2370,
+      "sha256": "4d59e9fe8da5a4d1632e5d2f619721c7aa87e4b907ab7c6a0bbb7ccdb0270b74"
+    },
+    "next_action": "Repair the reproduced Java source identity defect: Luna 01a1922d-62b0-79d0-8c8d-c37ae2d2fe22 is implementing exact raw-byte hashing and pre-effect Worker source binding; Main must review source identity, legacy Worker compatibility, tests and UNKNOWN handling before acceptance. Mac .15-to-.16-to-.15 offline software transition and synthetic data lifecycle are Main accepted in their limited scope; original success Tool 777007 terminal0 is spent, output truncated, and no native or real-user-data claim is made. Luna 01a191b4-acf5-7c83-8441-0f4aa622cdb3 is developing source-only Main pin transport. Preserve the original Stage2 UNKNOWN owner and packet without query, polling, retry, signal, close, cleanup or takeover; Stage2 cold/READY/GO/pip and Windows .16 public MCP remain NOT_RUN. Existing .16 wheel/source archive documentation contains stale .15 text; rebuild from corrected README in a future candidate, never alter frozen artifacts. Mac current resources remain UNVERIFIED; final independent heldouts remain NOT_SELECTED.",
+    "publication_of_this_update": "LOCAL_NOT_YET_PUBLISHED"
   }
 }

@@ -1,0 +1,41 @@
+{
+  "schema": "macos-offline-version-transition-evidence/1",
+  "status": "MAIN_ACCEPTED_SCOPED_ACTUAL_OFFLINE_TRANSITION_SYNTHETIC_DATA",
+  "platform": "macOS ARM64",
+  "versions": ["0.1.15", "0.1.16", "0.1.15"],
+  "inputs": {
+    "0.1.15": {
+      "source_snapshot": "958970b605b746d2593dd5a3c65965b960864d46",
+      "offline_archive_sha256": "a9232354e10c066c2709960c0f2c6b5e0164c395b5be539dbee113155daea6cf",
+      "application_wheel_sha256": "340f5566c2e5e147ebb47d2a7704888efae88d96138e7660ce11dc6c9d53afc6"
+    },
+    "0.1.16": {
+      "source_snapshot": "660eda981360144973fd208bd73847a6ba237799",
+      "offline_archive_sha256": "1c8d53998776f3e4fecae50c0e2317754311341d18ff87602662758b84e46395",
+      "application_wheel_sha256": "c648346230df3169a9462a3fa5a13619575bd3f1268813df3651e082c05eadef"
+    }
+  },
+  "observed": {
+    "upgrade_exit_code": 0,
+    "rollback_exit_code": 0,
+    "installed_package_members_matched_to_wheels": [200, 201, 200],
+    "rollback_package_and_distribution_fingerprints_match_initial": true,
+    "synthetic_data_lifecycle": "PASS_SCOPED_BACKUP_RESTORE_AND_OLD_CODE_REOPEN",
+    "controlled_failure_exit_code": 73,
+    "offline_probe": "EPERM_AND_NO_LISTENER_ACCEPTANCE_IN_INSTALL_PROCESS_TREE",
+    "outer_tool_exit_code": 0,
+    "outer_combined_output": "TRUNCATED; SEPARATE_STREAMS_AND_EOF_NOT_OBSERVED",
+    "initial_attempt": "EXIT_2_PERMISSION_ERROR_BEFORE_CHILD_INSTALL; EXACT_RAISE_SITE_UNKNOWN"
+  },
+  "evidence_sha256": {
+    "product_transition_result": "c7184e6283e90f896523a43b69bad5af297b5f3f1056e528c6aa9d2eb3bfa1f4",
+    "original_outer_tool_return": "49b07311280d1965358cc38bb8132583b98d32381891781a1dc582ea0c25c235",
+    "main_scoped_acceptance": "9763da36850e021e42e1c30b6de8cd9dda2ff193b84adc392363a2f9ac1d0e5b"
+  },
+  "limitations": [
+    "The data lifecycle uses a synthetic ledger and a reviewed MPH solely as opaque bytes; no real user data or model was opened.",
+    "No COMSOL, JDK, Server, Worker, GUI, license checkout, native solve, 0.1.16 uninstall or full M4/U10 or platform-matrix acceptance is claimed.",
+    "The complete outer stdout and stderr are unavailable because the returned combined output was truncated; child records and their hashes were checked separately.",
+    "The separately identified Java source identity defect in 0.1.16 and its repair are outside this transition test."
+  ]
+}
