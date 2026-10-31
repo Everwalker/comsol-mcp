@@ -1,0 +1,53 @@
+{
+  "schema": "comsol-mcp.scoped-package-uninstall-evidence/1",
+  "status": "MAIN_ACCEPTED_SCOPED_ACTUAL_PACKAGE_ONLY_UNINSTALL",
+  "target": "macOS ARM64",
+  "version": "0.1.16",
+  "application_wheel_sha256": "c648346230df3169a9462a3fa5a13619575bd3f1268813df3651e082c05eadef",
+  "scope": "One new isolated virtual environment, one pip application-package uninstall and one external synthetic project; no real user project, COMSOL, JDK, Server, Worker, license or native solve.",
+  "actual_observations": {
+    "offline_install": "PASS_SCOPED_NO_INDEX_REQUIRE_HASHES",
+    "package_uninstall_exit": 0,
+    "original_uninstall_tool_chunk": "81a001",
+    "original_uninstall_tool_exit": 0,
+    "original_uninstall_tool_session": "NONE",
+    "application_record_paths_within_venv": 388,
+    "metadata_import_and_entry_point_absent_after_uninstall": true,
+    "synthetic_project_inventory_and_logical_history_unchanged": true,
+    "synthetic_sqlite_integrity": "ok",
+    "synthetic_terminal_history_rows": 2,
+    "distribution_count_before": 43,
+    "distribution_count_after": 42,
+    "remaining_dependencies_and_pip": "UNCHANGED"
+  },
+  "independent_main_review": {
+    "original_tool_chunk": "577fbc",
+    "exit": 0,
+    "terminal_zero_records_verified": 6,
+    "evidence_manifest_entries_verified": 48,
+    "synthetic_files_readback_hashes_match": true,
+    "sqlite_readonly_integrity": "ok",
+    "fresh_readonly_import_and_entry_point_probe": "ABSENT"
+  },
+  "manual_pip_residual_marker": {
+    "observation": "The isolated-install marker remains READY with the prior inventory after manual pip package removal; it is not current package-presence evidence.",
+    "main_readonly_content_guard": "BLOCKED_CONTENT_DRIFT",
+    "main_readonly_tool_chunk": "d5892e",
+    "note": "The separate guarded product full-venv uninstall was not invoked on this altered environment."
+  },
+  "limits": {
+    "full_venv_uninstall": "NOT_RUN_IN_THIS_EXPERIMENT",
+    "dependency_uninstall": "NOT_RUN",
+    "independent_active_network_probe": "NOT_RUN",
+    "version_0_1_17": "NOT_RUN",
+    "native_engine": "NOT_RUN",
+    "U10_full_acceptance": "NOT_RUN"
+  },
+  "retained_original_failure": "The first install attempt exited 71 because the outer sandbox refused to apply the nested network-deny profile before creating the venv. The authorized, formally escalated execution later completed with exit 0; both original results were retained.",
+  "private_originals": {
+    "main_review_tool_sha256": "39a4f89db74bf35b937b683f0bcb1baf3ff2a30992eb2f05b7590a9053aa8ccd",
+    "marker_guard_tool_sha256": "b8e78da9f946b607c0e35bfd242a6e52a2771263e385f251cf133ae1bf3203e8",
+    "uninstall_tool_sha256": "57a7bc62defa472206ec939ebb982fc210c7e4a9f3f009f234bced9c0e123639",
+    "evidence_manifest_sha256": "f9833c56bc72b8a13f45d48fe51d488a9026018224f4b7a61e083d934cd287ef"
+  }
+}
