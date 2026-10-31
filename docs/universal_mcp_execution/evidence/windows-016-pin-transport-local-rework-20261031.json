@@ -1,0 +1,21 @@
+{
+  "schema": "windows-pin-transport-local-rework-evidence/1",
+  "status": "REWORK_REQUIRED_SOURCE_AND_FAKE_ONLY",
+  "reviewed_sender_sha256": "19cec7862426eb2b86bd1d775a5951a8dbdab8841949104adc93f750c4a542ee",
+  "findings": [
+    {
+      "id": "READY_DEPENDENT_DOCUMENT_DELIVERY",
+      "observation": "The draft required document hashes before launching, although the accepted GO and activation documents bind the actual later READY and certificate. Its sender also did not deliver the documents and final inbox index required by the receiver.",
+      "required_repair": "After verifying the same-session READY and certificate, an independent Main publisher must produce and deliver the bound documents and publish the matching index last; the independently supplied hashes must not be derived solely from that index."
+    },
+    {
+      "id": "UNSAFE_SSH_ARGUMENTS",
+      "observation": "A local validation-only negative accepted -f, -oForkAfterAuthentication=yes and -M despite the intended foreground, nonmultiplexed owner and stdin channel.",
+      "required_repair": "Reject background/fork and multiplex options and validate configuration and proxy boundaries before launching."
+    }
+  ],
+  "evidence_scope": "The argument negative invoked no SSH process or Popen. The source snapshot was reviewed locally. Earlier draft fake tests do not establish the complete live delivery path.",
+  "runtime": "SSH_REMOTE_WINDOWS_NOT_RUN",
+  "original_stage2_transfer": "UNKNOWN_ORIGINAL_OWNER_AND_NAMESPACE_REMAIN_FENCED_NO_RETRY_OR_CLEANUP",
+  "goal": "ACTIVE_NOT_COMPLETE"
+}

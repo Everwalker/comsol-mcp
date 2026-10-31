@@ -234,10 +234,18 @@
       "evidence_refs": [
         "evidence/dependency-prep.json",
         "evidence/M4_RELEASE_TOOLING.json",
-        "evidence/WINDOWS_PREP.json"
+        "evidence/WINDOWS_PREP.json",
+        "evidence/mac-arm64-offline-transition-0.1.15-0.1.16-20261031.json"
       ],
       "scope": "Software/source/input evidence only; required native and final acceptance remain open.",
-      "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
+      "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included.",
+      "mac_arm_offline_transition_015_016_015": {
+        "status": "PASS_SCOPED_ACTUAL_SOFTWARE_WITH_SYNTHETIC_DATA",
+        "evidence_ref": "evidence/mac-arm64-offline-transition-0.1.15-0.1.16-20261031.json",
+        "scope": "Disposable offline installation, upgrade, rollback and synthetic ledger/opaque fixture backup and restore; full outer output was truncated.",
+        "version_016_uninstall": "NOT_RUN",
+        "native_engine_and_full_group_acceptance": "NOT_RUN"
+      }
     },
     {
       "id": "U11",
