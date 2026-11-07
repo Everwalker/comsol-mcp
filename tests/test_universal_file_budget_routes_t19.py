@@ -6,7 +6,10 @@ at all:
 
 1. The public code.execute_java route refuses a registered Java source whose
    bytes exceed the fixed 2 MiB host-side limit before any Worker contact, under
-   a granted trusted-code project.
+   a granted trusted-code project.  The refusal is provably pre-dispatch (the
+   bounded read declares the validation stage and the dispatch witness records
+   no engine call), so it stays a definite INVALID_REQUEST and must not poison
+   the model gate.
 2. resolve_registered_artifact binds identity (project/host) first and then
    honours the caller's bounded read limit with ARTIFACT_TOO_LARGE, and serves
    within-cap bytes unchanged.
@@ -91,13 +94,27 @@ def test_java_route_refuses_registered_source_over_the_two_meb_cap_before_worker
                      {"source_artifact": registered["data"]["path"], "entrypoint": "Oversize",
                       "mode": "trusted", "arguments": {}}, "oversize-execute")
     assert result["success"] is False
-    # The project root binding refuses the over-cap bytes with INVALID_REQUEST
-    # before any Worker call.  Because the write ticket already began, the
-    # durable envelope stays fail-closed EXECUTION_STATE_UNKNOWN while keeping
-    # the structured cause code; the Worker was never contacted.
-    assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN", result["error"]
-    assert result["error"]["details"]["cause_code"] == "INVALID_REQUEST", result["error"]
+    # Both pre-dispatch proofs hold on the durable envelope: the bounded read
+    # declared the validation stage and the witness recorded zero engine calls,
+    # so the refusal is published as the definite INVALID_REQUEST and is not
+    # downgraded into EXECUTION_STATE_UNKNOWN.  Nothing reached the Worker.
+    assert result["error"]["code"] == "INVALID_REQUEST", result["error"]
+    assert result["error"]["stage"] == "validation", result["error"]
+    assert result["data"]["status"] == "REFUSED" and result["data"]["refused"] is True
+    witness = result["data"]["witness"]
+    assert witness["mutation_issued"] is False and witness["dispatches"] == []
     assert not worker.executions
+    # A provably never-dispatched request leaves the model gate clean: no
+    # revision bump, no dirty freeze, and an identical retry is refused the
+    # same definite way instead of ENGINE_BUSY/REVISION_CONFLICT/UNKNOWN.
+    state = service.ledger._models[ref["model_tag"]]
+    assert state.dirty is False and state.active_operation_id is None
+    assert state.revision == 0
+    retry = _public(daemon, project, ref, service, "code.execute_java",
+                    {"source_artifact": registered["data"]["path"], "entrypoint": "Oversize",
+                     "mode": "trusted", "arguments": {}}, "oversize-execute-retry")
+    assert retry["success"] is False
+    assert retry["error"]["code"] == "INVALID_REQUEST", retry["error"]
 
 
 def test_registered_artifact_read_is_identity_bound_then_size_bounded(environment):

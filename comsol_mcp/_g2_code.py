@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from ._execution_contract import ExecutionContractError
+from ._execution_contract import ExecutionContractError, PreWriteRefusal
 from ._project_root import ProjectRootBinding, open_project_root_binding
 
 
@@ -71,14 +71,17 @@ def read_source_snapshot(project_root: str | Path | ProjectRootBinding,
     owned_binding = not isinstance(project_root, ProjectRootBinding)
     binding = open_project_root_binding(project_root) if owned_binding else project_root
     try:
-        path, parts = _relative_source_path(binding.path, source_artifact)
-        raw, identity = binding.read_file(parts, max_bytes=MAX_JAVA_SOURCE_BYTES)
         try:
-            source = raw.decode("utf-8")
-        except UnicodeDecodeError as exc:
-            raise ExecutionContractError("INVALID_REQUEST", "source artifact must contain valid UTF-8") from exc
-        return SourceSnapshot(path=path, relative_parts=parts, source=source, raw_bytes=raw,
-                              sha256=hashlib.sha256(raw).hexdigest(), file_identity=dict(identity))
+            path, parts = _relative_source_path(binding.path, source_artifact)
+            raw, identity = binding.read_file(parts, max_bytes=MAX_JAVA_SOURCE_BYTES)
+            try:
+                source = raw.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ExecutionContractError("INVALID_REQUEST", "source artifact must contain valid UTF-8") from exc
+            return SourceSnapshot(path=path, relative_parts=parts, source=source, raw_bytes=raw,
+                                  sha256=hashlib.sha256(raw).hexdigest(), file_identity=dict(identity))
+        except ExecutionContractError as exc:
+            raise _host_side_refusal(exc) from exc
     finally:
         if owned_binding:
             binding.close()
@@ -97,7 +100,30 @@ def read_source(project_root: str | Path, source_artifact: str) -> tuple[Path, s
     return snapshot.path, snapshot.source, snapshot.sha256
 
 
+def _host_side_refusal(exc: ExecutionContractError) -> ExecutionContractError:
+    """Give a host-side-only failure the explicit pre-dispatch (validation) stage.
+
+    Path decisions, one bounded project-root read, and pure source analysis
+    cannot issue an engine call, so the managed backend may publish their code
+    as a definite refusal instead of EXECUTION_STATE_UNKNOWN. The claim is
+    never trusted alone: _managed_backend._dispatch_with_witness still requires
+    the dispatch witness to show no mutation-class engine dispatch happened.
+    Failures that already declare a stage, or that report an unresolved engine
+    state, keep their fail-closed shape.
+    """
+    if exc.stage is not None or exc.code == "EXECUTION_STATE_UNKNOWN":
+        return exc
+    return PreWriteRefusal(exc.code, str(exc), details=dict(exc.details))
+
+
 def describe_snapshot(snapshot: SourceSnapshot, entrypoint: str = "") -> dict[str, Any]:
+    try:
+        return _describe_snapshot(snapshot, entrypoint)
+    except ExecutionContractError as exc:
+        raise _host_side_refusal(exc) from exc
+
+
+def _describe_snapshot(snapshot: SourceSnapshot, entrypoint: str) -> dict[str, Any]:
     path, source, digest = snapshot.path, snapshot.source, snapshot.sha256
     classes = _ENTRYPOINT_RE.findall(source)
     chosen = entrypoint.strip() if isinstance(entrypoint, str) else ""

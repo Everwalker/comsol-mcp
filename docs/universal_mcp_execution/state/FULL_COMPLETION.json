@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "New-job attach-only job.log observation recorded: named() returned empty string. Both T07 UNKNOWN model/session fences remain; do not query original job, replay, reconcile, signal or clean either resource. Qwen is implementing an evidence-based ROI fix; T13 and T18 continue; T19 domain file-budget obligation remains open.",
-  "updated_utc": "2026-11-07T15:37:29.579152+00:00",
+  "next_task_hint": "T18 software refusal fix recorded; T07 ROI and T13 deletion safety work continue. Both T07 UNKNOWN fences remain. T19 domain file-budget obligation and 144 baseline consumer failures require follow-up.",
+  "updated_utc": "2026-11-07T15:53:11.987228+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -187,11 +187,19 @@
       "scope_note": "Same current source bytes and actual independent project as T06; macOS arm64 6.4.0.293 only."
     },
     "T18": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G3.json",
+        "docs/universal_mcp_execution/evidence/full/T18-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T18-java-refusal-focused-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T18-unknown-fence-regression-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T18-java-consumer-regression-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T18-java-refusal-probe-post-fix-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/sources/t18_pre_dispatch_refusal_probe_20261107.py.txt"
+      ],
+      "blocker": "Real Worker compilation/runtime error, timeout/partial-change recovery and negative controls remain unverified. Additional consumer test selection has 144 failures also seen by count in the baseline; attribution and required impact remain open."
     },
     "T19": {
       "status": "IN_PROGRESS",

@@ -1,0 +1,385 @@
+== result
+{
+ "data": {
+  "cleanup_failed": false,
+  "dispatch_stage": "validation",
+  "domain_outcome": {
+   "cleanup_failed": false,
+   "details": {
+    "status_token": "REFUSED"
+   },
+   "dispatch_stage": "validation",
+   "execution_state_unknown": false,
+   "failure": {
+    "code": "INVALID_REQUEST",
+    "message": "source artifact exceeds the 2 MiB source limit",
+    "safe_retry": false
+   },
+   "operation": "code.execute_java",
+   "state": "failed",
+   "status_token": "REFUSED",
+   "verification_status": "NOT_APPLICABLE",
+   "witness": {
+    "dispatches": [],
+    "engine_calls": 0,
+    "methods": [],
+    "mutation_issued": false,
+    "mutation_method": null
+   }
+  },
+  "domain_state": "failed",
+  "effect": "project_write",
+  "execution_state_unknown": false,
+  "isolation_proof": {
+   "software_boundary_not_native": true
+  },
+  "operation": "code.execute_java",
+  "partial_change": false,
+  "refusal": {
+   "code": "INVALID_REQUEST",
+   "message": "source artifact exceeds the 2 MiB source limit",
+   "safe_retry": false,
+   "stage": "validation"
+  },
+  "refused": true,
+  "status": "REFUSED",
+  "verification_status": "NOT_APPLICABLE",
+  "verified_outcome": "failed",
+  "witness": {
+   "dispatches": [],
+   "engine_calls": 0,
+   "methods": [],
+   "mutation_issued": false,
+   "mutation_method": null
+  }
+ },
+ "error": {
+  "code": "INVALID_REQUEST",
+  "message": "source artifact exceeds the 2 MiB source limit",
+  "safe_retry": false,
+  "stage": "validation"
+ },
+ "execution": {
+  "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+  "dirty": false,
+  "idempotency_key": "oversize-execute",
+  "job_id": "6913d00c-ee16-4028-8a6d-716fb2773deb",
+  "model_ownership": "mcp_owned",
+  "model_ref": {
+   "generation": 1,
+   "model_tag": "mcp1",
+   "schema_version": 1,
+   "server_instance_id": "software-server",
+   "session_id": "software-session"
+  },
+  "operation_id": "c0aa7c42-5300-4e4d-b3c7-7cc6c2a83483",
+  "request_hash": "e0136e56daa832352161350a1f209337c1ae57bda44de49a236498e408f887a1",
+  "request_id": "oversize-execute",
+  "revision": 0,
+  "server_ownership": "shared",
+  "session_id": "software-session"
+ },
+ "success": false
+}
+== ledger_state
+{
+ "active_operation_id": null,
+ "dirty": false,
+ "revision_after": 0,
+ "revision_before": 0
+}
+== worker_executions
+[]
+== job_record
+{
+ "job": {
+  "created_at": "2026-11-07 15:44:23",
+  "effective_timeouts": {
+   "execution_timeout_s": null,
+   "no_progress_warning_s": null,
+   "queue_timeout_s": null,
+   "rpc_timeout_s": 30.0
+  },
+  "finished_at": "2026-11-07 15:44:23",
+  "job_id": "6913d00c-ee16-4028-8a6d-716fb2773deb",
+  "metadata": {
+   "arguments": {
+    "arguments": {
+     "arguments": {},
+     "entrypoint": "Oversize",
+     "mode": "trusted",
+     "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "software-server",
+      "session_id": "software-session"
+     },
+     "project_id": "f3e61afd-9aad-43a8-a198-2f391b76adf9",
+     "session_id": "software-session",
+     "source_artifact": "g2_artifacts/registered/dcb99efccf51aa1380747cb34e14b3993891f131b0d3500daccc33fb582466a2.java"
+    },
+    "operation_id": "code.execute_java"
+   },
+   "engine_started_at": 1794066263.115319,
+   "execution": {
+    "expected_revision": 0,
+    "idempotency_key": "oversize-execute",
+    "model_ref": {
+     "generation": 1,
+     "model_tag": "mcp1",
+     "schema_version": 1,
+     "server_instance_id": "software-server",
+     "session_id": "software-session"
+    },
+    "project_id": "f3e61afd-9aad-43a8-a198-2f391b76adf9",
+    "request_id": "oversize-execute",
+    "session_id": "software-session"
+   },
+   "finished_observed_at": 1794066263.1165938,
+   "operation": "operation_call",
+   "queue_wait_s": 5.3666066378355026e-05,
+   "runtime_binding": {
+    "endpoint": "127.0.0.1:25447",
+    "kind": "default_backend",
+    "project_id": "f3e61afd-9aad-43a8-a198-2f391b76adf9",
+    "session_id": "software-session",
+    "worker_epoch": 1,
+    "worker_instance_id": "worker-1"
+   }
+  },
+  "operation": {
+   "created_at": "2026-11-07 15:44:23",
+   "effective_timeouts": {
+    "execution_timeout_s": null,
+    "no_progress_warning_s": null,
+    "queue_timeout_s": null,
+    "rpc_timeout_s": 30.0
+   },
+   "finished_at": "2026-11-07 15:44:23",
+   "idempotency_key": "oversize-execute",
+   "metadata": {
+    "arguments": {
+     "arguments": {
+      "arguments": {},
+      "entrypoint": "Oversize",
+      "mode": "trusted",
+      "model_ref": {
+       "generation": 1,
+       "model_tag": "mcp1",
+       "schema_version": 1,
+       "server_instance_id": "software-server",
+       "session_id": "software-session"
+      },
+      "project_id": "f3e61afd-9aad-43a8-a198-2f391b76adf9",
+      "session_id": "software-session",
+      "source_artifact": "g2_artifacts/registered/dcb99efccf51aa1380747cb34e14b3993891f131b0d3500daccc33fb582466a2.java"
+     },
+     "operation_id": "code.execute_java"
+    },
+    "execution": {
+     "expected_revision": 0,
+     "idempotency_key": "oversize-execute",
+     "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "software-server",
+      "session_id": "software-session"
+     },
+     "project_id": "f3e61afd-9aad-43a8-a198-2f391b76adf9",
+     "request_id": "oversize-execute",
+     "session_id": "software-session"
+    },
+    "operation": "operation_call",
+    "runtime_binding": {
+     "endpoint": "127.0.0.1:25447",
+     "kind": "default_backend",
+     "project_id": "f3e61afd-9aad-43a8-a198-2f391b76adf9",
+     "session_id": "software-session",
+     "worker_epoch": 1,
+     "worker_instance_id": "worker-1"
+    }
+   },
+   "operation": "operation_call",
+   "operation_id": "c0aa7c42-5300-4e4d-b3c7-7cc6c2a83483",
+   "request_hash": "e0136e56daa832352161350a1f209337c1ae57bda44de49a236498e408f887a1",
+   "request_id": "oversize-execute",
+   "result": {
+    "data": {
+     "cleanup_failed": false,
+     "dispatch_stage": "validation",
+     "domain_outcome": {
+      "cleanup_failed": false,
+      "details": {
+       "status_token": "REFUSED"
+      },
+      "dispatch_stage": "validation",
+      "execution_state_unknown": false,
+      "failure": {
+       "code": "INVALID_REQUEST",
+       "message": "source artifact exceeds the 2 MiB source limit",
+       "safe_retry": false
+      },
+      "operation": "code.execute_java",
+      "state": "failed",
+      "status_token": "REFUSED",
+      "verification_status": "NOT_APPLICABLE",
+      "witness": {
+       "dispatches": [],
+       "engine_calls": 0,
+       "methods": [],
+       "mutation_issued": false,
+       "mutation_method": null
+      }
+     },
+     "domain_state": "failed",
+     "effect": "project_write",
+     "execution_state_unknown": false,
+     "isolation_proof": {
+      "software_boundary_not_native": true
+     },
+     "operation": "code.execute_java",
+     "partial_change": false,
+     "refusal": {
+      "code": "INVALID_REQUEST",
+      "message": "source artifact exceeds the 2 MiB source limit",
+      "safe_retry": false,
+      "stage": "validation"
+     },
+     "refused": true,
+     "status": "REFUSED",
+     "verification_status": "NOT_APPLICABLE",
+     "verified_outcome": "failed",
+     "witness": {
+      "dispatches": [],
+      "engine_calls": 0,
+      "methods": [],
+      "mutation_issued": false,
+      "mutation_method": null
+     }
+    },
+    "error": {
+     "code": "INVALID_REQUEST",
+     "message": "source artifact exceeds the 2 MiB source limit",
+     "safe_retry": false,
+     "stage": "validation"
+    },
+    "execution": {
+     "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+     "dirty": false,
+     "idempotency_key": "oversize-execute",
+     "job_id": "6913d00c-ee16-4028-8a6d-716fb2773deb",
+     "model_ownership": "mcp_owned",
+     "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp1",
+      "schema_version": 1,
+      "server_instance_id": "software-server",
+      "session_id": "software-session"
+     },
+     "operation_id": "c0aa7c42-5300-4e4d-b3c7-7cc6c2a83483",
+     "request_hash": "e0136e56daa832352161350a1f209337c1ae57bda44de49a236498e408f887a1",
+     "request_id": "oversize-execute",
+     "revision": 0,
+     "server_ownership": "shared",
+     "session_id": "software-session"
+    },
+    "success": false
+   },
+   "started_at": "2026-11-07 15:44:23",
+   "status": "FAILED"
+  },
+  "operation_id": "c0aa7c42-5300-4e4d-b3c7-7cc6c2a83483",
+  "result": {
+   "data": {
+    "cleanup_failed": false,
+    "dispatch_stage": "validation",
+    "domain_outcome": {
+     "cleanup_failed": false,
+     "details": {
+      "status_token": "REFUSED"
+     },
+     "dispatch_stage": "validation",
+     "execution_state_unknown": false,
+     "failure": {
+      "code": "INVALID_REQUEST",
+      "message": "source artifact exceeds the 2 MiB source limit",
+      "safe_retry": false
+     },
+     "operation": "code.execute_java",
+     "state": "failed",
+     "status_token": "REFUSED",
+     "verification_status": "NOT_APPLICABLE",
+     "witness": {
+      "dispatches": [],
+      "engine_calls": 0,
+      "methods": [],
+      "mutation_issued": false,
+      "mutation_method": null
+     }
+    },
+    "domain_state": "failed",
+    "effect": "project_write",
+    "execution_state_unknown": false,
+    "isolation_proof": {
+     "software_boundary_not_native": true
+    },
+    "operation": "code.execute_java",
+    "partial_change": false,
+    "refusal": {
+     "code": "INVALID_REQUEST",
+     "message": "source artifact exceeds the 2 MiB source limit",
+     "safe_retry": false,
+     "stage": "validation"
+    },
+    "refused": true,
+    "status": "REFUSED",
+    "verification_status": "NOT_APPLICABLE",
+    "verified_outcome": "failed",
+    "witness": {
+     "dispatches": [],
+     "engine_calls": 0,
+     "methods": [],
+     "mutation_issued": false,
+     "mutation_method": null
+    }
+   },
+   "error": {
+    "code": "INVALID_REQUEST",
+    "message": "source artifact exceeds the 2 MiB source limit",
+    "safe_retry": false,
+    "stage": "validation"
+   },
+   "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "oversize-execute",
+    "job_id": "6913d00c-ee16-4028-8a6d-716fb2773deb",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+     "generation": 1,
+     "model_tag": "mcp1",
+     "schema_version": 1,
+     "server_instance_id": "software-server",
+     "session_id": "software-session"
+    },
+    "operation_id": "c0aa7c42-5300-4e4d-b3c7-7cc6c2a83483",
+    "request_hash": "e0136e56daa832352161350a1f209337c1ae57bda44de49a236498e408f887a1",
+    "request_id": "oversize-execute",
+    "revision": 0,
+    "server_ownership": "shared",
+    "session_id": "software-session"
+   },
+   "success": false
+  },
+  "started_at": "2026-11-07 15:44:23",
+  "status": "FAILED"
+ },
+ "op_status": "FAILED"
+}
+== followup_after_reject
+{
+ "error": null,
+ "success": true
+}

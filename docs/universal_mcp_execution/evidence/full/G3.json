@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:31:08.579423+00:00",
+  "updated_utc": "2026-11-07T15:53:11.987228+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -90,8 +90,19 @@
       "tests": "New focused file-budget suite 2 passed; adjacent selected suites 64 passed, exit 0.",
       "java_source_limit": "2 MiB (prior T19 report 512 KiB was incorrect)",
       "known_gap": "Qwen enumerated legacy paths and native .mph save/load without byte budgets. TASKS T19 explicitly calls for file/compute budgets across routes; the claim that every actual file entry is bounded conflicts with its own table. Whether a project-configurable quota is mandated remains unproven; do not waive the domain file-budget obligation.",
-      "predispatch_java_error": "Oversized source with zero Worker calls is currently wrapped as EXECUTION_STATE_UNKNOWN; T18 is examining whether it can be safely classified as a deterministic pre-dispatch refusal.",
-      "source_test_sha256": "cba2d78b799921339cd96a34a11a5c0e0c7fbf0e2d225c25399ba66ab6430499"
+      "predispatch_java_error": "T18 candidate fixes deterministic oversized source classification when host validation stage and dispatch witness both prove no mutation; synthetic evidence is in T18. Prior T19 report records pre-fix behavior.",
+      "source_test_sha256": "a5c0fdb6432bc1694a7b316e0fb013f2053cacc3c8428ea9b4dc35aa073d6929"
     }
+  },
+  "T18": {
+    "status": "IMPLEMENTED",
+    "implementation_scope": "Host-only source snapshot/analysis errors explicitly declare validation stage; existing dispatch witness still prevents a definite refusal after mutation. Synthetic probe shows oversize source rejected without Worker dispatch and without dirtying model ledger.",
+    "source_identity_sha256": {
+      "comsol_mcp/_g2_code.py": "56c68c655fa35891436ca8e12692e1d7f7b69ff222f1ccbc48d6afcadc33abbd",
+      "tests/test_universal_file_budget_routes_t19.py": "a5c0fdb6432bc1694a7b316e0fb013f2053cacc3c8428ea9b4dc35aa073d6929"
+    },
+    "tests": "95 passed focused; 85 passed / 21 skipped UNKNOWN-fence suites; additional consumer suites 144 failed / 76 passed with identical counts under the pre-fix source. Failures remain unresolved; exact failure-set equivalence and complete attribution not independently established.",
+    "evidence": "docs/universal_mcp_execution/evidence/full/T18-qwen-20261107.md",
+    "limitations": "No real Worker failure-path, compilation-error, timeout, partial-mutation or recovery exercise. Existing original and candidate-b0 UNKNOWN jobs are unchanged."
   }
 }
