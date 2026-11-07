@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
-  "current_candidate_commit": "f49cc0fb2a1acd14336402f4dda5a87cb61e6ca0",
+  "current_candidate_commit": "468be21d2eba665f82489053cee5c3738510ff2d",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "Continue T20 software and T19 budget/T18 refusal work; seek a safe general T13 deletion route and T14 selection support. T07/T17 native ce10 attempt failed before model creation; approval review rejected same-domain continuation, so prepare a corrected independent plan before requesting approval. Keep both old UNKNOWN fences intact.",
-  "updated_utc": "2026-11-07T16:42:15.364162+00:00",
+  "next_task_hint": "Continue T14 selection, T19 legacy resource admission and T20 artifact-boundary work. The f49 native validation plan is prepared; user approval is pending after the auto-review rejection. Preserve earlier UNKNOWN model/session fences.",
+  "updated_utc": "2026-11-07T16:48:23.820015+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -237,8 +237,11 @@
       "status": "RUNNING",
       "implementation_done": false,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/T20-qwen-20261108.md",
+        "docs/universal_mcp_execution/evidence/full/G4.json"
+      ],
+      "blocker": "Potential public function.data_import artifact_id/layout path mismatch may breach project file boundaries; synthetic public-route reproduction and a safe registered-artifact binding are in progress. Real multi-component and interpolation native execution not performed."
     },
     "T21": {
       "status": "TODO",
@@ -570,16 +573,12 @@
     ]
   },
   "documentation_head_before_update": "23e5ea5",
-  "candidate_identity_note": "Current source candidate f49cc0f includes T13 group schema and T18 empty-source refusal; ce10fda native wheel belongs to an earlier source and stopped before a model was created. Concurrent uncommitted edits are not included.",
+  "candidate_identity_note": "Current committed source 468be21 adds T20 funcs allowlist to f49. T14 selection edits are uncommitted and excluded. Native plan/wheel remains pinned to f49 and any later evidence must account for source-scope differences.",
   "active_work_observation": {
-    "observed_utc": "2026-11-07T16:37:24.165798+00:00",
+    "observed_utc": "2026-11-07T16:48:23.820015+00:00",
     "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
     "reasoning_effort": "max",
     "agents": [
-      {
-        "id": "01a1b6cb-b06d-7c33-903f-daf78434353e",
-        "scope": "T20 parameter/variable/function software"
-      },
       {
         "id": "01a1b6d1-1f7d-7031-be8a-37022651c8d2",
         "scope": "T14 selection semantics software"
@@ -587,6 +586,10 @@
       {
         "id": "01a1b6de-e46e-7923-ae50-f6b5b83271e0",
         "scope": "T19 legacy load budget admission coverage"
+      },
+      {
+        "id": "01a1b6e7-7973-7e22-921b-2ea9310a009a",
+        "scope": "T20 artifact/path boundary reproduction and repair"
       }
     ],
     "note": "Live session observation only; no liveness inference after restart."
