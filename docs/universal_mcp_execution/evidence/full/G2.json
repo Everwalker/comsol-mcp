@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:16:34.234366+00:00",
+  "updated_utc": "2026-11-07T16:18:52.021965+00:00",
   "T11": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Existing tag-path model tree discovery with new synthetic coverage for multiple components, labels, root scope and WorkPlane accessor; no production source changed.",
@@ -26,5 +26,14 @@
     "tests": "Selected typed suites 91 passed; adjacent suites 140 passed; subsequent standalone unit-a 150 passed. Synthetic fixtures only.",
     "limitations": "Actual COMSOL typed getter/setter round trips, allowed-value enumeration, overload behavior, installed MCP and platform matrix remain unverified.",
     "evidence": "docs/universal_mcp_execution/evidence/full/T12-qwen-20261107.md"
+  },
+  "T13": {
+    "status": "IN_PROGRESS",
+    "implementation_done": false,
+    "source_commit": "b93b12c85680efc255649282613a67d713524a81",
+    "implemented_scope": "Align the existing model-root NodeGroup ungroup data schema with emitted fields; maintain pre-write refusal for ordinary and nested node.remove. Same-list create/copy and ungroup are software-only observations.",
+    "evidence": "docs/universal_mcp_execution/evidence/full/T13-qwen-20261107.md",
+    "validation": "Qwen: 405 focused tests passed after one pre-existing flat-import repair; main: five affected tests passed after small wording/type-table cleanup. One 30-file broad run had 178 failures, 835 passes, 30 skips; no baseline attribution, retained as unresolved evidence.",
+    "gap": "Required ordinary/nested authorized deletion remains unimplemented. A leaf-only scan and same-list post-read cannot establish cross-list retention; viable general safe semantics and native verification remain to be developed."
   }
 }
