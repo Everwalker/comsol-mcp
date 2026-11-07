@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T07 software candidate recorded; build pinned candidate and validate via installed MCP in a genuinely independent new project/session, without replaying or cleaning original UNKNOWN resources. T11 and T19 software work continues.",
-  "updated_utc": "2026-11-07T14:59:22.102129+00:00",
+  "next_task_hint": "T11 software milestone unblocks T12. New isolated T07 native validation and T19 software work continue; original T07 UNKNOWN remains fenced.",
+  "updated_utc": "2026-11-07T15:05:23.234552+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -114,11 +114,14 @@
       "blocker": "Scoped synthetic tests and source assessment available; actual two-model preservation, shared-client behavior, save/load/epoch/rebind, and domain/API/Java same-binding native evidence remain unverified. T07 UNKNOWN remains fenced."
     },
     "T11": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G2.json",
+        "docs/universal_mcp_execution/evidence/full/T11-qwen-20261107.md"
+      ],
+      "blocker": "Only synthetic tree and source inspection available; real multi-component/renamed/nested model and public MCP readback remain unverified. A separate standalone unit-a invocation reported 3 import failures."
     },
     "T12": {
       "status": "TODO",

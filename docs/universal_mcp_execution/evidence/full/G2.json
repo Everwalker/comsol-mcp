@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "updated_utc": "2026-11-07T15:05:23.234552+00:00",
+  "T11": {
+    "status": "IMPLEMENTED",
+    "implementation_scope": "Existing tag-path model tree discovery with new synthetic coverage for multiple components, labels, root scope and WorkPlane accessor; no production source changed.",
+    "source_identity_sha256": {
+      "comsol_mcp/_g2_engine.py": "71f1e21bb8219d4be9f61a6a850adeb1af5161de294ff17ed486798c37abcbb9",
+      "comsol_mcp/_g2_contract.py": "98b23f3eb6118c9d02644fa50b46c340358bd1fd6ff6d5ce3eb2e819b224aec7",
+      "comsol_mcp/worker_java/PersistentComsolWorker.java": "bbbfded4bc90232750cfa1cd516bc572990c12aa83283f26aba28ceb67058e01",
+      "tests/test_g3_r02_discovery.py": "8048a8b2f78367ea7cf86c7d3fe0fee74365a6f732666a0b6772c5465927a781"
+    },
+    "tests": "Selected discovery/registry 38 passed; adjacent node suites 267 passed; standalone test_unit_a_node_public_api invocation reported 3 import failures with test_unit_d_same_list_copy missing from its import path. The latter invocation is not a pass.",
+    "limitations": "No actual renamed COMSOL model, native WorkPlane traversal, installed-MCP readback, or target-matrix execution yet.",
+    "evidence": "docs/universal_mcp_execution/evidence/full/T11-qwen-20261107.md"
+  }
+}

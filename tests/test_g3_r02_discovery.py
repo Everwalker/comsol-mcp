@@ -20,7 +20,10 @@ import json
 import pytest
 
 from comsol_mcp._execution_contract import ExecutionContractError
-from comsol_mcp._g2_engine import COLLECTION_CANDIDATES, _solver_feature_order_witness, children_node, find_nodes
+from comsol_mcp._g2_contract import resolve_node_path
+from comsol_mcp._g2_engine import (
+    COLLECTION_CANDIDATES, _solver_feature_order_witness, children_node, find_nodes, inspect_node,
+)
 
 
 class _Container:
@@ -679,3 +682,129 @@ def test_find_nodes_cursor_bound_to_query_and_epoch():
     with pytest.raises(ExecutionContractError) as exc3:
         find_nodes(worker, "m", {"tag": "comp1"}, limit=1, cursor=json.dumps({"v": 1}))
     assert exc3.value.code == "INVALID_CURSOR"
+
+
+# ---------------------------------------------------------------------------
+# T11: deep/local discovery and stable addressing in multi-component trees.
+# These cases pin the acceptance clauses directly: tags (never labels, never
+# literal comp1/geom1) are the addressing identity; the search is scopeable to
+# one subtree; renames and hierarchy changes keep the required object locatable
+# through the tag path that discovery itself returns.
+# ---------------------------------------------------------------------------
+
+def _multi_component_tree():
+    """Two components with arbitrary tags whose feature tags collide."""
+    core_surf = _FakeNode(children={"feature": {"pin": _FakeNode(tag="pin", type_id="Size")}},
+                          tag="surf1", type_id="WorkPlane", label="Core surface")
+    core_geom = _FakeNode(children={"feature": {"surf1": core_surf}}, tag="outerGeom", type_id="Geometry")
+    core = _FakeNode(children={"geom": {"outerGeom": core_geom}}, tag="core", type_id="Component")
+    shell_surf = _FakeNode(children={"feature": {"band": _FakeNode(tag="band", type_id="Size")}},
+                           tag="surf1", type_id="WorkPlane", label="Shell surface")
+    shell_geom = _FakeNode(children={"feature": {"surf1": shell_surf}}, tag="innerGeom", type_id="Geometry")
+    shell = _FakeNode(children={"geom": {"innerGeom": shell_geom}}, tag="shell", type_id="Component")
+    model = _FakeNode(children={"component": {"core": core, "shell": shell}}, tag="model", type_id="Model")
+    return model
+
+
+def test_find_separates_same_tag_in_custom_named_components_and_paths_readdress():
+    """The engine never assumes comp1/geom1 and find output is directly addressable."""
+    model = _multi_component_tree()
+
+    class _TreeWorker(_WalkWorker):
+        def client(self):
+            return _Client(model)
+
+    worker = _TreeWorker(model)
+    result = find_nodes(worker, "m", {"type_id": "WorkPlane"}, limit=10)
+    assert result["complete"] is True and result["errors"] == []
+    by_component = {}
+    for row in result["results"]:
+        comp_segment = row["path"]["segments"][0]
+        assert comp_segment == {"collection": "component", "tag": comp_segment["tag"]}
+        by_component[comp_segment["tag"]] = row
+    assert sorted(by_component) == ["core", "shell"]
+    # Both objects carry tag "surf1"; only their full tag paths tell them apart.
+    assert all(row["tag"] == "surf1" for row in result["results"])
+    for comp_tag, child_tag in (("core", "pin"), ("shell", "band")):
+        page = children_node(worker, "m", by_component[comp_tag]["path"], limit=10)
+        assert page["complete"] is True
+        assert [row["tag"] for row in page["children"]] == [child_tag]
+
+
+def test_find_root_scopes_the_walk_to_one_component_subtree():
+    model = _multi_component_tree()
+
+    class _TreeWorker(_WalkWorker):
+        def client(self):
+            return _Client(model)
+
+    worker = _TreeWorker(model)
+    root = {"segments": [{"collection": "component", "tag": "shell"}]}
+    result = find_nodes(worker, "m", {"type_id": "Size"}, root=root, limit=10)
+    assert result["complete"] is True and result["errors"] == []
+    assert [row["tag"] for row in result["results"]] == ["band"], "the other component must not leak into a local search"
+    segments = result["results"][0]["path"]["segments"]
+    # A locally started search still returns model-root-absolute addressable paths.
+    assert segments[0] == {"collection": "component", "tag": "shell"}
+    assert {"collection": "geom", "tag": "innerGeom"} in segments
+
+
+def test_refused_segment_names_the_actual_members_so_a_renamed_tree_is_addressable():
+    model = _multi_component_tree()
+    with pytest.raises(ExecutionContractError) as exc:
+        resolve_node_path(model, {"segments": [{"collection": "component", "tag": "core"},
+                                               {"collection": "geom", "tag": "geom1"}]})
+    assert exc.value.code == "NODE_NOT_FOUND"
+    message = str(exc.value)
+    assert "geom:geom1" in message
+    assert "outerGeom" in message, "the refusal must report the tags the engine actually has"
+
+
+def test_rename_and_hierarchy_change_keep_objects_locatable_by_tag_path():
+    """Simulated node.label_set effect plus a created sibling node."""
+    inner_geom = _FakeNode(children={"feature": {"r1": _FakeNode(tag="r1", type_id="Rectangle")}},
+                           tag="wpgeom", type_id="Geometry")
+
+    class _AccessorNode(_FakeNode):
+        def __getattr__(self, name):
+            if name == "geom":
+                return lambda *args: self.children["geom"][""]
+            return super().__getattr__(name)
+
+    wp = _AccessorNode(children={"geom": {"": inner_geom}}, tag="w1", type_id="WorkPlane", label="Old plate")
+    geom = _FakeNode(children={"feature": {"w1": wp}}, tag="gY", type_id="Geometry")
+    model = _FakeNode(children={"component": {"cX": _FakeNode(children={"geom": {"gY": geom}}, tag="cX")}},
+                      tag="model", type_id="Model")
+    worker = _FixtureWorker(model)
+    path = {"segments": [{"collection": "component", "tag": "cX"},
+                         {"collection": "geom", "tag": "gY"},
+                         {"collection": "feature", "tag": "w1"}]}
+
+    before = find_nodes(worker, "m", {"label": "Old plate"}, limit=5)
+    assert before["complete"] is True and before["results"][0]["path"]["segments"] == path["segments"]
+
+    # A COMSOL rename changes only the label; tags are the stable identity.
+    wp._label = "Renamed plate"
+
+    stale = find_nodes(worker, "m", {"label": "Old plate"}, limit=5)
+    assert stale["results"] == [] and stale["complete"] is True, "the previous label is not a stable handle"
+    current = find_nodes(worker, "m", {"tag": "w1"}, limit=5)
+    assert current["complete"] is True and current["results"][0]["label"] == "Renamed plate"
+    assert current["results"][0]["path"]["segments"] == path["segments"]
+
+    # Tag-path addressing is unaffected by the rename, including through the
+    # WorkPlane's inner-geometry accessor child.
+    page = children_node(worker, "m", path, limit=10)
+    assert page["children"] == [{"collection": "geom", "tag": None, "accessor": True}]
+    identity = inspect_node(worker, "m", path, include_properties=False)
+    assert identity["tag"] == "w1" and identity["label"] == "Renamed plate"
+    assert identity["path"] == path
+
+    # A hierarchy change (new sibling feature) is discovered by the next walk
+    # and its returned path resolves without guessing.
+    geom.children["feature"]["w2"] = _FakeNode(tag="w2", type_id="WorkPlane", label="Added stage")
+    after = find_nodes(worker, "m", {"type_id": "WorkPlane"}, limit=5)
+    found = {row["tag"]: row["path"]["segments"] for row in after["results"]}
+    assert sorted(found) == ["w1", "w2"]
+    assert found["w2"] == path["segments"][:2] + [{"collection": "feature", "tag": "w2"}]
+    assert children_node(worker, "m", {"segments": found["w2"]}, limit=10)["complete"] is True
