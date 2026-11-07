@@ -415,6 +415,12 @@
         "tests/test_control_daemon_sessions.py",
         "tests/test_w24_actual_default_epoch_capability.py"
       ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_registry_T03.json",
+          "scope": "2026-11-07 public MCP round T03: registry.list over installed 0.1.16 wheel on macOS arm64 returned all 274 operations in one page (count=total=274, next_cursor null); declarations only, no engine execution"
+        }
+      ],
       "installed_registry": {
         "executable": true,
         "implementation_status": "SUPPORTED_UNVERIFIED",
@@ -441,6 +447,20 @@
       "historical_route_details": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/actions/9",
       "status": "UNVERIFIED",
       "candidate_test_files": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json#/describe:runtime.discover",
+          "scope": "2026-11-07 T05: MCP operation_describe compatibility entry point returned full input/output schemas for 5 named operations (runtime.discover, runtime.doctor, project.create, session.start, model.create) with no engine start; schema retrieval via compatibility path only, not a call to registry.describe itself"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_project_T06.json#/describe:code.compile_java",
+          "scope": "2026-11-07 T06 preflight: MCP operation_describe compatibility entry point returned full schemas for 5 named operations (code.describe_java, code.compile_java, code.execute_java, project.inspect, session.connect); schema retrieval via compatibility path only, not a call to registry.describe itself"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json#/describe:code.execute",
+          "scope": "negative probe: unknown operation name code.execute correctly returned isError=true with UNSUPPORTED_OPERATION and safe_retry=false; accurate unknown-capability reporting, single observed case"
+        }
+      ],
       "installed_registry": {
         "executable": true,
         "implementation_status": "SUPPORTED_UNVERIFIED",
@@ -599,6 +619,12 @@
         "tests/test_w26_os_resources.py",
         "tests/test_w26_solver_action_routes.py",
         "tests/test_windows_t037_broker.py"
+      ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_project_T06.json#/project.create",
+          "scope": "2026-11-07 T06: one project workspace created through the installed wheel on macOS arm64; success true; authorization, budget and policy clauses not covered"
+        }
       ],
       "installed_registry": {
         "executable": true,
@@ -819,6 +845,12 @@
         "tests/test_windows_resource_owner.py",
         "tests/test_windows_suspended_ownership.py"
       ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_connect_T06.json#/response",
+          "scope": "2026-11-07 T06: one session.connect to the started session endpoint on macOS arm64; success true; external pre-existing mphserver ownership and version-mismatch cases not exercised"
+        }
+      ],
       "installed_registry": {
         "executable": true,
         "implementation_status": "SUPPORTED_UNVERIFIED",
@@ -850,6 +882,12 @@
         "tests/test_run_w21_stage_native.py",
         "tests/test_session_server_control.py",
         "tests/test_windows_preflight_lifetime.py"
+      ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_session_T06.json#/response",
+          "scope": "2026-11-07 T06: one managed session start bound to the discovered COMSOL 6.4.0.293 arm64 runtime; request/job recorded; shared-server, stop, recover and disconnect clauses not exercised"
+        }
       ],
       "installed_registry": {
         "executable": true,
@@ -1096,6 +1134,12 @@
         "tests/test_t044_r11_run_cycle_receipt.py",
         "tests/test_t044_r12_actual_r11_replay.py",
         "tests/test_w24_static_unknown_retention.py"
+      ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_model_T06.json#/response",
+          "scope": "2026-11-07 T06: one model created on the bound engine returning model_tag mcp1 generation 1; load/adopt and multi-model preservation not exercised"
+        }
       ],
       "installed_registry": {
         "executable": true,
@@ -2116,6 +2160,12 @@
         "tests/test_g2_w08_w12.py",
         "tests/test_phase3_acceptance_driver.py"
       ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_compile_T06.json#/response",
+          "scope": "2026-11-07 T06: UniversalSmoke.java (source sha256 33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670) compiled against the installed 6.4.0.293 engine classpath on macOS arm64; success true; compile-failure reporting path not exercised"
+        }
+      ],
       "installed_registry": {
         "executable": true,
         "implementation_status": "SUPPORTED_UNVERIFIED",
@@ -2169,6 +2219,16 @@
         "tests/test_w24_schema_only_mode.py",
         "tests/test_w24_static_shape_managed.py",
         "tests/test_windows_t037.py"
+      ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json#/response",
+          "scope": "2026-11-07 T06: one authorized source executed against the injected bound model mcp1; expected_revision 0 with revision 1 after; source_binding_verified true; readback returned geometry domain count 1, study smoke_study, solution sol1, dataset dset1; Stationary study.run ran inside the same Model via Java"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/G1.json#/T06",
+          "scope": "round summary; caveat preserved: solution tags and successful solve do not establish numerical values, units, rendered image, persistence or global native acceptance"
+        }
       ],
       "installed_registry": {
         "executable": true,
@@ -6128,6 +6188,16 @@
         "tests/test_w21_native_output.py",
         "tests/test_w23_native_results.py"
       ],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_result_T07.json#/response",
+          "scope": "2026-11-07 T07 attempt: EXECUTION_STATE_UNKNOWN post-dispatch (JavaWorkerError FlException Unknown_solution), isError true, safe_retry false, job c25bce5c-87a1-4be5-b367-20ce5624f730 unreconciled; negative/unknown-state record only, no result values established; no replay or engine action taken"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/G1.json#/T07",
+          "scope": "round summary marks T07 BLOCKED pending original-request and model reconciliation"
+        }
+      ],
       "installed_registry": {
         "executable": true,
         "implementation_status": "SUPPORTED_UNVERIFIED",
@@ -8521,6 +8591,12 @@
       ],
       "handler_paths_not_materialized_or_absent": [],
       "status": "UNVERIFIED",
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_describe_T06.json#/response",
+          "scope": "2026-11-07 T06: registry-only synthetic action exercised once; introspection of UniversalSmoke.java source artifact with entrypoint UniversalSmoke on macOS arm64"
+        }
+      ],
       "installed_registry": {
         "executable": true,
         "implementation_status": "SUPPORTED_UNVERIFIED",
@@ -14066,6 +14142,12 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json#/runtime.discover",
+          "scope": "2026-11-07 T05: runtime_discover executed against installed COMSOL 6.4.0.293 arm64 with comsol_started=false and license_checked_out=false; runtime_doctor not run; only the discover half of this clause covered; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -17239,6 +17321,20 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_describe_T06.json#/response",
+          "scope": "2026-11-07 T06 ran describe/compile/execute/readback once end-to-end for UniversalSmoke on a macOS arm64 6.4.0.293 bound model; T031 error, partial-change, source-identity and budget clauses not covered; evidence_status stays NOT_RUN"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_compile_T06.json#/response",
+          "scope": "same single T06 smoke chain; not the frozen T031 case scenario; evidence_status stays NOT_RUN"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json#/response",
+          "scope": "same single T06 smoke chain; not the frozen T031 case scenario; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -17299,6 +17395,12 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/sources/UniversalSmoke.java",
+          "scope": "2026-11-07 T06 code artifact exists with recorded sha256 in G1.json#/T06; provenance is the T06 smoke round, not the frozen T031 case scenario; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -17314,6 +17416,12 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json#/response",
+          "scope": "execution record carries model_ref with model_tag mcp1 generation 1 and before/after state; from the T06 smoke round, not the frozen T031 case scenario; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -17329,6 +17437,12 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json#/response",
+          "scope": "readback fields (geometry domain count, study, solution, dataset tags) present in the same execution record; numerical verification absent because T07 result.evaluate ended UNKNOWN; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -17869,6 +17983,20 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_stdio_T05.json",
+          "scope": "2026-11-07 T05 stdio client: initialize PASS, tools/list published 112 schemas, server_info call returned structuredContent success; stdout cleanliness, log isolation and full protocol matrix not established; evidence_status stays NOT_RUN"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_registry_T03.json",
+          "scope": "registry list exercised count/total/next_cursor pagination fields on a single page; multi-page paging not demonstrated; evidence_status stays NOT_RUN"
+        },
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json#/describe:code.execute",
+          "scope": "isError=true paired with structuredContent error shape observed; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -17914,6 +18042,12 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json#/describe:code.execute",
+          "scope": "one observed instance where an error call returned isError=true with structured error while sibling calls succeeded; not the full matrix; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {
@@ -20476,6 +20610,12 @@
       "frozen_disposition": "CORE_REQUIRED_AFFECTED_RETEST",
       "evidence_status": "NOT_RUN",
       "linked_existing_core_tests": [],
+      "current_evidence": [
+        {
+          "ref": "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json",
+          "scope": "2026-11-07 T05: five registry.describe schema retrievals plus runtime.discover completed with comsol_started=false and license_checked_out=false; existence-only verification demonstrated for named operations; T059 real-run and status-transition clauses not covered; evidence_status stays NOT_RUN"
+        }
+      ],
       "source": "docs/universal_mcp_execution/state/GENERAL_COVERAGE.json#/tests_mapping/assertions"
     },
     {

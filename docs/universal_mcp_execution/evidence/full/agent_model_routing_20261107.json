@@ -25,5 +25,15 @@
     "authorization": "NOT_AUTHORIZED_BY_USER",
     "cause": "resume_agent has no model override and resumed sessions used parent model",
     "corrective_action": "Stopped resumed agents; do not use resume_agent. All subsequent agents are spawned afresh with explicit Qwen/max. Have new Qwen check partial follow-up edits."
+  },
+  "live_usage_tail_observation": {
+    "observed_utc": "2026-11-07T12:48:41.073196+00:00",
+    "source": "local OpenCodex usage.jsonl, final 1.2 MB only",
+    "window": "30 minutes preceding observation",
+    "routes": {
+      "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S/max HTTP 200": 187,
+      "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S/max HTTP 499": 6
+    },
+    "qualification": "Tail-only aggregate; conversation identifiers were not directly matched to agent thread ids. It verifies live routing exists, not per-agent backend attribution."
   }
 }
