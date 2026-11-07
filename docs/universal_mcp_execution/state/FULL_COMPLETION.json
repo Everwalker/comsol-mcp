@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
-  "current_candidate_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+  "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T05 installed public MCP; T03 coverage; then first independent macOS project if runtime permits",
-  "updated_utc": "2026-11-07T10:47:25.750903+00:00",
+  "next_task_hint": "Qwen agents: investigate T07 UNKNOWN and source fix, recovery tool, U03 introspection; coordinate original owned job without replay",
+  "updated_utc": "2026-11-07T11:39:53.755637+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -35,10 +35,14 @@
       "blocker": null
     },
     "T03": {
-      "status": "TODO",
-      "implementation_done": false,
-      "execution_complete": false,
-      "evidence_refs": [],
+      "status": "DONE",
+      "implementation_done": true,
+      "execution_complete": true,
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G0.json",
+        "docs/universal_mcp_execution/state/GENERAL_COVERAGE_U01_U12.json",
+        "docs/universal_mcp_execution/evidence/full/public_registry_T03.json"
+      ],
       "blocker": null
     },
     "T04": {
@@ -51,25 +55,34 @@
       "blocker": null
     },
     "T05": {
-      "status": "RUNNING",
-      "implementation_done": false,
-      "execution_complete": false,
-      "evidence_refs": [],
+      "status": "DONE",
+      "implementation_done": true,
+      "execution_complete": true,
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G1.json",
+        "docs/universal_mcp_execution/evidence/full/public_stdio_T05.json",
+        "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json"
+      ],
       "blocker": null
     },
     "T06": {
-      "status": "TODO",
-      "implementation_done": false,
-      "execution_complete": false,
-      "evidence_refs": [],
+      "status": "DONE",
+      "implementation_done": true,
+      "execution_complete": true,
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G1.json",
+        "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json"
+      ],
       "blocker": null
     },
     "T07": {
-      "status": "TODO",
+      "status": "BLOCKED",
       "implementation_done": false,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/public_result_T07.json"
+      ],
+      "blocker": "Original result.evaluate request returned EXECUTION_STATE_UNKNOWN after dispatch, with COMSOL Unknown_solution. Do not replay, replace, signal or cleanup the original job/model; inspect the original job and reconcile only through safe authorized control paths. Independent implementation work may continue."
     },
     "T08": {
       "status": "TODO",

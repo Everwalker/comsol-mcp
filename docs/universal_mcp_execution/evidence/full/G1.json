@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "updated_utc": "2026-11-07T11:34:02.779792+00:00",
+  "T05": {
+    "status": "DONE",
+    "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+    "documentation_handoff_commit_at_build": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
+    "source_identity_note": "No comsol_mcp or pyproject diff vs basis at build; wheel built before handoff-only commit from same source bytes.",
+    "wheel": {
+      "name": "comsol_mcp-0.1.16-py3-none-any.whl",
+      "sha256": "71dc685122ecad2808dd7d9f3a2868dec60853ea141530436f23e030df7f986b",
+      "local_path": "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/dist/comsol_mcp-0.1.16-py3-none-any.whl",
+      "distribution_version": "0.1.16",
+      "command": "uv build --wheel",
+      "platform": "macOS arm64; Python build environment; pure Python wheel"
+    },
+    "installation": {
+      "method": "uv venv + uv pip install local wheel with network-resolved dependencies",
+      "python": "3.14.7",
+      "pip_check": "All installed packages are compatible",
+      "installed_module": "isolated venv site-packages, not editable source",
+      "cwd": "/private/tmp/comsol-mcp-full-continuation-client",
+      "offline_or_other_architecture": "NOT_RUN"
+    },
+    "public_mcp": {
+      "transport": "MCP SDK stdio client -> installed comsol-mcp executable",
+      "initialize": "PASS",
+      "published_tool_schemas": 112,
+      "server_info": "READY; worker NOT_STARTED",
+      "runtime_discover": "COMSOL 6.4.0 build 293 arm64 and bundled Java 21.0.7 observed from installation metadata",
+      "raw": [
+        "docs/universal_mcp_execution/evidence/full/public_stdio_T05.json",
+        "docs/universal_mcp_execution/evidence/full/public_discovery_T05.json"
+      ],
+      "limitations": "No engine start or license checkout; no solve, Desktop, full native or platform-matrix acceptance inferred."
+    },
+    "initial_sandbox_failure": {
+      "reason": "local TCP socket bind PermissionError in private control daemon",
+      "operation": "NOT_SUBMITTED",
+      "lock": "original isolated control lock observed free after daemon traceback",
+      "evidence": "docs/universal_mcp_execution/evidence/full/public_stdio_T05_sandbox_denied.json",
+      "resolution": "same installed candidate used after explicit loopback-capable execution permission; distinct failure evidence preserved"
+    }
+  },
+  "T06": {
+    "status": "DONE",
+    "scope": "one new local macOS arm64 COMSOL 6.4.0.293 bound-model project only",
+    "source": "docs/universal_mcp_execution/evidence/full/sources/UniversalSmoke.java",
+    "source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
+    "entrypoint": "UniversalSmoke",
+    "model_revision": "0 -> 1",
+    "worker_build_id": "persistent-comsol-worker/source-snapshot-v2",
+    "readback": "geometry domain count 1; study smoke_study; solution sol1; dataset dset1; Java invoked Stationary study.run",
+    "records": [
+      "docs/universal_mcp_execution/evidence/full/public_project_T06.json",
+      "docs/universal_mcp_execution/evidence/full/public_session_T06.json",
+      "docs/universal_mcp_execution/evidence/full/public_connect_T06.json",
+      "docs/universal_mcp_execution/evidence/full/public_model_T06.json",
+      "docs/universal_mcp_execution/evidence/full/public_java_describe_T06.json",
+      "docs/universal_mcp_execution/evidence/full/public_java_compile_T06.json",
+      "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json"
+    ],
+    "caveat": "solution tags and successful solve do not yet establish numerical values, units, rendered image, persistence or global native acceptance"
+  },
+  "T07": {
+    "status": "BLOCKED",
+    "operation": "result.evaluate",
+    "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+    "request_id": "full-universal-20261107-result-evaluate-01",
+    "reason": "EXECUTION_STATE_UNKNOWN post-dispatch, COMSOL Unknown_solution",
+    "safe_retry": false,
+    "evidence": "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
+    "recovery": "Inspect original request/job and reconcile model; do not replay or assume cleanup."
+  }
+}

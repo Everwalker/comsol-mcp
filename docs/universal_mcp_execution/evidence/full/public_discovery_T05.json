@@ -1,0 +1,857 @@
+{
+  "describe:runtime.discover": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"operation_id\": \"runtime.discover\", \"mcp_tool_name\": \"runtime_discover\", \"domain\": \"runtime\", \"purpose\": \"发现全部 COMSOL 安装、JDK 与架构\", \"effect\": \"READ\", \"scope\": \"control\", \"gate\": \"G0\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"runtime.discover input\", \"type\": \"object\", \"properties\": {\"request_id\": {\"type\": \"string\"}, \"roots\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [], \"additionalProperties\": false}, \"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"runtime.discover input\", \"type\": \"object\", \"properties\": {\"request_id\": {\"type\": \"string\"}, \"roots\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [], \"additionalProperties\": false}, \"output_schema\": {\"type\": \"object\", \"required\": [\"success\", \"data\"], \"properties\": {\"success\": {\"type\": \"boolean\"}, \"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}}, \"additionalProperties\": true}, \"wire_compatibility\": {\"transport\": \"MCP structuredContent plus text mirror; isError equals not success\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"]}, \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"route\": \"control plane\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"executable\": true}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "operation_id": "runtime.discover",
+        "mcp_tool_name": "runtime_discover",
+        "domain": "runtime",
+        "purpose": "发现全部 COMSOL 安装、JDK 与架构",
+        "effect": "READ",
+        "scope": "control",
+        "gate": "G0",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "runtime.discover input",
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "roots": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "runtime.discover input",
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "roots": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "executable": true
+      }
+    },
+    "isError": false
+  },
+  "describe:runtime.doctor": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"operation_id\": \"runtime.doctor\", \"mcp_tool_name\": \"runtime_doctor\", \"domain\": \"runtime\", \"purpose\": \"检查安装、目录、端口、JVM、渲染与配置\", \"effect\": \"READ\", \"scope\": \"control\", \"gate\": \"G0\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"runtime.doctor input\", \"type\": \"object\", \"properties\": {\"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}, \"checks\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [], \"additionalProperties\": false}, \"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"runtime.doctor input\", \"type\": \"object\", \"properties\": {\"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}, \"checks\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [], \"additionalProperties\": false}, \"output_schema\": {\"type\": \"object\", \"required\": [\"success\", \"data\"], \"properties\": {\"success\": {\"type\": \"boolean\"}, \"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}}, \"additionalProperties\": true}, \"wire_compatibility\": {\"transport\": \"MCP structuredContent plus text mirror; isError equals not success\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"]}, \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"route\": \"control plane\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"executable\": true}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "operation_id": "runtime.doctor",
+        "mcp_tool_name": "runtime_doctor",
+        "domain": "runtime",
+        "purpose": "检查安装、目录、端口、JVM、渲染与配置",
+        "effect": "READ",
+        "scope": "control",
+        "gate": "G0",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "runtime.doctor input",
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "runtime_id": {
+              "type": "string"
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "runtime.doctor input",
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "runtime_id": {
+              "type": "string"
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "executable": true
+      }
+    },
+    "isError": false
+  },
+  "describe:project.create": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"operation_id\": \"project.create\", \"mcp_tool_name\": \"project_create\", \"domain\": \"project\", \"purpose\": \"创建项目工作区和初始策略\", \"effect\": \"STATE_WRITE\", \"scope\": \"control\", \"gate\": \"G1\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"project.create input\", \"type\": \"object\", \"properties\": {\"idempotency_key\": {\"type\": \"string\", \"minLength\": 1}, \"request_id\": {\"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"workspace\": {\"type\": \"string\"}, \"policy\": {\"type\": \"object\"}}, \"required\": [\"idempotency_key\", \"label\", \"workspace\", \"policy\"], \"additionalProperties\": false}, \"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"project.create input\", \"type\": \"object\", \"properties\": {\"idempotency_key\": {\"type\": \"string\", \"minLength\": 1}, \"request_id\": {\"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"workspace\": {\"type\": \"string\"}, \"policy\": {\"type\": \"object\"}}, \"required\": [\"idempotency_key\", \"label\", \"workspace\", \"policy\"], \"additionalProperties\": false}, \"output_schema\": {\"type\": \"object\", \"required\": [\"success\", \"data\"], \"properties\": {\"success\": {\"type\": \"boolean\"}, \"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}}, \"additionalProperties\": true}, \"wire_compatibility\": {\"transport\": \"MCP structuredContent plus text mirror; isError equals not success\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"]}, \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"route\": \"control plane\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"executable\": true, \"runtime_dispatch_contract\": {\"handler\": \"ControlDaemon project authority over the durable operation store\", \"entrypoints\": [\"project.create\", \"registry_call\", \"operation_call\"], \"engine_queue\": \"bypassed; project actions remain usable without a COMSOL connection\", \"nested_identity\": \"model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope\", \"verification_scope\": \"control-plane software behavior only; no COMSOL solver capability implied\"}}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "operation_id": "project.create",
+        "mcp_tool_name": "project_create",
+        "domain": "project",
+        "purpose": "创建项目工作区和初始策略",
+        "effect": "STATE_WRITE",
+        "scope": "control",
+        "gate": "G1",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "project.create input",
+          "type": "object",
+          "properties": {
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "workspace": {
+              "type": "string"
+            },
+            "policy": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "label",
+            "workspace",
+            "policy"
+          ],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "project.create input",
+          "type": "object",
+          "properties": {
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "workspace": {
+              "type": "string"
+            },
+            "policy": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "label",
+            "workspace",
+            "policy"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "executable": true,
+        "runtime_dispatch_contract": {
+          "handler": "ControlDaemon project authority over the durable operation store",
+          "entrypoints": [
+            "project.create",
+            "registry_call",
+            "operation_call"
+          ],
+          "engine_queue": "bypassed; project actions remain usable without a COMSOL connection",
+          "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
+          "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied"
+        }
+      }
+    },
+    "isError": false
+  },
+  "describe:session.start": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"operation_id\": \"session.start\", \"mcp_tool_name\": \"session_start\", \"domain\": \"session\", \"purpose\": \"启动专用受管 mphserver\", \"effect\": \"HOST_CONTROL\", \"scope\": \"project\", \"gate\": \"G0\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"session.start input\", \"type\": \"object\", \"properties\": {\"project_id\": {\"type\": \"string\", \"minLength\": 1}, \"idempotency_key\": {\"type\": \"string\", \"minLength\": 1}, \"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}, \"options\": {\"type\": \"object\"}, \"resources\": {\"type\": \"object\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"runtime_id\"], \"additionalProperties\": false}, \"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"session.start input\", \"type\": \"object\", \"properties\": {\"project_id\": {\"type\": \"string\", \"minLength\": 1}, \"idempotency_key\": {\"type\": \"string\", \"minLength\": 1}, \"request_id\": {\"type\": \"string\"}, \"runtime_id\": {\"type\": \"string\"}, \"options\": {\"type\": \"object\"}, \"resources\": {\"type\": \"object\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"runtime_id\"], \"additionalProperties\": false}, \"output_schema\": {\"type\": \"object\", \"required\": [\"success\", \"data\"], \"properties\": {\"success\": {\"type\": \"boolean\"}, \"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}}, \"additionalProperties\": true}, \"wire_compatibility\": {\"transport\": \"MCP structuredContent plus text mirror; isError equals not success\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"]}, \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"route\": \"control plane\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"notes\": \"仅空options/resources当前可执行；要求project host_control。启动前验证本地runtime_id、私有安装影子、精确进程出生和单一127.0.0.1 listener；不修改安装树。\", \"executable\": true, \"runtime_dispatch_contract\": {\"handler\": \"ControlDaemon cached operation store\", \"entrypoints\": [\"session.start\", \"registry_call\", \"operation_call\"], \"engine_queue\": \"bypassed\", \"nested_identity\": \"model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope\", \"verification_scope\": \"control-plane software behavior only; no COMSOL solver capability implied\"}}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "operation_id": "session.start",
+        "mcp_tool_name": "session_start",
+        "domain": "session",
+        "purpose": "启动专用受管 mphserver",
+        "effect": "HOST_CONTROL",
+        "scope": "project",
+        "gate": "G0",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "session.start input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "runtime_id": {
+              "type": "string"
+            },
+            "options": {
+              "type": "object"
+            },
+            "resources": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "runtime_id"
+          ],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "session.start input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "runtime_id": {
+              "type": "string"
+            },
+            "options": {
+              "type": "object"
+            },
+            "resources": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "runtime_id"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "仅空options/resources当前可执行；要求project host_control。启动前验证本地runtime_id、私有安装影子、精确进程出生和单一127.0.0.1 listener；不修改安装树。",
+        "executable": true,
+        "runtime_dispatch_contract": {
+          "handler": "ControlDaemon cached operation store",
+          "entrypoints": [
+            "session.start",
+            "registry_call",
+            "operation_call"
+          ],
+          "engine_queue": "bypassed",
+          "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
+          "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied"
+        }
+      }
+    },
+    "isError": false
+  },
+  "describe:model.create": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"operation_id\": \"model.create\", \"mcp_tool_name\": \"model_create\", \"domain\": \"model\", \"purpose\": \"显式新建模型并返回唯一身份\", \"effect\": \"WRITE\", \"scope\": \"project\", \"gate\": \"G3\", \"implementation_status\": \"SUPPORTED_UNVERIFIED\", \"input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"model.create input\", \"type\": \"object\", \"properties\": {\"project_id\": {\"type\": \"string\", \"minLength\": 1}, \"idempotency_key\": {\"type\": \"string\", \"minLength\": 1}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"dimension\": {\"type\": \"integer\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"session_id\", \"label\"], \"additionalProperties\": false}, \"catalog_input_schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"model.create input\", \"type\": \"object\", \"properties\": {\"project_id\": {\"type\": \"string\", \"minLength\": 1}, \"idempotency_key\": {\"type\": \"string\", \"minLength\": 1}, \"request_id\": {\"type\": \"string\"}, \"session_id\": {\"type\": \"string\"}, \"label\": {\"type\": \"string\"}, \"dimension\": {\"type\": \"integer\"}}, \"required\": [\"project_id\", \"idempotency_key\", \"session_id\", \"label\"], \"additionalProperties\": false}, \"output_schema\": {\"type\": \"object\", \"required\": [\"success\", \"data\"], \"properties\": {\"success\": {\"type\": \"boolean\"}, \"data\": {\"type\": \"object\"}, \"error\": {\"type\": [\"object\", \"string\", \"null\"]}, \"execution\": {\"type\": \"object\"}}, \"additionalProperties\": true}, \"wire_compatibility\": {\"transport\": \"MCP structuredContent plus text mirror; isError equals not success\", \"request_execution\": \"execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request\", \"execution_fields\": [\"session_id\", \"model_ref\", \"expected_revision\", \"idempotency_key\", \"request_id\", \"rpc_timeout_s\", \"queue_timeout_s\", \"execution_timeout_s\"], \"model_ref\": \"structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape\", \"result_fields\": [\"success\", \"data\", \"error\", \"execution\"]}, \"output_contract\": \"ActionResult; add domain-specific data schema before implementation gate is closed\", \"route\": \"control plane\", \"required_tests\": [\"schema_valid\", \"normal_path\", \"failure_is_truthful\"], \"notes\": \"DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.\", \"executable\": true}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "operation_id": "model.create",
+        "mcp_tool_name": "model_create",
+        "domain": "model",
+        "purpose": "显式新建模型并返回唯一身份",
+        "effect": "WRITE",
+        "scope": "project",
+        "gate": "G3",
+        "implementation_status": "SUPPORTED_UNVERIFIED",
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "model.create input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "session_id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "catalog_input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "model.create input",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "session_id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "dimension": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "project_id",
+            "idempotency_key",
+            "session_id",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "success",
+            "data"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "data": {
+              "type": "object"
+            },
+            "error": {
+              "type": [
+                "object",
+                "string",
+                "null"
+              ]
+            },
+            "execution": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "wire_compatibility": {
+          "transport": "MCP structuredContent plus text mirror; isError equals not success",
+          "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+          "execution_fields": [
+            "session_id",
+            "model_ref",
+            "expected_revision",
+            "idempotency_key",
+            "request_id",
+            "rpc_timeout_s",
+            "queue_timeout_s",
+            "execution_timeout_s"
+          ],
+          "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+          "result_fields": [
+            "success",
+            "data",
+            "error",
+            "execution"
+          ]
+        },
+        "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+        "route": "control plane",
+        "required_tests": [
+          "schema_valid",
+          "normal_path",
+          "failure_is_truthful"
+        ],
+        "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+        "executable": true
+      }
+    },
+    "isError": false
+  },
+  "describe:code.execute": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": false, \"data\": {}, \"error\": {\"code\": \"UNSUPPORTED_OPERATION\", \"message\": \"unknown registry operation: code.execute\", \"safe_retry\": false}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "UNSUPPORTED_OPERATION",
+        "message": "unknown registry operation: code.execute",
+        "safe_retry": false
+      }
+    },
+    "isError": true
+  },
+  "runtime.discover": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"schema_version\": \"comsol-mcp.runtime-discover/1.0.0\", \"status\": \"OBSERVED\", \"platform\": \"macos\", \"host_architecture\": \"arm64\", \"roots_examined\": [{\"path\": \"/Applications/COMSOL64/Multiphysics\", \"status\": \"SCANNED\"}, {\"path\": \"/Applications\", \"status\": \"SCANNED\"}], \"errors\": [], \"installations\": [{\"runtime_id\": \"comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics\", \"root\": \"/Applications/COMSOL64/Multiphysics\", \"platform\": \"macos\", \"version\": {\"status\": \"OBSERVED\", \"value\": \"6.4.0\", \"sources\": [{\"value\": \"6.4.0\", \"path\": \"/Applications/COMSOL64/Multiphysics/readme.txt\"}, {\"value\": \"6.4.0\", \"path\": \"/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics.app/Contents/Info.plist\"}, {\"value\": \"6.4.0\", \"path\": \"/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics Server.app/Contents/Info.plist\"}]}, \"build\": {\"status\": \"OBSERVED\", \"value\": 293, \"source\": \"/Applications/COMSOL64/Multiphysics/readme.txt\"}, \"architecture\": {\"status\": \"OBSERVED\", \"values\": [\"arm64\"], \"sources\": [{\"path\": \"/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher\", \"executable\": true, \"architectures\": [\"arm64\"]}, {\"path\": \"/Applications/COMSOL64/Multiphysics/bin/comsol\", \"executable\": true, \"architectures\": []}]}, \"launchers\": [{\"path\": \"/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher\", \"executable\": true, \"architectures\": [\"arm64\"]}, {\"path\": \"/Applications/COMSOL64/Multiphysics/bin/comsol\", \"executable\": true, \"architectures\": []}], \"bundled_java\": [{\"home\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home\", \"java_executable\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java\", \"version\": {\"status\": \"OBSERVED\", \"value\": \"21.0.7\"}, \"architecture\": {\"status\": \"OBSERVED\", \"values\": [\"arm64\"], \"source\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java\"}, \"release_metadata\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/release\"}], \"markers\": {\"readme\": true, \"api_plugins\": true, \"launcher_count\": 2, \"bundled_java_count\": 1}, \"metadata_only\": true, \"comsol_started\": false, \"license_checked_out\": false}], \"comsol_started\": false, \"license_checked_out\": false}, \"execution\": {\"operation_id\": \"d8ba057a-8bec-465f-93b3-934af4f05f11\", \"session_id\": null, \"model_ref\": null, \"revision\": null, \"request_id\": \"a9ecef91-f9fe-4d85-8479-cc524d8a2efb\", \"request_hash\": \"fdf0a31f95a3fc439b7f9398de515d6a847d00af283a3ac00b3c656ae4bbfe31\", \"idempotency_key\": \"97cdf491-4ad9-4e7b-a768-774870ecbb76\", \"job_id\": \"ad4586a3-0e2d-47be-b70d-01ba056e6ce2\"}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "schema_version": "comsol-mcp.runtime-discover/1.0.0",
+        "status": "OBSERVED",
+        "platform": "macos",
+        "host_architecture": "arm64",
+        "roots_examined": [
+          {
+            "path": "/Applications/COMSOL64/Multiphysics",
+            "status": "SCANNED"
+          },
+          {
+            "path": "/Applications",
+            "status": "SCANNED"
+          }
+        ],
+        "errors": [],
+        "installations": [
+          {
+            "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+            "root": "/Applications/COMSOL64/Multiphysics",
+            "platform": "macos",
+            "version": {
+              "status": "OBSERVED",
+              "value": "6.4.0",
+              "sources": [
+                {
+                  "value": "6.4.0",
+                  "path": "/Applications/COMSOL64/Multiphysics/readme.txt"
+                },
+                {
+                  "value": "6.4.0",
+                  "path": "/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics.app/Contents/Info.plist"
+                },
+                {
+                  "value": "6.4.0",
+                  "path": "/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics Server.app/Contents/Info.plist"
+                }
+              ]
+            },
+            "build": {
+              "status": "OBSERVED",
+              "value": 293,
+              "source": "/Applications/COMSOL64/Multiphysics/readme.txt"
+            },
+            "architecture": {
+              "status": "OBSERVED",
+              "values": [
+                "arm64"
+              ],
+              "sources": [
+                {
+                  "path": "/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher",
+                  "executable": true,
+                  "architectures": [
+                    "arm64"
+                  ]
+                },
+                {
+                  "path": "/Applications/COMSOL64/Multiphysics/bin/comsol",
+                  "executable": true,
+                  "architectures": []
+                }
+              ]
+            },
+            "launchers": [
+              {
+                "path": "/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher",
+                "executable": true,
+                "architectures": [
+                  "arm64"
+                ]
+              },
+              {
+                "path": "/Applications/COMSOL64/Multiphysics/bin/comsol",
+                "executable": true,
+                "architectures": []
+              }
+            ],
+            "bundled_java": [
+              {
+                "home": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home",
+                "java_executable": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java",
+                "version": {
+                  "status": "OBSERVED",
+                  "value": "21.0.7"
+                },
+                "architecture": {
+                  "status": "OBSERVED",
+                  "values": [
+                    "arm64"
+                  ],
+                  "source": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java"
+                },
+                "release_metadata": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/release"
+              }
+            ],
+            "markers": {
+              "readme": true,
+              "api_plugins": true,
+              "launcher_count": 2,
+              "bundled_java_count": 1
+            },
+            "metadata_only": true,
+            "comsol_started": false,
+            "license_checked_out": false
+          }
+        ],
+        "comsol_started": false,
+        "license_checked_out": false
+      },
+      "execution": {
+        "operation_id": "d8ba057a-8bec-465f-93b3-934af4f05f11",
+        "session_id": null,
+        "model_ref": null,
+        "revision": null,
+        "request_id": "a9ecef91-f9fe-4d85-8479-cc524d8a2efb",
+        "request_hash": "fdf0a31f95a3fc439b7f9398de515d6a847d00af283a3ac00b3c656ae4bbfe31",
+        "idempotency_key": "97cdf491-4ad9-4e7b-a768-774870ecbb76",
+        "job_id": "ad4586a3-0e2d-47be-b70d-01ba056e6ce2"
+      }
+    },
+    "isError": false
+  }
+}

@@ -44,7 +44,7 @@
       "host_arch": "arm64",
       "installation": "PRESENT",
       "root": "/Applications/COMSOL64/Multiphysics",
-      "version_evidence": "about.txt identifies COMSOL 6.4; exact running build NOT_RUN",
+      "version_evidence": "installed MCP runtime.discover: 6.4.0 build 293 arm64, metadata only; public_discovery_T05.json",
       "jdk": {
         "home": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home",
         "javac_present": true,
@@ -53,8 +53,8 @@
       "license_file_presence": "PRESENT",
       "license_checkout": "NOT_RUN",
       "graphic_session": "console session observed by read-only subagent; actual Desktop NOT_RUN",
-      "new_project_root": "PENDING_CREATE",
-      "installed_public_mcp": "IN_PROGRESS"
+      "new_project_root": "CREATED: isolated under .g3-private/full-continuation-20261107/independent-projects",
+      "installed_public_mcp": "PASS limited to T05 public discovery"
     },
     "windows-x64-6.3": {
       "platform_access": "NOT_RUN",
@@ -69,5 +69,35 @@
     "fences": "Original Windows Stage2 owner/packet and possible original Java fixture owner remain untouched; no new authority inferred from old state.",
     "reporter": "read-only local subagent Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S max and main recheck",
     "next": "Attempt independent Mac project and actual license checkout via normal installed MCP; acquire independent Windows endpoint when available."
+  },
+  "T03": {
+    "status": "DONE",
+    "coverage": "docs/universal_mcp_execution/state/GENERAL_COVERAGE_U01_U12.json",
+    "coverage_sha256": "6a5702c99700a41028159c9b18a1ec56c8dc81c623a1b2bdad3346e96ad1f43f",
+    "counts": {
+      "catalog_operations": 273,
+      "original_tests": 60,
+      "frozen_assertions": 427,
+      "assertions_by_kind": {
+        "EXECUTION": 115,
+        "PASS": 175,
+        "EVIDENCE": 137
+      },
+      "assertions_by_scope": {
+        "CORE_REQUIRED": 414,
+        "CASE_SPECIALIZED": 13
+      },
+      "actions_with_unmaterialized_or_absent_handler_paths": 0,
+      "target_matrix_rows": 360,
+      "installed_registry_operations": 274,
+      "synthetic_registry_only": [
+        "code.describe_java"
+      ],
+      "registry_declarations": {
+        "SUPPORTED_UNVERIFIED:True": 267,
+        "PROPOSED_NOT_IMPLEMENTED:False": 7
+      }
+    },
+    "evidence_limit": "Group mappings are broad candidates; inherited handler links are static and unverified. Published registry names and executable declarations are not native or product acceptance. 7 non-executable desktop entries remain gaps for T45; U11/U12 require independent final evidence."
   }
 }
