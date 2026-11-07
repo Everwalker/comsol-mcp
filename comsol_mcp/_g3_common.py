@@ -182,7 +182,15 @@ FUNCTION_TYPE_PROPERTIES: dict[str, frozenset[str] | None] = {
         {
             "adaptol", "argrange", "defineinv", "definerandom", "defvars",
             "dseparator", "extrap", "extrapvalue", "filename", "frame",
-            "funcinvname", "funcname", "funcnametable", "interp", "leftend",
+            # ``funcs`` is not in the short model.func() properties table but is
+            # documented for Interpolation in the same 6.4 Programming Reference,
+            # "Supported Functions and Settings" (setting ``funcs`` / GUI label
+            # "Functions" / value type StringMatrix), and it is the documented
+            # multi-function spreadsheet layout knob advertised by
+            # ``_FUNCTION_LAYOUT_PROPERTIES`` and used by data_import readback.
+            # The engine's own getValueType still gates the write: a build that
+            # does not carry the property is refused before dispatch.
+            "funcinvname", "funcname", "funcs", "funcnametable", "interp", "leftend",
             "modelres", "nargs", "plotfuncname", "plotleftextrap",
             "plotrightextrap", "points", "primfunname", "randomname",
             "randomnargs", "randomrange", "reinterp", "reinterporder",
