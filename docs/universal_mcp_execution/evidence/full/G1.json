@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T14:57:46.697163+00:00",
+  "updated_utc": "2026-11-07T15:14:47.121120+00:00",
   "T05": {
     "status": "DONE",
     "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
@@ -63,7 +63,7 @@
     "caveat": "solution tags and successful solve do not yet establish numerical values, units, rendered image, persistence or global native acceptance"
   },
   "T07": {
-    "status": "IMPLEMENTED",
+    "status": "IN_PROGRESS",
     "operation": "result.evaluate",
     "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
     "request_id": "full-universal-20261107-result-evaluate-01",
@@ -94,7 +94,7 @@
       ]
     },
     "candidate_fix": {
-      "status": "SOFTWARE_IMPLEMENTED_NOT_NATIVE_VERIFIED",
+      "status": "NATIVE_ATTEMPT_FAILED_NEW_UNKNOWN",
       "source_identity_sha256": {
         "comsol_mcp/_g3_results.py": "35987e14249e0112805dd0d9b90d44b895df326ecd1b3a4d275fe76a64f7fe84",
         "comsol_mcp/_solution_binding.py": "21824cb33d5bbd73c8c950ba5267c24fea2ab6a904eacf29a209ce045c17a9c1",
@@ -106,6 +106,30 @@
       "limitations": "No live test of the modified candidate. Skipped tuple diagnostic does not establish outer/inner mapping; cross-version behavior and actual numerical/image results remain unverified.",
       "evidence": "docs/universal_mcp_execution/evidence/full/T07-source-fix-qwen-20261107.md",
       "original_job": "Job reconciled once for recorded quiescence but remains UNKNOWN and model/session fences remain; do not replay or infer absence of side effects."
-    }
+    },
+    "new_candidate_unknown": {
+      "status": "EXECUTION_STATE_UNKNOWN",
+      "source_candidate": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
+      "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+      "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "job_id": "4722d099-56ac-4a22-938d-1d60e163cbc3",
+      "request_id": "t07v2-b0cbd2d-b-result-evaluate-01",
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "cause_code": "NATIVE_RESULT_BINDING_MISMATCH",
+      "cause_message": "aggregate actual ROI is not the requested all-entity selection",
+      "mutation_issued": true,
+      "safe_retry": false,
+      "source_response": "docs/universal_mcp_execution/evidence/full/public_result_T07_candidate_b0_UNKNOWN.json",
+      "sha256": "04bb1bc0d17eec2db7b8cc3273cbce721464809c6dc2bcdfb113908349c1ad33",
+      "fence": "No further model/session/Worker calls, replay, cleanup, session recovery or job reconciliation without a separately justified recovery plan. Preserve original earlier T07 fence independently."
+    },
+    "fresh_control_domain_note": "The sandbox preflight in the task-created control domain A did not submit the description request; an escalated read-only description then used that domain before fresh-domain guidance. Domain A was retained; all new project/session/model work used separate domain B. Native agent is recording full provenance."
   }
 }

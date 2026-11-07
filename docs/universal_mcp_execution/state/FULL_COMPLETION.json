@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T19 authorization/timeout tests recorded; finish the required cross-route file-budget analysis before marking software complete. T12 and independent T07 native preparation continue; original T07 UNKNOWN remains fenced.",
-  "updated_utc": "2026-11-07T15:10:35.833338+00:00",
+  "next_task_hint": "Preserve BOTH original T07 UNKNOWN and candidate-b0 UNKNOWN fences; diagnose ROI binding mismatch from persisted response/source and implement a general fix. Do not replay, query, signal or clean either fenced model/session. T12 and T19 file-budget software work continue.",
+  "updated_utc": "2026-11-07T15:14:47.121120+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -76,8 +76,8 @@
       "blocker": null
     },
     "T07": {
-      "status": "IMPLEMENTED",
-      "implementation_done": true,
+      "status": "IN_PROGRESS",
+      "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
@@ -86,9 +86,10 @@
         "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-precheck-sandbox-abort-qwen-20261107.json",
         "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-qwen-20261107.json",
         "docs/universal_mcp_execution/evidence/full/G1.json",
-        "docs/universal_mcp_execution/evidence/full/T07-source-fix-qwen-20261107.md"
+        "docs/universal_mcp_execution/evidence/full/T07-source-fix-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/public_result_T07_candidate_b0_UNKNOWN.json"
       ],
-      "blocker": "Candidate result fix has only software evidence; original job remains UNKNOWN and fenced. Real numeric value, unit/solution identity, image and model revision must be demonstrated on a genuinely independent model/session; two historical fixture failures and other baseline failures remain unresolved."
+      "blocker": "Fresh candidate reached a separate result.evaluate post-dispatch UNKNOWN: actual all-entity ROI binding mismatch with mutation issued. This new job/model/session is separately fenced; diagnose/fix from recorded evidence before another independent attempt. Original T07 UNKNOWN also remains fenced. Real numeric/image evidence remains absent."
     },
     "T08": {
       "status": "TODO",
@@ -515,7 +516,25 @@
     "original_unknown_job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
     "original_unknown_request_id": "full-universal-20261107-result-evaluate-01",
     "recovery_constraint": "Query the original control job only; no replay, cleanup, process signal or replacement on the same model until reconciled.",
-    "reconciliation": "original job quiescent observation recorded; UNKNOWN and model fence remain"
+    "reconciliation": "original job quiescent observation recorded; UNKNOWN and model fence remain",
+    "additional_fences": [
+      {
+        "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+          "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "job_id": "4722d099-56ac-4a22-938d-1d60e163cbc3",
+        "request_id": "t07v2-b0cbd2d-b-result-evaluate-01",
+        "reason": "candidate b0 result.evaluate ROI mismatch, post-dispatch UNKNOWN",
+        "constraint": "No further model/session/Worker calls, replay, cleanup, session recovery or job reconciliation without a separately justified recovery plan. Preserve original earlier T07 fence independently.",
+        "evidence": "docs/universal_mcp_execution/evidence/full/public_result_T07_candidate_b0_UNKNOWN.json"
+      }
+    ]
   },
   "documentation_head_before_update": "23e5ea5",
   "candidate_identity_note": "Pinned production-source candidate for fresh T07 validation; T05/T06/T17 wheel evidence belongs to the earlier source identity recorded in G1. Current source edits by other agents are not part of this pinned candidate."
