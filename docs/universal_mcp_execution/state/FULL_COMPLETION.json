@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T11 software milestone unblocks T12. New isolated T07 native validation and T19 software work continue; original T07 UNKNOWN remains fenced.",
-  "updated_utc": "2026-11-07T15:05:23.234552+00:00",
+  "next_task_hint": "T19 authorization/timeout tests recorded; finish the required cross-route file-budget analysis before marking software complete. T12 and independent T07 native preparation continue; original T07 UNKNOWN remains fenced.",
+  "updated_utc": "2026-11-07T15:10:35.833338+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -187,11 +187,17 @@
       "blocker": null
     },
     "T19": {
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "implementation_done": false,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G3.json",
+        "docs/universal_mcp_execution/evidence/full/T19-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T19-regress-a-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T19-regress-b-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T19-regress-c-pytest-20261107.txt"
+      ],
+      "blocker": "File-budget semantics across the three required routes need explicit source/evidence reconciliation; native bound-model authorization and negative controls remain unverified."
     },
     "T20": {
       "status": "TODO",

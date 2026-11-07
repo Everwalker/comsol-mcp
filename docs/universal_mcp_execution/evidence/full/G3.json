@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T14:51:21.415131+00:00",
+  "updated_utc": "2026-11-07T15:10:35.833338+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -56,5 +56,34 @@
     "evidence": "docs/universal_mcp_execution/evidence/full/T16-qwen-20261107.md",
     "tests": "Docs and gateway selected suites 74 passed, 1 skipped; the separate 185 passed / 5 failed T15 collection still has missing pinned-capture failures (not passes).",
     "limitations": "No installed-server-to-real-control-daemon documentation chain, actual 6.3 help, live docs-to-api.describe reflection, or actual Java execution of the unfamiliar API. Search is chunk-level all-token containment, not phrase or semantic matching."
+  },
+  "T19": {
+    "status": "IN_PROGRESS",
+    "scope": "Qwen added synthetic control-plane authorization, deadline-cap and trusted-code gate tests, and fixed three broken test imports. No production source changed.",
+    "test_file_sha256": {
+      "tests/test_unit_a_node_public_api.py": "df184498811aaad567e035a9384e8282e8a605383350d43bc5ca17ee8e80acbb",
+      "tests/test_universal_project_grant_budget_t19.py": "1f0a5109203ce810f84c3261b574d6f9fa220b41da3647257e2fe229868dcede"
+    },
+    "tests": "56 passed in authority/daemon/java-witness selected tests and 170 passed in unit-a/security selection; earlier standalone unit-a 3 import failures were fixed by package-qualified imports.",
+    "test_logs": {
+      "regress-a": {
+        "path": "docs/universal_mcp_execution/evidence/full/T19-regress-a-pytest-20261107.txt",
+        "sha256": "13e2c4f32b64c097b5aee2f8f66c85001193f11328e8962fd4767e380fe1df92",
+        "reported_pytest_exit": 0
+      },
+      "regress-b": {
+        "path": "docs/universal_mcp_execution/evidence/full/T19-regress-b-pytest-20261107.txt",
+        "sha256": "8b59403d9575bfaa7a6f991333f11585b659cb89a30ca11ae8481b40be84f8ad",
+        "reported_pytest_exit": 1
+      },
+      "regress-c": {
+        "path": "docs/universal_mcp_execution/evidence/full/T19-regress-c-pytest-20261107.txt",
+        "sha256": "4777000bd18f912829b1e688bea65e16f9576e062d73fda240ace1da39cf76ce",
+        "reported_pytest_exit": 0
+      }
+    },
+    "evidence": "docs/universal_mcp_execution/evidence/full/T19-qwen-20261107.md",
+    "open_question": "TASKS T19 explicitly includes file/compute budgets across domain, generic API and Java. The Qwen report observes fixed host-side limits but does not yet demonstrate the required file-budget semantics across all applicable routes. Do not classify a possible required gap as new scope without reconciling the frozen task.",
+    "limitations": "Real bound-model authorization/batch setter and negative controls remain unverified; trusted Java is not an OS sandbox."
   }
 }

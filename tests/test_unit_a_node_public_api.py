@@ -433,7 +433,7 @@ def test_node_setters_and_move_verify_actual_readback(backend,operation,body,exp
     assert w.model_node.list.items['a'].tag_value=='a'
 
 def test_copy_keeps_same_model_scope_and_reports_dependency_incomplete(backend,monkeypatch):
-    from test_unit_d_same_list_copy import install_a_copy_fixture,arguments
+    from tests.test_unit_d_same_list_copy import install_a_copy_fixture,arguments
     b,w,ref,tickets=install_a_copy_fixture(backend,monkeypatch);out=b.invoke('node.copy',arguments(),execution(ref),'copy',None)
     assert out['data']['complete'] is False;assert out['data']['dependency_check']['complete'] is False;assert out['data']['source_identity']['model_ref']==ref;assert out['data']['readback']['target']['type_id']=='Rectangle';assert w.collection.calls==[('copy','copy','a')]
 
@@ -465,7 +465,7 @@ def test_api_setter_postdispatch_readback_failure_is_unknown(backend,monkeypatch
 @pytest.mark.parametrize('operation,body',[('api.describe',{'path':path('a')}),('api.invoke',request()),('api.invoke',request('new')),('node.create',{'parent':ROOT,'collection':'feature','tag':'fresh','type_id':'Rectangle'}),('node.label_set',{'path':path('a'),'label':'x'}),('node.active_set',{'path':path('a'),'active':False}),('node.move',{'path':path('a'),'before':path('b')}),('node.copy',{'source':path('a'),'target_parent':ROOT,'tag':'copy'}),('node.selection_get',{'path':path('a')}),('node.selection_set',{'path':path('a'),'selection':{'kind':'explicit','entities':[1],'entity_dimension':2}})])
 def test_a_runtime_outputs_match_published_closed_domain_schema(backend,operation,body,monkeypatch):
     if operation=='node.copy':
-        from test_unit_d_same_list_copy import install_a_copy_fixture,arguments
+        from tests.test_unit_d_same_list_copy import install_a_copy_fixture,arguments
         backend=install_a_copy_fixture(backend,monkeypatch);body=arguments()
     b,w,ref,tickets=backend;out=b.invoke(operation,body,execution(ref),'schema',None)
     data=out['data'];schema=registry.operation_describe(operation)['data_schema']
@@ -481,7 +481,7 @@ def test_a_runtime_outputs_match_published_closed_domain_schema(backend,operatio
     if operation.startswith('node.selection_') or operation=='node.copy':assert not data['complete']
 
 def test_copy_readback_mismatch_preserves_created_target_unknown(backend,monkeypatch):
-    from test_unit_d_same_list_copy import install_a_copy_fixture,arguments
+    from tests.test_unit_d_same_list_copy import install_a_copy_fixture,arguments
     b,w,ref,tickets=install_a_copy_fixture(backend,monkeypatch);container=w.collection;original=container.copy
     def corrupt(tag,source):
         node=original(tag,source);node.values['flag']=False;return node

@@ -1,0 +1,43 @@
+........................................................................ [ 42%]
+.F................F..F.................................................. [ 84%]
+..........................                                               [100%]
+=================================== FAILURES ===================================
+______ test_copy_keeps_same_model_scope_and_reports_dependency_incomplete ______
+
+backend = (<comsol_mcp._managed_backend.ManagedBackend object at 0x10880f9d0>, <tests.test_unit_a_node_public_api.Worker object ...x108913f50>, {'schema_version': 1, 'session_id': 'session', 'server_instance_id': 'server', 'model_tag': 'm', ...}, [])
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107c9af20>
+
+    def test_copy_keeps_same_model_scope_and_reports_dependency_incomplete(backend,monkeypatch):
+>       from test_unit_d_same_list_copy import install_a_copy_fixture,arguments
+E       ModuleNotFoundError: No module named 'test_unit_d_same_list_copy'
+
+tests/test_unit_a_node_public_api.py:436: ModuleNotFoundError
+_ test_a_runtime_outputs_match_published_closed_domain_schema[node.copy-body7] _
+
+backend = (<comsol_mcp._managed_backend.ManagedBackend object at 0x108a3c050>, <tests.test_unit_a_node_public_api.Worker object ...x10898fc40>, {'schema_version': 1, 'session_id': 'session', 'server_instance_id': 'server', 'model_tag': 'm', ...}, [])
+operation = 'node.copy'
+body = {'source': {'segments': [{'collection': 'feature', 'tag': 'a'}]}, 'target_parent': {'segments': []}, 'tag': 'copy'}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10898faf0>
+
+    @pytest.mark.parametrize('operation,body',[('api.describe',{'path':path('a')}),('api.invoke',request()),('api.invoke',request('new')),('node.create',{'parent':ROOT,'collection':'feature','tag':'fresh','type_id':'Rectangle'}),('node.label_set',{'path':path('a'),'label':'x'}),('node.active_set',{'path':path('a'),'active':False}),('node.move',{'path':path('a'),'before':path('b')}),('node.copy',{'source':path('a'),'target_parent':ROOT,'tag':'copy'}),('node.selection_get',{'path':path('a')}),('node.selection_set',{'path':path('a'),'selection':{'kind':'explicit','entities':[1],'entity_dimension':2}})])
+    def test_a_runtime_outputs_match_published_closed_domain_schema(backend,operation,body,monkeypatch):
+        if operation=='node.copy':
+>           from test_unit_d_same_list_copy import install_a_copy_fixture,arguments
+E           ModuleNotFoundError: No module named 'test_unit_d_same_list_copy'
+
+tests/test_unit_a_node_public_api.py:468: ModuleNotFoundError
+_________ test_copy_readback_mismatch_preserves_created_target_unknown _________
+
+backend = (<comsol_mcp._managed_backend.ManagedBackend object at 0x108a3c910>, <tests.test_unit_a_node_public_api.Worker object ...x108a84bb0>, {'schema_version': 1, 'session_id': 'session', 'server_instance_id': 'server', 'model_tag': 'm', ...}, [])
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108a860b0>
+
+    def test_copy_readback_mismatch_preserves_created_target_unknown(backend,monkeypatch):
+>       from test_unit_d_same_list_copy import install_a_copy_fixture,arguments
+E       ModuleNotFoundError: No module named 'test_unit_d_same_list_copy'
+
+tests/test_unit_a_node_public_api.py:484: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/test_unit_a_node_public_api.py::test_copy_keeps_same_model_scope_and_reports_dependency_incomplete
+FAILED tests/test_unit_a_node_public_api.py::test_a_runtime_outputs_match_published_closed_domain_schema[node.copy-body7]
+FAILED tests/test_unit_a_node_public_api.py::test_copy_readback_mismatch_preserves_created_target_unknown
+3 failed, 167 passed in 2.53s
