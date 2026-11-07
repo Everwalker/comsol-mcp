@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T16:41:51.735964+00:00",
+  "updated_utc": "2026-11-07T17:02:14.164054+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -84,13 +84,13 @@
       }
     },
     "evidence": "docs/universal_mcp_execution/evidence/full/T19-qwen-20261107.md",
-    "open_question": "Decide and implement minimal compatible coverage for legacy model-load budget admission; do not treat optional estimate admission as a proven hard byte quota or assert an unstated project-policy quota requirement.",
+    "open_question": "Legacy load admission asymmetry is fixed in software. T19 remains open pending the related project artifact/path investigation and native authorized batch-setter/negative controls.",
     "limitations": "Real bound-model authorization/batch setter and negative controls remain unverified; trusted Java is not an OS sandbox.",
     "file_budget_followup": {
       "evidence": "docs/universal_mcp_execution/evidence/full/T19-file-budget-qwen-20261107.md",
       "tests": "New focused file-budget suite 2 passed; adjacent selected suites 64 passed, exit 0.",
       "java_source_limit": "2 MiB (prior T19 report 512 KiB was incorrect)",
-      "known_gap": "W26 trusted startup disk admission covers configured domain model.save and other producing effects by operator-supplied estimates, but is not an OS quota and is absent when unconfigured. Legacy model_load routes classify PROJECT_WRITE and bypass these admission producers while G3 model.load is covered; unified behavior remains unimplemented.",
+      "known_gap": "Legacy model_load, load_visible_main_model and load_current_main_model now use the same trusted W26 admission class as model.load when configured. Admission is based on estimates, not a hard quota; a separate function.data_import artifact/path project-boundary investigation remains open.",
       "predispatch_java_error": "T18 candidate fixes deterministic oversized source classification when host validation stage and dispatch witness both prove no mutation; synthetic evidence is in T18. Prior T19 report records pre-fix behavior.",
       "source_test_sha256": "a5c0fdb6432bc1694a7b316e0fb013f2053cacc3c8428ea9b4dc35aa073d6929"
     },
@@ -100,6 +100,13 @@
       "test_log": "docs/universal_mcp_execution/evidence/full/T19-main-integration-pytest-20261108.txt",
       "software_results": "9 focused integration tests passed after review (5 Java, 4 save admission); 129 adjacent passed; W26 suite 51 passed, 10 failed with logged Darwin sysctl EPERM.",
       "limitations": "Synthetic Worker; trusted estimates are admission-only, not file-size enforcement; Windows and real .mph tests not executed."
+    },
+    "legacy_load_fix": {
+      "source_commit": "c5006849856a94696743fa8549d19e65cb58e4bb",
+      "evidence": "docs/universal_mcp_execution/evidence/full/T19-legacy-admission-qwen-20261108.md",
+      "tests": "14 new passed; 154 unit-a passed; adjacent 85 passed / 10 failed, same failed test identities as W26 baseline (Darwin sandbox sysctl EPERM).",
+      "compatibility": "Configured disk/memory inventories require per-operation estimates for the legacy load names or refuse before dispatch; no-config behavior unchanged. README records this upgrade impact.",
+      "limitations": "Synthetic Worker; Windows route and complete native memory observation unverified. Admission is not OS quota."
     }
   },
   "T18": {
