@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:56:37.922161+00:00",
+  "updated_utc": "2026-11-07T16:03:21.498879+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -96,7 +96,7 @@
     }
   },
   "T18": {
-    "status": "IMPLEMENTED",
+    "status": "IN_PROGRESS",
     "implementation_scope": "Host-only source snapshot/analysis errors explicitly declare validation stage; existing dispatch witness still prevents a definite refusal after mutation. Synthetic probe shows oversize source rejected without Worker dispatch and without dirtying model ledger.",
     "source_identity_sha256": {
       "comsol_mcp/_g2_code.py": "56c68c655fa35891436ca8e12692e1d7f7b69ff222f1ccbc48d6afcadc33abbd",
@@ -104,6 +104,12 @@
     },
     "tests": "95 passed focused; 85 passed / 21 skipped UNKNOWN-fence suites; additional consumer suites 144 failed / 76 passed with identical counts under the pre-fix source. Failures remain unresolved; exact failure-set equivalence and complete attribution not independently established.",
     "evidence": "docs/universal_mcp_execution/evidence/full/T18-qwen-20261107.md",
-    "limitations": "No real Worker failure-path, compilation-error, timeout, partial-mutation or recovery exercise. Existing original and candidate-b0 UNKNOWN jobs are unchanged."
+    "limitations": "No real Worker failure-path, compilation-error, timeout, partial-mutation or recovery exercise. Existing original and candidate-b0 UNKNOWN jobs are unchanged.",
+    "new_empty_source_gap": {
+      "scope": "The public source_artifact schema accepts a string without minLength; empty input is rejected by read_source_snapshot outside its validation wrapper.",
+      "repro": "docs/universal_mcp_execution/evidence/full/T18-empty-source-refusal-repro-20261108.txt",
+      "observed": "EXECUTION_STATE_UNKNOWN/post_dispatch, cause INVALID_REQUEST, engine_calls=0, mutation_issued=false in a synthetic witness probe.",
+      "next": "Fix the deterministic validation branch without relaxing unproven/post-dispatch UNKNOWN semantics."
+    }
   }
 }

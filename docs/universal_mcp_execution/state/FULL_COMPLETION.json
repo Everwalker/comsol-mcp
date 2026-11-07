@@ -4,7 +4,7 @@
   "current_candidate_commit": "ce10fda76441f9eaee46cb58f36edba5a8cb91a2",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Validate candidate ce10fda through a fresh installed MCP, genuinely separate project/session/Worker: recheck Java happy path and T07 numeric/image ROI fix. Never access/replay/clean either prior T07 UNKNOWN. T13 and T19 domain file-budget work continue.",
-  "updated_utc": "2026-11-07T15:59:55.357093+00:00",
+  "updated_utc": "2026-11-07T16:03:21.498879+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -189,8 +189,8 @@
       "scope_note": "Same current source bytes and actual independent project as T06; macOS arm64 6.4.0.293 only."
     },
     "T18": {
-      "status": "IMPLEMENTED",
-      "implementation_done": true,
+      "status": "IN_PROGRESS",
+      "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/G3.json",
@@ -199,9 +199,10 @@
         "docs/universal_mcp_execution/evidence/full/T18-unknown-fence-regression-pytest-20261107.txt",
         "docs/universal_mcp_execution/evidence/full/T18-java-consumer-regression-pytest-20261107.txt",
         "docs/universal_mcp_execution/evidence/full/T18-java-refusal-probe-post-fix-20261107.txt",
-        "docs/universal_mcp_execution/evidence/full/sources/t18_pre_dispatch_refusal_probe_20261107.py.txt"
+        "docs/universal_mcp_execution/evidence/full/sources/t18_pre_dispatch_refusal_probe_20261107.py.txt",
+        "docs/universal_mcp_execution/evidence/full/T18-empty-source-refusal-repro-20261108.txt"
       ],
-      "blocker": "Real Worker compilation/runtime error, timeout/partial-change recovery and negative controls remain unverified. Additional consumer test selection has 144 failures also seen by count in the baseline; attribution and required impact remain open."
+      "blocker": "Empty Java source path still becomes UNKNOWN despite zero engine calls; Qwen is fixing this deterministic refusal. Real Worker failure paths and 144 baseline consumer failures remain unverified."
     },
     "T19": {
       "status": "IN_PROGRESS",
