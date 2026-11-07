@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import os
+import subprocess
+import sys
 from contextvars import ContextVar
 from pathlib import Path
 
@@ -384,6 +386,60 @@ def test_java_description_hashes_bounded_original_utf8_bytes_without_newline_tra
             assert described["source_sha256"] != hashlib.sha256(normalized).hexdigest()
     assert cases[0][1] and len(cases[0][1]) == 43
     assert hashlib.sha256(cases[0][1]).hexdigest() == "2bc2059d87cefd465f5f01125637b0cb93671e896c4e019cb7492bdb3dd8481b"
+
+
+def test_source_snapshot_byte_limit_and_invalid_utf8(tmp_path):
+    from comsol_mcp._g2_code import MAX_JAVA_SOURCE_BYTES, read_source_snapshot
+
+    source = tmp_path / "Bounded.java"
+    raw = b"x" * MAX_JAVA_SOURCE_BYTES
+    source.write_bytes(raw)
+    snapshot = read_source_snapshot(tmp_path, source.name)
+    assert snapshot.raw_bytes == raw
+    assert snapshot.sha256 == hashlib.sha256(raw).hexdigest()
+    source.write_bytes(raw + b"x")
+    with pytest.raises(ExecutionContractError) as oversized:
+        read_source_snapshot(tmp_path, source.name)
+    assert oversized.value.code == "INVALID_REQUEST"
+    source.write_bytes(b"\xff")
+    with pytest.raises(ExecutionContractError) as invalid:
+        read_source_snapshot(tmp_path, source.name)
+    assert invalid.value.code == "INVALID_REQUEST"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX FIFO behavior; Windows native behavior is NOT_RUN")
+def test_source_snapshot_rejects_fifo_without_blocking(tmp_path):
+    os.mkfifo(tmp_path / "Blocked.java")
+    program = '''\nimport sys\nfrom comsol_mcp._g2_code import read_source_snapshot\nfrom comsol_mcp._execution_contract import ExecutionContractError\ntry:\n    read_source_snapshot(sys.argv[1], "Blocked.java")\nexcept ExecutionContractError as exc:\n    print(exc.code)\nelse:\n    raise SystemExit("FIFO was accepted")\n'''
+    # subprocess.run kills and reaps only this test-owned child on timeout.
+    result = subprocess.run([sys.executable, "-c", program, str(tmp_path)],
+                            capture_output=True, text=True, timeout=3)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "ARTIFACT_MISSING"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory identity fixture; Windows native behavior is NOT_RUN")
+def test_source_snapshot_retains_bound_root_during_replacement_and_restore(tmp_path):
+    from comsol_mcp._g2_code import read_source_snapshot
+    from comsol_mcp._project_root import open_project_root_binding
+
+    project = tmp_path / "project"
+    project.mkdir()
+    original = b"public class Original {}\r\n"
+    (project / "Original.java").write_bytes(original)
+    binding = open_project_root_binding(project)
+    moved = tmp_path / "original-root"
+    try:
+        project.rename(moved)
+        project.mkdir()
+        (project / "Original.java").write_bytes(b"public class Replaced {}")
+        assert read_source_snapshot(binding, "Original.java").raw_bytes == original
+        (project / "Original.java").unlink()
+        project.rmdir()
+        moved.rename(project)
+        assert read_source_snapshot(binding, "Original.java").raw_bytes == original
+    finally:
+        binding.close()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX dir_fd/no-follow race fixture; Windows native behavior is NOT_RUN")

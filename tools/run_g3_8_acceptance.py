@@ -44,6 +44,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+from tools.java_snapshot_runner import execute_java_fixture
 from comsol_mcp._g3_results import result_at_points, result_evaluate
 from comsol_mcp._g3_w18 import plot_render
 from comsol_mcp._operation_store import OperationStore
@@ -805,13 +806,7 @@ public final class CopperBlockBuilder {
 """
             builder_file = target_dir / "CopperBlockBuilder.java"
             builder_file.write_text(builder_code, encoding="utf-8")
-            worker.submit("code_execute", {
-                "tag": tag_copper,
-                "source_artifact": str(builder_file),
-                "expected_source_sha256": sha256_file(builder_file),
-                "entrypoint": "CopperBlockBuilder",
-                "arguments": {},
-            })
+            execute_java_fixture(worker, tag_copper, builder_file, "CopperBlockBuilder")
 
             # -------------------------------------------------------------
             # V02: 真实结构预检与未知读取 (PUBLIC_MCP_NATIVE)
@@ -1065,13 +1060,7 @@ public final class TransientDiffusionBuilder {
 """
             trans_file = target_dir / "TransientDiffusionBuilder.java"
             trans_file.write_text(trans_builder_code, encoding="utf-8")
-            worker.submit("code_execute", {
-                "tag": tag_trans,
-                "source_artifact": str(trans_file),
-                "expected_source_sha256": sha256_file(trans_file),
-                "entrypoint": "TransientDiffusionBuilder",
-                "arguments": {},
-            })
+            execute_java_fixture(worker, tag_trans, trans_file, "TransientDiffusionBuilder")
 
             # -------------------------------------------------------------
             # V08: 瞬态正弦独立解析基准 (PUBLIC_MCP_NATIVE)

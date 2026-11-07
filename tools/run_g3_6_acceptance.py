@@ -71,6 +71,7 @@ from comsol_mcp._security_os import set_private_directory_permissions, validate_
 from comsol_mcp import _g2_isolation as isolation
 from comsol_mcp import _java_worker as java_worker
 from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+from tools.java_snapshot_runner import execute_java_fixture
 from comsol_mcp._g3_results import result_at_points, result_evaluate, result_field_export
 from comsol_mcp._g3_w18 import plot_render
 
@@ -586,13 +587,7 @@ public final class FullBenchmarkBuilder {
 """
             builder_file = suite_work_dir / "FullBenchmarkBuilder.java"
             builder_file.write_text(builder_code, encoding="utf-8")
-            build_rep = worker.submit("code_execute", {
-                "tag": tag,
-                "source_artifact": str(builder_file),
-                "expected_source_sha256": sha256_file(builder_file),
-                "entrypoint": "FullBenchmarkBuilder",
-                "arguments": {},
-            })
+            build_rep = execute_java_fixture(worker, tag, builder_file, "FullBenchmarkBuilder")
             assert build_rep.get("status") == "SUCCEEDED", f"Build failed: {build_rep}"
 
             # --- WD07 verification: parameter readback and unit evaluation ---
@@ -664,13 +659,7 @@ public final class TransientSolver {
 """
             trans_file = suite_work_dir / "TransientSolver.java"
             trans_file.write_text(transient_code, encoding="utf-8")
-            worker.submit("code_execute", {
-                "tag": tag,
-                "source_artifact": str(trans_file),
-                "expected_source_sha256": sha256_file(trans_file),
-                "entrypoint": "TransientSolver",
-                "arguments": {},
-            })
+            execute_java_fixture(worker, tag, trans_file, "TransientSolver")
 
             pts_t = result_at_points(worker, tag, {
                 "spec": {"expressions": ["T"], "solution": {"dataset": "dset2"}},
@@ -786,13 +775,7 @@ public final class ParamModifier {
 """
             mod_file = suite_work_dir / "ParamModifier.java"
             mod_file.write_text(mod_code, encoding="utf-8")
-            worker2.submit("code_execute", {
-                "tag": reloaded_tag,
-                "source_artifact": str(mod_file),
-                "expected_source_sha256": sha256_file(mod_file),
-                "entrypoint": "ParamModifier",
-                "arguments": {},
-            })
+            execute_java_fixture(worker2, reloaded_tag, mod_file, "ParamModifier")
 
             mod_pts = result_at_points(worker2, reloaded_tag, {
                 "spec": {"expressions": ["T"], "solution": {"dataset": "dset1"}},
@@ -816,13 +799,7 @@ public final class ParamModifier {
             def live_background_solve():
                 solve_in_progress.set()
                 try:
-                    worker2.submit("code_execute", {
-                        "tag": reloaded_tag,
-                        "source_artifact": str(mod_file),
-                        "expected_source_sha256": sha256_file(mod_file),
-                        "entrypoint": "ParamModifier",
-                        "arguments": {},
-                    })
+                    execute_java_fixture(worker2, reloaded_tag, mod_file, "ParamModifier")
                 except Exception:
                     pass
 
@@ -1116,9 +1093,7 @@ public class FastSolve {
 """
         f_solve = shared_dir / "FastSolve.java"
         f_solve.write_text(code_solve, encoding="utf-8")
-        inst64_a.worker.submit("code_execute", {"tag": m64.tag(), "source_artifact": str(f_solve),
-                                                  "expected_source_sha256": sha256_file(f_solve),
-                                                  "entrypoint": "FastSolve", "arguments": {}})
+        execute_java_fixture(inst64_a.worker, m64.tag(), f_solve, "FastSolve")
         plot_64_a = inst64_a.work_dir / "switch_64_a.png"
         plot_render(inst64_a.worker, m64.tag(), {"path": "pg3d", "options": {"destination": str(plot_64_a), "allow_overwrite": True}})
         mph_64_a = inst64_a.work_dir / "switch_64_a.mph"
@@ -1129,9 +1104,7 @@ public class FastSolve {
         inst63 = LiveComsolServerInstance("6.3", self.root_63, self.jdk11, shared_dir / "step2_63")
         inst63.start()
         m63 = inst63.worker.client().create("Model63")
-        inst63.worker.submit("code_execute", {"tag": m63.tag(), "source_artifact": str(f_solve),
-                                                "expected_source_sha256": sha256_file(f_solve),
-                                                "entrypoint": "FastSolve", "arguments": {}})
+        execute_java_fixture(inst63.worker, m63.tag(), f_solve, "FastSolve")
         plot_63 = inst63.work_dir / "switch_63.png"
         plot_render(inst63.worker, m63.tag(), {"path": "pg3d", "options": {"destination": str(plot_63), "allow_overwrite": True}})
         mph_63 = inst63.work_dir / "switch_63.mph"

@@ -105,10 +105,12 @@ public final class PersistentComsolWorkerSourceCompilerHarness {
       List<?> rows=(List<?>)result.get("diagnostics");check(!rows.isEmpty(),"diagnostics retained");
       check(((Map<?,?>)rows.get(0)).get("source").equals(p.getFileName().toString()),"registered source diagnostic association");
     }
-    Path stable=registered("public class Stable {}");Object snap=snapshot(stable,"Stable");
+    Path stable=registered("public class Stable {}");String stableSha=sha(Files.readAllBytes(stable));
+    Object snap=snapshot(stable,"Stable",stableSha);
     Files.write(stable,"public class Replaced { !!! }".getBytes(StandardCharsets.UTF_8));
     check(Boolean.TRUE.equals(compile(snap).get("compiled")),"compile immutable snapshot after path changed");
-    rejected(stable,"Stable","content address mutation rejected before compile");
+    rejected(stable,"Stable",stableSha,"SOURCE_HASH_MISMATCH",
+        "changed bytes with the previously observed source hash are rejected before compile");
     Path good=registered("public class Good {}");
     check(Boolean.TRUE.equals(compile(snapshot(good,"Good")).get("compiled")),"Worker consumes bytes without path reopening");
     Path oversized=root.resolve("Large.java");Files.write(oversized,new byte[2*1024*1024+1]);rejected(oversized,"Large","bounded snapshot limit");

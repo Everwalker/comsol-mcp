@@ -39,6 +39,7 @@ from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._platform_process import process_identity
 from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+from tools.java_snapshot_runner import execute_java_fixture
 from comsol_mcp._operation_store import OperationStore, IdempotencyConflict
 from comsol_mcp._artifact_store import (
     ArtifactStore,
@@ -1784,13 +1785,7 @@ public final class ModelAcceptanceG35Builder {
 """
         builder_file = self.run_dir / "ModelAcceptanceG35Builder.java"
         builder_file.write_text(builder_code, encoding="utf-8")
-        reply = self.worker.submit("code_execute", {
-            "tag": tag,
-            "source_artifact": str(builder_file),
-            "expected_source_sha256": _sha256(builder_file),
-            "entrypoint": "ModelAcceptanceG35Builder",
-            "arguments": {},
-        })
+        reply = execute_java_fixture(self.worker, tag, builder_file, "ModelAcceptanceG35Builder")
         assert reply.get("ok") is True or reply.get("status") == "SUCCEEDED", f"Model builder failed: {reply}"
         self.log(f"Model {tag} solved successfully on live COMSOL engine.")
 

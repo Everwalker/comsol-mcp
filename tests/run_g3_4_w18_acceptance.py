@@ -38,6 +38,7 @@ from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._platform_process import process_identity
 from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+from tools.java_snapshot_runner import execute_java_fixture
 from comsol_mcp._artifact_store import (
     ArtifactStore,
     csv_to_field_array,
@@ -594,13 +595,7 @@ public final class ModelAcceptanceV02Builder {
 """
         builder_file = self.run_dir / "ModelAcceptanceV02Builder.java"
         builder_file.write_text(builder_code, encoding="utf-8")
-        reply = self.worker.submit("code_execute", {
-            "tag": tag,
-            "source_artifact": str(builder_file),
-            "expected_source_sha256": _sha256(builder_file),
-            "entrypoint": "ModelAcceptanceV02Builder",
-            "arguments": {},
-        })
+        reply = execute_java_fixture(self.worker, tag, builder_file, "ModelAcceptanceV02Builder")
         assert reply.get("ok") is True, f"Model build failed: {reply}"
 
         # 1. Create CutPlane dataset on dset1
@@ -1237,13 +1232,7 @@ public final class ModelSaver {{
 """
         saver_file = self.run_dir / "ModelSaver.java"
         saver_file.write_text(save_code, encoding="utf-8")
-        reply = self.worker.submit("code_execute", {
-            "tag": self.live_model_tag,
-            "source_artifact": str(saver_file),
-            "expected_source_sha256": _sha256(saver_file),
-            "entrypoint": "ModelSaver",
-            "arguments": {},
-        })
+        reply = execute_java_fixture(self.worker, self.live_model_tag, saver_file, "ModelSaver")
         assert reply.get("ok") is True
         assert mph_path.is_file()
         mph_sha = _sha256(mph_path)

@@ -25,7 +25,7 @@ def environment(tmp_path,monkeypatch):
         body={'project_id':project['project_id'],'session_id':ref['session_id'],'model_ref':ref,**body}
         execution={'project_id':project['project_id'],'session_id':ref['session_id'],'model_ref':ref,'expected_revision':service.ledger._models[ref['model_tag']].revision,'request_id':key,'idempotency_key':key}
         return daemon.dispatch({'operation':op if wrapper=='direct' else wrapper,'arguments':({k:v for k,v in body.items() if k not in {'project_id','session_id','model_ref'}} if wrapper=='direct' else {'operation_id':op,'arguments':body}),'execution':execution})
-    registered=public('artifact.register',{'path':'Recipe.java','role':'java-source','classification':'project_private'},'source')
+    registered=public('artifact.register',{'path':'Recipe.java','role':'java-source','classification':'project_local'},'source')
     assert registered['success'],registered
     yield daemon,worker,project,ref,registered['data'],public
     daemon.close()
@@ -42,6 +42,16 @@ def execute_recipe(environment,wrapper='operation_call'):
     assert executed['execution']['runtime_observation']['status']=='OBSERVED'
     return executed,record
 
+
+def test_public_java_execution_requires_live_trusted_code_permission(environment):
+    daemon,worker,project,ref,source,public=environment
+    daemon.backend.service.ledger.permissions.discard('trusted_code')
+    result=public('code.execute_java',{'source_artifact':source['path'],'entrypoint':'Recipe',
+        'mode':'trusted','arguments':{}},'execute-without-trusted-code')
+    assert result['success'] is False, result
+    assert result['error']['code']=='PERMISSION_DENIED', result
+    assert not worker.executions
+
 @pytest.mark.parametrize('wrapper',['operation_call','registry_call','direct'])
 def test_real_public_durable_wrapper_is_consumed_without_rewriting_store(environment,wrapper):
     daemon,worker,project,ref,source,public=environment;executed,record=execute_recipe(environment,wrapper)
@@ -49,6 +59,47 @@ def test_real_public_durable_wrapper_is_consumed_without_rewriting_store(environ
     assert result['success'],result
     assert result['data']['test_refs'][0]['scope']=='EXECUTION_SMOKE'
     assert json.dumps(daemon.store.get_operation(record['operation_id']),sort_keys=True)==before
+    assert len(worker.executions)==1
+
+
+def test_v2_witness_allows_redacted_non_identity_readback(environment):
+    daemon,worker,project,ref,source,public=environment
+    worker.synthetic_readback={'source_text':'fixture-only-sensitive-value','value':42}
+    _,record=execute_recipe(environment)
+    job=daemon.store.operation_job(record['operation_id'])
+    events=daemon.store.events(job['job_id'],offset=0,limit=1000)
+    observed=next(row['metadata'] for row in events if row['event']=='worker_request'
+                  and row['metadata'].get('phase')=='observed'
+                  and row['metadata'].get('kind')=='code_execute')
+    assert observed['reply']['result']['readback']['source_text']=='<redacted>'
+    result=public('code.recipe_register',{'source_artifact':source['artifact_id'],'entrypoint':'Recipe',
+        'input_schema':{'type':'object'},'test_refs':[record['operation_id']]},'recipe-redacted')
+    assert result['success'], result
+
+
+@pytest.mark.parametrize('field', ['source_name', 'expected_source_sha256', 'expected_worker_build_id',
+                                  'expected_worker_instance_id', 'source_snapshot_b64', 'receipt_instance'])
+def test_v2_worker_event_identity_tampering_is_refused(environment, monkeypatch, field):
+    daemon,worker,project,ref,source,public=environment
+    _,record=execute_recipe(environment)
+    original_events=daemon.store.events
+    def tampered_events(job_id,*args,**kwargs):
+        rows=copy.deepcopy(original_events(job_id,*args,**kwargs))
+        for row in rows:
+            event=row.get('metadata',{})
+            if row.get('event') != 'worker_request' or event.get('kind') != 'code_execute':
+                continue
+            if field == 'receipt_instance':
+                if event.get('phase') == 'observed':
+                    event['reply']['result']['worker_instance_id']='another-worker'
+            else:
+                event['metadata'][field]='wrong'
+        return rows
+    monkeypatch.setattr(daemon.store,'events',tampered_events)
+    result=public('code.recipe_register',{'source_artifact':source['artifact_id'],'entrypoint':'Recipe',
+        'input_schema':{'type':'object'},'test_refs':[record['operation_id']]},'recipe-v2-tampered')
+    assert result['success'] is False, result
+    assert result['error']['code']=='RECIPE_TEST_UNVERIFIED', result
     assert len(worker.executions)==1
 
 @pytest.mark.parametrize('damage',['recordwrapper','metawrapper','Noneoperation','innerop','recursive','extraouter','project','executionproject','session','model','modelbool','missingexecutionproject','failed','failedjob','source','runtime','worker-event'])

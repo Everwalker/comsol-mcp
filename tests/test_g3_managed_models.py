@@ -178,21 +178,28 @@ class _Worker:
         if kwargs.get("expected_source_sha256") != digest:
             raise AssertionError("managed Java execution did not bind the Worker to raw source bytes")
         request_id = kwargs.get("request_id") or f"worker-execute-{len(self.executions)}"
-        payload = {"tag": tag, "source_name": path, "entrypoint": entrypoint,
+        payload = {"type": "code_execute", "request_id": request_id,
+                   "tag": tag, "source_name": path, "source_snapshot_b64": "<redacted>", "entrypoint": entrypoint,
                    "arguments": dict(arguments or {}),
-                   "expected_source_sha256": kwargs["expected_source_sha256"]}
+                   "expected_source_sha256": kwargs["expected_source_sha256"],
+                   "expected_worker_build_id": "persistent-comsol-worker/source-snapshot-v2",
+                   "expected_worker_instance_id": self.instance_id}
         request_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         event = {"request_id": request_id, "kind": "code_execute",
                  "operation_id": self._active_operation_id, "request_hash": request_hash,
                  "metadata": payload}
         if callable(self._active_event_callback):
             self._active_event_callback({"phase": "submitted", **event})
-        reply = {"ok": True, "status": "SUCCEEDED", "result": {"executed": True, "model_tag": tag,
+        reply = {"ok": True, "status": "SUCCEEDED", "type": "code_execute", "request_id": request_id,
+                "result": {"executed": True, "model_tag": tag,
                 "source_sha256": digest, "entrypoint": entrypoint, "answer": 42,
                 "worker_build_id": "persistent-comsol-worker/source-snapshot-v2",
                 "worker_instance_id": self.instance_id}, "_source_binding_verified": True}
+        if hasattr(self, "synthetic_readback"):
+            reply["result"]["readback"] = self.synthetic_readback
         if callable(self._active_event_callback):
-            self._active_event_callback({"phase": "observed", "status": "SUCCEEDED", **event})
+            from comsol_mcp._java_worker import _redact
+            self._active_event_callback({"phase": "observed", "status": "SUCCEEDED", "reply": _redact(reply), **event})
         return reply
 
 

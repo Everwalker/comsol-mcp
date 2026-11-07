@@ -1493,6 +1493,51 @@ def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256:
                 sent, received = submitted[0], observed[0]
                 sent_payload = sent.get("metadata")
                 received_payload = received.get("metadata")
+                # V2 events bind a basename and source digest, not a path.
+                # The persisted public request independently binds the full
+                # project-relative path below. Preserve historical v1 path
+                # evidence only when the event is actually a v1 path frame.
+                v2_source = False
+                if isinstance(sent_payload, Mapping) and "source_name" in sent_payload:
+                    from ._java_worker import _SOURCE_BINDING_WORKER_BUILD_ID
+                    observed_reply = received.get("reply")
+                    observed_result = (observed_reply.get("result")
+                                       if isinstance(observed_reply, Mapping) else None)
+                    runtime_observation = (result_execution.get("runtime_observation")
+                                           if isinstance(result_execution, Mapping) else None)
+                    runtime_identity = (runtime_observation.get("runtime_identity")
+                                        if isinstance(runtime_observation, Mapping) else None)
+                    v2_source = bool(
+                        "source_artifact" not in sent_payload
+                        and sent_payload.get("type") == "code_execute"
+                        and sent_payload.get("request_id") == sent.get("request_id")
+                        and sent_payload.get("source_name") == PurePosixPath(source_path).name
+                        and sent_payload.get("source_snapshot_b64") == "<redacted>"
+                        and sent_payload.get("expected_source_sha256") == source_sha256
+                        and sent_payload.get("expected_worker_build_id") == _SOURCE_BINDING_WORKER_BUILD_ID
+                        and isinstance(readback, Mapping)
+                        and readback.get("worker_build_id") == _SOURCE_BINDING_WORKER_BUILD_ID
+                        and isinstance(runtime_identity, Mapping)
+                        and isinstance(runtime_identity.get("worker_instance_id"), str)
+                        and bool(runtime_identity["worker_instance_id"])
+                        and sent_payload.get("expected_worker_instance_id") == runtime_identity["worker_instance_id"]
+                        and readback.get("worker_instance_id") == runtime_identity["worker_instance_id"]
+                        and isinstance(data, Mapping) and data.get("source_binding_verified") is True
+                        and isinstance(observed_reply, Mapping)
+                        and observed_reply.get("ok") is True
+                        and observed_reply.get("status") == "SUCCEEDED"
+                        and observed_reply.get("type") == "code_execute"
+                        and observed_reply.get("request_id") == sent.get("request_id")
+                        and observed_reply.get("_source_binding_verified") is True
+                        and isinstance(observed_result, Mapping)
+                        and all(observed_result.get(key) == readback.get(key)
+                                for key in ("executed", "model_tag", "source_sha256", "entrypoint",
+                                            "worker_build_id", "worker_instance_id"))
+                    )
+                legacy_source = (isinstance(sent_payload, Mapping)
+                                 and "source_name" not in sent_payload
+                                 and "source_snapshot_b64" not in sent_payload
+                                 and _worker_source_path_matches(sent_payload.get("source_artifact"), source_path))
                 worker_execution_observed = bool(
                     sent.get("request_id") == received.get("request_id")
                     and sent.get("request_hash") == received.get("request_hash")
@@ -1500,7 +1545,7 @@ def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256:
                     and isinstance(sent_payload, Mapping)
                     and isinstance(received_payload, Mapping)
                     and sent_payload == received_payload
-                    and _worker_source_path_matches(sent_payload.get("source_artifact"), source_path)
+                    and (v2_source or legacy_source)
                     and sent_payload.get("entrypoint") == entrypoint
                     and isinstance(model_ref, Mapping)
                     and sent_payload.get("tag") == model_ref.get("model_tag")

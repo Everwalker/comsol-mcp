@@ -1,6 +1,8 @@
 """Control-plane tests for the persistent Java Worker; they never attach COMSOL."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import shutil
@@ -780,7 +782,9 @@ def test_remote_client_load_serializes_path_objects_as_strings(tmp_path):
 
 
 def test_java_worker_code_methods_forward_the_independently_observed_source_hash():
-    digest = "a" * 64
+    source = "public class NewTask { // 温度\r\n}\r\n".encode("utf-8")
+    digest = hashlib.sha256(source).hexdigest()
+    encoded = base64.b64encode(source).decode("ascii")
 
     class Recorder:
         def __init__(self):
@@ -791,15 +795,15 @@ def test_java_worker_code_methods_forward_the_independently_observed_source_hash
             return {"ok": True}
 
     worker = Recorder()
-    PersistentJavaWorker.compile_java(worker, "/project/NewTask.java", "NewTask",
+    PersistentJavaWorker.compile_java(worker, "NewTask.java", "NewTask", source_bytes=source,
                                       expected_source_sha256=digest, request_id="compile-1")
-    PersistentJavaWorker.execute_java(worker, "mcp1", "/project/NewTask.java", "NewTask", {},
+    PersistentJavaWorker.execute_java(worker, "mcp1", "NewTask.java", "NewTask", {}, source_bytes=source,
                                       expected_source_sha256=digest, request_id="execute-1")
     assert worker.calls[0][0:2] == (
-        "code_compile", {"source_artifact": "/project/NewTask.java", "entrypoint": "NewTask",
+        "code_compile", {"source_name": "NewTask.java", "source_snapshot_b64": encoded, "entrypoint": "NewTask",
                          "expected_source_sha256": digest})
     assert worker.calls[1][0:2] == (
-        "code_execute", {"tag": "mcp1", "source_artifact": "/project/NewTask.java",
+        "code_execute", {"tag": "mcp1", "source_name": "NewTask.java", "source_snapshot_b64": encoded,
                          "entrypoint": "NewTask", "arguments": {}, "expected_source_sha256": digest})
 
 
@@ -824,18 +828,56 @@ def test_code_submit_refuses_missing_hash_without_contacting_worker():
     assert raised.value.execution_state_unknown is False
 
 
-def test_old_worker_without_source_binding_capability_never_receives_code_request(monkeypatch, tmp_path):
+@pytest.mark.parametrize("damage,code", [
+    ("legacy_path", "SOURCE_SNAPSHOT_REQUIRED"),
+    ("path_as_name", "SOURCE_SNAPSHOT_REQUIRED"),
+    ("wrong_digest", "SOURCE_HASH_MISMATCH"),
+    ("invalid_utf8", "SOURCE_SNAPSHOT_INVALID"),
+])
+def test_code_submit_rejects_invalid_v2_frames_before_contact(monkeypatch, damage, code):
+    worker = object.__new__(PersistentJavaWorker)
+    worker._operation_context = threading.local()
+    worker._on_request_event = None
+    worker._known_requests = {}
+    source = b"public class NewTask {}\n" if damage != "invalid_utf8" else b"\xff"
+    payload = {"source_name": "NewTask.java", "source_snapshot_b64": base64.b64encode(source).decode("ascii"),
+               "expected_source_sha256": hashlib.sha256(source).hexdigest(), "entrypoint": "NewTask"}
+    if damage == "legacy_path":
+        payload["source_artifact"] = "/project/NewTask.java"
+    elif damage == "path_as_name":
+        payload["source_name"] = "/project/NewTask.java"
+    elif damage == "wrong_digest":
+        payload["expected_source_sha256"] = "a" * 64
+    monkeypatch.setattr(java_worker.socket, "create_connection",
+                        lambda *_args, **_kwargs: pytest.fail("invalid source frame reached the Worker"))
+    with pytest.raises(JavaWorkerError) as raised:
+        worker.submit("code_execute", payload, request_id="invalid-v2")
+    assert raised.value.reply["code"] == code
+    assert raised.value.reply["source_operation_dispatched"] is False
+    assert raised.value.execution_state_unknown is False
+
+
+@pytest.mark.parametrize("legacy", ["unsupported", "protocol_v1"])
+def test_old_worker_without_source_binding_capability_never_receives_code_request(monkeypatch, tmp_path, legacy):
     writes = []
+    source = b"public class NewTask {}\n"
 
     class ScriptedStream:
         def __init__(self):
-            self.replies = [
-                b'{"ok":true,"type":"authenticated","generation":1}\n',
-                b'{"ok":false,"code":"UNKNOWN_COMMAND","message":"unsupported internal worker command"}\n',
-            ]
+            self.replies = [b'{"ok":true,"type":"authenticated","generation":1}\n']
 
         def write(self, value):
-            writes.append(json.loads(value.decode("utf-8")))
+            row = json.loads(value.decode("utf-8"))
+            writes.append(row)
+            if row.get("type") == "source_binding_capabilities":
+                if legacy == "unsupported":
+                    self.replies.append(b'{"ok":false,"code":"UNKNOWN_COMMAND"}\n')
+                else:
+                    self.replies.append(json.dumps({"ok": True, "type": row["type"],
+                        "status": "SUCCEEDED", "request_id": row["request_id"], "result": {
+                            "source_binding_protocol": 1,
+                            "worker_build_id": java_worker._SOURCE_BINDING_WORKER_BUILD_ID,
+                            "instance_id": "legacy-worker"}}).encode() + b"\n")
             return len(value)
 
         def flush(self):
@@ -868,8 +910,8 @@ def test_old_worker_without_source_binding_capability_never_receives_code_reques
     with witness_scope() as witness:
         with pytest.raises(JavaWorkerError) as raised:
             PersistentJavaWorker.execute_java(
-                worker, "mcp1", "/project/NewTask.java", "NewTask", {},
-                expected_source_sha256="a" * 64, request_id="old-worker-code")
+                worker, "mcp1", "NewTask.java", "NewTask", {}, source_bytes=source,
+                expected_source_sha256=hashlib.sha256(source).hexdigest(), request_id="old-worker-code")
     assert raised.value.reply["code"] == "WORKER_SOURCE_BINDING_UNAVAILABLE"
     assert raised.value.reply["source_operation_dispatched"] is False
     assert [row.get("type") for row in writes] == [None, "source_binding_capabilities"]
@@ -878,7 +920,9 @@ def test_old_worker_without_source_binding_capability_never_receives_code_reques
 
 def test_source_binding_probe_and_code_request_share_one_authenticated_connection(monkeypatch, tmp_path):
     writes = []
-    source_digest = "a" * 64
+    events = []
+    source = "public class NewTask { // Ω\r\n}\r\n".encode("utf-8")
+    source_digest = hashlib.sha256(source).hexdigest()
 
     class ScriptedStream:
         def __init__(self):
@@ -890,14 +934,15 @@ def test_source_binding_probe_and_code_request_share_one_authenticated_connectio
             if row.get("type") == "source_binding_capabilities":
                 self.replies.append(json.dumps({"ok": True, "type": "source_binding_capabilities", "status": "SUCCEEDED",
                     "request_id": row["request_id"], "result": {
-                        "source_binding_protocol": 1,
+                        "source_binding_protocol": 2,
                         "worker_build_id": java_worker._SOURCE_BINDING_WORKER_BUILD_ID,
                         "instance_id": "worker-unique-7"}}).encode() + b"\n")
             elif row.get("type") == "code_execute":
                 self.replies.append(json.dumps({"ok": True, "type": "code_execute", "status": "SUCCEEDED",
                     "request_id": row["request_id"], "result": {"executed": True,
                     "source_sha256": row["expected_source_sha256"], "entrypoint": row["entrypoint"],
-                    "model_tag": row["tag"]}}).encode() + b"\n")
+                    "model_tag": row["tag"], "worker_build_id": row["expected_worker_build_id"],
+                    "worker_instance_id": row["expected_worker_instance_id"]}}).encode() + b"\n")
             return len(value)
 
         def flush(self): return None
@@ -924,23 +969,34 @@ def test_source_binding_probe_and_code_request_share_one_authenticated_connectio
     worker._on_request_event = None
     worker.state_dir = tmp_path / "worker-state"
     from comsol_mcp._domain_outcome import witness_scope
-    with witness_scope() as witness:
-        reply = PersistentJavaWorker.execute_java(
-            worker, "mcp1", "/project/NewTask.java", "NewTask", {},
-            expected_source_sha256=source_digest, request_id="bound-code")
+    with worker.operation_context("bound-operation", on_request_event=events.append):
+        with witness_scope() as witness:
+            reply = PersistentJavaWorker.execute_java(
+                worker, "mcp1", "NewTask.java", "NewTask", {}, source_bytes=source,
+                expected_source_sha256=source_digest, request_id="bound-code")
     assert reply["ok"] is True
     assert [row.get("type") for row in writes] == [None, "source_binding_capabilities", "code_execute"]
     code_request = writes[-1]
     assert code_request["expected_worker_build_id"] == java_worker._SOURCE_BINDING_WORKER_BUILD_ID
     assert code_request["expected_worker_instance_id"] == "worker-unique-7"
     assert code_request["expected_source_sha256"] == source_digest
+    assert code_request["source_name"] == "NewTask.java"
+    assert base64.b64decode(code_request["source_snapshot_b64"], validate=True) == source
+    assert "source_artifact" not in code_request
+    assert [event["phase"] for event in events] == ["submitted", "observed"]
+    assert events[0]["metadata"] == events[1]["metadata"]
+    assert events[0]["request_hash"] == events[1]["request_hash"]
+    assert events[0]["metadata"]["source_snapshot_b64"] == "<redacted>"
+    assert events[1]["reply"]["result"]["worker_instance_id"] == "worker-unique-7"
     assert witness.mutation_issued is True
 
 
-def test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks(monkeypatch, tmp_path):
+@pytest.mark.parametrize("mismatch", ["source_sha256", "entrypoint", "model_tag", "worker_build_id", "worker_instance_id", "missing_instance"])
+def test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks(monkeypatch, tmp_path, mismatch):
     writes = []
     events = []
-    source_digest = "a" * 64
+    source = b"public class NewTask {}\n"
+    source_digest = hashlib.sha256(source).hexdigest()
 
     class ScriptedStream:
         def __init__(self):
@@ -952,15 +1008,21 @@ def test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks(
             if row.get("type") == "source_binding_capabilities":
                 self.replies.append(json.dumps({"ok": True, "type": "source_binding_capabilities", "status": "SUCCEEDED",
                     "request_id": row["request_id"], "result": {
-                        "source_binding_protocol": 1,
+                        "source_binding_protocol": 2,
                         "worker_build_id": java_worker._SOURCE_BINDING_WORKER_BUILD_ID,
                         "instance_id": "worker-unique-8"}}).encode() + b"\n")
             elif row.get("type") == "code_execute":
+                result = {"executed": True, "source_sha256": row["expected_source_sha256"],
+                          "entrypoint": row["entrypoint"], "model_tag": row["tag"],
+                          "worker_build_id": row["expected_worker_build_id"],
+                          "worker_instance_id": row["expected_worker_instance_id"]}
+                if mismatch == "missing_instance":
+                    del result["worker_instance_id"]
+                else:
+                    result[mismatch] = "other"
                 self.replies.append(json.dumps({"ok": True, "type": "code_execute", "status": "SUCCEEDED",
                     "request_id": row["request_id"], "source_operation_dispatched": False,
-                    "result": {"executed": True,
-                    "source_sha256": "b" * 64, "entrypoint": row["entrypoint"],
-                    "model_tag": row["tag"]}}).encode() + b"\n")
+                    "result": result}).encode() + b"\n")
             return len(value)
 
         def flush(self): return None
@@ -991,7 +1053,7 @@ def test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks(
     with worker.operation_context("mismatched-receipt", on_request_event=events.append):
         with witness_scope() as witness:
             reply = PersistentJavaWorker.execute_java(
-                worker, "mcp1", "/project/NewTask.java", "NewTask", {},
+                worker, "mcp1", "NewTask.java", "NewTask", {}, source_bytes=source,
                 expected_source_sha256=source_digest, request_id="mismatch-execute")
 
     assert reply["ok"] is False and reply["status"] == "UNKNOWN"
@@ -1001,6 +1063,7 @@ def test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks(
     observed = next(event for event in events if event["phase"] == "observed")
     assert observed["status"] == "UNKNOWN"
     assert observed["reply"]["failure"]["code"] == "WORKER_SOURCE_BINDING_MISMATCH"
+    assert observed["metadata"]["source_snapshot_b64"] == "<redacted>"
     assert [row.get("type") for row in writes] == [None, "source_binding_capabilities", "code_execute"]
     assert witness.mutation_issued is True
 

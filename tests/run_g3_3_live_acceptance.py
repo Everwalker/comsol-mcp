@@ -30,6 +30,7 @@ if str(ROOT) not in sys.path:
 
 from comsol_mcp._execution_contract import ExecutionContractError
 from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+from tools.java_snapshot_runner import execute_java_fixture
 from comsol_mcp._gate_a_reopen import verify_reopen, ReopenVerificationError
 from comsol_mcp._g3_results import (
     result_evaluate,
@@ -68,15 +69,11 @@ def _sha256_bytes(data: bytes) -> str:
 
 def _execute_checked(worker: PersistentJavaWorker, payload: Mapping[str, Any]) -> dict[str, Any]:
     """Fail at the actual compile/runtime error before inspecting an unchanged model."""
-    request = dict(payload)
-    source_artifact = request.get("source_artifact")
+    source_artifact = payload.get("source_artifact")
     if not isinstance(source_artifact, str) or not source_artifact:
         raise AssertionError("Java fixture operation requires a concrete source_artifact path")
-    request["expected_source_sha256"] = _sha256(Path(source_artifact))
-    reply = worker.submit("code_execute", request)
-    if reply.get("ok") is not True or reply.get("status") != "SUCCEEDED":
-        raise AssertionError(f"Java fixture operation failed: {reply!r}")
-    return reply
+    return execute_java_fixture(worker, payload["tag"], source_artifact,
+                                payload["entrypoint"], payload.get("arguments"))
 
 
 def git_blob_map_digest(commit: str = "HEAD") -> str:

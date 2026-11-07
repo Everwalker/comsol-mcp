@@ -49,6 +49,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from comsol_mcp._java_worker import JavaWorkerPaths, PersistentJavaWorker
+from tools.java_snapshot_runner import execute_java_fixture
 from comsol_mcp._g3_results import result_at_points, result_evaluate
 from comsol_mcp._g3_w18 import plot_render
 from comsol_mcp._operation_store import OperationStore
@@ -822,13 +823,7 @@ public final class CopperBlockBuilder {
 """
             copper_java = target_dir / "CopperBlockBuilder.java"
             copper_java.write_text(copper_code, encoding="utf-8")
-            copper_build_res = worker.submit("code_execute", {
-                "tag": tag_copper,
-                "source_artifact": str(copper_java),
-                "expected_source_sha256": sha256_file(copper_java),
-                "entrypoint": "CopperBlockBuilder",
-                "arguments": {},
-            })
+            copper_build_res = execute_java_fixture(worker, tag_copper, copper_java, "CopperBlockBuilder")
             readback = copper_build_res.get("result", {}).get("readback", {}) or copper_build_res.get("readback", {})
             if "heat_flux_boundary_1" in readback:
                 measured_heat_flux = float(readback["heat_flux_boundary_1"])
@@ -907,13 +902,7 @@ public final class TransientDiffusionBuilder {
 """
             trans_java = target_dir / "TransientDiffusionBuilder.java"
             trans_java.write_text(trans_code, encoding="utf-8")
-            worker.submit("code_execute", {
-                "tag": tag_trans,
-                "source_artifact": str(trans_java),
-                "expected_source_sha256": sha256_file(trans_java),
-                "entrypoint": "TransientDiffusionBuilder",
-                "arguments": {},
-            })
+            execute_java_fixture(worker, tag_trans, trans_java, "TransientDiffusionBuilder")
 
             # Sample 9 authentic points
             xs = [0.25, 0.5, 0.75]

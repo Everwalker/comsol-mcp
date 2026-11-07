@@ -233,7 +233,13 @@ class ProjectRootBinding:
         return self._read_posix(parts, max_bytes=max_bytes)
 
     def _read_posix(self, parts: Sequence[str], *, max_bytes: int) -> tuple[bytes, dict[str, int]]:
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        # A FIFO opened read-only can block before fstat gets a chance to
+        # reject it. Nonblocking has no effect on regular-file reads and lets
+        # the descriptor's actual type be checked safely after the open.
+        if not getattr(os, "O_NONBLOCK", 0):
+            raise _failure("ACCESS_VIOLATION", "platform cannot open source files without blocking")
+        flags = (os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_CLOEXEC", 0))
         directory_flags = _DIR_FLAGS
         opened_dirs: list[int] = []
         file_fd = None
