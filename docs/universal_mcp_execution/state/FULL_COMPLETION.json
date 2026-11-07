@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "Qwen agents: investigate T07 UNKNOWN and source fix, recovery tool, U03 introspection; coordinate original owned job without replay",
-  "updated_utc": "2026-11-07T11:53:21.700496+00:00",
+  "next_task_hint": "Qwen: T07 UNKNOWN analysis and recovery-tool verification; downstream T11/T12/T16/T41 software now eligible",
+  "updated_utc": "2026-11-07T12:41:42.754776+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -80,7 +80,8 @@
       "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
-        "docs/universal_mcp_execution/evidence/full/public_result_T07.json"
+        "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
+        "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json"
       ],
       "blocker": "Original result.evaluate request returned EXECUTION_STATE_UNKNOWN after dispatch, with COMSOL Unknown_solution. Do not replay, replace, signal or cleanup the original job/model; inspect the original job and reconcile only through safe authorized control paths. Independent implementation work may continue."
     },
@@ -99,11 +100,13 @@
       "blocker": null
     },
     "T10": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/T10-qwen-software-review-20261107.md"
+      ],
+      "blocker": "Scoped synthetic tests and source assessment available; actual two-model preservation, shared-client behavior, save/load/epoch/rebind, and domain/API/Java same-binding native evidence remain unverified. T07 UNKNOWN remains fenced."
     },
     "T11": {
       "status": "TODO",
@@ -134,11 +137,14 @@
       "blocker": null
     },
     "T15": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G3.json",
+        "docs/universal_mcp_execution/evidence/full/public_api_introspection_T15.json"
+      ],
+      "blocker": "Five tests failed because the pinned R31R2 capture was absent; actual 6.3/6.4 build-specific introspection remains unverified. Software downstream may proceed; do not count missing capture as passing."
     },
     "T16": {
       "status": "TODO",

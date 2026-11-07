@@ -70,6 +70,11 @@
     "reason": "EXECUTION_STATE_UNKNOWN post-dispatch, COMSOL Unknown_solution",
     "safe_retry": false,
     "evidence": "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
-    "recovery": "Inspect original request/job and reconcile model; do not replay or assume cleanup."
+    "recovery": "Inspect original request/job and reconcile model; do not replay or assume cleanup.",
+    "control_observation": {
+      "ref": "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json",
+      "scope": "Original control job remains UNKNOWN; observed Worker reply for last call FAILED and no unmatched submitted/observed calls in recorded log. This alone does not establish absence of partial model changes; reconcile proof still required.",
+      "replay": "NOT_PERFORMED"
+    }
   }
 }

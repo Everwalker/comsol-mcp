@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "task": "T15",
+  "requirement_groups": [
+    "U03",
+    "U08"
+  ],
+  "generated_utc": "2026-11-07T12:34:35+00:00",
+  "subtask": "C public-API runtime introspection evaluation (software/offline)",
+  "source_identity": {
+    "workspace": "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107",
+    "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+    "documentation_head": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
+    "comsol_mcp_registry_sha": "9f473f8b29849397e99623f33309119b060da031d560a6ab66f23408719572a5",
+    "reviewed_capability_rows": 24
+  },
+  "method": "current source review (comsol_mcp/_g2_public_api.py, _g2_registry.py, _g2_contract.py, worker_java/PersistentComsolWorker.java), focused software tests, and javap cross-check of the installed COMSOL 6.4 API jar plus pinned local help sha256; no COMSOL process, Worker, SSH, or prior task resource was started or modified",
+  "focused_tests": {
+    "interpreter": ".g3-private/full-continuation-20261107/venv/bin/python -m pytest (PYTEST_DISABLE_PLUGIN_AUTOLOAD=1, PYTHONPATH=tests, -p no:cacheprovider)",
+    "files": [
+      "tests/test_unit_a_node_public_api.py",
+      "tests/test_public_receiver_version_domain_r31r2.py",
+      "tests/test_tool_classification.py",
+      "tests/test_g2_registry_packaging.py"
+    ],
+    "tally": "185 passed, 5 failed",
+    "failure_classification": {
+      "cause": "all 5 failures are the missing frozen capture file evidence/R31R2_ACTUAL_ROOT_LABEL_DESCRIPTORS_SOURCE_R1.json, resolved by the test at <repo-parent>/evidence/...; that path is absent from the restored workspace and the whole /Volumes/SSD/Comsol-MCP volume",
+      "pinned_input_sha256": "877839f9eb8da3b8145babcd3357fd2982aab0691c7fa620e76bdaa35f48d03a",
+      "not_counted": "no behavioural failure",
+      "harness_note": "without PYTHONPATH=tests two node.copy cases also fail on a test-module import convention (from test_unit_d_same_list_copy import ...); with the convention they pass; pyproject has no pythonpath entry"
+    }
+  },
+  "sdk_metadata_verification": {
+    "reviewed_capabilities": 24,
+    "registry_sha": "9f473f8b29849397e99623f33309119b060da031d560a6ab66f23408719572a5",
+    "capabilities_absent_from_6_4_sdk": [],
+    "modelutil_getComsolVersion_present": true,
+    "modelentity_extra_writes_in_sdk_not_reviewed": [
+      [
+        "com.comsol.model.ModelEntity",
+        "author",
+        [
+          "java.lang.String"
+        ],
+        "com.comsol.model.ModelEntity"
+      ],
+      [
+        "com.comsol.model.ModelEntity",
+        "docMarker",
+        [
+          "java.lang.String"
+        ],
+        "java.lang.String"
+      ],
+      [
+        "com.comsol.model.ModelEntity",
+        "help",
+        [
+          "java.lang.String"
+        ],
+        "java.lang.String"
+      ],
+      [
+        "com.comsol.model.ModelEntity",
+        "model",
+        [
+          "java.lang.String"
+        ],
+        "com.comsol.model.ModelEntity"
+      ],
+      [
+        "com.comsol.model.ModelEntity",
+        "name",
+        [
+          "java.lang.String"
+        ],
+        "com.comsol.model.ModelEntity"
+      ],
+      [
+        "com.comsol.model.ModelEntity",
+        "tag",
+        [
+          "java.lang.String"
+        ],
+        "com.comsol.model.ModelEntity"
+      ],
+      [
+        "com.comsol.model.ModelEntity",
+        "version",
+        [
+          "java.lang.String"
+        ],
+        "com.comsol.model.ModelEntity"
+      ]
+    ],
+    "documentation_files": {
+      "MODEL_ENTITY": {
+        "pinned_sha256": "1e996ce8d28a6570a103c8bf341ca83f057cf8a90ece216b09d0cec192d7c2bf",
+        "local_file_sha256": "1e996ce8d28a6570a103c8bf341ca83f057cf8a90ece216b09d0cec192d7c2bf",
+        "match": true,
+        "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/ModelEntity.html"
+      },
+      "PROP_FEATURE": {
+        "pinned_sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+        "local_file_sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+        "match": true,
+        "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/PropFeature.html"
+      }
+    },
+    "sdk_jar": {
+      "path": "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar",
+      "sha256": "9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67"
+    }
+  },
+  "requirement_clause_routes": {
+    "actual_receiver_and_method_signatures": "Worker publicDescribe reflects the live receiver (interfaces bounded by com.comsol.model.*, declaring class, exact parameter/return types, metadata_complete/limits) and _g2_public_api normalizes/fences it; api.describe returns per-signature REVIEWED/UNREVIEWED policy",
+    "property_types_and_allowed_values": "node.property_schema reports value_type/allowed_values/kind/shape_rank/getter/java_signature/metadata_status from real getValueType/getAllowedPropertyValues/hasProperty; unknown metadata stays UNKNOWN",
+    "runtime_version_not_fixed": "runtime_version comes from ModelUtil.getComsolVersion() (confirmed in the 6.4 SDK jar); normalize_public_runtime_version accepts canonical four-part plus EN/ZH build declarations; capability checks are release+actual-signature based",
+    "server_side_effect_classification": "catalog effect for api.invoke is DYNAMIC; resolved_effect is computed by provisional_effect at project ACL, validate_call, ManagedBackend and prepare_invoke; caller declared_effect is an assertion only and any mismatch is PERMISSION_DENIED at every layer",
+    "unknown_capability_reporting": "non-reviewed signatures are described with policy_status UNREVIEWED, invoke_allowed false and controlled_alternative (node.property_* or code.execute_java with authorizes_this_signature false); the 6.4 SDK contains ModelEntity author/docMarker/help/model/name/tag/version setters that stay correctly unreviewed"
+  },
+  "defect_search_result": "no required software defect was confirmed in comsol_mcp/_g2_api(_g2_public_api.py)/_g2_registry.py; no source file was modified",
+  "rejected_candidates": [
+    "published input_schema for api.invoke/api.describe keeps identity fields required in the body while the runtime treats the outer execution envelope as authoritative: the daemon tolerates exact body/envelope matches, _g2_body strips identity, and validate_call merges envelope identity, so the published schema describes a permitted call shape and is stricter than the minimum; not a contradiction",
+    "initial 10 apparent SDK signature absences were a javap array-return parsing artifact in the first cross-check script; the corrected parser reports zero absences"
+  ],
+  "external_gates_remaining": {
+    "r31r2_frozen_capture": "restore evidence/R31R2_ACTUAL_ROOT_LABEL_DESCRIPTORS_SOURCE_R1.json (pinned sha256 above) from the prior backup, or re-capture actual root-label descriptors in a separately authorized native environment",
+    "actual_6_4_native_api_evidence": "api.describe/api.invoke against a live 6.4 server requires an authorized active platform; not started here by instruction",
+    "actual_6_3_sdk_or_build": "no COMSOL 6.3 installation exists on this host; 6.3 capability evidence needs the Windows-x64-6.3 target environment"
+  },
+  "scope_limits": [
+    "offline evaluation only; no native engine, Worker, Desktop, license checkout, solve, or scientific acceptance is implied",
+    "shared state files (FULL_COMPLETION.json, G3.json) intentionally not written by this subtask"
+  ]
+}

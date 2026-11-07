@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "observed_utc": "2026-11-07T12:41:04.087382+00:00",
+  "scope": "This continuation only. Metadata and aggregate router records, not per-agent backend correlation.",
+  "first_spawn": {
+    "requested_model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
+    "requested_reasoning_effort": "max",
+    "session_turn_contexts": "Six original agent session records explicitly name Qwen and max."
+  },
+  "local_router_observation": {
+    "source": "local OpenCodex routing-history SQLite; aggregated non-sensitive fields only",
+    "window": "since 2026-11-07 19:41 Asia/Shanghai",
+    "requested_model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
+    "provider": "omlx",
+    "served_model": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
+    "successful_200_requests": 409,
+    "cancelled_499_requests": 7,
+    "requested_effort_observed": "max",
+    "qualification": "Aggregate routing observed during this period; no cryptographic per-agent matching was established."
+  },
+  "unexpected_resume": {
+    "scope": "Agents B, E, F after close/resume",
+    "session_turn_context_model": "gpt-6.1-terra",
+    "requested_reasoning_effort": "max",
+    "authorization": "NOT_AUTHORIZED_BY_USER",
+    "cause": "resume_agent has no model override and resumed sessions used parent model",
+    "corrective_action": "Stopped resumed agents; do not use resume_agent. All subsequent agents are spawned afresh with explicit Qwen/max. Have new Qwen check partial follow-up edits."
+  }
+}

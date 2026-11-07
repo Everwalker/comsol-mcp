@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "updated_utc": "2026-11-07T12:41:42.754776+00:00",
+  "T15": {
+    "status": "IMPLEMENTED",
+    "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
+    "evidence": "docs/universal_mcp_execution/evidence/full/public_api_introspection_T15.json",
+    "software_tests": "185 passed, 5 failed in selected files; failures reported missing pinned R31R2 capture (sha256 877839f9eb8da3b8145babcd3357fd2982aab0691c7fa620e76bdaa35f48d03a). The failures are not passes and missing input prevents judging those tests.",
+    "sdk_scope": "24 reviewed signatures checked against installed COMSOL 6.4 SDK metadata; no new native receiver invocation or Windows 6.3 qualification inferred.",
+    "next": "Run applicable actual API introspection against an independently safe live target; recover the exact missing capture if available or re-establish appropriate evidence without fabricating bytes."
+  }
+}
