@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:18:50.774482+00:00",
+  "updated_utc": "2026-11-07T15:24:20.645452+00:00",
   "T05": {
     "status": "DONE",
     "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
@@ -128,7 +128,13 @@
       "safe_retry": false,
       "source_response": "docs/universal_mcp_execution/evidence/full/public_result_T07_candidate_b0_UNKNOWN.json",
       "sha256": "04bb1bc0d17eec2db7b8cc3273cbce721464809c6dc2bcdfb113908349c1ad33",
-      "fence": "No further model/session/Worker calls, replay, cleanup, session recovery or job reconciliation without a separately justified recovery plan. Preserve original earlier T07 fence independently."
+      "fence": "No further model/session/Worker calls, replay, cleanup, session recovery or job reconciliation without a separately justified recovery plan. Preserve original earlier T07 fence independently.",
+      "permitted_diagnostic_plan": {
+        "scope": "Only job.log for new job 4722d099-56ac-4a22-938d-1d60e163cbc3 in its own existing domain B, via attach-only control mode. Source inspection: _control_daemon._control_read job_log -> OperationStore.events SELECT; no Worker RPC or model call.",
+        "purpose": "Read already-persisted native reply events to determine selection.named readback if present; retain exact returned evidence.",
+        "bounds": "No original-job query, no job.reconcile, session.recover, model.inspect, Worker RPC, replay, cancellation, cleanup, process signal, daemon creation or fallback. If endpoint cannot be attached, stop and preserve fence.",
+        "status": "PLANNED_NOT_YET_OBSERVED"
+      }
     },
     "fresh_control_domain_note": "The sandbox preflight in the task-created control domain A did not submit the description request; an escalated read-only description then used that domain before fresh-domain guidance. Domain A was retained; all new project/session/model work used separate domain B. Native agent is recording full provenance.",
     "candidate_native_attempt": {
