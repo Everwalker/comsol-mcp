@@ -137,7 +137,7 @@ class SolutionBinding:
         raise ExecutionContractError("DATASET_CHAIN_TOO_DEEP", f"dataset chain exceeds {max_depth} nodes")
 
     @staticmethod
-    def _outer_labels(solution_info: Any, outer_indices: Sequence[int] | None, outer_count: int | None, *, _skip_empty_outer_tuple_diagnostic: bool = False) -> tuple[list[int], list[dict[str, Any]]]:
+    def _outer_labels(solution_info: Any, outer_indices: Sequence[int] | None, outer_count: int | None, *, _skip_empty_outer_tuple_diagnostic: bool = False, _empty_outer_singleton_witness: Any = None) -> tuple[list[int], list[dict[str, Any]]]:
         errors: list[dict[str, Any]] = []
         if outer_indices is not None:
             labels = _unique_ints(_normalise_ints(outer_indices, what="outer_indices"), what="outer_indices")
@@ -164,6 +164,15 @@ class SolutionBinding:
             errors.append({"method": "getOuterSolnum", "code": exc.code, "message": str(exc)})
             return [], errors
         if not labels and not _skip_empty_outer_tuple_diagnostic:
+            # A caller may defer the singleton decision until it has actually
+            # seen an empty outer axis.  The witness callable runs only here,
+            # so a complete non-empty mapping keeps its exact RPC set.  Only a
+            # witness that verifies on this live model may skip the redundant
+            # getSolnums([]) diagnostic; every other solution keeps the
+            # diagnostic and its dispatch-latch semantics unchanged.
+            if _empty_outer_singleton_witness is not None and _empty_outer_singleton_witness():
+                errors.append({"method": "getOuterSolnum", "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": "observed empty outer axis; optional tuple diagnostic skipped for verified singleton numeric-count read"})
+                return labels, errors
             # COMSOL may publish no labels through getOuterSolnum().  The
             # documented getSolnums(String[]) route can still return the real
             # (outer, inner) tuples; use it when available instead of inventing
@@ -211,6 +220,7 @@ class SolutionBinding:
         outer_count: int | None = None,
         strict: bool = True,
         _skip_empty_outer_tuple_diagnostic: bool = False,
+        _empty_outer_singleton_witness: Any = None,
     ) -> dict[str, Any]:
         """Read real ``(outer, inner) -> solnum`` and parameter metadata.
 
@@ -222,7 +232,8 @@ class SolutionBinding:
         if solution_info is None:
             raise ExecutionContractError("SOLUTION_METADATA_ERROR", "SolutionInfo is required")
         labels, errors = SolutionBinding._outer_labels(solution_info, outer_indices, outer_count,
-            _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
+            _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic,
+            _empty_outer_singleton_witness=_empty_outer_singleton_witness)
         pairs: list[dict[str, int]] = []
         inner_by_outer: dict[int, list[int]] = {}
         solnum_by_pair: dict[tuple[int, int], int] = {}

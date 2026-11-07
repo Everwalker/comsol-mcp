@@ -2369,6 +2369,16 @@ def _raw_eval_stationary_fixture(monkeypatch, *, count=1, point_count=3, values=
                 [[float(100 * solution + point) for point in range(point_count)]
                  for solution in range(count)]
             ]
+            # COMSOL 6.4 creates every numerical feature (Eval included) as a
+            # SelectionEntity, so the adapter's before-run binding snapshot
+            # legitimately reads feature.selection().  The fake must expose
+            # the same readback the native 6.4 worker returns for the tree's
+            # all-entity 2D-domain ROI (geom1, dim 2, one entity).
+            self.selection_node = _StationaryAggregateSelection()
+
+        def selection(self, *args: Any) -> Any:
+            self._guard("selection", args)
+            return self.selection_node
 
         def getCoordinatesShape(self):
             self._guard("getCoordinatesShape", ())
@@ -2444,6 +2454,306 @@ def test_public_result_evaluate_stationary_count_only_uses_real_eval_budget_path
         ]]
     finally:
         daemon.close()
+
+
+class _UnknownSolutionFlError(RuntimeError):
+    """Actual T07/R9 worker reply shape for the rejected ``getSolnums([])``.
+
+    The persistent worker marks a structured engine failure with
+    ``execution_state_unknown: true``; this fixture preserves exactly that so
+    ``_worker_failure_unknown`` sees the same bit the production fence saw on
+    the real 6.4 stationary model.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("FlException: Unknown solution. - Tag")
+        self.failure = {
+            "code": "ENGINE_CALL_FAILED",
+            "message": "FlException: Unknown solution. - Tag",
+            "execution_state_unknown": True,
+            "cause_chain": [{
+                "message": "Unknown_solution",
+                "type": "com.comsol.util.exceptions.FlException",
+            }],
+        }
+        self.reply = {"ok": False, "status": "FAILED", "type": "call", "failure": self.failure}
+
+
+class _StationaryAggregateSelection(Entity):
+    """GeomSelection view of one all-entity 2D-domain ROI on the fake feature."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._geometry = "geom1"
+        self._dimension = 2
+
+    def geom(self, *args: Any) -> Any:
+        self._guard("geom", args)
+        if args:
+            self._geometry = str(args[0])
+            if len(args) > 1:
+                self._dimension = int(args[1])
+            return None
+        return self._geometry
+
+    def dim(self) -> int:
+        self._guard("dim", ())
+        return self._dimension
+
+    def named(self) -> None:
+        self._guard("named", ())
+        return None
+
+    def entities(self) -> list[int]:
+        self._guard("entities", ())
+        return [1]
+
+    def isInheriting(self) -> bool:
+        self._guard("isInheriting", ())
+        return False
+
+    def all(self) -> None:
+        self._guard("all", ())
+        return None
+
+
+class _StationaryAggregateFeature(FInterp):
+    """Ephemeral spatial-aggregate feature returning one averaged cell."""
+
+    def __init__(self, tag: str, type_id: str) -> None:
+        super().__init__(tag, type_id, complex_=False,
+                         props={"data": None, "expr": [], "unit": []})
+        self.values = [[[42.0]]]
+        self.selection_node = _StationaryAggregateSelection()
+
+    def selection(self, *args: Any) -> Any:
+        self._guard("selection", args)
+        return self.selection_node
+
+
+def _t07_stationary_aggregate_body() -> dict[str, Any]:
+    return {
+        "spec": {
+            "expressions": ["u"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "average",
+            "entity_dim": 2,
+            "selection": {"kind": "all", "component": "comp1",
+                          "geometry": "geom1", "entity_dimension": 2},
+            "complex_mode": "real",
+            "storage": "inline",
+        }
+    }
+
+
+def test_result_evaluate_stationary_singleton_survives_rejected_empty_outer_diagnostic(
+    monkeypatch,
+) -> None:
+    """T07 regression: a rejected getSolnums([]) diagnostic must not kill a bounded aggregate.
+
+    The actual R9/T07 transcripts show the attached stationary singleton
+    publishing ``getOuterSolnum() == []`` while COMSOL 6.4 rejects the
+    redundant ``getSolnums([])`` diagnostic with FlException Unknown_solution.
+    With the live-model getter witnesses already proving the exact singleton
+    count, the adapter must skip that diagnostic and publish the count-only
+    aggregate instead of latching the read-only rejection as
+    EXECUTION_STATE_UNKNOWN.
+    """
+    tree = _stationary_count_tree(1)
+
+    def rejected_get_solnums(*args: Any) -> Any:
+        tree.solver.solution_info._guard("getSolnums", args)
+        raise _UnknownSolutionFlError()
+
+    tree.solver.solution_info.getSolnums = rejected_get_solnums
+    # The resolver only runs when the published SolutionInfo exposes the
+    # strict per-outer getter, exactly like the live 6.4 proxy does; without
+    # it the adapter never reaches the diagnostic that the T07 engine rejected.
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+
+    nodes: list[_StationaryAggregateFeature] = []
+
+    def factory(tag: str, *args: Any) -> _StationaryAggregateFeature:
+        node = _StationaryAggregateFeature(tag, str(args[0]) if args else "AvSurface")
+        nodes.append(node)
+        return node
+
+    tree.numerical.factory = factory
+
+    result = results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+    assert result["status"]["ok"] is True, result["status"]
+    assert "getSolnums" not in tree.engine_methods()
+    observation = result["solution_axes"]["numeric_count_observation"]
+    assert observation["status"] == "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT"
+    assert observation["numeric_solution_count"] == 1
+    assert result["solution_axes"]["pair_mapping_complete"] is False
+    assert nodes and nodes[0].type_id == "AvSurface"
+    assert nodes[0].props["expr"] == ["real((u))"]
+    assert "getData" in nodes[0].methods()
+    assert result["cleanup"]["removed"] is True
+    assert tree.numerical.items == {}
+
+
+def test_result_evaluate_first_unknown_at_native_read_still_latches_fence() -> None:
+    """The diagnostic skip must not weaken the fence at an actual payload read."""
+    tree = _stationary_count_tree(1)
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+
+    def factory(tag: str, *args: Any) -> _StationaryAggregateFeature:
+        node = _StationaryAggregateFeature(tag, str(args[0]) if args else "AvSurface")
+
+        def rejected_get_data() -> Any:
+            node._guard("getData", ())
+            raise _UnknownSolutionFlError()
+
+        node.getData = rejected_get_data
+        return node
+
+    tree.numerical.factory = factory
+
+    with pytest.raises(_UnknownSolutionFlError):
+        results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+
+
+def test_result_evaluate_explicit_selection_never_runs_singleton_witness() -> None:
+    """Explicit outer/inner selection keeps the exact HEAD dispatch set.
+
+    The at_points precedent gates the early singleton witness on requests
+    without an explicit selection.  Without that gate the witness getters
+    would become new fence-dispatchable RPCs on explicit-selection paths that
+    never ran them, even though the diagnostic skip can never apply there.
+    """
+    tree = _stationary_count_tree(2)
+    body = _t07_stationary_aggregate_body()
+    body["spec"]["solution"]["outer"] = 1
+    body["spec"]["solution"]["inner"] = 1
+    with pytest.raises(ExecutionContractError) as exc_info:
+        results.result_evaluate(tree.worker, "Model", body)
+    assert exc_info.value.code == "SOLUTION_AXIS_METADATA_UNAVAILABLE"
+    called = tree.engine_methods()
+    for witness_method in ("getLevels", "getLevelNames", "getNU", "getPNames",
+                           "getSizeMulti", "getSequenceType", "isAttached"):
+        assert witness_method not in called
+
+
+def test_result_evaluate_complete_pair_mapping_never_runs_singleton_witness(
+    monkeypatch,
+) -> None:
+    """A complete non-empty pair mapping keeps the exact HEAD RPC set.
+
+    The eager-witness candidate dispatched the singleton witness for every
+    request without explicit outer/inner, including requests whose
+    SolutionInfo published a complete non-empty (outer,inner) mapping —
+    paths that succeeded at HEAD with zero witness getters.  A structured
+    unknown rejection from any witness getter would then have latched such
+    a successful evaluation into EXECUTION_STATE_UNKNOWN.  The witness may
+    only run after getOuterSolnum() actually published an empty outer axis.
+    """
+    tree, _nodes = _raw_eval_stationary_fixture(monkeypatch, count=1, point_count=2)
+    tree.solver.solution_info.getOuterSolnum = lambda: (
+        tree.solver.solution_info._guard("getOuterSolnum", ()) or [1])
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+
+    def poisoned_sequence_type(*args: Any) -> Any:
+        tree.solver._guard("getSequenceType", args)
+        raise _UnknownSolutionFlError()
+
+    tree.solver.getSequenceType = poisoned_sequence_type
+
+    result = results.result_evaluate(tree.worker, "Model", {
+        "spec": {
+            "expressions": ["T"], "units": ["K"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "none", "complex_mode": "real", "storage": "inline",
+        },
+    })
+    assert result["status"]["ok"] is True, result["status"]
+    called = tree.engine_methods()
+    # getLevelNames is part of the HEAD full-mapping binding set inside
+    # resolve_solution_info itself; the listed getters are witness-family
+    # reads that HEAD never dispatched on this path.
+    for witness_method in ("getSequenceType", "isAttached", "getLevels",
+                           "getNU", "getPNames", "getSizeMulti"):
+        assert witness_method not in called
+
+
+def test_result_evaluate_unverified_witness_keeps_rejected_diagnostic_latch() -> None:
+    """An unverified witness must not suppress the diagnostic or its latch."""
+    tree = _stationary_count_tree(2)
+    tree.solver.props["getNU"] = 3  # disagrees with getSize()[1] == 2
+
+    def rejected_get_solnums(*args: Any) -> Any:
+        tree.solver.solution_info._guard("getSolnums", args)
+        raise _UnknownSolutionFlError()
+
+    tree.solver.solution_info.getSolnums = rejected_get_solnums
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+    tree.numerical.factory = lambda tag, *args: _StationaryAggregateFeature(
+        tag, str(args[0]) if args else "AvSurface")
+
+    with pytest.raises(_UnknownSolutionFlError):
+        results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+    assert "getSolnums" in tree.engine_methods()
+
+
+def test_result_solution_binding_ignores_lazy_witness_under_ticket_scope(monkeypatch) -> None:
+    """A sealed ephemeral ticket's supplemental phase never runs witness RPCs.
+
+    The lazy empty-outer witness is a required-phase count/identity probe,
+    so it must not be dispatched inside the ticket's supplemental_solution_info
+    phase, and its failures must not be relabeled as tolerated supplemental
+    failures.  With a scope active the callback is ignored and the resolver
+    keeps its existing in-phase diagnostic allowlist; without a scope the
+    callback still runs lazily after an actually-empty outer axis.
+    """
+    tree = _stationary_count_tree(2)
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+    calls: list[tuple[bool, int]] = []
+
+    class FakePhase:
+        def __init__(self) -> None:
+            self.entered = 0
+            self.open = False
+        def __enter__(self) -> list[Any]:
+            self.entered += 1
+            self.open = True
+            return []
+        def __exit__(self, *exc: Any) -> bool:
+            self.open = False
+            return False
+
+    class FakeScope:
+        def __init__(self) -> None:
+            self.phase = FakePhase()
+        def supplemental_solution_info(self, info: Any) -> FakePhase:
+            return self.phase
+
+    scope = FakeScope()
+    monkeypatch.setattr("comsol_mcp._ephemeral_result_ticket.current_scope", lambda: scope)
+
+    def witness() -> bool:
+        calls.append((scope.phase.open, scope.phase.entered))
+        return True
+
+    binding = results._result_solution_binding(
+        tree.model, "sol1", _empty_outer_singleton_witness=witness)
+    assert calls == []
+    assert scope.phase.entered == 1 and scope.phase.open is False
+    assert isinstance(binding, dict) and binding["pair_mapping_complete"] is False
+
+    monkeypatch.undo()
+    calls.clear()
+    binding = results._result_solution_binding(
+        tree.model, "sol1", _empty_outer_singleton_witness=witness)
+    assert len(calls) == 1 and calls[0][0] is False
+    assert any(e.get("method") == "getOuterSolnum"
+               and "skipped for verified singleton numeric-count read" in str(e.get("message", ""))
+               for e in binding["read_errors"])
 
 
 def test_public_result_evaluate_count_only_keeps_native_default_unit_unverified(

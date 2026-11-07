@@ -200,3 +200,32 @@ def test_generic_solutionbinding_successful_tuple_api_default_and_nonempty_prese
     info=Info();binding=SolutionBinding.resolve_solution_info(info,_skip_empty_outer_tuple_diagnostic=private_skip)
     assert binding['pair_mapping_complete'] is True and binding['solnum_pairs']==[{'outer':2,'inner':7,'solnum':7}]
     assert ('getSolnums' in info.calls) is (not private_skip)
+
+def test_generic_solutionbinding_lazy_witness_only_after_real_empty_labels():
+    # The lazy witness is consulted only after getOuterSolnum() really
+    # published an empty label list.  A verifying witness skips the redundant
+    # getSolnums([]) diagnostic; a non-verifying witness must not, and the
+    # documented tuple fallback may still complete the mapping.  Non-empty
+    # labels never consult the witness, keeping the HEAD RPC set.
+    class Info:
+        def __init__(self,outer):self.calls=[];self._outer=outer
+        def getOuterSolnum(self):self.calls.append('outer');return self._outer
+        def getSolnums(self,names):self.calls.append('getSolnums');return [[2,7]]
+        def getSolnum(self,outer,strict):assert outer==2 and strict is True;return [7]
+        def getPNames(self,pairs):return [['freq']]
+        def getPvals(self,pairs):return [[10.0]]
+        def getUnits(self,pairs):return [['Hz']]
+        def getLevelNames(self):return ['freq']
+    seen=[]
+    def probe(verified):
+        seen.append(True);return verified
+    info=Info([]);binding=SolutionBinding.resolve_solution_info(info,_empty_outer_singleton_witness=lambda:probe(True))
+    assert seen==[True] and 'getSolnums' not in info.calls and binding['pair_mapping_complete'] is False
+    assert any('skipped for verified singleton numeric-count read' in str(e.get('message')) for e in binding['read_errors'])
+    info=Info([]);seen.clear()
+    binding=SolutionBinding.resolve_solution_info(info,_empty_outer_singleton_witness=lambda:probe(False))
+    assert seen==[True] and 'getSolnums' in info.calls
+    assert binding['outer_indices']==[2] and binding['pair_mapping_complete'] is True
+    info=Info([2]);seen.clear()
+    binding=SolutionBinding.resolve_solution_info(info,_empty_outer_singleton_witness=lambda:probe(True))
+    assert seen==[] and 'getSolnums' not in info.calls and binding['pair_mapping_complete'] is True

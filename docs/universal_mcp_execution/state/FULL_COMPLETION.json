@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T16 and T41 software milestones recorded; T11 and T19 software work can proceed. T07 candidate repair awaits review and new isolated native validation; original job remains UNKNOWN and fenced.",
-  "updated_utc": "2026-11-07T14:51:21.415131+00:00",
+  "next_task_hint": "T07 software candidate recorded; build pinned candidate and validate via installed MCP in a genuinely independent new project/session, without replaying or cleaning original UNKNOWN resources. T11 and T19 software work continues.",
+  "updated_utc": "2026-11-07T14:57:46.697163+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -76,17 +76,19 @@
       "blocker": null
     },
     "T07": {
-      "status": "BLOCKED",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
         "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json",
         "docs/universal_mcp_execution/evidence/full/T07-reconcile-analysis-qwen-20261107.md",
         "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-precheck-sandbox-abort-qwen-20261107.json",
-        "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-qwen-20261107.json"
+        "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-qwen-20261107.json",
+        "docs/universal_mcp_execution/evidence/full/G1.json",
+        "docs/universal_mcp_execution/evidence/full/T07-source-fix-qwen-20261107.md"
       ],
-      "blocker": "Original job reconciled from durable observations, but remains UNKNOWN and registered-session/model fence is not cleared; no replay. Result code patch and safe session recovery or a new independent model are still required."
+      "blocker": "Candidate result fix has only software evidence; original job remains UNKNOWN and fenced. Real numeric value, unit/solution identity, image and model revision must be demonstrated on a genuinely independent model/session; two historical fixture failures and other baseline failures remain unresolved."
     },
     "T08": {
       "status": "TODO",

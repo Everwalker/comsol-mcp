@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T11:34:02.779792+00:00",
+  "updated_utc": "2026-11-07T14:57:46.697163+00:00",
   "T05": {
     "status": "DONE",
     "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
@@ -63,14 +63,14 @@
     "caveat": "solution tags and successful solve do not yet establish numerical values, units, rendered image, persistence or global native acceptance"
   },
   "T07": {
-    "status": "BLOCKED",
+    "status": "IMPLEMENTED",
     "operation": "result.evaluate",
     "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
     "request_id": "full-universal-20261107-result-evaluate-01",
     "reason": "EXECUTION_STATE_UNKNOWN post-dispatch, COMSOL Unknown_solution",
     "safe_retry": false,
     "evidence": "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
-    "recovery": "Inspect original request/job and reconcile model; do not replay or assume cleanup.",
+    "recovery": "Original job reconciliation has already run once; job is still UNKNOWN and model/session fenced. Use a genuinely separate project, server, worker and model for new validation; no replay or cleanup of original.",
     "control_observation": {
       "ref": "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json",
       "scope": "Original control job remains UNKNOWN; observed Worker reply for last call FAILED and no unmatched submitted/observed calls in recorded log. This alone does not establish absence of partial model changes; reconcile proof still required.",
@@ -92,6 +92,20 @@
         "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-precheck-sandbox-abort-qwen-20261107.json",
         "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-qwen-20261107.json"
       ]
+    },
+    "candidate_fix": {
+      "status": "SOFTWARE_IMPLEMENTED_NOT_NATIVE_VERIFIED",
+      "source_identity_sha256": {
+        "comsol_mcp/_g3_results.py": "35987e14249e0112805dd0d9b90d44b895df326ecd1b3a4d275fe76a64f7fe84",
+        "comsol_mcp/_solution_binding.py": "21824cb33d5bbd73c8c950ba5267c24fea2ab6a904eacf29a209ce045c17a9c1",
+        "tests/test_g3_results.py": "b6fafdff0ad81579aa107be993e59a60920f3b7d903b81afe314a7bbddea569f",
+        "tests/test_activity019_private_singleton_ticket.py": "195da63eab77b4dff0129d65b0fcb318ad3c0a6d7a7f6b640ecebcca41cb0915"
+      },
+      "summary": "On a truly empty outer axis, evaluate a verified count witness lazily before deciding whether to omit a diagnostic that returned structured UNKNOWN in the original attempt. Preserve explicit selection and nonempty-pair dispatch, fallback to original diagnostic if the witness is unverified, and preserve existing ephemeral-ticket boundary.",
+      "tests": "Selected result + core numeric suites: 285 passed, 2 failed for missing historical continuation evidence. Activity019 candidate: 3 passed/19 failed, baseline comparison 2 passed/20 failed with the additional new test passing only on candidate. Failures remain unresolved, not passes. See source fix record.",
+      "limitations": "No live test of the modified candidate. Skipped tuple diagnostic does not establish outer/inner mapping; cross-version behavior and actual numerical/image results remain unverified.",
+      "evidence": "docs/universal_mcp_execution/evidence/full/T07-source-fix-qwen-20261107.md",
+      "original_job": "Job reconciled once for recorded quiescence but remains UNKNOWN and model/session fences remain; do not replay or infer absence of side effects."
     }
   }
 }

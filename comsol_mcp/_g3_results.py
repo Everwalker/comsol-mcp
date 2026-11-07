@@ -4559,6 +4559,7 @@ def _feature_point_count(data: Any, layout: str) -> int:
 
 def _result_solution_binding(model: Any, solution_tag: Any, *,
     _skip_empty_outer_tuple_diagnostic: bool = False,
+    _empty_outer_singleton_witness: Any = None,
 ) -> dict[str, Any] | None:
     """Return a typed SolutionInfo binding when the selected solution publishes it."""
     if not isinstance(solution_tag, str) or not solution_tag:
@@ -4577,8 +4578,16 @@ def _result_solution_binding(model: Any, solution_tag: Any, *,
         scope = current_scope()
         if scope is None:
             return SolutionBinding.resolve_solution_info(dispatch_info,
-                _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
+                _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic,
+                _empty_outer_singleton_witness=_empty_outer_singleton_witness)
         with scope.supplemental_solution_info(info) as handled:
+            # The ticket's supplemental phase tolerates only the narrow
+            # resolver-getter allowlist; witness getters are required-phase
+            # count/identity RPCs and must never be labeled supplemental.
+            # While a ticket scope is active the lazy witness is therefore
+            # not honored, and the diagnostic keeps its existing in-phase
+            # allowlist and failure semantics.  (Today the scope binds only
+            # to _BUILTIN_RESULT_AT_POINTS, which passes the static flag.)
             binding = SolutionBinding.resolve_solution_info(dispatch_info,
                 _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
             handled.append(binding)
@@ -5749,7 +5758,52 @@ def _result_evaluate_body(
         or _string_or_none(dset_node, "solution", [])
         or _string_or_none(dset_node, "data", [])
     )
-    solution_binding = _result_solution_binding(model, solution_tag)
+    # The R9/T07 actual worker transcripts show COMSOL 6.4 publishing an empty
+    # outer axis for the attached stationary sequence and rejecting the
+    # redundant empty-outer getSolnums([]) diagnostic with FlException
+    # Unknown_solution.  This operation's first-UNKNOWN dispatch fence would
+    # latch that read-only rejection and report the whole evaluation as
+    # EXECUTION_STATE_UNKNOWN before the bounded count-only gate ever runs.
+    # A witness may only veto that diagnostic after getOuterSolnum() has
+    # actually published an empty outer axis on this live model, and only for
+    # requests without an explicit outer/inner selection: requests whose
+    # SolutionInfo publishes a complete non-empty mapping keep the exact HEAD
+    # RPC set (the witness never dispatches), and any solution whose witness
+    # does not verify keeps the diagnostic and its latch semantics.
+    singleton_count_witness: dict[str, Any] | None = None
+
+    def _empty_outer_singleton_witness() -> bool:
+        nonlocal singleton_count_witness
+        if singleton_count_witness is None:
+            singleton_count_witness = _single_stored_solution_count_observation(
+                model, dataset_binding, solution_tag
+            )
+        witness = singleton_count_witness
+        return (
+            witness.get("status") in {
+                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+                "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            }
+            and witness.get("witness_kind") in {
+                "attached_parametric_frequency_singleton",
+                "attached_stationary_count_only_singleton",
+                "attached_stationary_count_only",
+            }
+            and type(witness.get("numeric_solution_count")) is int
+            and 1 <= witness["numeric_solution_count"] <= 4096
+            and witness.get("solution_axes_pair_mapping_complete") is False
+        )
+
+    solution_binding = _result_solution_binding(
+        model,
+        solution_tag,
+        _empty_outer_singleton_witness=(
+            _empty_outer_singleton_witness
+            if solution_spec.get("outer") is None and solution_spec.get("inner") is None
+            else None
+        ),
+    )
     pair_mapping_complete = (
         isinstance(solution_binding, Mapping)
         and solution_binding.get("pair_mapping_complete") is True
@@ -5893,9 +5947,15 @@ def _result_evaluate_body(
     )
     count_only_raw_eval = aggregate == "none" and feat_type == "Eval" and not pair_mapping_complete
     if stationary_measure_count_only or count_only_raw_eval:
-        single_solution_count_observation = _single_stored_solution_count_observation(
-            model, dataset_binding, solution_tag
-        )
+        # HEAD parity: when no empty-outer witness probe ran (the getter was
+        # missing, refused, or published non-empty labels), compute the
+        # witness here exactly as the original count-only path did; an
+        # uncached witness must never be mistaken for a failed one.
+        if singleton_count_witness is None:
+            singleton_count_witness = _single_stored_solution_count_observation(
+                model, dataset_binding, solution_tag
+            )
+        single_solution_count_observation = singleton_count_witness
         single_attached_stationary = (
             isinstance(single_solution_count_observation, Mapping)
             and single_solution_count_observation.get("status")
