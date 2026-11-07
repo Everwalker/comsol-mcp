@@ -160,6 +160,107 @@ def test_real_stdio_call_validate_expressions(tmp_path):
     asyncio.run(_stdio_test())
 
 
+def test_real_stdio_public_docs_route_through_registry_call(tmp_path):
+    """Public MCP stdio -> registry_call -> catalog validation -> docs actions.
+
+    The MCP transport, published tool schemas, catalog input validation and
+    the OfflineDocsIndex are real; only the control-client boundary is
+    replaced in the child (same shape as the existing registry stdio test).
+    The corpus is a synthetic fixture, not copied commercial documentation.
+    """
+    import sys
+    import textwrap
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    corpus = tmp_path / 'Applications' / 'COMSOL64' / 'Multiphysics' / 'doc'
+    corpus.mkdir(parents=True)
+    (corpus / 'guide.md').write_text(
+        '# PropFeature\nIllegal temperature value example tutorial\n', encoding='utf-8')
+
+    async def _stdio_test():
+        child_server = textwrap.dedent(f'''
+            from pathlib import Path
+            from comsol_mcp import _control_client
+            from comsol_mcp._execution_contract import ExecutionContractError
+            from comsol_mcp._g2_registry import registry_describe, validate_call
+            from comsol_mcp._managed_backend import ManagedBackend
+
+            backend = ManagedBackend(Path({str(tmp_path)!r}), object(), registry={{}},
+                                     project_root=Path({str(tmp_path)!r}))
+
+            def dispatch(operation, arguments, execution):
+                try:
+                    if operation in {{"registry_call", "registry.call"}}:
+                        operation_id = arguments.get("operation_id", "")
+                        inner = dict(arguments.get("arguments") or {{}})
+                        validate_call(operation_id, inner)
+                        return backend._invoke_g2_control(operation_id, inner, {{}}, "stdio-docs")
+                    if operation in {{"registry_describe", "registry.describe"}}:
+                        return {{"success": True, "data": registry_describe(arguments.get("operation_id", ""))}}
+                except ExecutionContractError as exc:
+                    return {{"success": False, "error": exc.as_dict(), "data": {{}}}}
+                return {{"success": True, "data": {{}}}}
+
+            _control_client.dispatch = dispatch
+            from comsol_mcp.mcp_server import main
+            main()
+        ''')
+        server_params = StdioServerParameters(
+            command=sys.executable, args=['-c', child_server],
+            env={'PYTHONPATH': str(Path(__file__).resolve().parents[1]),
+                 'COMSOL_SERVER_MCP_HOME': str(tmp_path),
+                 'COMSOL_MCP_TOOL_PROFILE': 'full'},
+        )
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                assert (await session.initialize()) is not None
+                names = {tool.name for tool in (await session.list_tools()).tools}
+                assert {'registry_call', 'registry_describe'}.issubset(names)
+
+                # Public introspection of the docs contract: the published
+                # input schema keeps product and node_type dimensions apart.
+                described = await session.call_tool('registry_describe',
+                                                    arguments={'operation_id': 'docs.search'})
+                assert described.isError is False
+                props = described.structuredContent['data']['input_schema']['properties']
+                assert 'product' in props and 'node_type' not in props
+
+                def call(operation_id, inner):
+                    return session.call_tool('registry_call',
+                                             arguments={'operation_id': operation_id, 'arguments': inner})
+
+                indexed = await call('docs.index', {'project_id': 'proj', 'idempotency_key': 't16-public',
+                                                    'runtime_id': 'COMSOL64', 'sources': [str(corpus)]})
+                assert indexed.isError is False
+                index_data = indexed.structuredContent['data']
+                assert index_data['version'] == '6.4' and index_data['indexed_count'] >= 1
+
+                found = await call('docs.search', {'project_id': 'proj',
+                                                   'query': 'Illegal temperature tutorial', 'version': '6.4'})
+                assert found.isError is False
+                results = found.structuredContent['data']['results']
+                assert found.structuredContent['data']['status'] == 'SUCCEEDED'
+                assert 'illegal temperature' in results[0]['snippet'].lower()
+
+                absent = await call('docs.search', {'project_id': 'proj', 'query': 'phantom zzz term',
+                                                    'version': '6.4'})
+                assert absent.isError is False
+                assert absent.structuredContent['data']['status'] == 'NOT_FOUND'
+                unindexed = await call('docs.search', {'project_id': 'proj', 'query': 'Illegal',
+                                                       'version': '6.3'})
+                assert unindexed.structuredContent['data']['status'] == 'UNAVAILABLE'
+
+                # A node_type is not a legal docs.search dimension; the public
+                # envelope must refuse it with the catalog INVALID_REQUEST.
+                wrong = await call('docs.search', {'project_id': 'proj', 'query': 'Illegal',
+                                                   'version': '6.4', 'node_type': 'PropFeature'})
+                assert wrong.isError is True
+                assert 'INVALID_REQUEST' in json.dumps(wrong.structuredContent)
+
+    asyncio.run(_stdio_test())
+
+
 def test_opt_in_real_stdio_to_task_owned_control_listener(tmp_path):
     """Exercise real MCP stdio -> authenticated control RPC using a temporary fixture.
 

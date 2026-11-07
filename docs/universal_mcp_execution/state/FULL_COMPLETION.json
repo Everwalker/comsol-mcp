@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T41 software implementation and regression evidence recorded; T42 software may proceed. T07 repair and T16 documentation work remain in progress; original T07 job stays UNKNOWN and fenced. T19 software work is in progress.",
-  "updated_utc": "2026-11-07T14:47:01.713031+00:00",
+  "next_task_hint": "T16 and T41 software milestones recorded; T11 and T19 software work can proceed. T07 candidate repair awaits review and new isolated native validation; original job remains UNKNOWN and fenced.",
+  "updated_utc": "2026-11-07T14:51:21.415131+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -150,11 +150,15 @@
       "blocker": "Five tests failed because the pinned R31R2 capture was absent; actual 6.3/6.4 build-specific introspection remains unverified. Software downstream may proceed; do not count missing capture as passing."
     },
     "T16": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G3.json",
+        "docs/universal_mcp_execution/evidence/full/T16-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/t16_docs_probe_20261107.py"
+      ],
+      "blocker": "Installed public MCP to authenticated daemon path, live docs-to-API join, and actual 6.3 help remain unverified. T15 missing capture failures remain open."
     },
     "T17": {
       "status": "DONE",

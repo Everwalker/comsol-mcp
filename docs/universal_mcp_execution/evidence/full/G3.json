@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T14:10:17.594493+00:00",
+  "updated_utc": "2026-11-07T14:51:21.415131+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -43,5 +43,18 @@
       "docs/universal_mcp_execution/evidence/full/public_model_T06.json"
     ],
     "source_candidate_relation": "The Java/Worker production bytes at T06 match the pinned basis; changes after this evidence do not modify the Java code path. Reassess if affected source changes."
+  },
+  "T16": {
+    "status": "IMPLEMENTED",
+    "implementation_scope": "Recognize standard 6.3/6.4 install path version markers; require all search tokens in a returned chunk to reduce demonstrated unrelated hits. Tests exercise public stdio with a substituted control-client boundary; an in-process probe indexes actual locally installed 6.4 help.",
+    "source_identity_sha256": {
+      "comsol_mcp/_g2_docs.py": "8c5e2a8d7bcf9b464de02fc4cace69ba0b470c1aa4f3ab320adee555b6733826",
+      "tests/test_g3_r06_docs_query.py": "8e5ff03eb97568ae0c34037029965c9e2effcad60222e64f9060ac6672a176ec",
+      "tests/test_mcp_gateway.py": "7c69b5fa6dc5707f7bb20e9a8390e99176fa6c678f3721854116f5adb9f87244",
+      "docs/universal_mcp_execution/evidence/full/t16_docs_probe_20261107.py": "8330bbc868b82083f6dace36b607e8b00d78c92e0043cac8234ecd9230172b0a"
+    },
+    "evidence": "docs/universal_mcp_execution/evidence/full/T16-qwen-20261107.md",
+    "tests": "Docs and gateway selected suites 74 passed, 1 skipped; the separate 185 passed / 5 failed T15 collection still has missing pinned-capture failures (not passes).",
+    "limitations": "No installed-server-to-real-control-daemon documentation chain, actual 6.3 help, live docs-to-api.describe reflection, or actual Java execution of the unfamiliar API. Search is chunk-level all-token containment, not phrase or semantic matching."
   }
 }

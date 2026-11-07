@@ -1,7 +1,43 @@
 """Node type is a content dimension, never a product alias."""
 import pytest
-from comsol_mcp._g2_docs import OfflineDocsIndex
+from comsol_mcp._g2_docs import OfflineDocsIndex, infer_version
 from comsol_mcp._managed_backend import ManagedBackend
+
+
+def test_install_dir_markers_select_the_release():
+    """COMSOL63/COMSOL64 install names resolve to 6.3/6.4 releases."""
+    assert infer_version('COMSOL64') == '6.4'
+    assert infer_version('/Applications/COMSOL63/Multiphysics/doc/help') == '6.3'
+    assert infer_version('C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics\\doc') == '6.4'
+    # A dotted release keeps priority over the fallback alias.
+    assert infer_version('COMSOL 6.4', '6.3') == '6.4'
+    # The marker needs the COMSOL prefix and an exact two-digit release.
+    assert infer_version('COMSOL640') == 'unknown'
+    assert infer_version('COMSOL640', '6.3') == '6.3'
+    assert infer_version('reconstruct64', '6.4') == '6.4'
+
+
+def test_install_dir_layout_keeps_63_and_64_rows_apart(tmp_path):
+    """Indexing both install trees under one alias must not merge versions."""
+    for marker, body in (('COMSOL64', 'ModelEntity current'),
+                         ('COMSOL63', 'ModelEntity legacy')):
+        tree = tmp_path / 'Applications' / marker / 'Multiphysics' / 'doc'
+        tree.mkdir(parents=True)
+        (tree / 'model.txt').write_text(body)
+    index = OfflineDocsIndex(tmp_path / 'docs.sqlite', allowed_roots=[tmp_path])
+    try:
+        out = index.index(runtime_id='COMSOL64', sources=[str(tmp_path / 'Applications')])
+        assert out['version'] == '6.4'
+        current = index.search(query='current', version='6.4')
+        legacy = index.search(query='legacy', version='6.3')
+        assert current['status'] == 'SUCCEEDED' and current['results'][0]['snippet'] == 'ModelEntity current'
+        assert legacy['status'] == 'SUCCEEDED' and legacy['results'][0]['snippet'] == 'ModelEntity legacy'
+        # Each release slice is available but holds no document for the other
+        # tree's text, so cross-release queries are NOT_FOUND, never a merge.
+        assert index.search(query='current', version='6.3')['status'] == 'NOT_FOUND'
+        assert index.search(query='legacy', version='6.4')['status'] == 'NOT_FOUND'
+    finally:
+        index.close()
 
 
 @pytest.fixture
@@ -65,6 +101,34 @@ def test_node_type_is_matched_against_title_and_content_not_the_product(tmp_path
                             node_type='DomainFeature')['status'] == 'UNAVAILABLE'
         # A node type name is never a product name.
         assert index.search(query='PropFeature', version='6.4', product='DomainFeature')['status'] == 'UNAVAILABLE'
+    finally:
+        index.close()
+
+
+def test_multi_token_query_publishes_only_documents_holding_every_term(tmp_path):
+    """One common word must not turn an unrelated page into an error hit."""
+    body = tmp_path / 'docs'
+    body.mkdir()
+    (body / 'err.txt').write_text(
+        'ModelUtil\nThrows: java.io.IOException - if the file cannot be read.')
+    (body / 'intro.txt').write_text(
+        'Introduction\nThis file describes how to get started; read it first.')
+    index = OfflineDocsIndex(tmp_path / 'docs.sqlite', allowed_roots=[tmp_path])
+    try:
+        index.index(runtime_id='COMSOL64', sources=[str(body)])
+        # The intro page shares 'file', 'be' and 'read' but not 'cannot', so
+        # the full-phrase query excludes it under AND semantics.
+        hit = index.search(query='file cannot be read', version='6.4')
+        assert hit['status'] == 'SUCCEEDED'
+        assert [row['title'] for row in hit['results']] == ['ModelUtil']
+        assert 'file cannot be read' in hit['results'][0]['snippet'].lower()
+        # A shorter shared query legitimately returns both pages.
+        partial = index.search(query='read file', version='6.4')
+        assert partial['status'] == 'SUCCEEDED'
+        assert {row['title'] for row in partial['results']} == {'ModelUtil', 'Introduction'}
+        # A term absent from the whole slice is NOT_FOUND, never a
+        # partial-score success.
+        assert index.search(query='file cannot be parsed', version='6.4')['status'] == 'NOT_FOUND'
     finally:
         index.close()
 

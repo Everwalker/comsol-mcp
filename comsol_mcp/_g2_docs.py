@@ -14,6 +14,11 @@ from ._execution_contract import ExecutionContractError
 
 
 _VERSION_RE = re.compile(r"(?:COMSOL|comsol|version|v)?[^0-9]*(6[.]3|6[.]4)(?:[^0-9]|$)")
+# The supported installation directories are named COMSOL63/COMSOL64 (and the
+# Windows layout repeats COMSOL\COMSOL64), so an undotted install marker counts
+# as a version marker too; without this, docs indexed from the default install
+# cannot be searched under the 6.3/6.4 version dimension.
+_INSTALL_MARKER_RE = re.compile(r"(?<![A-Za-z0-9])(?i:comsol)\s*6([34])(?![0-9])")
 _TEXT_SUFFIXES = {".txt", ".md", ".rst", ".html", ".htm", ".xml", ".json", ".java"}
 _SECRET_PARTS = {".phase1-private", ".phase2-private", "control-private", ".ssh", ".aws", ".gnupg"}
 
@@ -27,9 +32,17 @@ def _sha256(path: Path) -> str:
 
 
 def infer_version(value: str, fallback: str | None = None) -> str:
+    """Resolve a 6.3/6.4 release marker from a runtime alias or path.
+
+    A dotted release (``6.3``/``6.4``) wins; otherwise the installation
+    directory marker (``COMSOL63``/``COMSOL64``) selects the release.
+    """
     match = _VERSION_RE.search(value or "")
     if match:
         return match.group(1)
+    match = _INSTALL_MARKER_RE.search(value or "")
+    if match:
+        return f"6.{match.group(1)}"
     return str(fallback or "unknown")
 
 
@@ -208,7 +221,7 @@ class OfflineDocsIndex:
 
         Both filters count toward availability: when the version/filters match
         no indexed document the result is UNAVAILABLE; when documents exist but
-        the query terms score nothing the result is NOT_FOUND.
+        no document contains every query token the result is NOT_FOUND.
         """
         if not isinstance(query, str) or not query.strip() or not isinstance(version, str) or not version.strip():
             raise ExecutionContractError("INVALID_REQUEST", "query and version are required")
@@ -229,20 +242,28 @@ class OfflineDocsIndex:
             return {"status": "UNAVAILABLE", "version": version, "results": [], "query": query}
         # Tokenized LIKE keeps this dependency-free and handles punctuation in
         # Java API names without constructing an unsafe SQL FTS expression.
+        # Publishing uses AND semantics: a document must contain every query
+        # token (title or content, case-insensitive containment).  Under the
+        # earlier any-token scoring a multi-word error query could return an
+        # unrelated page that merely contained one common word, falsely
+        # presenting a missing explanation as a successful help lookup.
+        # Relevance still ranks title matches above content matches.
         terms = [term for term in re.findall(r"[\w.:-]+", query.lower()) if term]
-        score_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? THEN 4 ELSE 0 END)", "(CASE WHEN lower(content) LIKE ? THEN 1 ELSE 0 END)"] * max(1, len(terms)))
+        effective_terms = terms or [query.lower()]
+        score_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? THEN 4 ELSE 0 END)", "(CASE WHEN lower(content) LIKE ? THEN 1 ELSE 0 END)"] * len(effective_terms))
+        coverage_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? OR lower(content) LIKE ? THEN 1 ELSE 0 END)"] * len(effective_terms))
         score_params: list[Any] = []
-        for term in terms or [query.lower()]:
-            score_params.extend([f"%{term}%", f"%{term}%"])
-        # Filter zero-score rows before publication.  Without this predicate
-        # every query returned an arbitrary document whenever that version had
-        # any indexed content, which falsely turned a missing concept into a
-        # successful help lookup.
-        sql = f"WITH ranked AS (SELECT *, ({score_sql}) AS relevance FROM documents WHERE {' AND '.join(where)}) " \
-              "SELECT * FROM ranked WHERE relevance > 0 ORDER BY relevance DESC, document_ref LIMIT ?"
+        coverage_params: list[Any] = []
+        for term in effective_terms:
+            like = f"%{term}%"
+            score_params.extend([like, like])
+            coverage_params.extend([like, like])
+        sql = f"WITH ranked AS (SELECT *, ({score_sql}) AS relevance, ({coverage_sql}) AS coverage FROM documents WHERE {' AND '.join(where)}) " \
+              "SELECT * FROM ranked WHERE relevance > 0 AND coverage = ? ORDER BY relevance DESC, document_ref LIMIT ?"
         # SQLite binds placeholders in the CTE's score expression, then its
-        # version/product predicates, then the outer LIMIT.
-        rows = self.db.execute(sql, score_params + params + [limit]).fetchall()
+        # coverage expression, then its version/product predicates, then the
+        # outer coverage bound and LIMIT.
+        rows = self.db.execute(sql, score_params + coverage_params + params + [len(effective_terms), limit]).fetchall()
         results = []
         for row in rows:
             doc = self._row(row)
