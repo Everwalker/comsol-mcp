@@ -115,6 +115,7 @@ from ._g2_engine import (
     property_set,
 )
 from ._g3_common import (
+    BINDABLE_SELECTION_KINDS,
     FUNCTION_TYPE_IDS,
     FUNCTION_TYPE_PROPERTIES,
     MEASURE_METRICS,
@@ -156,6 +157,7 @@ from ._g3_common import (
     require_entity_id_array,
     require_int,
     require_mapping,
+    require_named_selection,
     require_string,
     require_string_array,
     resolve_path,
@@ -806,25 +808,72 @@ def variable_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     }
 
 
+def _validate_bindable_selection(selection: Any, *, label: str = "selection") -> dict[str, Any]:
+    """Validate a bindable selection at a point where nothing is dispatched yet.
+
+    Both variable-selection entry points run this while only read probes have
+    happened, so a spec refusal here is a proven pre-dispatch refusal.  Without
+    the explicit validation stage the managed backend flattens the stage-less
+    validate_selection_spec raise into EXECUTION_STATE_UNKNOWN -- the W13_T006
+    mechanism pinned in tests/test_m1_product_repairs.py -- poisoning the
+    control gate for every later operation on the model.
+    """
+    try:
+        return validate_selection_spec(selection, label=label,
+                                       allowed_kinds=BINDABLE_SELECTION_KINDS)
+    except ExecutionContractError as exc:
+        if exc.stage is None:
+            raise PreWriteRefusal(exc.code, str(exc), safe_retry=exc.safe_retry,
+                                  details=exc.details) from exc
+        raise
+
+
 def variable_group_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("tag", "component", "selection"), ("tag",))
     tag = validate_tag(args["tag"])
     component = args.get("component")
     scope_spec = {} if component is None else {"component": component}
     parent, container, scope = _scope_container(worker, model_tag, scope_spec, "variable")
-    created = node_create(worker, model_tag, parent, "variable", tag, None)
-    node = child_node(worker, model_tag, parent, "variable", tag)
+    # Validate the requested selection before the group node exists, the same
+    # contract selection_create applies: a refused selection must never leave a
+    # half-configured node behind.  A named reference is resolved in its
+    # component here, like the dependency resolution node.selection_set performs.
     selection = args.get("selection")
-    selection_result = None
+    resolved_spec = None
+    effective_component: Any = None
     if selection is not None:
-        resolved_spec = validate_selection_spec(selection, label="selection")
+        resolved_spec = _validate_bindable_selection(selection)
         effective_component = component or resolved_spec.get("component")
+        if (component is not None and resolved_spec.get("component") is not None
+                and resolved_spec["component"] != component):
+            # node.selection_set's accepted contract: the selection must live in
+            # the component that owns the node (Selection.named() and model()
+            # resolve there), so a spec naming another component is refused here,
+            # before node_create, instead of validating in one component while the
+            # binding resolves the same tag in the other.  PreWriteRefusal
+            # declares the validation stage so the managed route publishes this
+            # refusal instead of flattening it to EXECUTION_STATE_UNKNOWN.
+            raise PreWriteRefusal(
+                "INVALID_REQUEST",
+                "selection component differs from its actual owner path: "
+                f"selection.component {resolved_spec['component']!r}, group component {component!r}",
+            )
         if scope == "global" and resolved_spec["kind"] in {"explicit", "all"} and not effective_component:
-            raise ExecutionContractError(
+            # Proven pre-write: this runs before node_create, so the refusal
+            # declares the validation stage; without it the managed route
+            # flattens the gate into EXECUTION_STATE_UNKNOWN (T14d probe).
+            raise PreWriteRefusal(
                 "INVALID_REQUEST",
                 "a local selection on a global variable group requires the model component node to be set "
                 "first (model.variable(<tag>).model(<mtag>)); pass component or selection.component",
             )
+        if resolved_spec["kind"] == "named":
+            _require_component(worker, model_tag, resolved_spec["component"])
+            require_named_selection(worker, model_tag, resolved_spec["component"], resolved_spec["tag"])
+    created = node_create(worker, model_tag, parent, "variable", tag, None)
+    node = child_node(worker, model_tag, parent, "variable", tag)
+    selection_result = None
+    if resolved_spec is not None:
         if not _has_accessor(node, "selection"):
             raise ExecutionContractError("API_UNSUPPORTED", "this variable group does not expose selection()")
         local = _call(node, "selection")
@@ -847,14 +896,32 @@ def variable_group_create(worker: Any, model_tag: str, arguments: Mapping[str, A
 def variable_selection_set(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("group", "selection"), ("group", "selection"))
     path, node, component, scope = _variable_group_context(worker, model_tag, args)
-    resolved_spec = validate_selection_spec(args["selection"], label="selection")
+    resolved_spec = _validate_bindable_selection(args["selection"])
     effective_component = component or resolved_spec.get("component")
+    if (component is not None and resolved_spec.get("component") is not None
+            and resolved_spec["component"] != component):
+        # Same contract as node.selection_set and variable_group_create above:
+        # the named tag resolves in the group's own component, so validating a
+        # different component's selection list would mis-bind a same-tag reference.
+        raise PreWriteRefusal(
+            "INVALID_REQUEST",
+            "selection component differs from its actual owner path: "
+            f"selection.component {resolved_spec['component']!r}, group component {component!r}",
+        )
     if scope == "global" and resolved_spec["kind"] in {"explicit", "all"} and not effective_component:
-        raise ExecutionContractError(
+        # Same gate as variable_group_create: nothing has been dispatched yet,
+        # so the refusal must declare the stage to survive the managed route.
+        raise PreWriteRefusal(
             "INVALID_REQUEST",
             "a local selection on a global variable group requires the model component node to be set first "
             "(model.variable(<tag>).model(<mtag>)); pass selection.component",
         )
+    if resolved_spec["kind"] == "named":
+        # Same dependency resolution as node.selection_set: refuse a named
+        # reference the component selection list does not report, instead of
+        # binding a dangling reference to a renamed or removed selection.
+        _require_component(worker, model_tag, resolved_spec["component"])
+        require_named_selection(worker, model_tag, resolved_spec["component"], resolved_spec["tag"])
     if not _has_accessor(node, "selection"):
         raise ExecutionContractError("API_UNSUPPORTED", "this variable group does not expose selection()")
     selection_node = _call(node, "selection")
@@ -2181,6 +2248,7 @@ def selection_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         raise node_not_found(f"selection {tag!r} does not exist in {component!r}")
     node = child_node(worker, model_tag, _component_path(component), "selection", tag)
     type_id = node_type(node)
+    label_probe = call_probe(node, "label")
     entities_probe = call_probe(node, "entities")
     entities = list(entities_probe["value"]) if entities_probe["ok"] and isinstance(entities_probe["value"], (list, tuple)) else None
     properties: dict[str, Any] = {}
@@ -2198,6 +2266,8 @@ def selection_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         "tag": tag,
         "path": path_with_segment(_component_path(component), "selection", tag),
         "type_id": type_id,
+        "label": label_probe["value"] if label_probe["ok"] else None,
+        "label_error": None if label_probe["ok"] else label_probe["error"],
         "entity_dimension": call_probe(node, "dim")["value"],
         "dimension": call_probe(node, "dimension")["value"],
         "entities": entities,

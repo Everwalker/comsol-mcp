@@ -1,0 +1,41 @@
+# T14b component-mismatch probe — post-fix run (worktree, 2026-11-08)
+== P1 group_create: group in comp1, named spec component comp2 (same tag in both) ==
+P1: INVALID_REQUEST -> selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+P1 state: varX exists in comp1=False, model_ref=None, named_ref=None (caller asked for comp2's 'sel'; comp1 model() + tag 'sel' resolves comp1's 'sel' [1,2]/dim2, comp2's is [9]/dim0)
+== P2 selection_set: group path comp1/variable/var1, named spec component comp2 ==
+P2: INVALID_REQUEST -> selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+P2 state: model_ref=None, named_ref=None (asked comp2)
+== P3 positive control: GLOBAL group, named spec component comp1 (legitimate) ==
+P3: OK -> {"path": {"segments": [{"collection": "variable", "tag": "varg"}]}, "scope": "global", "component": null, "selection": {"kind": "named", "applied": [{"method": "named", "requested": "sel", "readback": "sel"}], "model_binding": {"method": "model", "requested": "comp1", "readback": "comp1"}, "entity_s
+P3 state: model_ref='comp1', named_ref='sel'
+== P4 explicit: group comp1, explicit spec component comp2 ==
+P4: INVALID_REQUEST -> selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+P4 state: varE in comp1=False, entities_=None, geom=None (caller asked comp2/g2)
+== P5 inherited: group comp1, inherited spec component comp2 ==
+P5: INVALID_REQUEST -> selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+P5 state: varI in comp1=False, inheriting_=None model_ref=None (asked comp2)
+== P6 reverse asymmetry: group comp1, named spec comp2 but tag only in comp1 ==
+P6: INVALID_REQUEST -> selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+P6 note: the binding would resolve comp1's 'sel' (which exists); the gate refused on comp2, showing validation and binding use different components in both directions
+
+# Pre-fix run (identical script, captured in-session before the guard patch was applied)
+== P1 group_create: group in comp1, named spec component comp2 (same tag in both) ==
+P1: OK -> {"path": {"segments": [{"collection": "component", "tag": "comp1"}, {"collection": "variable", "tag": "varX"}]}, "created": true, ...}
+P1 state: varX exists in comp1=True, model_ref='comp1', named_ref='sel' (caller asked for comp2's 'sel')
+== P2 selection_set: group path comp1/variable/var1, named spec component comp2 ==
+P2: OK -> {... "selection": {"kind": "named", "applied": [{"method": "named", "requested": "sel", "readback": "sel"}], "model_binding": ...}}
+P2 state: model_ref='comp1', named_ref='sel' (asked comp2)
+== P3 positive control: GLOBAL group, named spec component comp1 (legitimate) ==
+P3: OK; P3 state: model_ref='comp1', named_ref='sel'
+== P4 explicit: group comp1, explicit spec component comp2 ==
+P4: OK; P4 state: varE in comp1=True, entities_=[7], geom='g2' (asked comp2/g2)
+== P5 inherited: group comp1, inherited spec component comp2 ==
+P5: OK; P5 state: varI in comp1=True, inheriting_=True model_ref='comp1' (asked comp2)
+== P6 reverse asymmetry: group comp1, named spec comp2 but tag only in comp1 ==
+P6: NODE_NOT_FOUND -> selection 'sel' does not exist in component 'comp2'; the engine reports []
+
+# Commands (repo root, PYTEST_DISABLE_PLUGIN_AUTOLOAD=1, -p no:cacheprovider):
+#   .g3-private/full-continuation-20261107/venv/bin/python docs/universal_mcp_execution/evidence/full/T14b-component-mismatch-probe-20261108.py
+#   .g3-private/full-continuation-20261107/venv/bin/python -m pytest tests/test_t14_selection_routes.py -q                     -> 22 passed
+#   .g3-private/full-continuation-20261107/venv/bin/python -m pytest tests/test_t14_selection_routes.py tests/test_g3_common.py tests/test_g3_w13.py tests/test_t20_domain_scope.py tests/test_m1_product_repairs.py -q -> 333 passed, exit 0
+

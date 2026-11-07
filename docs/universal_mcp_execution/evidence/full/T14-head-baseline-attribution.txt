@@ -1,0 +1,13 @@
+T14 existing-failure attribution: worktree vs HEAD snapshot copy at /tmp/t14-head-check
+Copy: tar of worktree (excl .git/.g3-private/__pycache__), then comsol_mcp/_g3_common.py replaced by git show HEAD:comsol_mcp/_g3_common.py
+venv python 3.14.7, PYTEST_DISABLE_PLUGIN_AUTOLOAD=1, -p no:cacheprovider
+
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_before_after_readback_reuses_first_original_child_not_new_wrapper
+FAILED tests/test_g3_results.py::test_actual014_raw_reproduces_original_r5_exact_label_rejection
+FAILED tests/test_g3_results.py::test_actual015_partial_resolver_reproduces_original_r6_publication_failure
+29 failed, 261 passed in 2.54s
+
+u06 collection error on HEAD copy:
+ERROR tests/test_u06_stationary_measure_integration.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.34s

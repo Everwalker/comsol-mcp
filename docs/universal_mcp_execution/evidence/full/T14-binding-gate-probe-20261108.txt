@@ -1,0 +1,19 @@
+T14 binding/label gate probe. Same script run twice.
+
+=== HEAD state (/tmp/t14-head-check: _g3_common.py = HEAD 4b3cca8..., _g3_w13.py = HEAD, no T14 selection edits) ===
+A spatial group_create -> ExecutionContractError API_UNSUPPORTED selection.kind='spatial' has no verified offline path in this operation (supported here: ['named', 'explicit', 'all', 'inherited'])
+A leftover variable nodes: ['varBad']
+B named-gone group_create -> OK {'path': {'segments': [{'collection': 'component', 'tag': 'comp1'}, {'collection': 'variable', 'tag': 'varX'}]
+B node created: True
+C named-gone selection_set -> OK {'path': {'segments': [{'collection': 'variable', 'tag': 'g1'}]}, 'scope': 'global', 'component': None, 'selec
+C named_ref after attempt: gone
+D inspect label: None label_error: None
+
+=== worktree state (T14 selection edits in _g3_common.py + approved _g3_w13.py selection regions) ===
+A spatial group_create -> ExecutionContractError API_UNSUPPORTED selection.kind='spatial' has no verified offline path in this operation (supported here: ['named', 'explicit', 'all', 'inherited'])
+A leftover variable nodes: []
+B named-gone group_create -> PreWriteRefusal NODE_NOT_FOUND selection 'gone' does not exist in component 'comp1'; the engine reports ['faces']
+B node created: False
+C named-gone selection_set -> PreWriteRefusal NODE_NOT_FOUND selection 'gone' does not exist in component 'comp1'; the engine reports ['faces']
+C named_ref after attempt: None
+D inspect label: Outer boundary label_error: None

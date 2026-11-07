@@ -1,0 +1,2054 @@
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 49%]
+......F......................F.......................................... [ 66%]
+........................................................................ [ 82%]
+..............................................FFFFFFFFFFFFFFFF.FFFFFFFFF [ 99%]
+F..F                                                                     [100%]
+=================================== FAILURES ===================================
+_______ test_actual014_raw_reproduces_original_r5_exact_label_rejection ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c2dedd0>
+
+    def test_actual014_raw_reproduces_original_r5_exact_label_rejection(monkeypatch):
+        import importlib.util
+        from pathlib import Path
+        old=Path(__file__).resolve().parents[1] / 'continuation/external-source/cb9949f2055e969d/_g3_results.py'
+        spec=importlib.util.spec_from_file_location('comsol_mcp._activity014_frozen_r5_results',old)
+        import hashlib
+>       assert hashlib.sha256(old.read_bytes()).hexdigest()=='cb9949f2055e969d3bedb19cac1df31f6e3bdfa710c78d749e2363f5ff3c1de3'
+                              ^^^^^^^^^^^^^^^^
+
+tests/test_g3_results.py:3148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/external-source/cb9949f2055e969d/_g3_results.py')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/external-source/cb9949f2055e969d/_g3_results.py'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+__ test_actual015_partial_resolver_reproduces_original_r6_publication_failure __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c39e740>
+
+    def test_actual015_partial_resolver_reproduces_original_r6_publication_failure(monkeypatch):
+        import importlib.util,hashlib
+        from pathlib import Path
+        from tests._published_history import published_source
+>       source=published_source('w23-saved-mph-science-readback-20261012-candidate20-r6/comsol_mcp/_g3_results.py')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_g3_results.py:3275: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/_published_history.py:16: in published_source
+    rows = [row for row in _source_map() if row["source"].endswith("/" + logical_path)]
+                           ^^^^^^^^^^^^^
+tests/_published_history.py:12: in _source_map
+    return json.loads((ROOT / "continuation/EXTERNAL_SOURCE_MAP.json").read_text())
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/EXTERNAL_SOURCE_MAP.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/EXTERNAL_SOURCE_MAP.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+__ test_original_public_scope_consume_accepts_only_actual_child_and_readbacks __
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_public_scope_con0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e15fc40>
+
+    def test_original_public_scope_consume_accepts_only_actual_child_and_readbacks(tmp_path,monkeypatch):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x112737890>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_______ test_actual_fault_fires_and_never_exempts_revision[global-child] _______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ed3bbd0>
+fault = 'global-child'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125a91d0>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_______ test_actual_fault_fires_and_never_exempts_revision[wrong-parent] _______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1125537e0>
+fault = 'wrong-parent'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52dd10>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_____ test_actual_fault_fires_and_never_exempts_revision[child-generation] _____
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e6b3e70>
+fault = 'child-generation'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125a8190>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_______ test_actual_fault_fires_and_never_exempts_revision[ignored-geom] _______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10eda38c0>
+fault = 'ignored-geom'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125a9810>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+______ test_actual_fault_fires_and_never_exempts_revision[ignored-named] _______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e694440>
+fault = 'ignored-named'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52e990>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+______ test_actual_fault_fires_and_never_exempts_revision[wrong-members] _______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11256e820>
+fault = 'wrong-members'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52dd10>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+________ test_actual_fault_fires_and_never_exempts_revision[wrong-dim] _________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ed73af0>
+fault = 'wrong-dim'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125a8190>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+______ test_actual_fault_fires_and_never_exempts_revision[missing-getter] ______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e15cd00>
+fault = 'missing-getter'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52d590>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+______ test_actual_fault_fires_and_never_exempts_revision[unknown-getter] ______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10eda3a80>
+fault = 'unknown-getter'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52e850>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_____ test_actual_fault_fires_and_never_exempts_revision[global-mutation] ______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x112623a80>
+fault = 'global-mutation'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125a9f90>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_____ test_actual_fault_fires_and_never_exempts_revision[post-read-change] _____
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne10')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e696120>
+fault = 'post-read-change'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52e990>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_________ test_actual_fault_fires_and_never_exempts_revision[revision] _________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne11')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ed72120>
+fault = 'revision'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52fb10>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+__________ test_actual_fault_fires_and_never_exempts_revision[units] ___________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne12')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ef0bd90>
+fault = 'units'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125aa490>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+________ test_actual_fault_fires_and_never_exempts_revision[incomplete] ________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_actual_fault_fires_and_ne13')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ee0b070>
+fault = 'incomplete'
+
+    @pytest.mark.parametrize('fault',['global-child','wrong-parent','child-generation','ignored-geom','ignored-named','wrong-members','wrong-dim','missing-getter','unknown-getter','global-mutation','post-read-change','revision','units','incomplete'])
+    def test_actual_fault_fires_and_never_exempts_revision(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out;fired=False
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52d590>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+______ test_exact_plane_guard_accepts14_and_rejects_cross_plane_no_native ______
+
+    def test_exact_plane_guard_accepts14_and_rejects_cross_plane_no_native():
+        for port,x in [('1',-10.),('2',8.)]:
+            expr=runner.plane_field_expressions(port);assert len(expr)==14 and len(set(expr))==14
+>           a={'spec':{'expressions':list(expr),'units':list(runner.plane_field_units(port)),'solution':{'dataset':'dset1','solution':'sol1'},'complex_mode':'preserve','selection':runner.plane_selection(port),'entity_dim':1},'points':runner._public_points(runner._field_points(x,321)),'coordinate_unit':'um','frame':'spatial'}
+                                                                                                                                                                                                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+x_um = -10.0, sample_count = 321
+
+    def _field_points(x_um: float, sample_count: int) -> list[list[float]]:
+        if sample_count not in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS:
+>           raise ValueError(f"field sample count is outside the frozen saved-MPH {protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS} grid")
+E           ValueError: field sample count is outside the frozen saved-MPH (641, 1281) grid
+
+tools/run_native_w23_saved_mph_diagnostic.py:1226: ValueError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[missing] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f0f8360>
+fault = 'missing'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125aaad0>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-parent-geometry] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x112553d20>
+fault = 'wrong-parent-geometry'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1127347d0>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-dimension] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ef08590>
+fault = 'wrong-dimension'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52ee90>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-name] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ef23bd0>
+fault = 'wrong-name'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125aa5d0>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-membership] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ed70980>
+fault = 'wrong-membership'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52fb10>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[unknown-inheriting] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e873000>
+fault = 'unknown-inheriting'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x112734910>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[inheriting] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x112623ee0>
+fault = 'inheriting'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125aa490>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[after-change] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ee09cc0>
+fault = 'after-change'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x112734690>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-stage] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ef22660>
+fault = 'wrong-stage'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x10e52ee90>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+_ test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-component] _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_original_selection_consum9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ed71860>
+fault = 'wrong-component'
+
+    @pytest.mark.parametrize('fault',['missing','wrong-parent-geometry','wrong-dimension','wrong-name','wrong-membership','unknown-inheriting','inheriting','after-change','wrong-stage','wrong-component'])
+    def test_original_selection_consumer_rejects_invalid_actual_shape_before_science(tmp_path,monkeypatch,fault):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x1125a9f90>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+____ test_before_after_readback_reuses_first_original_child_not_new_wrapper ____
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-786/test_before_after_readback_reu0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c3396a0>
+
+    def test_before_after_readback_reuses_first_original_child_not_new_wrapper(tmp_path,monkeypatch):
+>       out,g=setup(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_activity022_boundary_selection_ticket.py:197: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:47: in _public
+    ref=service.bind_model('Model')['execution']['model_ref']
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:277: in bind_model
+    snapshot = self._snapshot(model_tag)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_execution_service.py:630: in _snapshot
+    raw = dict(self.adapter.model_snapshot(model_tag))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1259: in backend_snapshot
+    result = _decode_reply(self.model_snapshot(model_tag, request_id=request_id, rpc_timeout_s=rpc_timeout_s), self)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_java_worker.py:1227: in model_snapshot
+    return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._java_worker.PersistentJavaWorker object at 0x112737890>
+kind = 'model_snapshot', payload = {'tag': 'Model'}, request_id = None
+queue_timeout_s = None, rpc_timeout_s = None
+
+    def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+            raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
+        body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
+        source_binding_required = kind in {"code_compile", "code_execute"}
+        if source_binding_required:
+            try:
+                _validate_source_snapshot_fields(body)
+            except JavaWorkerError as refusal:
+                self._emit_request_event("binding_refused", request_id=str(body["request_id"]), kind=kind,
+                                         payload=body, status="FAILED", code=refusal.reply.get("code"))
+                raise refusal
+        if queue_timeout_s is not None:
+            body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+        identifier = str(body["request_id"])
+        from ._ephemeral_result_ticket import before_submit, after_submit
+        ephemeral_audit = None
+        if not source_binding_required:
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        def mark_dispatched() -> None:
+            nonlocal ephemeral_audit
+            ephemeral_audit = before_submit(self, kind, body)
+            self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+        try:
+>           reply = self._request(body, timeout_s=rpc_timeout_s,
+                                  require_source_binding=source_binding_required,
+                                  before_dispatch=mark_dispatched if source_binding_required else None)
+E                                 TypeError: _RpcSDK.request() got an unexpected keyword argument 'require_source_binding'
+
+comsol_mcp/_java_worker.py:1151: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_g3_results.py::test_actual014_raw_reproduces_original_r5_exact_label_rejection
+FAILED tests/test_g3_results.py::test_actual015_partial_resolver_reproduces_original_r6_publication_failure
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_public_scope_consume_accepts_only_actual_child_and_readbacks
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[global-child]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[wrong-parent]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[child-generation]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[ignored-geom]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[ignored-named]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[wrong-members]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[wrong-dim]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[missing-getter]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[unknown-getter]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[global-mutation]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[post-read-change]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[revision]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[units]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_actual_fault_fires_and_never_exempts_revision[incomplete]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_exact_plane_guard_accepts14_and_rejects_cross_plane_no_native
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[missing]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-parent-geometry]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-dimension]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-name]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-membership]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[unknown-inheriting]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[inheriting]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[after-change]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-stage]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_original_selection_consumer_rejects_invalid_actual_shape_before_science[wrong-component]
+FAILED tests/test_activity022_boundary_selection_ticket.py::test_before_after_readback_reuses_first_original_child_not_new_wrapper
+29 failed, 407 passed in 2.72s

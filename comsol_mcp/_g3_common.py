@@ -1121,6 +1121,38 @@ def all_entities_of_dimension(component: Any, entity_dimension: int) -> list[int
     return require_entity_id_array(raw, "entities()", allow_empty=True)
 
 
+def _named_selection_gate(container_parent: Any, component: str, tag: str,
+                          geometry: str | None = None) -> None:
+    """Refuse a named-selection reference the owning container does not report.
+
+    The owning container's own tags() list is read first, matching the
+    read-then-refuse contract selection.inspect/selection.update already apply
+    and the dependency resolution node.selection_set performs before binding a
+    named reference: when a selection was renamed or removed after the caller
+    captured its tag, the caller gets a NODE_NOT_FOUND naming the engine's
+    actual members instead of an ambiguous engine-state failure.  When the
+    selection container or its tags() cannot be read the gate steps aside and
+    the accessor call surfaces the engine's own error.
+    """
+    container_probe = call_probe(container_parent, "selection")
+    if not container_probe["ok"] or container_probe["value"] is None:
+        return
+    probe = call_probe(container_probe["value"], "tags")
+    if probe["ok"] and isinstance(probe["value"], (list, tuple)):
+        available = [str(item) for item in probe["value"]]
+        if tag not in available:
+            scope = (f"component {component!r}" if geometry is None
+                     else f"geometry {geometry!r} of component {component!r}")
+            raise node_not_found(
+                f"selection {tag!r} does not exist in {scope}; the engine reports {available}"
+            )
+
+
+def require_named_selection(worker: Any, model_tag: str, component: str, tag: str) -> None:
+    """Gate a component-level named selection reference (see _named_selection_gate)."""
+    _named_selection_gate(component_node(worker, model_tag, component), component, tag)
+
+
 def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _component_final_entity: bool = False) -> dict[str, Any]:
     """Resolve a SelectionSpec to a concrete entity list through verified reads.
 
@@ -1147,6 +1179,7 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _compo
         geometry = resolved.get("geometry")
         if geometry and not _component_final_entity:
             geom = _call(comp, "geom", geometry)
+            _named_selection_gate(geom, component, resolved["tag"], geometry)
             node = _call(geom, "selection", resolved["tag"])
             objects_probe = call_probe(node, "objects")
             objects = [str(item) for item in objects_probe["value"]] if objects_probe["ok"] and objects_probe["value"] else []
@@ -1189,6 +1222,7 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _compo
                 "entity_count": len(object_entities),
                 "source": "geom_named_selection",
             }
+        _named_selection_gate(comp, component, resolved["tag"])
         node = _call(comp, "selection", resolved["tag"])
         if not _component_final_entity:
             return {"kind":kind,"component":component,"selection_tag":resolved["tag"],
@@ -1697,6 +1731,7 @@ __all__ = [
     "require_entity_id_array",
     "require_int",
     "require_mapping",
+    "require_named_selection",
     "require_number",
     "require_string",
     "require_string_array",

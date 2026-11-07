@@ -1,0 +1,85 @@
+# T14d global-scope selection gate on the public managed route (worktree, 2026-11-08)
+
+# Pre-fix run (identical script, captured before the two raise sites declared the stage)
+== G1 group_create global explicit spec without component ==
+G1 group_create global explicit spec without component: RAISED EXECUTION_STATE_UNKNOWN stage=post_dispatch
+G1 group_create global explicit spec without component: cause_code=INVALID_REQUEST cause_message=a local selection on a global variable group requires the model component node to be set first (model.variable(<tag>).model(<mtag>)); pass component or selection.component
+G1 group_create global explicit spec without component: NOTE flattening reason: did not declare a pre-dispatch stage
+G1 group_create global explicit spec without component: comp1 variable tags=[] global variable tags=[]
+
+== G2 selection_set global explicit spec without component ==
+G2 selection_set global explicit spec without component: RAISED EXECUTION_STATE_UNKNOWN stage=post_dispatch
+G2 selection_set global explicit spec without component: cause_code=INVALID_REQUEST cause_message=a local selection on a global variable group requires the model component node to be set first (model.variable(<tag>).model(<mtag>)); pass selection.component
+G2 selection_set global explicit spec without component: NOTE flattening reason: did not declare a pre-dispatch stage
+G2 selection_set global explicit spec without component: comp1 variable tags=[] global variable tags=['gvGate']
+
+G2 group state after refusal: named_ref=None model_ref=None inheriting_=False entities_=None
+
+== P1 group_create global explicit spec component comp1 (legitimate) ==
+P1 group_create global explicit spec component comp1 (legitimate): envelope status=None success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P1 group_create global explicit spec component comp1 (legitimate): comp1 variable tags=[] global variable tags=['varOk']
+
+== P2 selection_set global explicit spec component comp1 (legitimate) ==
+P2 selection_set global explicit spec component comp1 (legitimate): envelope status=APPLIED success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P2 selection_set global explicit spec component comp1 (legitimate): comp1 variable tags=[] global variable tags=['gvOk']
+
+
+# Post-fix run (same script after the two global-scope raises became PreWriteRefusal)
+== G1 group_create global explicit spec without component ==
+G1 group_create global explicit spec without component: envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+G1 group_create global explicit spec without component: refusal code=INVALID_REQUEST stage=validation message=a local selection on a global variable group requires the model component node to be set first (model.variable(<tag>).model(<mtag>)); pass component or selection.component
+G1 group_create global explicit spec without component: comp1 variable tags=[] global variable tags=[]
+
+== G2 selection_set global explicit spec without component ==
+G2 selection_set global explicit spec without component: envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+G2 selection_set global explicit spec without component: refusal code=INVALID_REQUEST stage=validation message=a local selection on a global variable group requires the model component node to be set first (model.variable(<tag>).model(<mtag>)); pass selection.component
+G2 selection_set global explicit spec without component: comp1 variable tags=[] global variable tags=['gvGate']
+
+G2 group state after refusal: named_ref=None model_ref=None inheriting_=False entities_=None
+
+== P1 group_create global explicit spec component comp1 (legitimate) ==
+P1 group_create global explicit spec component comp1 (legitimate): envelope status=None success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P1 group_create global explicit spec component comp1 (legitimate): comp1 variable tags=[] global variable tags=['varOk']
+
+== P2 selection_set global explicit spec component comp1 (legitimate) ==
+P2 selection_set global explicit spec component comp1 (legitimate): envelope status=APPLIED success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P2 selection_set global explicit spec component comp1 (legitimate): comp1 variable tags=[] global variable tags=['gvOk']
+
+
+# Commands (repo root):
+#   .g3-private/full-continuation-20261107/venv/bin/python docs/universal_mcp_execution/evidence/full/T14d-global-scope-route-probe-20261108.py
+#   PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .g3-private/full-continuation-20261107/venv/bin/python -m pytest tests/test_t14_selection_routes.py -q -p no:cacheprovider
+#     -> 28 passed, exit 0 (24 T14c + 4 new T14d pins)
+#   PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .g3-private/full-continuation-20261107/venv/bin/python -m pytest tests/test_t14_selection_routes.py tests/test_g3_common.py tests/test_g3_w13.py tests/test_t20_domain_scope.py tests/test_m1_product_repairs.py -q -p no:cacheprovider
+#     -> 339 passed, exit 0 (T14c 335 baseline + 4 new pins; test_m1_product_repairs keeps the mutation-witness UNKNOWN semantics pinned)
+
+# Notes:
+# * Scope beyond T14c: the T14c probe pinned the component-mismatch and named/
+#   kind gates but not the global-scope gate (scope == global + explicit/all +
+#   no effective_component), which at that time still raised a stage-less
+#   ExecutionContractError in variable_group_create (before node_create) and in
+#   variable_selection_set (before any selection call).  Pre-fix G1/G2 confirm
+#   the managed route flattened it to EXECUTION_STATE_UNKNOWN despite the raise
+#   being proven pre-write.
+# * The fix converts exactly those two raise sites to PreWriteRefusal (code and
+#   message unchanged).  The post-write API_UNSUPPORTED raises behind the
+#   selection() accessor probe are deliberately NOT converted: they cannot prove
+#   a pre-dispatch state and stay fail-closed UNKNOWN.
+# * kind all cannot reach this gate on a public request (validate_selection_spec
+#   requires selection.component for all), so the reachable shape is explicit on a
+#   global group without selection.component; the gate condition keeps the all
+#   arm as the documented invariant.
+# * Mutation-witness fail-closed on this exact gate is pinned by
+#   tests/test_t14_selection_routes.py::TestManagedRouteRefusalPublication::
+#   test_global_group_gate_behind_a_recorded_mutation_stays_unknown (recorded
+#   mutation-class call -> EXECUTION_STATE_UNKNOWN stage=post_dispatch with
+#   cause_code INVALID_REQUEST), mirroring tests/test_m1_product_repairs.py.
+# * Fake-engine boundary as in T14c: DispatchWitness is vacuously clean here; the
+#   write-dispatch proof is the printed engine state (no varGate node; gvGate
+#   group state unchanged).  No COMSOL/Worker/SSH was started; no native claim.
+# * Identities: probe py sha256 29d0b6c7d59af5f93b5db110dd6b299104a93f8aabaa25fd1a262166f629aa97;
+#   comsol_mcp/_g3_w13.py after this fix sha256 f9ef1497f9e838653df7291526b362baf5dfef87ff8b59af627325490fd47b5f
+#   (T14c state was 469410f31f82ba32050215cc6a21eb233a694b1954781410b5f78d9216419bee);
+#   tests/test_t14_selection_routes.py after this fix sha256 682ce283104fa1fc348e9a75b5aea62a9f95180283f5a6a80f6904ab947a1451
+#   (T14c state 1fffa8b84a14cceacb1bfe7f9c34c96345118ef11b0ba6e87c5df64b347c8657);
+#   comsol_mcp/_g3_common.py unchanged (014c589cb4ed480341b073aebaa513eb65af91fa995ba6e56dc478711fed8209).

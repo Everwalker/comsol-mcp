@@ -1,0 +1,93 @@
+# T14c managed-route refusal-publication probe - post-fix run (worktree, 2026-11-08)
+== M1 group_create named component mismatch (comp1 group, comp2 spec) ==
+M1 group_create named component mismatch (comp1 group, comp2 spec): envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+M1 group_create named component mismatch (comp1 group, comp2 spec): refusal code=INVALID_REQUEST stage=validation message=selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+M1 group_create named component mismatch (comp1 group, comp2 spec): comp1 variable tags=[] global variable tags=[]
+
+== M2 selection_set inherited component mismatch (comp1 group, comp2 spec) ==
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): refusal code=INVALID_REQUEST stage=validation message=selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): comp1 variable tags=['gv2'] global variable tags=[]
+
+M2 group state after refusal: named_ref=None model_ref=None inheriting_=False
+
+== M3 group_create stale named tag 'gone' ==
+M3 group_create stale named tag 'gone': envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+M3 group_create stale named tag 'gone': refusal code=NODE_NOT_FOUND stage=validation message=selection 'gone' does not exist in component 'comp1'; the engine reports ['faces']
+M3 group_create stale named tag 'gone': comp1 variable tags=[] global variable tags=[]
+
+== M4 group_create unbindable kind spatial (pre-create validation) ==
+M4 group_create unbindable kind spatial (pre-create validation): envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+M4 group_create unbindable kind spatial (pre-create validation): refusal code=API_UNSUPPORTED stage=validation message=selection.kind='spatial' has no verified offline path in this operation (supported here: ['named', 'explicit', 'all', 'inherited'])
+M4 group_create unbindable kind spatial (pre-create validation): comp1 variable tags=[] global variable tags=[]
+
+== M5 group_create named spec without tag ==
+M5 group_create named spec without tag: envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+M5 group_create named spec without tag: refusal code=INVALID_REQUEST stage=validation message=selection: kind 'named' requires tag
+M5 group_create named spec without tag: comp1 variable tags=[] global variable tags=[]
+
+== P-OK1 global group, named spec component comp1 (legitimate) ==
+P-OK1 global group, named spec component comp1 (legitimate): envelope status=None success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P-OK1 global group, named spec component comp1 (legitimate): comp1 variable tags=[] global variable tags=['varG']
+
+== P-OK2 comp1 group, named spec component comp1 (legitimate) ==
+P-OK2 comp1 group, named spec component comp1 (legitimate): envelope status=None success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P-OK2 comp1 group, named spec component comp1 (legitimate): comp1 variable tags=['varOk'] global variable tags=[]
+
+
+# Pre-fix run (identical script, captured before the stage patch was applied)
+== M1 group_create named component mismatch (comp1 group, comp2 spec) ==
+M1 group_create named component mismatch (comp1 group, comp2 spec): RAISED EXECUTION_STATE_UNKNOWN stage=post_dispatch
+M1 group_create named component mismatch (comp1 group, comp2 spec): cause_code=INVALID_REQUEST cause_message=selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+M1 group_create named component mismatch (comp1 group, comp2 spec): NOTE flattening reason: did not declare a pre-dispatch stage
+M1 group_create named component mismatch (comp1 group, comp2 spec): comp1 variable tags=[] global variable tags=[]
+
+== M2 selection_set inherited component mismatch (comp1 group, comp2 spec) ==
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): RAISED EXECUTION_STATE_UNKNOWN stage=post_dispatch
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): cause_code=INVALID_REQUEST cause_message=selection component differs from its actual owner path: selection.component 'comp2', group component 'comp1'
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): NOTE flattening reason: did not declare a pre-dispatch stage
+M2 selection_set inherited component mismatch (comp1 group, comp2 spec): comp1 variable tags=['gv2'] global variable tags=[]
+
+M2 group state after refusal: named_ref=None model_ref=None inheriting_=False
+
+== M3 group_create stale named tag 'gone' ==
+M3 group_create stale named tag 'gone': envelope status=REFUSED success=False execution_state_unknown=False dispatch_stage=validation witness.mutation_issued=False
+M3 group_create stale named tag 'gone': refusal code=NODE_NOT_FOUND stage=validation message=selection 'gone' does not exist in component 'comp1'; the engine reports ['faces']
+M3 group_create stale named tag 'gone': comp1 variable tags=[] global variable tags=[]
+
+== M4 group_create unbindable kind spatial (pre-create validation) ==
+M4 group_create unbindable kind spatial (pre-create validation): RAISED EXECUTION_STATE_UNKNOWN stage=post_dispatch
+M4 group_create unbindable kind spatial (pre-create validation): cause_code=API_UNSUPPORTED cause_message=selection.kind='spatial' has no verified offline path in this operation (supported here: ['named', 'explicit', 'all', 'inherited'])
+M4 group_create unbindable kind spatial (pre-create validation): NOTE flattening reason: did not declare a pre-dispatch stage
+M4 group_create unbindable kind spatial (pre-create validation): comp1 variable tags=[] global variable tags=[]
+
+== M5 group_create named spec without tag ==
+M5 group_create named spec without tag: RAISED EXECUTION_STATE_UNKNOWN stage=post_dispatch
+M5 group_create named spec without tag: cause_code=INVALID_REQUEST cause_message=selection: kind 'named' requires tag
+M5 group_create named spec without tag: NOTE flattening reason: did not declare a pre-dispatch stage
+M5 group_create named spec without tag: comp1 variable tags=[] global variable tags=[]
+
+== P-OK1 global group, named spec component comp1 (legitimate) ==
+P-OK1 global group, named spec component comp1 (legitimate): envelope status=None success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P-OK1 global group, named spec component comp1 (legitimate): comp1 variable tags=[] global variable tags=['varG']
+
+== P-OK2 comp1 group, named spec component comp1 (legitimate) ==
+P-OK2 comp1 group, named spec component comp1 (legitimate): envelope status=None success=True execution_state_unknown=False dispatch_stage=None witness.mutation_issued=None
+P-OK2 comp1 group, named spec component comp1 (legitimate): comp1 variable tags=['varOk'] global variable tags=[]
+
+
+# Commands (repo root):
+#   .g3-private/full-continuation-20261107/venv/bin/python docs/universal_mcp_execution/evidence/full/T14c-managed-route-probe-20261108.py
+#   PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .g3-private/full-continuation-20261107/venv/bin/python -m pytest tests/test_t14_selection_routes.py tests/test_g3_common.py tests/test_g3_w13.py tests/test_t20_domain_scope.py tests/test_m1_product_repairs.py -q -p no:cacheprovider
+#     -> 335 passed, exit 0 (TestManagedRouteRefusalPublication pins included)
+#   same command --deselect tests/test_t14_selection_routes.py::TestManagedRouteRefusalPublication
+#     -> 333 passed, 2 deselected, exit 0 (T14b baseline preserved)
+
+# Notes:
+# * The fake engine is not behind the _java_worker transport, so DispatchWitness is
+#   vacuously clean in these runs; the write-dispatch proof here is the printed
+#   variable collections and group state (no node created, named_ref/model_ref
+#   unchanged). The live-transport witness behaviour (a recorded mutation keeps
+#   EXECUTION_STATE_UNKNOWN, a stage-less raise keeps EXECUTION_STATE_UNKNOWN) is
+#   pinned by tests/test_m1_product_repairs.py, which is included in the 335 run.
+# * Probe file sha256 af8febe9e9a36c8403c694e6b38a347dc60c46b477235d1e14a7bc0e68c7f06b.
