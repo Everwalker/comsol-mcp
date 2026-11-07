@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:10:35.833338+00:00",
+  "updated_utc": "2026-11-07T15:31:08.579423+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -83,7 +83,15 @@
       }
     },
     "evidence": "docs/universal_mcp_execution/evidence/full/T19-qwen-20261107.md",
-    "open_question": "TASKS T19 explicitly includes file/compute budgets across domain, generic API and Java. The Qwen report observes fixed host-side limits but does not yet demonstrate the required file-budget semantics across all applicable routes. Do not classify a possible required gap as new scope without reconciling the frozen task.",
-    "limitations": "Real bound-model authorization/batch setter and negative controls remain unverified; trusted Java is not an OS sandbox."
+    "open_question": "Whether uncapped legacy/domain model file I/O satisfies the frozen T19 file-budget obligation remains unresolved; do not infer a configurable quota is mandatory or waive the obligation without evidence.",
+    "limitations": "Real bound-model authorization/batch setter and negative controls remain unverified; trusted Java is not an OS sandbox.",
+    "file_budget_followup": {
+      "evidence": "docs/universal_mcp_execution/evidence/full/T19-file-budget-qwen-20261107.md",
+      "tests": "New focused file-budget suite 2 passed; adjacent selected suites 64 passed, exit 0.",
+      "java_source_limit": "2 MiB (prior T19 report 512 KiB was incorrect)",
+      "known_gap": "Qwen enumerated legacy paths and native .mph save/load without byte budgets. TASKS T19 explicitly calls for file/compute budgets across routes; the claim that every actual file entry is bounded conflicts with its own table. Whether a project-configurable quota is mandated remains unproven; do not waive the domain file-budget obligation.",
+      "predispatch_java_error": "Oversized source with zero Worker calls is currently wrapped as EXECUTION_STATE_UNKNOWN; T18 is examining whether it can be safely classified as a deterministic pre-dispatch refusal.",
+      "source_test_sha256": "cba2d78b799921339cd96a34a11a5c0e0c7fbf0e2d225c25399ba66ab6430499"
+    }
   }
 }
