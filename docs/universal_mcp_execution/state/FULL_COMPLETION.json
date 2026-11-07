@@ -4,7 +4,7 @@
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Original T07 job.reconcile completed once from durable events; job remains UNKNOWN. Do not repeat it or replay. Await scoped result patch review, assess session.recover or use a new independent model; T16/T41 software work continues.",
-  "updated_utc": "2026-11-07T13:57:18.481730+00:00",
+  "updated_utc": "2026-11-07T14:10:17.594493+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -157,11 +157,18 @@
       "blocker": null
     },
     "T17": {
-      "status": "TODO",
-      "implementation_done": false,
-      "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "status": "DONE",
+      "implementation_done": true,
+      "execution_complete": true,
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G3.json",
+        "docs/universal_mcp_execution/evidence/full/public_java_describe_T06.json",
+        "docs/universal_mcp_execution/evidence/full/public_java_compile_T06.json",
+        "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json",
+        "docs/universal_mcp_execution/evidence/full/public_model_T06.json"
+      ],
+      "blocker": null,
+      "scope_note": "Same current source bytes and actual independent project as T06; macOS arm64 6.4.0.293 only."
     },
     "T18": {
       "status": "TODO",
