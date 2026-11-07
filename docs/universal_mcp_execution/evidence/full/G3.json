@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:53:11.987228+00:00",
+  "updated_utc": "2026-11-07T15:56:37.922161+00:00",
   "T15": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Source and synthetic inspection only; actual 6.3/6.4 runtime acceptance remains incomplete.",
@@ -10,7 +10,7 @@
     "next": "Run applicable actual API introspection against an independently safe live target; recover the exact missing capture if available or re-establish appropriate evidence without fabricating bytes."
   },
   "T17": {
-    "status": "DONE",
+    "status": "IMPLEMENTED_REVALIDATION_REQUIRED",
     "scope": "Reuses the T06 current-candidate source-byte evidence for one independent macOS arm64 COMSOL 6.4.0.293 project and bound model; not cross-platform or full Java acceptance.",
     "source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
     "runtime_build": "6.4.0.293",
@@ -42,7 +42,8 @@
       "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json",
       "docs/universal_mcp_execution/evidence/full/public_model_T06.json"
     ],
-    "source_candidate_relation": "The Java/Worker production bytes at T06 match the pinned basis; changes after this evidence do not modify the Java code path. Reassess if affected source changes."
+    "source_candidate_relation": "The Java/Worker production bytes at T06 match the pinned basis; changes after this evidence do not modify the Java code path. Reassess if affected source changes.",
+    "new_candidate_note": "T18 subsequently changed _g2_code.py host-side source handling. Prior Mac Java success is retained as historical evidence, but the affected happy path must be revalidated on the new candidate."
   },
   "T16": {
     "status": "IMPLEMENTED",
