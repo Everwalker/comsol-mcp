@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
-  "current_candidate_commit": "b93b12c85680efc255649282613a67d713524a81",
+  "current_candidate_commit": "f49cc0fb2a1acd14336402f4dda5a87cb61e6ca0",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Continue T20 software and T19 budget/T18 refusal work; seek a safe general T13 deletion route and T14 selection support. T07/T17 native ce10 attempt failed before model creation; approval review rejected same-domain continuation, so prepare a corrected independent plan before requesting approval. Keep both old UNKNOWN fences intact.",
-  "updated_utc": "2026-11-07T16:18:52.021965+00:00",
+  "updated_utc": "2026-11-07T16:25:17.297055+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -196,8 +196,8 @@
       "scope_note": "Earlier T06/T17 run was Mac arm64 6.4.0.293 on earlier source bytes; changed Java source handling remains unverified natively."
     },
     "T18": {
-      "status": "IN_PROGRESS",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/G3.json",
@@ -207,9 +207,11 @@
         "docs/universal_mcp_execution/evidence/full/T18-java-consumer-regression-pytest-20261107.txt",
         "docs/universal_mcp_execution/evidence/full/T18-java-refusal-probe-post-fix-20261107.txt",
         "docs/universal_mcp_execution/evidence/full/sources/t18_pre_dispatch_refusal_probe_20261107.py.txt",
-        "docs/universal_mcp_execution/evidence/full/T18-empty-source-refusal-repro-20261108.txt"
+        "docs/universal_mcp_execution/evidence/full/T18-empty-source-refusal-repro-20261108.txt",
+        "docs/universal_mcp_execution/evidence/full/T19-domain-budget-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T19-main-integration-pytest-20261108.txt"
       ],
-      "blocker": "Empty Java source path still becomes UNKNOWN despite zero engine calls; Qwen is fixing this deterministic refusal. Real Worker failure paths and 144 baseline consumer failures remain unverified."
+      "blocker": "Software fixes cover host-side deterministic source refusals, including empty input; real compile error, partial mutation, timeout/UNKNOWN and recovery remain unverified. Two earlier T07 model/session fences persist."
     },
     "T19": {
       "status": "IN_PROGRESS",
@@ -223,9 +225,11 @@
         "docs/universal_mcp_execution/evidence/full/T19-regress-c-pytest-20261107.txt",
         "docs/universal_mcp_execution/evidence/full/T19-file-budget-qwen-20261107.md",
         "docs/universal_mcp_execution/evidence/full/T19-file-budget-focused-pytest-20261107.txt",
-        "docs/universal_mcp_execution/evidence/full/T19-file-budget-adjacent-pytest-20261107.txt"
+        "docs/universal_mcp_execution/evidence/full/T19-file-budget-adjacent-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T19-domain-budget-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T19-main-integration-pytest-20261108.txt"
       ],
-      "blocker": "T19 explicitly includes file budgets across routes; legacy/domain .mph and file paths are reported uncapped. Determine required semantics and close the actual gap before software completion. Bound-model native authorization/negative controls remain unverified."
+      "blocker": "W26 trusted disk estimates provide configured admission for model.save but are not a hard quota; legacy model_load routes bypass producer admission while G3 model.load is covered. Determine and implement consistent route coverage; real batch-setter/negative controls and Windows remain unverified."
     },
     "T20": {
       "status": "TODO",
@@ -564,16 +568,12 @@
     ]
   },
   "documentation_head_before_update": "23e5ea5",
-  "candidate_identity_note": "Current source commit b93b12c includes T13 node.remove schema/refusal clarification; prior ce10fda wheel/native-preflight evidence binds the earlier source. Uncommitted concurrent edits are not part of this identity.",
+  "candidate_identity_note": "Current source candidate f49cc0f includes T13 group schema and T18 empty-source refusal; ce10fda native wheel belongs to an earlier source and stopped before a model was created. Concurrent uncommitted edits are not included.",
   "active_work_observation": {
-    "observed_utc": "2026-11-07T16:18:52.021965+00:00",
+    "observed_utc": "2026-11-07T16:25:17.297055+00:00",
     "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
     "reasoning_effort": "max",
     "agents": [
-      {
-        "id": "01a1b6b7-2cd7-7622-b024-eb0078ab0d36",
-        "scope": "T19 domain file-budget design and T18 empty-source refusal"
-      },
       {
         "id": "01a1b6c8-a2f5-7ea2-ab1f-9dfb47965631",
         "scope": "prepare corrected independent T07/T17 native plan without execution"
@@ -581,6 +581,10 @@
       {
         "id": "01a1b6cb-b06d-7c33-903f-daf78434353e",
         "scope": "T20 parameter/variable/function software"
+      },
+      {
+        "id": "01a1b6d1-1f7d-7031-be8a-37022651c8d2",
+        "scope": "T14 selection semantics software"
       }
     ],
     "note": "Live session observation only; no liveness inference after restart."
