@@ -1,3 +1,9 @@
+# Current handoff — U01–U12 continuation (2026-11-07)
+
+Current goal: [MASTER_GOAL](../full_universal_continuation_20261107/MASTER_GOAL.md). Task state and next work: [FULL_COMPLETION](state/FULL_COMPLETION.json). The fixed source starts at `cd2c9cdc`; `0827fb9` has an independent **software-only** Java snapshot v2 ACCEPT. Main develops; the final Reviewer must be independent. Active-source restoration, including deferred historical blobs and the workpack integrity variance, is described in [G0 evidence](evidence/full/G0.json). Keep the original Windows Stage2 UNKNOWN and possible fixture-owner resources fenced; use new independent resources. The section below is historical, including obsolete phase-authority and Java-repair instructions.
+
+---
+
 # Current handoff — r470 Java source snapshot v2
 
 ## 2026-11-07 — Java source snapshot v2 software stage

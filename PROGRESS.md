@@ -1,3 +1,9 @@
+# Current progress — U01–U12 continuation
+
+Status: ACTIVE_NOT_COMPLETE. Fixed basis `cd2c9cdc` recovered with active files verified; full historical blob bytes are not claimed. Java snapshot v2 ACCEPT is software-only. T01/T02 and their evidence: [FULL_COMPLETION](docs/universal_mcp_execution/state/FULL_COMPLETION.json), [G0](docs/universal_mcp_execution/evidence/full/G0.json). Next: T03 coverage, T04 target preflight, T05 source-external installed MCP entry; proceed with other independent tasks as ready. Final acceptance requires a genuinely independent Reviewer and applicable native evidence. Historical progress follows.
+
+---
+
 # Progress — r470 Java source snapshot v2
 
 ## 2026-11-07 — Java source snapshot v2 software stage

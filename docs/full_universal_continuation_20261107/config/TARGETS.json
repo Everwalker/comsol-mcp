@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "basis": "Current handoff 2026-10-21; existing user scope decisions preserved",
+  "targets": [
+    {
+      "id": "windows-x64-6.3",
+      "native": "REQUIRED",
+      "distribution": "REQUIRED"
+    },
+    {
+      "id": "windows-x64-6.4",
+      "native": "REQUIRED",
+      "distribution": "REQUIRED"
+    },
+    {
+      "id": "macos-arm64-6.4",
+      "native": "REQUIRED",
+      "distribution": "REQUIRED"
+    },
+    {
+      "id": "macos-arm64-6.3",
+      "native": "USER_REQUESTED_SKIP",
+      "distribution": "ARCHITECTURE_BUILD_REMAINS_REQUIRED"
+    },
+    {
+      "id": "macos-x64-6.3",
+      "native": "USER_REQUESTED_SKIP",
+      "distribution": "ARCHITECTURE_BUILD_REMAINS_REQUIRED"
+    },
+    {
+      "id": "macos-x64-6.4",
+      "native": "USER_REQUESTED_SKIP_HARDWARE",
+      "distribution": "REQUIRED"
+    }
+  ]
+}

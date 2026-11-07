@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+  "status": "PUBLISHED_JAVA_REVIEW_REPORTS_26_PASS_NOT_RUN_BY_WORKPACK_AUTHOR",
+  "scope": "15 exact software nodes, 26 parameterized cases reported in scoped Java review; not a global acceptance suite",
+  "nodes": [
+    "tests/test_g2_w08_w12.py::test_java_description_hashes_bounded_original_utf8_bytes_without_newline_translation",
+    "tests/test_g2_w08_w12.py::test_source_snapshot_rejects_symlink_replacement_after_path_selection",
+    "tests/test_g2_w08_w12.py::test_dispatch_project_root_binding_rejects_replaced_workspace_root",
+    "tests/test_g2_w08_w12.py::test_java_result_helpers_reject_unbound_and_incomplete_worker_success",
+    "tests/test_g2_w08_w12.py::test_managed_execute_mismatch_is_unknown_without_post_action_worker_reads",
+    "tests/test_g2_w08_w12.py::test_managed_execute_preserves_proven_pre_model_failures_without_after_snapshot",
+    "tests/test_java_worker.py::test_java_worker_code_methods_forward_the_independently_observed_source_hash",
+    "tests/test_java_worker.py::test_code_submit_refuses_missing_hash_without_contacting_worker",
+    "tests/test_java_worker.py::test_old_worker_without_source_binding_capability_never_receives_code_request",
+    "tests/test_java_worker.py::test_source_binding_probe_and_code_request_share_one_authenticated_connection",
+    "tests/test_java_worker.py::test_mismatched_execute_success_is_marked_unknown_before_observer_callbacks",
+    "tests/test_g3_managed_models.py::test_registered_crlf_recipe_source_retains_original_byte_identity",
+    "tests/test_g3_managed_models.py::test_recipe_run_mismatched_success_stops_before_any_post_action_worker_read",
+    "tests/test_g3_managed_models.py::test_recipe_run_preserves_proven_pre_model_failures_without_after_snapshot",
+    "tests/test_public_java_recipe_witness.py::test_real_public_durable_wrapper_is_consumed_without_rewriting_store"
+  ],
+  "notes": [
+    "The worker fixture in tests/test_java_worker.py starts a real Worker; never substitute the whole module or a broad -k expression.",
+    "Two symlink/root replacement tests explicitly skip on Windows; do not treat skip as Windows handle qualification.",
+    "Read actual selected test changes before rerun. No test name here establishes PASS.",
+    "Reuse the scoped Java software acceptance if production code is unchanged; run only when recovery sanity or affected changes make it necessary. Never treat this list as U01-U12 completion."
+  ],
+  "optional_compiler_nodes": [
+    "tests/test_worker_registered_source_compiler.py::test_actual_production_source_snapshot_compiler[externalJDK11]",
+    "tests/test_worker_registered_source_compiler.py::test_actual_production_source_snapshot_compiler[bundledJDK21]"
+  ],
+  "optional_compiler_requires": "COMSOL apiplugins SDK JARs and matching JDK; no engine startup by these harness tests; not part of default selection"
+}

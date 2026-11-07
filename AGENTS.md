@@ -1,5 +1,10 @@
 # AGENTS.md — comsol-server-mcp
 
+## Current continuation — 2026-11-07
+
+The current user instruction and `docs/full_universal_continuation_20261107/MASTER_GOAL.md` supersede conflicting historical role assignments, W01–W26/science-case gates, phase stops, and automatic push-to-main instructions below. Main develops and records U01–U12 continuously; a genuinely independent sub-Reviewer performs the final unified acceptance and rechecks fixes. Use `docs/universal_mcp_execution/state/FULL_COMPLETION.json` as the canonical current task progress. The older sections remain historical guidance where compatible; retain all resource, model, permission and data-protection fences.
+
+
 ## Project Overview
 
 COMSOL MCP Server (`comsol-mcp` v0.1.9). An attach-first MCP bridge that connects to a running COMSOL Multiphysics Server, loads a main .mph model, locks it, and drives the same server-side model that a COMSOL Desktop client visualizes in real time.

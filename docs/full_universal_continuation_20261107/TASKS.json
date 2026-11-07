@@ -1,0 +1,1261 @@
+{
+  "schema_version": 1,
+  "scope": "Frozen U01-U12; 52 execution steps, not additional release gates",
+  "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+  "dependency_semantics": "depends_on controls implementation readiness. A predecessor with implementation_done=true may unblock software work while its external/native validation remains BLOCKED. Final DONE requires the stated acceptance evidence; final product requires every applicable requirement plus independent review. Target checks are independent; no inferred native PASS.",
+  "groups": [
+    {
+      "id": "G0",
+      "title": "恢复候选、继承证据与选择可用环境"
+    },
+    {
+      "id": "G1",
+      "title": "优先打通一条真实纵向闭环"
+    },
+    {
+      "id": "G2",
+      "title": "通用模型与对象操作"
+    },
+    {
+      "id": "G3",
+      "title": "版本自省、帮助与可编程执行"
+    },
+    {
+      "id": "G4",
+      "title": "一般建模、计算与阶段传递"
+    },
+    {
+      "id": "G5",
+      "title": "真实结果、图像与验证契约"
+    },
+    {
+      "id": "G6",
+      "title": "持久作业、控制面和资源生命周期"
+    },
+    {
+      "id": "G7",
+      "title": "项目产物、保护与可迁移恢复"
+    },
+    {
+      "id": "G8",
+      "title": "普通安装、Desktop 与平台交付"
+    },
+    {
+      "id": "G9",
+      "title": "有限迁移测试、独立终审与交付"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T01",
+      "group": "G0",
+      "task": "从固定公开提交恢复工作树，保留现存用户修改，核对必要源文件与构件来源；发现 sparse/缺 blob 时补齐实际所需内容。",
+      "depends_on": [],
+      "requirement_groups": [
+        "U01",
+        "U12"
+      ],
+      "acceptance": "新目录可获得约定源码；不能用已知 tree hash 冒充全体文件字节已恢复；不依赖旧本地目录。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T02",
+      "group": "G0",
+      "task": "继承 Java snapshot v2 已受审实现和修复；核对主线、WIP、交接分支的真实差异，仅整合仍缺的通用改动。 同步 CURRENT_HANDOFF、RESUME 与当前用户指令，建立唯一 FULL_COMPLETION 指针，清除过期 Java next_action（保留历史事实）。",
+      "depends_on": [
+        "T01"
+      ],
+      "requirement_groups": [
+        "U04",
+        "U08",
+        "U12"
+      ],
+      "acceptance": "已接受代码/测试/runner 关系清楚；当前候选只对受影响范围重验，旧 v1 历史证据不改写。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T03",
+      "group": "G0",
+      "task": "从真实 action 目录及原 60 测试的子断言建立/更新一次 U01–U12 覆盖表，区分现有证据、缺口、案例科学、平台跳过和外部阻塞。",
+      "depends_on": [
+        "T01"
+      ],
+      "requirement_groups": [
+        "U12"
+      ],
+      "acceptance": "实际目录数量与映射一致；不把注册工具数、受控 Java 存在或旧 PASS 当所有功能通过；不新增重复审批台账。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T04",
+      "group": "G0",
+      "task": "早期检查三活跃目标的可访问性、版本/JDK、许可、普通用户安装、图形和项目目录能力；辨明旧 UNKNOWN 仅约束的具体资源。",
+      "depends_on": [
+        "T01"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U07",
+        "U10"
+      ],
+      "acceptance": "精确到目标与能力的 READY/BLOCKED/NOT_RUN；能选出首个新授权独立项目；不恢复旧 once、Popen、token 或按旧 PID 发信号。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 预检完成可为 DONE，同时各不可用目标继续 BLOCKED；这是识别环境状态，不代表机器已可运行。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T05",
+      "group": "G1",
+      "task": "构建并在新目录用普通安装入口启动候选 MCP，确认源码目录之外的发现、schema、版本与限制说明。",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "acceptance": "来自实际安装包的公共 MCP 请求与响应；不借旧测试 driver 才能完成正常使用。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 首先 build/install/discover；有准备好的活跃平台立即执行正常入口闭环。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T06",
+      "group": "G1",
+      "task": "由 Agent 在新项目编写新 Java，通过安装后的 MCP 编译并在明确绑定的模型内建立一个小型可求解模型。",
+      "depends_on": [
+        "T04",
+        "T05"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U04",
+        "U05"
+      ],
+      "acceptance": "新源码字节身份、ModelRef/build、编译诊断、实际求解与写后回读；无需改服务端/Worker/任务允许名单。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T07",
+      "group": "G1",
+      "task": "从同一解取得真实数值、单位/解索引与真实图像，经 MCP 对外返回。",
+      "depends_on": [
+        "T06"
+      ],
+      "requirement_groups": [
+        "U06"
+      ],
+      "acceptance": "非硬编码的数值、图像与模型 revision/solution 对应；图像可由 Host 经 MCP/资源读取。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T08",
+      "group": "G1",
+      "task": "保存模型及项目依赖，换新目录、新 Worker，在同版本重新打开并读取存储解。",
+      "depends_on": [
+        "T06",
+        "T07"
+      ],
+      "requirement_groups": [
+        "U09"
+      ],
+      "acceptance": "真实保存与新 Worker 重新读出结果，路径可迁移；不能重算后冒充存储解回读。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T09",
+      "group": "G1",
+      "task": "T05–T08 遇到直接阻断时就在原任务修复；T09 汇总首条闭环的可复现正常用户路径和已验证范围，完成后继续下一任务。",
+      "depends_on": [
+        "T05",
+        "T06",
+        "T07",
+        "T08"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U04",
+        "U06",
+        "U09",
+        "U12"
+      ],
+      "acceptance": "本组 scoped evidence 完整；明确不等于 U01–U12 或跨平台全部通过；完成后立即转下一任务。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T10",
+      "group": "G2",
+      "task": "完成 attach/create/load/adopt/copy/save/close/rebind 的模型身份传递，保持 session/epoch/revision 一致并保护其他用户模型。",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "acceptance": "两模型场景中的目标回读与非目标保持；领域、通用 API、Java 操作指向同一绑定模型。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T11",
+      "group": "G2",
+      "task": "完成真实模型树的深层/局部发现与稳定对象寻址，覆盖多 component、改名及嵌套 WorkPlane/feature。",
+      "depends_on": [
+        "T10"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U03"
+      ],
+      "acceptance": "变换名称/层级后仍可定位所需对象；不固定 comp1/geom1 或把 label 当稳定身份。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T12",
+      "group": "G2",
+      "task": "补齐 typed 属性读写及允许值，保持 bool/int/double/string、空与单元素数组、矩阵、表达式和单位的区别。",
+      "depends_on": [
+        "T11"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U03",
+        "U08"
+      ],
+      "acceptance": "对实际支持类型的往返证据；拒绝或准确描述不支持转换，不静默压平成字符串/标量。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T13",
+      "group": "G2",
+      "task": "对原目录所需对象族补齐创建、复制及授权删除/回读，特别补普通/嵌套对象删除路线。",
+      "depends_on": [
+        "T10",
+        "T11",
+        "T12"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "acceptance": "目标动作可完成且非目标节点保留；删除说明精确，不能把仅 NodeGroup ungroup 当通用删除，也不盲目 cascade。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T14",
+      "group": "G2",
+      "task": "完成 named/explicit/all/inherited/spatial 等适用选择路线，区分实体、对象与 selection 属性，并检查几何重建后选区。",
+      "depends_on": [
+        "T11",
+        "T12"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U05"
+      ],
+      "acceptance": "多组件、不同实体维数与改名后的选择读回；不猜边界编号或几何维数。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T15",
+      "group": "G3",
+      "task": "公开真实 receiver、方法签名、属性、类型、允许值与运行时版本；按服务端策略区分读写 effect。",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "requirement_groups": [
+        "U03",
+        "U08"
+      ],
+      "acceptance": "6.3/6.4 当前 build 能力证据；调用者 declared_effect 不能自行取得只读权限；未知能力准确报告。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "actual_6.3_and_6.4_API_or_SDK_metadata"
+      ]
+    },
+    {
+      "id": "T16",
+      "group": "G3",
+      "task": "打通目标版本的本地官方帮助/示例/错误检索，与自省结果互相指向；为无 wrapper 动作提供实际可用回退路线。",
+      "depends_on": [
+        "T15"
+      ],
+      "requirement_groups": [
+        "U03"
+      ],
+      "acceptance": "Agent 能找到一个不熟悉的合法 API 并解释参数来源；缺文档/权限如实说明，不捏造内部 feature。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "actual_6.3_and_6.4_API_or_SDK_metadata"
+      ]
+    },
+    {
+      "id": "T17",
+      "group": "G3",
+      "task": "验证项目中新 Java 经公开 MCP 完成编译、执行及绑定模型回读；已审 snapshot v2 按当前集成影响继承。",
+      "depends_on": [
+        "T02",
+        "T05",
+        "T10"
+      ],
+      "requirement_groups": [
+        "U04"
+      ],
+      "acceptance": "新项目源码无需核心增白名单/重打安装包；源码字节、Worker/模型身份和收据一致；不重复旧软件审查。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T18",
+      "group": "G3",
+      "task": "完成新 Java 的编译错误、运行错误、部分修改与超时/UNKNOWN 的可诊断返回，并保留可恢复模型状态。",
+      "depends_on": [
+        "T17"
+      ],
+      "requirement_groups": [
+        "U04",
+        "U07",
+        "U09"
+      ],
+      "acceptance": "失败证据可定位真实问题；编译成功不冒称执行成功；部分修改与完全未执行分开。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T19",
+      "group": "G3",
+      "task": "将一次项目级授权、文件/计算预算、失效条件与模型绑定统一到领域、通用 API、Java 路线。",
+      "depends_on": [
+        "T10",
+        "T15",
+        "T17"
+      ],
+      "requirement_groups": [
+        "U04",
+        "U08"
+      ],
+      "acceptance": "授权范围内批量 setter 可持续执行；扩大权限与错误资源被拒绝；trusted Java 的实际主机权限边界如实说明。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T20",
+      "group": "G4",
+      "task": "补齐参数/变量/函数、表达式验证、描述/单位、插值数据与作用域的通用操作。",
+      "depends_on": [
+        "T12",
+        "T16",
+        "T17"
+      ],
+      "requirement_groups": [
+        "U05"
+      ],
+      "acceptance": "任意合理名称和不同 component 下操作/回读/求值成功；不把原样本变量写死到核心。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T21",
+      "group": "G4",
+      "task": "补齐几何/CAD、坐标系、配对、耦合算子的目录路线，按许可探测 1D/2D/轴对称/3D 与嵌套几何。",
+      "depends_on": [
+        "T11",
+        "T14",
+        "T16",
+        "T17"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U05"
+      ],
+      "acceptance": "所需动作有实际路径；源/目标、实体维数、变换与许可边界可读回；只改指定对象。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T22",
+      "group": "G4",
+      "task": "补齐材料/属性组、函数/张量与物理/feature/subfeature/多物理/PDE 路线，支持初值、边界条件与选择。",
+      "depends_on": [
+        "T14",
+        "T20",
+        "T21"
+      ],
+      "requirement_groups": [
+        "U05"
+      ],
+      "acceptance": "至少一条非旧任务限定的完整建模路径；变量名和合法 feature 由真实接口决定。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T23",
+      "group": "G4",
+      "task": "补齐网格、Study、Solver 的深层配置和执行，保持已有 solver，支持目录承诺的时间/频率/特征值与解复用路线。",
+      "depends_on": [
+        "T21",
+        "T22"
+      ],
+      "requirement_groups": [
+        "U05",
+        "U07"
+      ],
+      "acceptance": "实际网格/求解状态、警告和解身份；初始化成功、有解、计算失败区分；选择/维数不硬编码。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T24",
+      "group": "G4",
+      "task": "完成可配置扫描/DOE/优化路线的参数、指标、预算、缓存、重试和停止；缓存按真实输入/模型/版本失效。",
+      "depends_on": [
+        "T20",
+        "T23"
+      ],
+      "requirement_groups": [
+        "U05",
+        "U07"
+      ],
+      "acceptance": "小型多 case 真实执行与预算停止；未许可原生优化不冒称已许可，可明确使用约定外部算法路线。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T25",
+      "group": "G4",
+      "task": "完成通用阶段状态传递：source solution/dataset、实际时间/参数索引、变量/坐标映射、插值与误差记录。",
+      "depends_on": [
+        "T23",
+        "T24"
+      ],
+      "requirement_groups": [
+        "U05",
+        "U09"
+      ],
+      "acceptance": "一个非固定胶水任务的两阶段状态传递与回读；不通过固定温度/公式替代引擎状态。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T26",
+      "group": "G5",
+      "task": "补齐 dataset、切点/线/面/join、表格/probe 的建立与读取，保留真实数据集和解引用。",
+      "depends_on": [
+        "T11",
+        "T23"
+      ],
+      "requirement_groups": [
+        "U06",
+        "U08"
+      ],
+      "acceptance": "相关目录动作有可执行路径，求值不误删用户原 numerical/table 节点。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T27",
+      "group": "G5",
+      "task": "保持多表达式、复数、数组/矩阵、outer/inner、实际时间/频率/参数、坐标和单位元数据完整。",
+      "depends_on": [
+        "T26"
+      ],
+      "requirement_groups": [
+        "U06"
+      ],
+      "acceptance": "非旧表达式名与复场、多解轴的真实返回；不能猜第一项、只取实部或默默改单位。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T28",
+      "group": "G5",
+      "task": "完成积分、平均、极值等测度语义及默认单位回读，覆盖实际实体维数与轴对称权重。",
+      "depends_on": [
+        "T14",
+        "T26",
+        "T27"
+      ],
+      "requirement_groups": [
+        "U06",
+        "U09"
+      ],
+      "acceptance": "小型解析参照和必要负控；不把节点平均当面积/体积平均，不重复径向权重。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T29",
+      "group": "G5",
+      "task": "完成图组、view/camera 及目录中的导出路线，图像/资源经 MCP 取得并关联同一存储解。",
+      "depends_on": [
+        "T26",
+        "T27"
+      ],
+      "requirement_groups": [
+        "U06"
+      ],
+      "acceptance": "真实引擎图像、数据与 revision/solution/参数一致；text-only Host 有明确资源/数据替代。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T30",
+      "group": "G5",
+      "task": "分开 execution、numerical、physical 三状态，支持任务配置 profile、已注册后端观测与明确外部数据模式。",
+      "depends_on": [
+        "T27",
+        "T28"
+      ],
+      "requirement_groups": [
+        "U09"
+      ],
+      "acceptance": "伪造 caller 数值不能认证当前模型；未知物理规则为 NOT_COVERED，不影响合法原始求值，也不默认为物理通过。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T31",
+      "group": "G6",
+      "task": "统一持久 job、operation/idempotency、model revision/checkpoint 关系，重复请求不重复执行。",
+      "depends_on": [
+        "T10",
+        "T19"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "acceptance": "重复提交/查询有同一已记录作业；无第二次模型写入；状态来源唯一。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T32",
+      "group": "G6",
+      "task": "将同 Server 引擎访问串行化，分离控制面状态查询与真实模型调用，长任务期间保持可响应。",
+      "depends_on": [
+        "T31"
+      ],
+      "requirement_groups": [
+        "U07"
+      ],
+      "acceptance": "长任务期间查询/日志可响应，冲突引擎调用排队；不以伪只读绕开锁。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T33",
+      "group": "G6",
+      "task": "完成 Host 失联、控制重启、超时、Worker 异常后的恢复/协调，按资源隔离 UNKNOWN。",
+      "depends_on": [
+        "T31",
+        "T32"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U09"
+      ],
+      "acceptance": "查询原 job 不重放；无关新资源可继续；未知不被自动改写为成功/取消。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T34",
+      "group": "G6",
+      "task": "明确 cancel requested、已证实停止、无法取消的语义，停止与清理限于有真实所有权的资源。",
+      "depends_on": [
+        "T32",
+        "T33"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "acceptance": "支持路径上的真停止证据；共享实例和其他版本/用户模型保留；不按陈旧 PID 清理。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T35",
+      "group": "G6",
+      "task": "完成有界日志/分页/轮转与终态保留，将 trace/logger 故障和引擎故障分开。",
+      "depends_on": [
+        "T31"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "acceptance": "超过普通日志长度后内存有界、可读主要证据且终态可记录；不靠持续提高常量宣布解决。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T36",
+      "group": "G7",
+      "task": "对模型/依赖/报告/代码入口统一项目根、私有路径、链接、typed 边界与授权检查。",
+      "depends_on": [
+        "T19"
+      ],
+      "requirement_groups": [
+        "U08"
+      ],
+      "acceptance": "各实际入口受同一边界约束；直接越界与非目标数据修改被拒绝，正常授权路径可用。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T37",
+      "group": "G7",
+      "task": "完成安全保存/覆盖策略/原子产物发布；失败、部分写入和空间不足不能损坏现有正式数据。",
+      "depends_on": [
+        "T36"
+      ],
+      "requirement_groups": [
+        "U08",
+        "U09"
+      ],
+      "acceptance": "代表性失败留下可解释状态且旧数据仍可读；覆盖仅在项目策略允许时发生。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T38",
+      "group": "G7",
+      "task": "打包可迁移项目清单：模型、项目代码、依赖/数据、参数/假设、原始数值、图像、日志和来源。",
+      "depends_on": [
+        "T27",
+        "T29",
+        "T37"
+      ],
+      "requirement_groups": [
+        "U09",
+        "U12"
+      ],
+      "acceptance": "清单引用真实存在的文件及准确 hash/版本/身份；不分发 COMSOL 商业库、许可证或秘密。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T39",
+      "group": "G7",
+      "task": "在新目录、新 Worker、同版本重开项目/存储解，检查外部依赖解析与结果语义。",
+      "depends_on": [
+        "T38",
+        "T33"
+      ],
+      "requirement_groups": [
+        "U09"
+      ],
+      "acceptance": "已验证路径之外的适用恢复证据；不要求已跳过机器，不承诺 6.4→6.3 无损降版。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T40",
+      "group": "G7",
+      "task": "完成 checkpoint/diff/recovery 的真实语义及失败后继续操作，说明不能回滚的外部文件/GUI 副作用。",
+      "depends_on": [
+        "T31",
+        "T37",
+        "T39"
+      ],
+      "requirement_groups": [
+        "U08",
+        "U09"
+      ],
+      "acceptance": "受影响对象可正确恢复/报告部分恢复；不能把有限 checkpoint 称作全局 ACID。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ]
+    },
+    {
+      "id": "T41",
+      "group": "G8",
+      "task": "统一普通启动/配置/doctor 的入口，集中 OS/arch/JDK/build 差异，移除正常使用对旧 activity/用户名/仓库 driver 的依赖。",
+      "depends_on": [
+        "T05",
+        "T15"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "acceptance": "用户从新目录按公开步骤可启动；诊断有真实可操作原因；缺 GUI/文档不隐式禁用 API 核心。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T42",
+      "group": "G8",
+      "task": "从同一规范候选构建 Windows x64、Mac ARM64、Mac Intel 的包、lock/wheelhouse、哈希/版本清单与离线预检。",
+      "depends_on": [
+        "T41"
+      ],
+      "requirement_groups": [
+        "U10",
+        "U12"
+      ],
+      "acceptance": "三架构软件构件完整、来源一致，离线模式不隐式下载；不把构件生成当所有机器原生通过。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T43",
+      "group": "G8",
+      "task": "走 Windows 普通用户安装/启动路线，验证两个 COMSOL 版本发现与公共 MCP；修复所需普通路径阻断。",
+      "depends_on": [
+        "T04",
+        "T41",
+        "T42"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "acceptance": "当前候选的正常 install + public MCP 证据；历史 0.1.10 安装与未知 0.1.16 transfer 不抵作当前通过；旧 UNKNOWN 资源保持隔离。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4"
+      ]
+    },
+    {
+      "id": "T44",
+      "group": "G8",
+      "task": "验证活跃目标上的离线安装、升级/回退、schema migration、卸载的数据保护；继承未受影响的 Mac 已接受软件证据。",
+      "depends_on": [
+        "T42"
+      ],
+      "requirement_groups": [
+        "U10"
+      ],
+      "acceptance": "当前候选适用生命周期记录；外部模型数据保留；不将 synthetic 数据检查升格为真实原生求解验收。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 各目标独立记进度，可先做可用目标；某目标阻塞不挡其他目标。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4",
+        "macos-arm64-6.4"
+      ]
+    },
+    {
+      "id": "T45",
+      "group": "G8",
+      "task": "完成声明支持范围内的 Desktop 绑定/显示/读取/必要迁移及权限错误，保持 API 工作流可用。",
+      "depends_on": [
+        "T10",
+        "T41",
+        "T04"
+      ],
+      "requirement_groups": [
+        "U10"
+      ],
+      "acceptance": "实际共享绑定或明确保存迁移证据；不宣称任意 standalone Desktop 内存可被无条件接管。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 各目标独立记进度，可先做可用目标；某目标阻塞不挡其他目标。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4",
+        "macos-arm64-6.4"
+      ]
+    },
+    {
+      "id": "T46",
+      "group": "G8",
+      "task": "在 Win x64 6.3、Win x64 6.4、Mac ARM64 6.4 分别执行适用核心链及受影响回归，记录真实 build/构件/解。",
+      "depends_on": [
+        "T23",
+        "T30",
+        "T33",
+        "T39",
+        "T42",
+        "T45"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10"
+      ],
+      "acceptance": "三个活跃 native 行各有真实运行范围；组验收与单条成功分开；required 行 BLOCKED 时保持未完成。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 各目标独立记进度，可先做可用目标；某目标阻塞不挡其他目标。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4",
+        "macos-arm64-6.4"
+      ]
+    },
+    {
+      "id": "T47",
+      "group": "G9",
+      "task": "冻结生产代码/构件候选，由独立 Reviewer 选定两类小型、有限预算的未预设任务。",
+      "depends_on": [
+        "T03",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45"
+      ],
+      "requirement_groups": [
+        "U11"
+      ],
+      "acceptance": "至少一类为旧案例之外接口或通用方程，至少一类从陌生已有模型开始；事先定义输出与负控；两类总数保持有限。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 候选冻结前生产实现、T43 两个 Windows 正常安装行及 T46 两个 Windows 核心原生行完成；不等待 Mac 原生或全部生命周期/Desktop 验收，后者仍是最终全局验收义务。之后改代码则按影响重冻/补验。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.3",
+        "T43/windows-x64-6.4",
+        "T46/windows-x64-6.3",
+        "T46/windows-x64-6.4"
+      ]
+    },
+    {
+      "id": "T48",
+      "group": "G9",
+      "task": "仅用已安装 MCP、实际文档、项目数据/Java，在 Windows 6.3 和 6.4 分别执行两类任务与负控。",
+      "depends_on": [
+        "T47"
+      ],
+      "requirement_groups": [
+        "U11"
+      ],
+      "acceptance": "两个 Windows 版本 × 两个任务族，共四个组合的真实操作/结果；不改服务端、Worker、allowlist 或安装文件；不能用两个铜块改参数冒充两族。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T49",
+      "group": "G9",
+      "task": "若迁移发现核心缺陷，主 Agent 修通用语义并冻结新候选；Reviewer 对受影响范围及同难度等价变体复测。",
+      "depends_on": [
+        "T47"
+      ],
+      "requirement_groups": [
+        "U11",
+        "U12"
+      ],
+      "acceptance": "不把刚硬编码的答案当迁移成功；不无限增添物理领域、任务数或重跑无关全仓。无缺陷则记无需执行。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 T48 有实际成功/失败结果并记 execution_complete=true 后即可进入；失败时 T48 保持未验收，不要求先通过才能修复。若 T48 无缺陷，记录 DONE + NO_FIX_NEEDED；不人为制造新测试阶段。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "attempt_dependencies": [
+        "T48"
+      ]
+    },
+    {
+      "id": "T50",
+      "group": "G9",
+      "task": "独立 Reviewer 审查 U01–U12 覆盖、实际调用证据、来源/构件、平台与原测试子断言，独立运行关键负控。",
+      "depends_on": [
+        "T03",
+        "T46",
+        "T48",
+        "T49"
+      ],
+      "requirement_groups": [
+        "U12"
+      ],
+      "acceptance": "有真实独立审查报告与明确接受/拒绝理由；不可仅复述主 Agent 总结；新非阻断建议进 BACKLOG。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T51",
+      "group": "G9",
+      "task": "主 Agent 修复本轮 required 缺口与阻断问题，由 Reviewer 复审受影响部分；保留已通过无影响证据。",
+      "depends_on": [
+        "T50"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10",
+        "U11",
+        "U12"
+      ],
+      "acceptance": "阻断项闭环；不通过降级状态、删除失败测试或扩大 USER_REQUESTED_SKIP 伪造完成；不逐文件从头审签。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 若 T50 无阻断缺陷，记录 DONE + NO_BLOCKING_FINDINGS；不得代写 Reviewer 通过。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    },
+    {
+      "id": "T52",
+      "group": "G9",
+      "task": "生成最终安装/恢复交付与简洁下一步说明，锁定实际批准候选，汇总全部 required 与残余外部阻塞/可选专项。",
+      "depends_on": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45",
+        "T46",
+        "T47",
+        "T48",
+        "T49",
+        "T50",
+        "T51"
+      ],
+      "requirement_groups": [
+        "U12"
+      ],
+      "acceptance": "仅全部 required 及活跃目标满足且独立批准时标 UNIVERSAL_CORE_VERIFIED_SCOPED；否则标 WAITING_EXTERNAL 并给出最小解阻条件，绝不称全部完成。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "status": "TODO",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 全部 required 真满足才关闭成功；阻塞交付可先做，但不能把整体状态标为完成。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ]
+    }
+  ]
+}

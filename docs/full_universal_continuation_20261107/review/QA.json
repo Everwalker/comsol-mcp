@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "scope": "WORKPACK_ONLY_NOT_COMSOL_PRODUCT_ACCEPTANCE",
+  "review_date_utc": "2026-11-07T10:02:01.940591+00:00",
+  "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+  "unit_tests": {
+    "status": "PASS",
+    "unique_tests": 26,
+    "command": "python3 -m unittest discover -s tests -v",
+    "log": "review/TOOL_TESTS.txt"
+  },
+  "relocated_directory": {
+    "status": "PASS",
+    "unicode_and_spaces": true,
+    "unique_tests": 26,
+    "log": "review/RELOCATED_TOOL_TESTS.txt",
+    "same_tests_repeated_not_52_unique": true,
+    "integrity": "PASS",
+    "initial_navigation": "T01_READY_ONLY"
+  },
+  "independent_reviews": [
+    "review/WORKPACK_SCOPE_REVIEW.md",
+    "review/WORKPACK_TECHNICAL_REVIEW.md"
+  ],
+  "remote_full_restore": "NOT_RUN",
+  "real_COMSOL_or_Worker": "NOT_RUN",
+  "Windows_or_macOS_execution_here": "NOT_RUN",
+  "product_pytest_here": "NOT_RUN",
+  "evidence_reuse_note": "26 Java product cases reported in repository are distinct from these 26 workpack utility cases. Repeated runs and reviewer checks are not additive.",
+  "source_files_modified_in_public_repository": false,
+  "runtime_authority_restored": false
+}

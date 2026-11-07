@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "updated_utc": "2026-11-07T10:47:25.750903+00:00",
+  "source_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+  "source_tree": "c81188515a5359df5a5bd72d91b498a3ade4d4ff",
+  "T01": {
+    "status": "DONE",
+    "receipt": "docs/full_universal_continuation_20261107/RESTORE_RECEIPT.json",
+    "integrity_qualification": "Original overlay check failed only on .gitignore size and SHA256; isolated copy rebased only that manifest entry and records both identities in LOCAL_PACKAGE_VARIANCE.json. 39 other entries unchanged and matched original manifest.",
+    "restore_qualification": "Initial sandbox Git fetch failed DNS; escalated pinned partial Git recovery read and reconstructed complete tree but stopped after 67 of 1286 selected files (child stderr not retained). Single-blob and batch fetch of the same pinned source succeeded; continued only our own staging and checked every selected byte against Git blob SHA-1, with SHA-256 recorded. 20,739 historical blobs deferred; no old authority restored."
+  },
+  "T02": {
+    "status": "DONE",
+    "comparisons": {
+      "main_to_wip": {
+        "base": "c6e078ab8dc610fc242c89c11557e5848726895f",
+        "head": "a583f6999e3cefb02b2214772da2eaf48b793052",
+        "ahead_by": 1,
+        "files": 27
+      },
+      "wip_to_handoff": {
+        "base": "a583f6999e3cefb02b2214772da2eaf48b793052",
+        "head": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+        "ahead_by": 3,
+        "files": 19
+      },
+      "accepted_to_handoff": {
+        "base": "0827fb985300ca5d936a112d1ac2ebac64f192b9",
+        "head": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
+        "ahead_by": 1,
+        "files": 4,
+        "scope": "handoff/progress and independent review documentation only"
+      }
+    },
+    "accepted_scope": "Java source snapshot v2 software only; not native, installed MCP, or global acceptance",
+    "review": "docs/java_snapshot_stage_20261107/review/PRODUCT_REVIEW_0827fb9.md",
+    "proof_route": "GitHub compare API for the immutable SHAs; no merge/cherry-pick needed",
+    "prior_r470_next_action": "preserved under RESUME.json current_checkpoint_r470.next_action; no longer current"
+  },
+  "T04": {
+    "status": "DONE",
+    "meaning": "preflight recorded, not native acceptance",
+    "macos-arm64-6.4": {
+      "host_arch": "arm64",
+      "installation": "PRESENT",
+      "root": "/Applications/COMSOL64/Multiphysics",
+      "version_evidence": "about.txt identifies COMSOL 6.4; exact running build NOT_RUN",
+      "jdk": {
+        "home": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home",
+        "javac_present": true,
+        "javac_version": "21.0.7"
+      },
+      "license_file_presence": "PRESENT",
+      "license_checkout": "NOT_RUN",
+      "graphic_session": "console session observed by read-only subagent; actual Desktop NOT_RUN",
+      "new_project_root": "PENDING_CREATE",
+      "installed_public_mcp": "IN_PROGRESS"
+    },
+    "windows-x64-6.3": {
+      "platform_access": "NOT_RUN",
+      "reason": "No independently identified, authorized Windows endpoint was established during local preflight; no historical SSH or UNKNOWN resource contacted.",
+      "version_jdk_license_gui_install": "NOT_RUN"
+    },
+    "windows-x64-6.4": {
+      "platform_access": "NOT_RUN",
+      "reason": "No independently identified, authorized Windows endpoint was established during local preflight; no historical SSH or UNKNOWN resource contacted.",
+      "version_jdk_license_gui_install": "NOT_RUN"
+    },
+    "fences": "Original Windows Stage2 owner/packet and possible original Java fixture owner remain untouched; no new authority inferred from old state.",
+    "reporter": "read-only local subagent Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S max and main recheck",
+    "next": "Attempt independent Mac project and actual license checkout via normal installed MCP; acquire independent Windows endpoint when available."
+  }
+}
