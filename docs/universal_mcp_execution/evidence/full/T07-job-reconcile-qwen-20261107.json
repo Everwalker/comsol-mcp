@@ -1,0 +1,673 @@
+{
+  "schema": "T07_JOB_RECONCILE_V1",
+  "executing_model": "local Qwen omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S (max reasoning), this session",
+  "purpose": "one restricted job.reconcile for the original T07 UNKNOWN job via the installed MCP native-control",
+  "original_job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+  "original_project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+  "original_session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+  "reconcile_request_id": "full-universal-20261107-t07reconcile-01",
+  "reconcile_idempotency_key": "full-universal-20261107-t07reconcile-01",
+  "precondition_facts_durable": {
+    "durable_job_status_before": "UNKNOWN",
+    "runtime_binding_kind": "registered_session",
+    "binding_project_matches": true,
+    "binding_session_matches": true,
+    "events_total": 70,
+    "submitted": 34,
+    "observed_terminal": 34,
+    "submitted_not_observed": [],
+    "dup_observed": [],
+    "obs_status_dist": {
+      "SUCCEEDED": 33,
+      "FAILED": 1
+    },
+    "project_workspace": "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/independent-projects/full-universal-smoke-20261107",
+    "project_is_new_task_scope": true,
+    "durable_job_status_preconditions_ok": true
+  },
+  "operations_not_called": [
+    "result.evaluate resubmission",
+    "java.execute",
+    "model.solve",
+    "model.inspect refresh",
+    "session.recover",
+    "job.cancel",
+    "stop",
+    "job.cleanup",
+    "worker create",
+    "fenced historical Worker/SSH access"
+  ],
+  "started_utc": "2026-11-07T13:53:05.216216+00:00",
+  "calls": [
+    {
+      "kind": "job.status.precheck",
+      "request": {
+        "operation_id": "job.status",
+        "arguments": {
+          "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730"
+        },
+        "execution": {
+          "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+          "request_id": "full-universal-20261107-t07reconcile-01-pre",
+          "idempotency_key": "full-universal-20261107-t07reconcile-01-pre"
+        }
+      },
+      "response": {
+        "meta": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"job_id\": \"c25bce5c-87a1-4be5-b367-20ce5624f730\", \"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"status\": \"UNKNOWN\", \"metadata\": {\"arguments\": {\"arguments\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"spec\": {\"aggregate\": \"average\", \"complex_mode\": \"real\", \"entity_dim\": 2, \"expressions\": [\"u\"], \"selection\": {\"component\": \"smoke_comp\", \"entity_dimension\": 2, \"geometry\": \"smoke_geom\", \"kind\": \"all\"}, \"solution\": {\"dataset\": \"dset1\", \"solution\": \"sol1\"}, \"storage\": \"inline\"}}, \"operation_id\": \"result.evaluate\"}, \"engine_started_at\": 1794051475.665984, \"execution\": {\"execution_timeout_s\": 120, \"expected_revision\": 1, \"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"request_id\": \"full-universal-20261107-result-evaluate-01\", \"rpc_timeout_s\": 120, \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"finished_observed_at\": 1794051475.913928, \"operation\": \"operation_call\", \"queue_wait_s\": 0.0001284999307245016, \"runtime_binding\": {\"kind\": \"registered_session\", \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"worker_epoch\": 2, \"worker_instance_id\": \"4acb4d9d-5816-459f-9fda-b3bbc7cd171f\"}}, \"created_at\": \"2026-11-07 11:37:55\", \"started_at\": \"2026-11-07 11:37:55\", \"finished_at\": null, \"effective_timeouts\": {\"execution_timeout_s\": 120, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 120}, \"operation\": {\"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"request_id\": \"full-universal-20261107-result-evaluate-01\", \"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"request_hash\": \"8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93\", \"operation\": \"operation_call\", \"status\": \"UNKNOWN\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"details\": {\"cause_message\": \"{\\\"completed_at_ms\\\": \\\"1794051475912\\\", \\\"failure\\\": {\\\"cause_chain\\\": [{\\\"message\\\": \\\"Unknown_solution\\\", \\\"type\\\": \\\"com.comsol.util.exceptions.FlException\\\"}], \\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: \\\\u672a\\\\u77e5\\\\u89e3\\\\u3002\\\\n  - \\\\u6807\\\\u8bb0\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1794051475851\\\", \\\"request_id\\\": \\\"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\\\", \\\"started_at_ms\\\": \\\"1794051475851\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"cause_type\": \"JavaWorkerError\"}, \"message\": \"legacy callback raised after write dispatch\", \"safe_retry\": false, \"stage\": \"post_dispatch\"}, \"execution\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"job_id\": \"c25bce5c-87a1-4be5-b367-20ce5624f730\", \"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"request_hash\": \"8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93\", \"request_id\": \"full-universal-20261107-result-evaluate-01\"}, \"success\": false}, \"metadata\": {\"arguments\": {\"arguments\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"spec\": {\"aggregate\": \"average\", \"complex_mode\": \"real\", \"entity_dim\": 2, \"expressions\": [\"u\"], \"selection\": {\"component\": \"smoke_comp\", \"entity_dimension\": 2, \"geometry\": \"smoke_geom\", \"kind\": \"all\"}, \"solution\": {\"dataset\": \"dset1\", \"solution\": \"sol1\"}, \"storage\": \"inline\"}}, \"operation_id\": \"result.evaluate\"}, \"execution\": {\"execution_timeout_s\": 120, \"expected_revision\": 1, \"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"request_id\": \"full-universal-20261107-result-evaluate-01\", \"rpc_timeout_s\": 120, \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"operation\": \"operation_call\", \"runtime_binding\": {\"kind\": \"registered_session\", \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"worker_epoch\": 2, \"worker_instance_id\": \"4acb4d9d-5816-459f-9fda-b3bbc7cd171f\"}}, \"created_at\": \"2026-11-07 11:37:55\", \"started_at\": \"2026-11-07 11:37:55\", \"finished_at\": null, \"effective_timeouts\": {\"execution_timeout_s\": 120, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 120}}, \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"details\": {\"cause_message\": \"{\\\"completed_at_ms\\\": \\\"1794051475912\\\", \\\"failure\\\": {\\\"cause_chain\\\": [{\\\"message\\\": \\\"Unknown_solution\\\", \\\"type\\\": \\\"com.comsol.util.exceptions.FlException\\\"}], \\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: \\\\u672a\\\\u77e5\\\\u89e3\\\\u3002\\\\n  - \\\\u6807\\\\u8bb0\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1794051475851\\\", \\\"request_id\\\": \\\"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\\\", \\\"started_at_ms\\\": \\\"1794051475851\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"cause_type\": \"JavaWorkerError\"}, \"message\": \"legacy callback raised after write dispatch\", \"safe_retry\": false, \"stage\": \"post_dispatch\"}, \"execution\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"job_id\": \"c25bce5c-87a1-4be5-b367-20ce5624f730\", \"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"request_hash\": \"8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93\", \"request_id\": \"full-universal-20261107-result-evaluate-01\"}, \"success\": false}}}",
+            "annotations": null,
+            "meta": null
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+            "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+            "status": "UNKNOWN",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp1",
+                    "schema_version": 1,
+                    "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                    "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                  },
+                  "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                  "spec": {
+                    "aggregate": "average",
+                    "complex_mode": "real",
+                    "entity_dim": 2,
+                    "expressions": [
+                      "u"
+                    ],
+                    "selection": {
+                      "component": "smoke_comp",
+                      "entity_dimension": 2,
+                      "geometry": "smoke_geom",
+                      "kind": "all"
+                    },
+                    "solution": {
+                      "dataset": "dset1",
+                      "solution": "sol1"
+                    },
+                    "storage": "inline"
+                  }
+                },
+                "operation_id": "result.evaluate"
+              },
+              "engine_started_at": 1794051475.665984,
+              "execution": {
+                "execution_timeout_s": 120,
+                "expected_revision": 1,
+                "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp1",
+                  "schema_version": 1,
+                  "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                },
+                "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                "request_id": "full-universal-20261107-result-evaluate-01",
+                "rpc_timeout_s": 120,
+                "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+              },
+              "finished_observed_at": 1794051475.913928,
+              "operation": "operation_call",
+              "queue_wait_s": 0.0001284999307245016,
+              "runtime_binding": {
+                "kind": "registered_session",
+                "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                "worker_epoch": 2,
+                "worker_instance_id": "4acb4d9d-5816-459f-9fda-b3bbc7cd171f"
+              }
+            },
+            "created_at": "2026-11-07 11:37:55",
+            "started_at": "2026-11-07 11:37:55",
+            "finished_at": null,
+            "effective_timeouts": {
+              "execution_timeout_s": 120,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 120
+            },
+            "operation": {
+              "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+              "request_id": "full-universal-20261107-result-evaluate-01",
+              "idempotency_key": "full-universal-20261107-result-evaluate-01",
+              "request_hash": "8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93",
+              "operation": "operation_call",
+              "status": "UNKNOWN",
+              "result": {
+                "data": {},
+                "error": {
+                  "code": "EXECUTION_STATE_UNKNOWN",
+                  "details": {
+                    "cause_message": "{\"completed_at_ms\": \"1794051475912\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1794051475851\", \"request_id\": \"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\", \"started_at_ms\": \"1794051475851\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                    "cause_type": "JavaWorkerError"
+                  },
+                  "message": "legacy callback raised after write dispatch",
+                  "safe_retry": false,
+                  "stage": "post_dispatch"
+                },
+                "execution": {
+                  "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                  "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+                  "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+                  "request_hash": "8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93",
+                  "request_id": "full-universal-20261107-result-evaluate-01"
+                },
+                "success": false
+              },
+              "metadata": {
+                "arguments": {
+                  "arguments": {
+                    "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                    "model_ref": {
+                      "generation": 1,
+                      "model_tag": "mcp1",
+                      "schema_version": 1,
+                      "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                      "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                    },
+                    "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                    "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                    "spec": {
+                      "aggregate": "average",
+                      "complex_mode": "real",
+                      "entity_dim": 2,
+                      "expressions": [
+                        "u"
+                      ],
+                      "selection": {
+                        "component": "smoke_comp",
+                        "entity_dimension": 2,
+                        "geometry": "smoke_geom",
+                        "kind": "all"
+                      },
+                      "solution": {
+                        "dataset": "dset1",
+                        "solution": "sol1"
+                      },
+                      "storage": "inline"
+                    }
+                  },
+                  "operation_id": "result.evaluate"
+                },
+                "execution": {
+                  "execution_timeout_s": 120,
+                  "expected_revision": 1,
+                  "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp1",
+                    "schema_version": 1,
+                    "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                    "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                  },
+                  "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                  "request_id": "full-universal-20261107-result-evaluate-01",
+                  "rpc_timeout_s": 120,
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                },
+                "operation": "operation_call",
+                "runtime_binding": {
+                  "kind": "registered_session",
+                  "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                  "worker_epoch": 2,
+                  "worker_instance_id": "4acb4d9d-5816-459f-9fda-b3bbc7cd171f"
+                }
+              },
+              "created_at": "2026-11-07 11:37:55",
+              "started_at": "2026-11-07 11:37:55",
+              "finished_at": null,
+              "effective_timeouts": {
+                "execution_timeout_s": 120,
+                "no_progress_warning_s": null,
+                "queue_timeout_s": null,
+                "rpc_timeout_s": 120
+              }
+            },
+            "result": {
+              "data": {},
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "details": {
+                  "cause_message": "{\"completed_at_ms\": \"1794051475912\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1794051475851\", \"request_id\": \"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\", \"started_at_ms\": \"1794051475851\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                  "cause_type": "JavaWorkerError"
+                },
+                "message": "legacy callback raised after write dispatch",
+                "safe_retry": false,
+                "stage": "post_dispatch"
+              },
+              "execution": {
+                "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+                "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+                "request_hash": "8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93",
+                "request_id": "full-universal-20261107-result-evaluate-01"
+              },
+              "success": false
+            }
+          }
+        },
+        "isError": false
+      }
+    },
+    {
+      "kind": "job.reconcile.once",
+      "request": {
+        "operation_id": "job.reconcile",
+        "arguments": {
+          "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730"
+        },
+        "execution": {
+          "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+          "request_id": "full-universal-20261107-t07reconcile-01",
+          "idempotency_key": "full-universal-20261107-t07reconcile-01"
+        }
+      },
+      "response": {
+        "meta": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": true, \"data\": {\"job_id\": \"c25bce5c-87a1-4be5-b367-20ce5624f730\", \"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"status\": \"UNKNOWN\", \"metadata\": {\"arguments\": {\"arguments\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"spec\": {\"aggregate\": \"average\", \"complex_mode\": \"real\", \"entity_dim\": 2, \"expressions\": [\"u\"], \"selection\": {\"component\": \"smoke_comp\", \"entity_dimension\": 2, \"geometry\": \"smoke_geom\", \"kind\": \"all\"}, \"solution\": {\"dataset\": \"dset1\", \"solution\": \"sol1\"}, \"storage\": \"inline\"}}, \"operation_id\": \"result.evaluate\"}, \"callback_completion_unknown\": true, \"engine_started_at\": 1794051475.665984, \"execution\": {\"execution_timeout_s\": 120, \"expected_revision\": 1, \"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"request_id\": \"full-universal-20261107-result-evaluate-01\", \"rpc_timeout_s\": 120, \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"finished_observed_at\": 1794051475.913928, \"operation\": \"operation_call\", \"queue_wait_s\": 0.0001284999307245016, \"reconciled_quiescent\": true, \"reconciliation\": [{\"request_id\": \"wrk-263f3b72-f19c-4c52-95a1-72c06488b92d\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-dc61625c-b7e4-4ad5-ad8b-e155a08d87d9\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-5441575c-ecbd-41a1-9cc9-72a788d6d001\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-2e5c8ac0-8aa3-48be-abee-d5c0682d86f2\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-e99518d8-fb35-4bc4-b690-ef55990b8ad8\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-eaebaf52-ced5-438d-8f9e-e44e0a9b8976\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-cbe60b29-104c-4526-b9c9-97c7129c6c8f\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-70eb98b0-244f-44f8-8890-3adfeb6f0168\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-b3c0983b-f952-4370-bef0-36f75c7b7cdb\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-b4e8e0aa-879c-44b7-9133-fc3ef54c07a5\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-6452f069-5380-4329-9560-a22aece99a7f\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-5e65a230-fae8-4a38-a531-99b71f53ef07\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-11cd6057-92af-49a2-bb32-f6a60634c60e\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-261e7396-5a2d-4562-8197-42a171c03dd4\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-ca2445a2-0f2d-4453-87b6-a6712336169b\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-faadf029-3010-41bc-9894-b0ca505ff5c8\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-7dcc6363-28c4-4000-9ab2-6d91aa6fdddb\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-34b665a0-1bf7-4c5f-b3f5-bb6ca3e23d8b\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-7906d954-3ddc-4c94-9b4a-8665cdd1e3cf\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-73f46289-390d-4561-b852-13043c70ee8a\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-c62823ea-1fea-4b25-bb72-fa6e8b1bfb75\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-bacc8b84-cf36-4633-9a4b-f532058b5d42\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-cc26e70d-46af-4580-823f-33cad20cbaaa\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-68f2467e-f490-4860-9cd7-8dd5ed28a566\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-f76a1bd7-590f-4101-b6b2-e4898186959e\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-3d9b9749-4737-489d-8880-e0762cc8524c\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-258f6925-899d-4962-9ff1-6a1ee3effb4a\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-0729f6ba-d026-4371-a77c-4f5e75be593b\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-17478f58-9871-4e99-8f2d-205f4ce668b1\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-3fd51fa3-282c-45b0-ae8e-86a36fd184c3\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-e2f537ac-3f71-4351-8543-292d047f2d24\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-cc3c65b5-2bd0-4bbe-aacd-9248e1ba55b1\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-965a682d-7b3a-45ca-9269-8124d040096c\", \"source\": \"durable_worker_observation\", \"status\": \"SUCCEEDED\"}, {\"request_id\": \"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\", \"source\": \"durable_worker_observation\", \"status\": \"FAILED\"}], \"replay_performed\": false, \"runtime_binding\": {\"kind\": \"registered_session\", \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"worker_epoch\": 2, \"worker_instance_id\": \"4acb4d9d-5816-459f-9fda-b3bbc7cd171f\"}}, \"created_at\": \"2026-11-07 11:37:55\", \"started_at\": \"2026-11-07 11:37:55\", \"finished_at\": null, \"effective_timeouts\": {\"execution_timeout_s\": 120, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 120}, \"operation\": {\"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"request_id\": \"full-universal-20261107-result-evaluate-01\", \"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"request_hash\": \"8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93\", \"operation\": \"operation_call\", \"status\": \"UNKNOWN\", \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"details\": {\"cause_message\": \"{\\\"completed_at_ms\\\": \\\"1794051475912\\\", \\\"failure\\\": {\\\"cause_chain\\\": [{\\\"message\\\": \\\"Unknown_solution\\\", \\\"type\\\": \\\"com.comsol.util.exceptions.FlException\\\"}], \\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: \\\\u672a\\\\u77e5\\\\u89e3\\\\u3002\\\\n  - \\\\u6807\\\\u8bb0\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1794051475851\\\", \\\"request_id\\\": \\\"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\\\", \\\"started_at_ms\\\": \\\"1794051475851\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"cause_type\": \"JavaWorkerError\"}, \"message\": \"legacy callback raised after write dispatch\", \"safe_retry\": false, \"stage\": \"post_dispatch\"}, \"execution\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"job_id\": \"c25bce5c-87a1-4be5-b367-20ce5624f730\", \"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"request_hash\": \"8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93\", \"request_id\": \"full-universal-20261107-result-evaluate-01\"}, \"success\": false}, \"metadata\": {\"arguments\": {\"arguments\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"spec\": {\"aggregate\": \"average\", \"complex_mode\": \"real\", \"entity_dim\": 2, \"expressions\": [\"u\"], \"selection\": {\"component\": \"smoke_comp\", \"entity_dimension\": 2, \"geometry\": \"smoke_geom\", \"kind\": \"all\"}, \"solution\": {\"dataset\": \"dset1\", \"solution\": \"sol1\"}, \"storage\": \"inline\"}}, \"operation_id\": \"result.evaluate\"}, \"execution\": {\"execution_timeout_s\": 120, \"expected_revision\": 1, \"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"model_ref\": {\"generation\": 1, \"model_tag\": \"mcp1\", \"schema_version\": 1, \"server_instance_id\": \"3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"request_id\": \"full-universal-20261107-result-evaluate-01\", \"rpc_timeout_s\": 120, \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\"}, \"operation\": \"operation_call\", \"runtime_binding\": {\"kind\": \"registered_session\", \"project_id\": \"78b3d7af-c2de-4ea9-bce5-6a7aef601b91\", \"session_id\": \"session-5eaf7c16ca4c41ada3f7cd12b369f4d6\", \"worker_epoch\": 2, \"worker_instance_id\": \"4acb4d9d-5816-459f-9fda-b3bbc7cd171f\"}}, \"created_at\": \"2026-11-07 11:37:55\", \"started_at\": \"2026-11-07 11:37:55\", \"finished_at\": null, \"effective_timeouts\": {\"execution_timeout_s\": 120, \"no_progress_warning_s\": null, \"queue_timeout_s\": null, \"rpc_timeout_s\": 120}}, \"result\": {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"details\": {\"cause_message\": \"{\\\"completed_at_ms\\\": \\\"1794051475912\\\", \\\"failure\\\": {\\\"cause_chain\\\": [{\\\"message\\\": \\\"Unknown_solution\\\", \\\"type\\\": \\\"com.comsol.util.exceptions.FlException\\\"}], \\\"code\\\": \\\"ENGINE_CALL_FAILED\\\", \\\"execution_state_unknown\\\": true, \\\"message\\\": \\\"FlException: \\\\u672a\\\\u77e5\\\\u89e3\\\\u3002\\\\n  - \\\\u6807\\\\u8bb0\\\", \\\"ok\\\": false}, \\\"ok\\\": false, \\\"queued_at_ms\\\": \\\"1794051475851\\\", \\\"request_id\\\": \\\"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\\\", \\\"started_at_ms\\\": \\\"1794051475851\\\", \\\"status\\\": \\\"FAILED\\\", \\\"type\\\": \\\"call\\\"}\", \"cause_type\": \"JavaWorkerError\"}, \"message\": \"legacy callback raised after write dispatch\", \"safe_retry\": false, \"stage\": \"post_dispatch\"}, \"execution\": {\"idempotency_key\": \"full-universal-20261107-result-evaluate-01\", \"job_id\": \"c25bce5c-87a1-4be5-b367-20ce5624f730\", \"operation_id\": \"32f864f2-4423-4f41-ba22-84890cd410ad\", \"request_hash\": \"8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93\", \"request_id\": \"full-universal-20261107-result-evaluate-01\"}, \"success\": false}}}",
+            "annotations": null,
+            "meta": null
+          }
+        ],
+        "structuredContent": {
+          "success": true,
+          "data": {
+            "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+            "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+            "status": "UNKNOWN",
+            "metadata": {
+              "arguments": {
+                "arguments": {
+                  "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp1",
+                    "schema_version": 1,
+                    "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                    "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                  },
+                  "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                  "spec": {
+                    "aggregate": "average",
+                    "complex_mode": "real",
+                    "entity_dim": 2,
+                    "expressions": [
+                      "u"
+                    ],
+                    "selection": {
+                      "component": "smoke_comp",
+                      "entity_dimension": 2,
+                      "geometry": "smoke_geom",
+                      "kind": "all"
+                    },
+                    "solution": {
+                      "dataset": "dset1",
+                      "solution": "sol1"
+                    },
+                    "storage": "inline"
+                  }
+                },
+                "operation_id": "result.evaluate"
+              },
+              "callback_completion_unknown": true,
+              "engine_started_at": 1794051475.665984,
+              "execution": {
+                "execution_timeout_s": 120,
+                "expected_revision": 1,
+                "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                "model_ref": {
+                  "generation": 1,
+                  "model_tag": "mcp1",
+                  "schema_version": 1,
+                  "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                },
+                "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                "request_id": "full-universal-20261107-result-evaluate-01",
+                "rpc_timeout_s": 120,
+                "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+              },
+              "finished_observed_at": 1794051475.913928,
+              "operation": "operation_call",
+              "queue_wait_s": 0.0001284999307245016,
+              "reconciled_quiescent": true,
+              "reconciliation": [
+                {
+                  "request_id": "wrk-263f3b72-f19c-4c52-95a1-72c06488b92d",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-dc61625c-b7e4-4ad5-ad8b-e155a08d87d9",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-5441575c-ecbd-41a1-9cc9-72a788d6d001",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-2e5c8ac0-8aa3-48be-abee-d5c0682d86f2",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-e99518d8-fb35-4bc4-b690-ef55990b8ad8",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-eaebaf52-ced5-438d-8f9e-e44e0a9b8976",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-cbe60b29-104c-4526-b9c9-97c7129c6c8f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-70eb98b0-244f-44f8-8890-3adfeb6f0168",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-b3c0983b-f952-4370-bef0-36f75c7b7cdb",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-b4e8e0aa-879c-44b7-9133-fc3ef54c07a5",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-6452f069-5380-4329-9560-a22aece99a7f",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-5e65a230-fae8-4a38-a531-99b71f53ef07",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-11cd6057-92af-49a2-bb32-f6a60634c60e",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-261e7396-5a2d-4562-8197-42a171c03dd4",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-ca2445a2-0f2d-4453-87b6-a6712336169b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-faadf029-3010-41bc-9894-b0ca505ff5c8",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-7dcc6363-28c4-4000-9ab2-6d91aa6fdddb",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-34b665a0-1bf7-4c5f-b3f5-bb6ca3e23d8b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-7906d954-3ddc-4c94-9b4a-8665cdd1e3cf",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-73f46289-390d-4561-b852-13043c70ee8a",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-c62823ea-1fea-4b25-bb72-fa6e8b1bfb75",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-bacc8b84-cf36-4633-9a4b-f532058b5d42",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-cc26e70d-46af-4580-823f-33cad20cbaaa",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-68f2467e-f490-4860-9cd7-8dd5ed28a566",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-f76a1bd7-590f-4101-b6b2-e4898186959e",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-3d9b9749-4737-489d-8880-e0762cc8524c",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-258f6925-899d-4962-9ff1-6a1ee3effb4a",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-0729f6ba-d026-4371-a77c-4f5e75be593b",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-17478f58-9871-4e99-8f2d-205f4ce668b1",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-3fd51fa3-282c-45b0-ae8e-86a36fd184c3",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-e2f537ac-3f71-4351-8543-292d047f2d24",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-cc3c65b5-2bd0-4bbe-aacd-9248e1ba55b1",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-965a682d-7b3a-45ca-9269-8124d040096c",
+                  "source": "durable_worker_observation",
+                  "status": "SUCCEEDED"
+                },
+                {
+                  "request_id": "wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416",
+                  "source": "durable_worker_observation",
+                  "status": "FAILED"
+                }
+              ],
+              "replay_performed": false,
+              "runtime_binding": {
+                "kind": "registered_session",
+                "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                "worker_epoch": 2,
+                "worker_instance_id": "4acb4d9d-5816-459f-9fda-b3bbc7cd171f"
+              }
+            },
+            "created_at": "2026-11-07 11:37:55",
+            "started_at": "2026-11-07 11:37:55",
+            "finished_at": null,
+            "effective_timeouts": {
+              "execution_timeout_s": 120,
+              "no_progress_warning_s": null,
+              "queue_timeout_s": null,
+              "rpc_timeout_s": 120
+            },
+            "operation": {
+              "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+              "request_id": "full-universal-20261107-result-evaluate-01",
+              "idempotency_key": "full-universal-20261107-result-evaluate-01",
+              "request_hash": "8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93",
+              "operation": "operation_call",
+              "status": "UNKNOWN",
+              "result": {
+                "data": {},
+                "error": {
+                  "code": "EXECUTION_STATE_UNKNOWN",
+                  "details": {
+                    "cause_message": "{\"completed_at_ms\": \"1794051475912\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1794051475851\", \"request_id\": \"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\", \"started_at_ms\": \"1794051475851\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                    "cause_type": "JavaWorkerError"
+                  },
+                  "message": "legacy callback raised after write dispatch",
+                  "safe_retry": false,
+                  "stage": "post_dispatch"
+                },
+                "execution": {
+                  "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                  "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+                  "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+                  "request_hash": "8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93",
+                  "request_id": "full-universal-20261107-result-evaluate-01"
+                },
+                "success": false
+              },
+              "metadata": {
+                "arguments": {
+                  "arguments": {
+                    "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                    "model_ref": {
+                      "generation": 1,
+                      "model_tag": "mcp1",
+                      "schema_version": 1,
+                      "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                      "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                    },
+                    "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                    "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                    "spec": {
+                      "aggregate": "average",
+                      "complex_mode": "real",
+                      "entity_dim": 2,
+                      "expressions": [
+                        "u"
+                      ],
+                      "selection": {
+                        "component": "smoke_comp",
+                        "entity_dimension": 2,
+                        "geometry": "smoke_geom",
+                        "kind": "all"
+                      },
+                      "solution": {
+                        "dataset": "dset1",
+                        "solution": "sol1"
+                      },
+                      "storage": "inline"
+                    }
+                  },
+                  "operation_id": "result.evaluate"
+                },
+                "execution": {
+                  "execution_timeout_s": 120,
+                  "expected_revision": 1,
+                  "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                  "model_ref": {
+                    "generation": 1,
+                    "model_tag": "mcp1",
+                    "schema_version": 1,
+                    "server_instance_id": "3e35142b53f2ea69d319dccc3aa5f7e374a93f7187856e5a93f0bd8052e59d4e",
+                    "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                  },
+                  "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                  "request_id": "full-universal-20261107-result-evaluate-01",
+                  "rpc_timeout_s": 120,
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6"
+                },
+                "operation": "operation_call",
+                "runtime_binding": {
+                  "kind": "registered_session",
+                  "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+                  "session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+                  "worker_epoch": 2,
+                  "worker_instance_id": "4acb4d9d-5816-459f-9fda-b3bbc7cd171f"
+                }
+              },
+              "created_at": "2026-11-07 11:37:55",
+              "started_at": "2026-11-07 11:37:55",
+              "finished_at": null,
+              "effective_timeouts": {
+                "execution_timeout_s": 120,
+                "no_progress_warning_s": null,
+                "queue_timeout_s": null,
+                "rpc_timeout_s": 120
+              }
+            },
+            "result": {
+              "data": {},
+              "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "details": {
+                  "cause_message": "{\"completed_at_ms\": \"1794051475912\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1794051475851\", \"request_id\": \"wrk-0aa8cd17-f5bf-44e5-9010-13a28c3fd416\", \"started_at_ms\": \"1794051475851\", \"status\": \"FAILED\", \"type\": \"call\"}",
+                  "cause_type": "JavaWorkerError"
+                },
+                "message": "legacy callback raised after write dispatch",
+                "safe_retry": false,
+                "stage": "post_dispatch"
+              },
+              "execution": {
+                "idempotency_key": "full-universal-20261107-result-evaluate-01",
+                "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+                "operation_id": "32f864f2-4423-4f41-ba22-84890cd410ad",
+                "request_hash": "8da794c6b5a8adcce5e12d10af2bdc61fc5d6f7a57ca753bf53ad782c33e9e93",
+                "request_id": "full-universal-20261107-result-evaluate-01"
+              },
+              "success": false
+            }
+          }
+        },
+        "isError": false
+      }
+    }
+  ],
+  "pre_check_job_status": "UNKNOWN",
+  "reconcile_success": true,
+  "post_reconcile_job_status": "UNKNOWN",
+  "decision": "CALLED_ONCE",
+  "finished_utc": "2026-11-07T13:53:05.662177+00:00"
+}

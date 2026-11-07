@@ -4,7 +4,7 @@
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Use durable job.reconcile for original T07 without replay; keep model fenced until separately justified. Continue result patch and T41.",
-  "updated_utc": "2026-11-07T13:33:11.289645+00:00",
+  "updated_utc": "2026-11-07T13:56:41.594965+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -82,9 +82,11 @@
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
         "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json",
-        "docs/universal_mcp_execution/evidence/full/T07-reconcile-analysis-qwen-20261107.md"
+        "docs/universal_mcp_execution/evidence/full/T07-reconcile-analysis-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-precheck-sandbox-abort-qwen-20261107.json",
+        "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-qwen-20261107.json"
       ],
-      "blocker": "Original result.evaluate request returned EXECUTION_STATE_UNKNOWN after dispatch, with COMSOL Unknown_solution. Do not replay, replace, signal or cleanup the original job/model; inspect the original job and reconcile only through safe authorized control paths. Independent implementation work may continue."
+      "blocker": "Original job reconciled from durable observations, but remains UNKNOWN and registered-session/model fence is not cleared; no replay. Result code patch and safe session recovery or a new independent model are still required."
     },
     "T08": {
       "status": "TODO",
@@ -485,7 +487,8 @@
     "control_home_relative": ".g3-private/full-continuation-20261107/native-control",
     "original_unknown_job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
     "original_unknown_request_id": "full-universal-20261107-result-evaluate-01",
-    "recovery_constraint": "Query the original control job only; no replay, cleanup, process signal or replacement on the same model until reconciled."
+    "recovery_constraint": "Query the original control job only; no replay, cleanup, process signal or replacement on the same model until reconciled.",
+    "reconciliation": "original job quiescent observation recorded; UNKNOWN and model fence remain"
   },
   "documentation_head_before_update": "23e5ea5"
 }

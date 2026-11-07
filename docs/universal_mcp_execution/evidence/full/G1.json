@@ -80,6 +80,18 @@
       "ref": "docs/universal_mcp_execution/evidence/full/T07-reconcile-analysis-qwen-20261107.md",
       "findings": "Original last Worker call was SolutionInfo.getSolnums with empty outer list; all 34 submitted Worker requests have observed terminal replies, with no create/set/remove dispatch in the recorded sequence. Control job remains UNKNOWN; a failed read call does not establish global model state.",
       "clarification": "Report references to T48/T49 are inapplicable here: this is T07, not the heldout workflow. Job reconciliation does not convert the outcome to success or authorize replay."
+    },
+    "job_reconciliation": {
+      "status": "RECONCILED_QUIESCENT",
+      "job_status": "UNKNOWN",
+      "worker_rpc": "NONE; 34 durable worker observations",
+      "replay_performed": false,
+      "callback_completion_unknown": true,
+      "model_state": "STILL_FENCED; session-level and model revision reconciliation not established",
+      "evidence": [
+        "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-precheck-sandbox-abort-qwen-20261107.json",
+        "docs/universal_mcp_execution/evidence/full/T07-job-reconcile-qwen-20261107.json"
+      ]
     }
   }
 }

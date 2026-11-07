@@ -1,0 +1,93 @@
+{
+  "schema": "T07_JOB_RECONCILE_V1",
+  "executing_model": "local Qwen omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S (max reasoning), this session",
+  "purpose": "one restricted job.reconcile for the original T07 UNKNOWN job via the installed MCP native-control",
+  "original_job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730",
+  "original_project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+  "original_session_id": "session-5eaf7c16ca4c41ada3f7cd12b369f4d6",
+  "reconcile_request_id": "full-universal-20261107-t07reconcile-01",
+  "reconcile_idempotency_key": "full-universal-20261107-t07reconcile-01",
+  "precondition_facts_durable": {
+    "durable_job_status_before": "UNKNOWN",
+    "runtime_binding_kind": "registered_session",
+    "binding_project_matches": true,
+    "binding_session_matches": true,
+    "events_total": 70,
+    "submitted": 34,
+    "observed_terminal": 34,
+    "submitted_not_observed": [],
+    "dup_observed": [],
+    "obs_status_dist": {
+      "SUCCEEDED": 33,
+      "FAILED": 1
+    },
+    "project_workspace": "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/independent-projects/full-universal-smoke-20261107",
+    "project_is_new_task_scope": true,
+    "durable_job_status_preconditions_ok": true
+  },
+  "operations_not_called": [
+    "result.evaluate resubmission",
+    "java.execute",
+    "model.solve",
+    "model.inspect refresh",
+    "session.recover",
+    "job.cancel",
+    "stop",
+    "job.cleanup",
+    "worker create",
+    "fenced historical Worker/SSH access"
+  ],
+  "started_utc": "2026-11-07T13:51:17.465195+00:00",
+  "calls": [
+    {
+      "kind": "job.status.precheck",
+      "request": {
+        "operation_id": "job.status",
+        "arguments": {
+          "job_id": "c25bce5c-87a1-4be5-b367-20ce5624f730"
+        },
+        "execution": {
+          "project_id": "78b3d7af-c2de-4ea9-bce5-6a7aef601b91",
+          "request_id": "full-universal-20261107-t07reconcile-01-pre",
+          "idempotency_key": "full-universal-20261107-t07reconcile-01-pre"
+        }
+      },
+      "response": {
+        "meta": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"success\": false, \"error\": {\"code\": \"CONTROL_REQUEST_NOT_SUBMITTED\", \"type\": \"RuntimeError\", \"message\": \"Control preflight failed; the requested operation was not submitted.\", \"safe_retry\": false}, \"execution\": {\"request_id\": \"full-universal-20261107-t07reconcile-01-pre\", \"idempotency_key\": \"full-universal-20261107-t07reconcile-01-pre\"}, \"data\": {\"status\": \"NOT_SUBMITTED\", \"operation_dispatched\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"pre_dispatch\", \"control_startup_outcome\": \"UNRESOLVED\"}}",
+            "annotations": null,
+            "meta": null
+          }
+        ],
+        "structuredContent": {
+          "success": false,
+          "error": {
+            "code": "CONTROL_REQUEST_NOT_SUBMITTED",
+            "type": "RuntimeError",
+            "message": "Control preflight failed; the requested operation was not submitted.",
+            "safe_retry": false
+          },
+          "execution": {
+            "request_id": "full-universal-20261107-t07reconcile-01-pre",
+            "idempotency_key": "full-universal-20261107-t07reconcile-01-pre"
+          },
+          "data": {
+            "status": "NOT_SUBMITTED",
+            "operation_dispatched": false,
+            "execution_state_unknown": false,
+            "dispatch_stage": "pre_dispatch",
+            "control_startup_outcome": "UNRESOLVED"
+          }
+        },
+        "isError": true
+      }
+    }
+  ],
+  "pre_check_job_status": "NOT_SUBMITTED",
+  "decision": "NOT_CALLED",
+  "reason": "live job status is NOT_SUBMITTED, not UNKNOWN",
+  "finished_utc": "2026-11-07T13:51:17.862397+00:00"
+}
