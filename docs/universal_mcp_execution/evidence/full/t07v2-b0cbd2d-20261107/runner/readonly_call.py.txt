@@ -1,0 +1,23 @@
+import asyncio, json, sys, datetime
+from pathlib import Path
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+sys.path.insert(0, str(Path(__file__).parent))
+from env import B2, base_env
+
+params = StdioServerParameters(command=str(B2 / "venv/bin/comsol-mcp"), args=[], env=base_env(), cwd="/private/tmp/t07v2-client-20261107")
+label = sys.argv[1]
+body = json.loads(sys.argv[2])
+out = Path(sys.argv[3])
+assert not out.exists(), out
+timeout_s = int(sys.argv[4]) if len(sys.argv) > 4 else 120
+
+async def main():
+    async with stdio_client(params) as (r, w):
+        async with ClientSession(r, w, read_timeout_seconds=datetime.timedelta(seconds=timeout_s)) as session:
+            await session.initialize()
+            res = (await session.call_tool("operation_call", body)).model_dump(mode="json")
+            out.write_text(json.dumps({"request": body, "response": res}, ensure_ascii=False, indent=2) + "\n")
+            print(json.dumps(res.get("structuredContent"), ensure_ascii=False)[:3000])
+
+asyncio.run(main())

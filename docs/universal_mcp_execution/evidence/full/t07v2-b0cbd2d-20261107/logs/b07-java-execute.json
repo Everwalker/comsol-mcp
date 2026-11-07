@@ -1,0 +1,254 @@
+{
+  "request": {
+    "operation_id": "code.execute_java",
+    "arguments": {
+      "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+      "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "expected_revision": 0,
+      "idempotency_key": "t07v2-b0cbd2d-b-java-execute-01",
+      "source_artifact": "src/UniversalSmoke.java",
+      "entrypoint": "UniversalSmoke",
+      "arguments": {
+        "expected_model_tag": "mcp1"
+      },
+      "mode": "trusted",
+      "timeout_s": 150
+    },
+    "execution": {
+      "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+      "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "expected_revision": 0,
+      "request_id": "t07v2-b0cbd2d-b-java-execute-01",
+      "idempotency_key": "t07v2-b0cbd2d-b-java-execute-01",
+      "rpc_timeout_s": 200,
+      "execution_timeout_s": 180
+    }
+  },
+  "response": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"source_sha256\": \"33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670\", \"entrypoint\": \"UniversalSmoke\", \"worker\": {\"ok\": true, \"request_id\": \"29ce44c2-2df0-41bd-8be8-4c8c0bef5d19\", \"type\": \"code_execute\", \"status\": \"SUCCEEDED\", \"queued_at_ms\": \"1794064312411\", \"started_at_ms\": \"1794064312411\", \"completed_at_ms\": \"1794064313543\", \"result\": {\"executed\": true, \"model_tag\": \"mcp1\", \"source_sha256\": \"33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670\", \"entrypoint\": \"UniversalSmoke\", \"worker_build_id\": \"persistent-comsol-worker/source-snapshot-v2\", \"worker_instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"readback\": {\"model_tag\": \"mcp1\", \"domain_count\": 1, \"study_tags\": [\"smoke_study\"], \"solution_tags\": [\"sol1\"], \"dataset_tags\": [\"dset1\"]}}}, \"before\": {\"tag\": \"mcp1\", \"model_tag\": \"mcp1\", \"fingerprint\": \"2bc7a2c19091c2f7f1f2afb571d309f274841c5ca5169779f215117e5bdbe27a\", \"fingerprint_components\": {\"schema_version\": 1, \"tag\": \"mcp1\", \"label\": \"T07v2 smoke model\", \"file_path\": \"\", \"time_modified_epoch_ms\": 0, \"parameters\": []}, \"fingerprint_scope\": [\"tag\", \"label\", \"file_path\", \"time_modified\", \"parameters\"], \"cas_limit\": \"control-plane revision plus observed change events; not COMSOL atomic CAS\", \"external_event_counter\": 0, \"changed_tags\": [], \"server_instance_id\": \"127.0.0.1:59380\", \"worker_instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"generation\": 2}, \"after\": {\"tag\": \"mcp1\", \"model_tag\": \"mcp1\", \"fingerprint\": \"8bfa52448882e3dceb3045b7ab8433bf4ec3ca7e5aaad033b762979e52028a76\", \"fingerprint_components\": {\"schema_version\": 1, \"tag\": \"mcp1\", \"label\": \"T07v2 smoke model\", \"file_path\": \"\", \"time_modified_epoch_ms\": 0, \"parameters\": [{\"name\": \"smoke_source\", \"expression\": \"1\"}]}, \"fingerprint_scope\": [\"tag\", \"label\", \"file_path\", \"time_modified\", \"parameters\"], \"cas_limit\": \"control-plane revision plus observed change events; not COMSOL atomic CAS\", \"external_event_counter\": 0, \"changed_tags\": [], \"server_instance_id\": \"127.0.0.1:59380\", \"worker_instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"generation\": 2}, \"worker_source_sha256\": \"33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670\", \"worker_entrypoint\": \"UniversalSmoke\", \"source_binding_verified\": true, \"readback\": {\"executed\": true, \"model_tag\": \"mcp1\", \"source_sha256\": \"33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670\", \"entrypoint\": \"UniversalSmoke\", \"worker_build_id\": \"persistent-comsol-worker/source-snapshot-v2\", \"worker_instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"readback\": {\"model_tag\": \"mcp1\", \"domain_count\": 1, \"study_tags\": [\"smoke_study\"], \"solution_tags\": [\"sol1\"], \"dataset_tags\": [\"dset1\"]}}, \"execution_success\": true, \"domain_state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"execution_state_unknown\": false, \"partial_change\": false, \"cleanup_failed\": false, \"dispatch_stage\": \"post_dispatch\", \"operation\": \"code.execute_java\", \"effect\": \"project_write\", \"domain_outcome\": {\"operation\": \"\", \"state\": \"succeeded\", \"verification_status\": \"NOT_APPLICABLE\", \"cleanup_failed\": false, \"execution_state_unknown\": false, \"dispatch_stage\": \"post_dispatch\"}, \"isolation_proof\": {\"verified\": true, \"proof_scope\": \"active SessionRuntimeContext + same ManagedBackend/Worker/service + original Server Popen/kernel birth + exact IPv4 loopback listener + live bidirectional Worker socket pair\", \"project_id\": \"5b89bbb1-dd17-41b4-b1da-4f585127df45\", \"session_id\": \"session-1efe8c8b25424e0d81848bd8e4a98cae\", \"runtime_id\": \"comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics\", \"worker_instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"worker_epoch\": 2, \"server_pid\": 61395, \"server_birth\": \"start_epoch_ms:1794064262864\", \"server_start_epoch_ms\": 1794064262864, \"worker_pid\": 61655, \"worker_start_epoch_ms\": 1794064282110, \"endpoint\": \"127.0.0.1:59380\", \"listener\": {\"pid\": 61395, \"endpoint\": \"127.0.0.1:59380\", \"local_endpoint\": \"127.0.0.1:59380\", \"remote_endpoint\": null, \"state\": \"LISTEN\", \"raw\": \"java    61395 everwalker   59u  IPv6 0xb6e35cf48dc08599      0t0  TCP 127.0.0.1:59380 (LISTEN)\"}, \"worker_client_ephemeral_port\": 59446, \"established_client_pids\": [61395, 61655], \"worker_health_rpc_performed\": false}}, \"error\": null, \"execution\": {\"session_id\": \"session-1efe8c8b25424e0d81848bd8e4a98cae\", \"model_ref\": {\"schema_version\": 1, \"session_id\": \"session-1efe8c8b25424e0d81848bd8e4a98cae\", \"server_instance_id\": \"e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832\", \"model_tag\": \"mcp1\", \"generation\": 1}, \"revision\": 1, \"dirty\": false, \"server_ownership\": \"mcp_managed\", \"model_ownership\": \"mcp_owned\", \"cas_limit\": \"managed revision is not a COMSOL cross-client atomic CAS\", \"request_id\": \"t07v2-b0cbd2d-b-java-execute-01\", \"operation_id\": \"29ce44c2-2df0-41bd-8be8-4c8c0bef5d19\", \"request_hash\": \"fe8c96360d4160b055da46ab24a8c2d71f59441e3d7aca2eb5dfe8208dc42951\", \"runtime_observation\": {\"schema\": \"comsol-worker-runtime-observation/v1\", \"status\": \"OBSERVED\", \"comsol_version\": \"6.4.0.293\", \"runtime_identity\": {\"runtime_id\": \"comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics\", \"worker_instance_id\": \"6c6ad99c-5ddc-4b3b-981d-40aecb300f5b\", \"connection_epoch\": 2, \"server_instance_id\": \"e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832\", \"endpoint\": \"127.0.0.1:59380\"}, \"installation_runtime_id\": \"comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics\"}, \"project_id\": \"5b89bbb1-dd17-41b4-b1da-4f585127df45\", \"idempotency_key\": \"t07v2-b0cbd2d-b-java-execute-01\", \"job_id\": \"04078868-ee8a-4432-a9b3-68438d7a3953\"}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
+        "entrypoint": "UniversalSmoke",
+        "worker": {
+          "ok": true,
+          "request_id": "29ce44c2-2df0-41bd-8be8-4c8c0bef5d19",
+          "type": "code_execute",
+          "status": "SUCCEEDED",
+          "queued_at_ms": "1794064312411",
+          "started_at_ms": "1794064312411",
+          "completed_at_ms": "1794064313543",
+          "result": {
+            "executed": true,
+            "model_tag": "mcp1",
+            "source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
+            "entrypoint": "UniversalSmoke",
+            "worker_build_id": "persistent-comsol-worker/source-snapshot-v2",
+            "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+            "readback": {
+              "model_tag": "mcp1",
+              "domain_count": 1,
+              "study_tags": [
+                "smoke_study"
+              ],
+              "solution_tags": [
+                "sol1"
+              ],
+              "dataset_tags": [
+                "dset1"
+              ]
+            }
+          }
+        },
+        "before": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "2bc7a2c19091c2f7f1f2afb571d309f274841c5ca5169779f215117e5bdbe27a",
+          "fingerprint_components": {
+            "schema_version": 1,
+            "tag": "mcp1",
+            "label": "T07v2 smoke model",
+            "file_path": "",
+            "time_modified_epoch_ms": 0,
+            "parameters": []
+          },
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59380",
+          "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+          "instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+          "generation": 2
+        },
+        "after": {
+          "tag": "mcp1",
+          "model_tag": "mcp1",
+          "fingerprint": "8bfa52448882e3dceb3045b7ab8433bf4ec3ca7e5aaad033b762979e52028a76",
+          "fingerprint_components": {
+            "schema_version": 1,
+            "tag": "mcp1",
+            "label": "T07v2 smoke model",
+            "file_path": "",
+            "time_modified_epoch_ms": 0,
+            "parameters": [
+              {
+                "name": "smoke_source",
+                "expression": "1"
+              }
+            ]
+          },
+          "fingerprint_scope": [
+            "tag",
+            "label",
+            "file_path",
+            "time_modified",
+            "parameters"
+          ],
+          "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+          "external_event_counter": 0,
+          "changed_tags": [],
+          "server_instance_id": "127.0.0.1:59380",
+          "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+          "instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+          "generation": 2
+        },
+        "worker_source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
+        "worker_entrypoint": "UniversalSmoke",
+        "source_binding_verified": true,
+        "readback": {
+          "executed": true,
+          "model_tag": "mcp1",
+          "source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
+          "entrypoint": "UniversalSmoke",
+          "worker_build_id": "persistent-comsol-worker/source-snapshot-v2",
+          "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+          "readback": {
+            "model_tag": "mcp1",
+            "domain_count": 1,
+            "study_tags": [
+              "smoke_study"
+            ],
+            "solution_tags": [
+              "sol1"
+            ],
+            "dataset_tags": [
+              "dset1"
+            ]
+          }
+        },
+        "execution_success": true,
+        "domain_state": "succeeded",
+        "verification_status": "NOT_APPLICABLE",
+        "execution_state_unknown": false,
+        "partial_change": false,
+        "cleanup_failed": false,
+        "dispatch_stage": "post_dispatch",
+        "operation": "code.execute_java",
+        "effect": "project_write",
+        "domain_outcome": {
+          "operation": "",
+          "state": "succeeded",
+          "verification_status": "NOT_APPLICABLE",
+          "cleanup_failed": false,
+          "execution_state_unknown": false,
+          "dispatch_stage": "post_dispatch"
+        },
+        "isolation_proof": {
+          "verified": true,
+          "proof_scope": "active SessionRuntimeContext + same ManagedBackend/Worker/service + original Server Popen/kernel birth + exact IPv4 loopback listener + live bidirectional Worker socket pair",
+          "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+          "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+          "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+          "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+          "worker_epoch": 2,
+          "server_pid": 61395,
+          "server_birth": "start_epoch_ms:1794064262864",
+          "server_start_epoch_ms": 1794064262864,
+          "worker_pid": 61655,
+          "worker_start_epoch_ms": 1794064282110,
+          "endpoint": "127.0.0.1:59380",
+          "listener": {
+            "pid": 61395,
+            "endpoint": "127.0.0.1:59380",
+            "local_endpoint": "127.0.0.1:59380",
+            "remote_endpoint": null,
+            "state": "LISTEN",
+            "raw": "java    61395 everwalker   59u  IPv6 0xb6e35cf48dc08599      0t0  TCP 127.0.0.1:59380 (LISTEN)"
+          },
+          "worker_client_ephemeral_port": 59446,
+          "established_client_pids": [
+            61395,
+            61655
+          ],
+          "worker_health_rpc_performed": false
+        }
+      },
+      "error": null,
+      "execution": {
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "model_ref": {
+          "schema_version": 1,
+          "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+          "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+          "model_tag": "mcp1",
+          "generation": 1
+        },
+        "revision": 1,
+        "dirty": false,
+        "server_ownership": "mcp_managed",
+        "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": "t07v2-b0cbd2d-b-java-execute-01",
+        "operation_id": "29ce44c2-2df0-41bd-8be8-4c8c0bef5d19",
+        "request_hash": "fe8c96360d4160b055da46ab24a8c2d71f59441e3d7aca2eb5dfe8208dc42951",
+        "runtime_observation": {
+          "schema": "comsol-worker-runtime-observation/v1",
+          "status": "OBSERVED",
+          "comsol_version": "6.4.0.293",
+          "runtime_identity": {
+            "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+            "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+            "connection_epoch": 2,
+            "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+            "endpoint": "127.0.0.1:59380"
+          },
+          "installation_runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics"
+        },
+        "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+        "idempotency_key": "t07v2-b0cbd2d-b-java-execute-01",
+        "job_id": "04078868-ee8a-4432-a9b3-68438d7a3953"
+      }
+    },
+    "isError": false
+  }
+}

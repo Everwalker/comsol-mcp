@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:14:47.121120+00:00",
+  "updated_utc": "2026-11-07T15:18:50.774482+00:00",
   "T05": {
     "status": "DONE",
     "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
@@ -130,6 +130,20 @@
       "sha256": "04bb1bc0d17eec2db7b8cc3273cbce721464809c6dc2bcdfb113908349c1ad33",
       "fence": "No further model/session/Worker calls, replay, cleanup, session recovery or job reconciliation without a separately justified recovery plan. Preserve original earlier T07 fence independently."
     },
-    "fresh_control_domain_note": "The sandbox preflight in the task-created control domain A did not submit the description request; an escalated read-only description then used that domain before fresh-domain guidance. Domain A was retained; all new project/session/model work used separate domain B. Native agent is recording full provenance."
+    "fresh_control_domain_note": "The sandbox preflight in the task-created control domain A did not submit the description request; an escalated read-only description then used that domain before fresh-domain guidance. Domain A was retained; all new project/session/model work used separate domain B. Native agent is recording full provenance.",
+    "candidate_native_attempt": {
+      "source_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
+      "wheel_sha256": "584d905f37b24120ea1bee8556b96af890a6228dd549dc62d6feb2e16bb5c8cf",
+      "source_sha256": "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670",
+      "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+      "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+      "worker_instance_id": "6c6ad99c-5ddc-4b3b-981d-40aecb300f5b",
+      "java_execute": "SUCCEEDED, revision 0 -> 1; actual solve and model readback",
+      "result_evaluate": "UNKNOWN; fenced, no numerical or image acceptance",
+      "evidence": "docs/universal_mcp_execution/evidence/full/T07v2-native-attempt-qwen-20261107.md",
+      "raw_evidence_directory": "docs/universal_mcp_execution/evidence/full/t07v2-b0cbd2d-20261107",
+      "runner_evidence": "Exact runner bytes retained as .py.txt because historical defaults target fenced domain B; do not execute.",
+      "deviation": "The agent listed the earlier project directory read-only once; no control API or Worker RPC in that command. It also reused new domain A for read-only descriptions after sandbox startup failure and before fresh-domain guidance; A was retained."
+    }
   }
 }

@@ -1,0 +1,147 @@
+{
+  "request": {
+    "operation_id": "runtime.discover",
+    "arguments": {
+      "idempotency_key": "t07v2-b0cbd2d-b-discover-01"
+    },
+    "execution": {
+      "request_id": "t07v2-b0cbd2d-b-discover-01",
+      "idempotency_key": "t07v2-b0cbd2d-b-discover-01"
+    }
+  },
+  "response": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": true, \"data\": {\"schema_version\": \"comsol-mcp.runtime-discover/1.0.0\", \"status\": \"OBSERVED\", \"platform\": \"macos\", \"host_architecture\": \"arm64\", \"roots_examined\": [{\"path\": \"/Applications/COMSOL64/Multiphysics\", \"status\": \"SCANNED\"}, {\"path\": \"/Applications\", \"status\": \"SCANNED\"}], \"errors\": [], \"installations\": [{\"runtime_id\": \"comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics\", \"root\": \"/Applications/COMSOL64/Multiphysics\", \"platform\": \"macos\", \"version\": {\"status\": \"OBSERVED\", \"value\": \"6.4.0\", \"sources\": [{\"value\": \"6.4.0\", \"path\": \"/Applications/COMSOL64/Multiphysics/readme.txt\"}, {\"value\": \"6.4.0\", \"path\": \"/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics.app/Contents/Info.plist\"}, {\"value\": \"6.4.0\", \"path\": \"/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics Server.app/Contents/Info.plist\"}]}, \"build\": {\"status\": \"OBSERVED\", \"value\": 293, \"source\": \"/Applications/COMSOL64/Multiphysics/readme.txt\"}, \"architecture\": {\"status\": \"OBSERVED\", \"values\": [\"arm64\"], \"sources\": [{\"path\": \"/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher\", \"executable\": true, \"architectures\": [\"arm64\"]}, {\"path\": \"/Applications/COMSOL64/Multiphysics/bin/comsol\", \"executable\": true, \"architectures\": []}]}, \"launchers\": [{\"path\": \"/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher\", \"executable\": true, \"architectures\": [\"arm64\"]}, {\"path\": \"/Applications/COMSOL64/Multiphysics/bin/comsol\", \"executable\": true, \"architectures\": []}], \"bundled_java\": [{\"home\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home\", \"java_executable\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java\", \"version\": {\"status\": \"OBSERVED\", \"value\": \"21.0.7\"}, \"architecture\": {\"status\": \"OBSERVED\", \"values\": [\"arm64\"], \"source\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java\"}, \"release_metadata\": \"/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/release\"}], \"markers\": {\"readme\": true, \"api_plugins\": true, \"launcher_count\": 2, \"bundled_java_count\": 1}, \"metadata_only\": true, \"comsol_started\": false, \"license_checked_out\": false}], \"comsol_started\": false, \"license_checked_out\": false}, \"execution\": {\"operation_id\": \"837e7475-4939-4ea4-9457-a45722198804\", \"session_id\": null, \"model_ref\": null, \"revision\": null, \"request_id\": \"t07v2-b0cbd2d-b-discover-01\", \"request_hash\": \"49915ce1826f740368479890c81932e31221a046fb552c76f867ed2f1124cb2a\", \"idempotency_key\": \"t07v2-b0cbd2d-b-discover-01\", \"job_id\": \"b940be19-1465-49eb-b81e-eb215d3c46c9\"}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": true,
+      "data": {
+        "schema_version": "comsol-mcp.runtime-discover/1.0.0",
+        "status": "OBSERVED",
+        "platform": "macos",
+        "host_architecture": "arm64",
+        "roots_examined": [
+          {
+            "path": "/Applications/COMSOL64/Multiphysics",
+            "status": "SCANNED"
+          },
+          {
+            "path": "/Applications",
+            "status": "SCANNED"
+          }
+        ],
+        "errors": [],
+        "installations": [
+          {
+            "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+            "root": "/Applications/COMSOL64/Multiphysics",
+            "platform": "macos",
+            "version": {
+              "status": "OBSERVED",
+              "value": "6.4.0",
+              "sources": [
+                {
+                  "value": "6.4.0",
+                  "path": "/Applications/COMSOL64/Multiphysics/readme.txt"
+                },
+                {
+                  "value": "6.4.0",
+                  "path": "/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics.app/Contents/Info.plist"
+                },
+                {
+                  "value": "6.4.0",
+                  "path": "/Applications/COMSOL64/Multiphysics/COMSOL Multiphysics Server.app/Contents/Info.plist"
+                }
+              ]
+            },
+            "build": {
+              "status": "OBSERVED",
+              "value": 293,
+              "source": "/Applications/COMSOL64/Multiphysics/readme.txt"
+            },
+            "architecture": {
+              "status": "OBSERVED",
+              "values": [
+                "arm64"
+              ],
+              "sources": [
+                {
+                  "path": "/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher",
+                  "executable": true,
+                  "architectures": [
+                    "arm64"
+                  ]
+                },
+                {
+                  "path": "/Applications/COMSOL64/Multiphysics/bin/comsol",
+                  "executable": true,
+                  "architectures": []
+                }
+              ]
+            },
+            "launchers": [
+              {
+                "path": "/Applications/COMSOL64/Multiphysics/bin/macarm64/comsollauncher",
+                "executable": true,
+                "architectures": [
+                  "arm64"
+                ]
+              },
+              {
+                "path": "/Applications/COMSOL64/Multiphysics/bin/comsol",
+                "executable": true,
+                "architectures": []
+              }
+            ],
+            "bundled_java": [
+              {
+                "home": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home",
+                "java_executable": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java",
+                "version": {
+                  "status": "OBSERVED",
+                  "value": "21.0.7"
+                },
+                "architecture": {
+                  "status": "OBSERVED",
+                  "values": [
+                    "arm64"
+                  ],
+                  "source": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/bin/java"
+                },
+                "release_metadata": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home/release"
+              }
+            ],
+            "markers": {
+              "readme": true,
+              "api_plugins": true,
+              "launcher_count": 2,
+              "bundled_java_count": 1
+            },
+            "metadata_only": true,
+            "comsol_started": false,
+            "license_checked_out": false
+          }
+        ],
+        "comsol_started": false,
+        "license_checked_out": false
+      },
+      "execution": {
+        "operation_id": "837e7475-4939-4ea4-9457-a45722198804",
+        "session_id": null,
+        "model_ref": null,
+        "revision": null,
+        "request_id": "t07v2-b0cbd2d-b-discover-01",
+        "request_hash": "49915ce1826f740368479890c81932e31221a046fb552c76f867ed2f1124cb2a",
+        "idempotency_key": "t07v2-b0cbd2d-b-discover-01",
+        "job_id": "b940be19-1465-49eb-b81e-eb215d3c46c9"
+      }
+    },
+    "isError": false
+  }
+}

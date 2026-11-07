@@ -1,0 +1,27 @@
+import asyncio, json, sys, datetime
+from pathlib import Path
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+sys.path.insert(0, str(Path(__file__).parent))
+from env import B2, base_env
+
+params = StdioServerParameters(command=str(B2 / "venv/bin/comsol-mcp"), args=[], env=base_env(), cwd="/private/tmp/t07v2-client-20261107")
+ops = sys.argv[1:] or ["result.evaluate", "plot.render", "plot.list", "plot.group_create", "artifact.list", "artifact.inspect", "artifact.read", "runtime.render_probe", "runtime.doctor"]
+out = B2 / ("logs/describe_" + ("_".join(ops)[:60]) + ".json")
+assert not out.exists(), out
+
+async def main():
+    async with stdio_client(params) as (r, w):
+        async with ClientSession(r, w, read_timeout_seconds=datetime.timedelta(seconds=60)) as session:
+            await session.initialize()
+            data = {}
+            for op in ops:
+                data["describe:" + op] = (await session.call_tool("operation_describe", {"operation_id": op})).model_dump(mode="json")
+            out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+            for k, v in data.items():
+                sc = v.get("structuredContent") or {}
+                d = sc.get("data") or {}
+                print(k, "| success=", sc.get("success"), "| effect=", d.get("effect"), "| gate=", d.get("gate"), "| impl=", d.get("implementation_status"))
+
+asyncio.run(main())
+print("saved:", out)

@@ -1,0 +1,14 @@
+{
+  "record": "control-domain-A-note-t07v2-20261107",
+  "written_utc": "2026-11-07T15:10:26.612Z",
+  "domain_a_home": "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v2-native-20261107/mcp-home",
+  "first_sandbox_failures": "control.log contains two daemon tracebacks, both PermissionError [Errno 1] on socket bind in server_bind (sandbox denial). Failed daemon processes exited on exception; no signal was sent by the agent.",
+  "startup_outcome_of_failed_attempts": "daemon process exited (traceback logged); lock acquisition by failed processes not separately proven, hence domain retained rather than assumed clean",
+  "escalated_reuse_note": "Before this guidance arrived, the first escalated run (describe-only, 2026-11-07T15:09:24Z) reused domain A and started a healthy daemon (DAEMON_READY pid=60167, port=59058). It executed only operation_describe (READ catalog) with all-success results; saved at logs/describe_result.evaluate_plot.render_plot.list_plot.group_create_arti.json. No project/session/model/engine calls in domain A.",
+  "domain_a_state": "RETAINED untouched: live idle daemon pid 60167 holds control.lock (verified via lsof read-only). No further use, no signals, no cleanup.",
+  "domain_b_plan": {
+    "home": "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v2-native-20261107/mcp-home-b",
+    "request_idempotency_prefix": "t07v2-b0cbd2d-b-",
+    "note": "all main-path steps (project.create onward) use domain B only"
+  }
+}

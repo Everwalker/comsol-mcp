@@ -1,0 +1,1493 @@
+{
+  "request": {
+    "operation_id": "result.evaluate",
+    "arguments": {
+      "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+      "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "idempotency_key": "t07v2-b0cbd2d-b-result-evaluate-01",
+      "spec": {
+        "expressions": [
+          "u"
+        ],
+        "solution": {
+          "dataset": "dset1",
+          "solution": "sol1"
+        },
+        "selection": {
+          "kind": "all",
+          "component": "smoke_comp",
+          "geometry": "smoke_geom",
+          "entity_dimension": 2
+        },
+        "entity_dim": 2,
+        "aggregate": "average",
+        "complex_mode": "real",
+        "storage": "inline"
+      }
+    },
+    "execution": {
+      "project_id": "5b89bbb1-dd17-41b4-b1da-4f585127df45",
+      "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-1efe8c8b25424e0d81848bd8e4a98cae",
+        "server_instance_id": "e9dcaea249df3a137db1a451d1d82b266e85476afd11d7f7906fd738c3f0d832",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "expected_revision": 1,
+      "request_id": "t07v2-b0cbd2d-b-result-evaluate-01",
+      "idempotency_key": "t07v2-b0cbd2d-b-result-evaluate-01",
+      "rpc_timeout_s": 180,
+      "execution_timeout_s": 180
+    }
+  },
+  "response": {
+    "meta": null,
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\": false, \"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"result.evaluate failed with NATIVE_RESULT_BINDING_MISMATCH (aggregate actual ROI is not the requested all-entity selection); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged\", \"safe_retry\": false, \"stage\": \"post_dispatch\", \"details\": {\"stage\": \"before_run\", \"role\": \"aggregate\", \"publish_allowed\": false, \"dispatch_stage\": \"post_dispatch\", \"witness\": {\"engine_calls\": 194, \"mutation_method\": \"getSequenceType\", \"mutation_issued\": true, \"methods\": [\"all\", \"component\", \"create\", \"dataset\", \"dim\", \"entities\", \"geom\", \"get\", \"getLevelNames\", \"getLevels\", \"getNU\", \"getOuterSolnum\", \"getPNames\", \"getSDim\", \"getSequenceType\", \"getSize\", \"getSizeMulti\", \"getSolutioninfo\", \"getString\", \"getStringArray\", \"getType\", \"isAttached\", \"isAxisymmetric\", \"isInheriting\", \"lengthUnit\", \"modelNode\", \"named\", \"numerical\", \"properties\", \"remove\", \"result\", \"selection\", \"set\", \"sol\", \"study\", \"tags\"], \"dispatches\": [{\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"numerical\", \"args_count\": 0, \"receiver\": \"h-ac1209e6-faae-44b1-8545-d0a42f6796a4\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-ac1209e6-faae-44b1-8545-d0a42f6796a4\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-a2b23771-5867-4df9-86a2-04fcf3476ab8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-a2b23771-5867-4df9-86a2-04fcf3476ab8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-57a7b863-27eb-42d3-8afa-967175ee8e8e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-7f479dfb-70b8-4ccb-9596-65de418a7c60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-49d38901-e4d7-43b4-ae5c-fb2a21a54d76\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-7f479dfb-70b8-4ccb-9596-65de418a7c60\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-19a3e2e4-f651-4d5a-af7c-d75614976293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"modelNode\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3b0b8f77-c6bc-4a94-b4d3-ca480351823d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"component\", \"args_count\": 1, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 0, \"receiver\": \"h-eb8718bc-34cc-4f37-85f4-107baa4fab5a\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-373c8c3b-ab61-4213-b70f-5eb105614eeb\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-373c8c3b-ab61-4213-b70f-5eb105614eeb\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-e93682cc-917f-4bce-b24e-127de80b7891\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-e93682cc-917f-4bce-b24e-127de80b7891\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSolutioninfo\", \"args_count\": 0, \"receiver\": \"h-cab98c75-32e7-4ac9-9e28-c6d511993762\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-42942f2a-8964-44c9-9411-a8a10e919a55\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-11bc9344-7874-4121-a0cf-ffa2a0231936\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-11bc9344-7874-4121-a0cf-ffa2a0231936\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSolutioninfo\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSequenceType\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isAttached\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSize\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getSizeMulti\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getNU\", \"args_count\": 1, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getPNames\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-562b17b3-d184-467b-94b8-6eefb3e04ac3\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevels\", \"args_count\": 0, \"receiver\": \"h-562b17b3-d184-467b-94b8-6eefb3e04ac3\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-562b17b3-d184-467b-94b8-6eefb3e04ac3\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSize\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getSizeMulti\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getNU\", \"args_count\": 1, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSequenceType\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isAttached\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getPNames\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-562b17b3-d184-467b-94b8-6eefb3e04ac3\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevels\", \"args_count\": 0, \"receiver\": \"h-562b17b3-d184-467b-94b8-6eefb3e04ac3\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-562b17b3-d184-467b-94b8-6eefb3e04ac3\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-35289b08-2f26-45c0-b936-24ac35515118\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-75ea5cf3-9b76-4f12-959e-edf8b3962b0a\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-4aacbaa3-6230-48ed-9971-b195a06ab1e8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-42942f2a-8964-44c9-9411-a8a10e919a55\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"component\", \"args_count\": 1, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 1, \"receiver\": \"h-0b0901c0-e117-4425-9a60-7b9fb5208bd9\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"lengthUnit\", \"args_count\": 0, \"receiver\": \"h-0c1b8aac-d95a-4433-807d-ef47abbcfe9c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSDim\", \"args_count\": 0, \"receiver\": \"h-0c1b8aac-d95a-4433-807d-ef47abbcfe9c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"isAxisymmetric\", \"args_count\": 0, \"receiver\": \"h-0c1b8aac-d95a-4433-807d-ef47abbcfe9c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-851ae297-fde1-45f5-9ce3-f176b5608293\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3db72900-88fc-4920-9d0e-7fabbd9c3713\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-f571c7c2-f0ae-4750-be0f-71787fd0a44e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-3db72900-88fc-4920-9d0e-7fabbd9c3713\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"modelNode\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-a6da5594-2725-4172-8e00-52179f6b8920\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"component\", \"args_count\": 1, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 0, \"receiver\": \"h-3787b4e5-5bcc-42c8-904d-97a2f414fd9d\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-5b63d2f6-3a01-496d-984c-4c173bbc3800\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-5b63d2f6-3a01-496d-984c-4c173bbc3800\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-dc03fbe5-a02f-4b72-add5-49a7cc9f5ae2\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-dc03fbe5-a02f-4b72-add5-49a7cc9f5ae2\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSolutioninfo\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSequenceType\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isAttached\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSize\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getSizeMulti\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getNU\", \"args_count\": 1, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getPNames\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-1c9e95fe-0767-40c5-ad99-991abc565dd8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevels\", \"args_count\": 0, \"receiver\": \"h-1c9e95fe-0767-40c5-ad99-991abc565dd8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-1c9e95fe-0767-40c5-ad99-991abc565dd8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSize\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getSizeMulti\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getNU\", \"args_count\": 1, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSequenceType\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isAttached\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getPNames\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-1c9e95fe-0767-40c5-ad99-991abc565dd8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevels\", \"args_count\": 0, \"receiver\": \"h-1c9e95fe-0767-40c5-ad99-991abc565dd8\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-1c9e95fe-0767-40c5-ad99-991abc565dd8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-04a41dea-018c-40fc-9bb3-b3fa40558456\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-811fcf55-ca36-4eed-a88d-db1e6159da67\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-fa304274-ed40-4e38-839a-fc1e5a85fc89\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"create\", \"args_count\": 2, \"receiver\": \"h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"set\", \"args_count\": 2, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"set\", \"args_count\": 2, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 2, \"receiver\": \"h-fcb0ee6f-99c3-41ba-bf34-373951e22529\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"all\", \"args_count\": 0, \"receiver\": \"h-fcb0ee6f-99c3-41ba-bf34-373951e22529\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"result\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dataset\", \"args_count\": 0, \"receiver\": \"h-66ea0caa-6ed0-452b-ab51-2cb660382af0\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-58c24968-9039-4f60-b2ba-0ea83df98f29\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-25c9cb47-b2e3-492c-b559-666a9ff5c4d8\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-58c24968-9039-4f60-b2ba-0ea83df98f29\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"properties\", \"args_count\": 0, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-82182e0a-3585-4b97-b02c-507347d17c5e\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"modelNode\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-72d65246-378e-4bdb-8ed0-6191d50eb771\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"component\", \"args_count\": 1, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 0, \"receiver\": \"h-49963ab8-878a-4a08-81bb-bba09648a761\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-adc721d8-7059-42da-9324-973285798947\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-adc721d8-7059-42da-9324-973285798947\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"sol\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-3601c195-8a3e-4fd1-a545-597f6d1764af\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"get\", \"args_count\": 1, \"receiver\": \"h-3601c195-8a3e-4fd1-a545-597f6d1764af\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSolutioninfo\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSequenceType\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isAttached\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSize\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getSizeMulti\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getNU\", \"args_count\": 1, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getPNames\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-296669f4-5cbb-4a85-8695-c214d598509c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevels\", \"args_count\": 0, \"receiver\": \"h-296669f4-5cbb-4a85-8695-c214d598509c\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-296669f4-5cbb-4a85-8695-c214d598509c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSize\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getSizeMulti\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getNU\", \"args_count\": 1, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getType\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getSequenceType\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isAttached\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getPNames\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevelNames\", \"args_count\": 0, \"receiver\": \"h-296669f4-5cbb-4a85-8695-c214d598509c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getLevels\", \"args_count\": 0, \"receiver\": \"h-296669f4-5cbb-4a85-8695-c214d598509c\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"getOuterSolnum\", \"args_count\": 0, \"receiver\": \"h-296669f4-5cbb-4a85-8695-c214d598509c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-68d79261-a023-4d68-a9b5-6d21e48e2ab6\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-71fd7653-5073-4e9d-b521-f813b9c5b453\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-27bd3a97-b51e-4710-bc9e-038f678d87af\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"study\", \"args_count\": 0, \"receiver\": \"h-ee04f9a1-45c0-4858-8386-df9df96cd5df\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getString\", \"args_count\": 1, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"getStringArray\", \"args_count\": 1, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"selection\", \"args_count\": 0, \"receiver\": \"h-f2643c35-8df3-4e60-91ca-46afba17858c\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"geom\", \"args_count\": 0, \"receiver\": \"h-76732047-1f9e-4277-a1a3-a7a6402b20c7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"dim\", \"args_count\": 0, \"receiver\": \"h-76732047-1f9e-4277-a1a3-a7a6402b20c7\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"named\", \"args_count\": 0, \"receiver\": \"h-76732047-1f9e-4277-a1a3-a7a6402b20c7\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"entities\", \"args_count\": 0, \"receiver\": \"h-76732047-1f9e-4277-a1a3-a7a6402b20c7\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"isInheriting\", \"args_count\": 0, \"receiver\": \"h-76732047-1f9e-4277-a1a3-a7a6402b20c7\", \"is_mutation\": false}, {\"command\": \"call\", \"method\": \"remove\", \"args_count\": 1, \"receiver\": \"h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7\", \"is_mutation\": true}, {\"command\": \"call\", \"method\": \"tags\", \"args_count\": 0, \"receiver\": \"h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7\", \"is_mutation\": false}]}, \"unproven_pre_dispatch\": false, \"cause_code\": \"NATIVE_RESULT_BINDING_MISMATCH\", \"cause_message\": \"aggregate actual ROI is not the requested all-entity selection\"}}, \"execution\": {\"request_id\": \"t07v2-b0cbd2d-b-result-evaluate-01\", \"operation_id\": \"1ca053cf-b0bc-4f8a-a046-dd6f52ec007a\", \"request_hash\": \"3efeeef9edb6f8c404ef69f41d7f2c29788e344bf9a5395c067e3b56b83d68a4\", \"idempotency_key\": \"t07v2-b0cbd2d-b-result-evaluate-01\", \"job_id\": \"4722d099-56ac-4a22-938d-1d60e163cbc3\"}}",
+        "annotations": null,
+        "meta": null
+      }
+    ],
+    "structuredContent": {
+      "success": false,
+      "data": {},
+      "error": {
+        "code": "EXECUTION_STATE_UNKNOWN",
+        "message": "result.evaluate failed with NATIVE_RESULT_BINDING_MISMATCH (aggregate actual ROI is not the requested all-entity selection); the callback did not declare a pre-dispatch stage, so the engine state cannot be shown to be unchanged",
+        "safe_retry": false,
+        "stage": "post_dispatch",
+        "details": {
+          "stage": "before_run",
+          "role": "aggregate",
+          "publish_allowed": false,
+          "dispatch_stage": "post_dispatch",
+          "witness": {
+            "engine_calls": 194,
+            "mutation_method": "getSequenceType",
+            "mutation_issued": true,
+            "methods": [
+              "all",
+              "component",
+              "create",
+              "dataset",
+              "dim",
+              "entities",
+              "geom",
+              "get",
+              "getLevelNames",
+              "getLevels",
+              "getNU",
+              "getOuterSolnum",
+              "getPNames",
+              "getSDim",
+              "getSequenceType",
+              "getSize",
+              "getSizeMulti",
+              "getSolutioninfo",
+              "getString",
+              "getStringArray",
+              "getType",
+              "isAttached",
+              "isAxisymmetric",
+              "isInheriting",
+              "lengthUnit",
+              "modelNode",
+              "named",
+              "numerical",
+              "properties",
+              "remove",
+              "result",
+              "selection",
+              "set",
+              "sol",
+              "study",
+              "tags"
+            ],
+            "dispatches": [
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "numerical",
+                "args_count": 0,
+                "receiver": "h-ac1209e6-faae-44b1-8545-d0a42f6796a4",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-ac1209e6-faae-44b1-8545-d0a42f6796a4",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-a2b23771-5867-4df9-86a2-04fcf3476ab8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-a2b23771-5867-4df9-86a2-04fcf3476ab8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-57a7b863-27eb-42d3-8afa-967175ee8e8e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-7f479dfb-70b8-4ccb-9596-65de418a7c60",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-49d38901-e4d7-43b4-ae5c-fb2a21a54d76",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-7f479dfb-70b8-4ccb-9596-65de418a7c60",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-19a3e2e4-f651-4d5a-af7c-d75614976293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "modelNode",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-3b0b8f77-c6bc-4a94-b4d3-ca480351823d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 0,
+                "receiver": "h-eb8718bc-34cc-4f37-85f4-107baa4fab5a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-373c8c3b-ab61-4213-b70f-5eb105614eeb",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-373c8c3b-ab61-4213-b70f-5eb105614eeb",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-e93682cc-917f-4bce-b24e-127de80b7891",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-e93682cc-917f-4bce-b24e-127de80b7891",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolutioninfo",
+                "args_count": 0,
+                "receiver": "h-cab98c75-32e7-4ac9-9e28-c6d511993762",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-42942f2a-8964-44c9-9411-a8a10e919a55",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-11bc9344-7874-4121-a0cf-ffa2a0231936",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-11bc9344-7874-4121-a0cf-ffa2a0231936",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolutioninfo",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSequenceType",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isAttached",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSize",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getSizeMulti",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getNU",
+                "args_count": 1,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-562b17b3-d184-467b-94b8-6eefb3e04ac3",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevels",
+                "args_count": 0,
+                "receiver": "h-562b17b3-d184-467b-94b8-6eefb3e04ac3",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-562b17b3-d184-467b-94b8-6eefb3e04ac3",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSize",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getSizeMulti",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getNU",
+                "args_count": 1,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSequenceType",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isAttached",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-562b17b3-d184-467b-94b8-6eefb3e04ac3",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevels",
+                "args_count": 0,
+                "receiver": "h-562b17b3-d184-467b-94b8-6eefb3e04ac3",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-562b17b3-d184-467b-94b8-6eefb3e04ac3",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-35289b08-2f26-45c0-b936-24ac35515118",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-75ea5cf3-9b76-4f12-959e-edf8b3962b0a",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-4aacbaa3-6230-48ed-9971-b195a06ab1e8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-42942f2a-8964-44c9-9411-a8a10e919a55",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 1,
+                "receiver": "h-0b0901c0-e117-4425-9a60-7b9fb5208bd9",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "lengthUnit",
+                "args_count": 0,
+                "receiver": "h-0c1b8aac-d95a-4433-807d-ef47abbcfe9c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSDim",
+                "args_count": 0,
+                "receiver": "h-0c1b8aac-d95a-4433-807d-ef47abbcfe9c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "isAxisymmetric",
+                "args_count": 0,
+                "receiver": "h-0c1b8aac-d95a-4433-807d-ef47abbcfe9c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-851ae297-fde1-45f5-9ce3-f176b5608293",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-3db72900-88fc-4920-9d0e-7fabbd9c3713",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-f571c7c2-f0ae-4750-be0f-71787fd0a44e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-3db72900-88fc-4920-9d0e-7fabbd9c3713",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-af9acf01-16f6-4eaf-b9a1-bbe93a5f1541",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "modelNode",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-a6da5594-2725-4172-8e00-52179f6b8920",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 0,
+                "receiver": "h-3787b4e5-5bcc-42c8-904d-97a2f414fd9d",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-5b63d2f6-3a01-496d-984c-4c173bbc3800",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-5b63d2f6-3a01-496d-984c-4c173bbc3800",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-dc03fbe5-a02f-4b72-add5-49a7cc9f5ae2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-dc03fbe5-a02f-4b72-add5-49a7cc9f5ae2",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolutioninfo",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSequenceType",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isAttached",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSize",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getSizeMulti",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getNU",
+                "args_count": 1,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-1c9e95fe-0767-40c5-ad99-991abc565dd8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevels",
+                "args_count": 0,
+                "receiver": "h-1c9e95fe-0767-40c5-ad99-991abc565dd8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-1c9e95fe-0767-40c5-ad99-991abc565dd8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSize",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getSizeMulti",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getNU",
+                "args_count": 1,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSequenceType",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isAttached",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-1c9e95fe-0767-40c5-ad99-991abc565dd8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevels",
+                "args_count": 0,
+                "receiver": "h-1c9e95fe-0767-40c5-ad99-991abc565dd8",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-1c9e95fe-0767-40c5-ad99-991abc565dd8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-04a41dea-018c-40fc-9bb3-b3fa40558456",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-811fcf55-ca36-4eed-a88d-db1e6159da67",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-fa304274-ed40-4e38-839a-fc1e5a85fc89",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "create",
+                "args_count": 2,
+                "receiver": "h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "set",
+                "args_count": 2,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "set",
+                "args_count": 2,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "selection",
+                "args_count": 0,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 2,
+                "receiver": "h-fcb0ee6f-99c3-41ba-bf34-373951e22529",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "all",
+                "args_count": 0,
+                "receiver": "h-fcb0ee6f-99c3-41ba-bf34-373951e22529",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "result",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dataset",
+                "args_count": 0,
+                "receiver": "h-66ea0caa-6ed0-452b-ab51-2cb660382af0",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-58c24968-9039-4f60-b2ba-0ea83df98f29",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-25c9cb47-b2e3-492c-b559-666a9ff5c4d8",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-58c24968-9039-4f60-b2ba-0ea83df98f29",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "properties",
+                "args_count": 0,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-82182e0a-3585-4b97-b02c-507347d17c5e",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "modelNode",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-72d65246-378e-4bdb-8ed0-6191d50eb771",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "component",
+                "args_count": 1,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 0,
+                "receiver": "h-49963ab8-878a-4a08-81bb-bba09648a761",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-adc721d8-7059-42da-9324-973285798947",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-adc721d8-7059-42da-9324-973285798947",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "sol",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-3601c195-8a3e-4fd1-a545-597f6d1764af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "get",
+                "args_count": 1,
+                "receiver": "h-3601c195-8a3e-4fd1-a545-597f6d1764af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSolutioninfo",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSequenceType",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isAttached",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSize",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getSizeMulti",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getNU",
+                "args_count": 1,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-296669f4-5cbb-4a85-8695-c214d598509c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevels",
+                "args_count": 0,
+                "receiver": "h-296669f4-5cbb-4a85-8695-c214d598509c",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-296669f4-5cbb-4a85-8695-c214d598509c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSize",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getSizeMulti",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getNU",
+                "args_count": 1,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getType",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getSequenceType",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isAttached",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getPNames",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevelNames",
+                "args_count": 0,
+                "receiver": "h-296669f4-5cbb-4a85-8695-c214d598509c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getLevels",
+                "args_count": 0,
+                "receiver": "h-296669f4-5cbb-4a85-8695-c214d598509c",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "getOuterSolnum",
+                "args_count": 0,
+                "receiver": "h-296669f4-5cbb-4a85-8695-c214d598509c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-68d79261-a023-4d68-a9b5-6d21e48e2ab6",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-71fd7653-5073-4e9d-b521-f813b9c5b453",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-27bd3a97-b51e-4710-bc9e-038f678d87af",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "study",
+                "args_count": 0,
+                "receiver": "h-ee04f9a1-45c0-4858-8386-df9df96cd5df",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getString",
+                "args_count": 1,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "getStringArray",
+                "args_count": 1,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "selection",
+                "args_count": 0,
+                "receiver": "h-f2643c35-8df3-4e60-91ca-46afba17858c",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "geom",
+                "args_count": 0,
+                "receiver": "h-76732047-1f9e-4277-a1a3-a7a6402b20c7",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "dim",
+                "args_count": 0,
+                "receiver": "h-76732047-1f9e-4277-a1a3-a7a6402b20c7",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "named",
+                "args_count": 0,
+                "receiver": "h-76732047-1f9e-4277-a1a3-a7a6402b20c7",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "entities",
+                "args_count": 0,
+                "receiver": "h-76732047-1f9e-4277-a1a3-a7a6402b20c7",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "isInheriting",
+                "args_count": 0,
+                "receiver": "h-76732047-1f9e-4277-a1a3-a7a6402b20c7",
+                "is_mutation": false
+              },
+              {
+                "command": "call",
+                "method": "remove",
+                "args_count": 1,
+                "receiver": "h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7",
+                "is_mutation": true
+              },
+              {
+                "command": "call",
+                "method": "tags",
+                "args_count": 0,
+                "receiver": "h-6fcf1dbc-cf94-49c4-ba0c-53fbc1f5e0e7",
+                "is_mutation": false
+              }
+            ]
+          },
+          "unproven_pre_dispatch": false,
+          "cause_code": "NATIVE_RESULT_BINDING_MISMATCH",
+          "cause_message": "aggregate actual ROI is not the requested all-entity selection"
+        }
+      },
+      "execution": {
+        "request_id": "t07v2-b0cbd2d-b-result-evaluate-01",
+        "operation_id": "1ca053cf-b0bc-4f8a-a046-dd6f52ec007a",
+        "request_hash": "3efeeef9edb6f8c404ef69f41d7f2c29788e344bf9a5395c067e3b56b83d68a4",
+        "idempotency_key": "t07v2-b0cbd2d-b-result-evaluate-01",
+        "job_id": "4722d099-56ac-4a22-938d-1d60e163cbc3"
+      }
+    },
+    "isError": true
+  }
+}

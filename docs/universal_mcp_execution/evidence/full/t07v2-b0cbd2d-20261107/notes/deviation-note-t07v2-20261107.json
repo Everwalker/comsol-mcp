@@ -1,0 +1,17 @@
+{
+  "record": "deviation-note-t07v2-20261107",
+  "written_utc": "2026-11-07T15:09:14.260Z",
+  "deviation": "At 2026-11-07T15:05:47Z (local 23:05 Asia/Shanghai) the agent ran `find /Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/independent-projects/full-universal-smoke-20261107 -maxdepth 3 | head -12` which read-only-listed the original T06/T07 fenced project workspace directory tree (src/UniversalSmoke.java path only).",
+  "scope_of_contact": "Local filesystem directory enumeration only. No MCP/control-plane query, no job/session lookup, no Worker RPC, no COMSOL/Desktop process signal, no replay, no cleanup, no modification of any path.",
+  "impact_assessment": "Original fence state unchanged: job c25bce5c-87a1-4be5-b367-20ce5624f730 remains UNKNOWN-untouched; project 78b3d7af-…, session session-5eaf…, Worker/model not queried. No source was read from that directory; Java source bytes are taken only from docs/universal_mcp_execution/evidence/full/sources/UniversalSmoke.java (sha256 33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670).",
+  "corrective_action": "The old project path will not be read or listed again for this task; all subsequent operations target only new resources under .g3-private/full-continuation-20261107/t07v2-native-20261107.",
+  "first_sandbox_failure": {
+    "file": "logs/describe_result.evaluate_plot.render_artifact.list.json",
+    "code": "CONTROL_REQUEST_NOT_SUBMITTED",
+    "type": "ControlStartupError",
+    "dispatch_stage": "pre_dispatch",
+    "operation_dispatched": false,
+    "execution_state_unknown": false,
+    "interpretation": "operation NOT_SUBMITTED due to sandbox denial of control daemon loopback setup; NOT an UNKNOWN job"
+  }
+}
