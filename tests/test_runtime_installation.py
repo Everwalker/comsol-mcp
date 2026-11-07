@@ -206,3 +206,197 @@ def test_runtime_static_read_rejects_model_revision_envelope(tmp_path: Path) -> 
         assert result["error"]["code"] == "INVALID_REQUEST"
     finally:
         daemon.close()
+
+
+def test_doctor_passes_a_fully_configured_static_installation(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    jdk = tmp_path / "jdk-17"
+    _write_macho(jdk / "bin" / "java", 0x0100000C)
+    _write_macho(jdk / "bin" / "javac", 0x0100000C)
+    (jdk / "release").write_text('JAVA_VERSION="17.0.12"\nOS_ARCH="aarch64"\n', encoding="utf-8")
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["installation", "version", "build", "launcher", "architecture", "java", "directories", "configuration"],
+        system="Darwin",
+        environ={"COMSOL_ROOT": str(install), "COMSOL_JAVA_HOME": str(jdk)},
+    )
+    assert result["status"] == "PASS_STATIC"
+    config = [row for row in result["installations"][0]["checks"] if row["name"] == "configuration"][0]
+    assert config["status"] == "PASS"
+    assert config["comsol_root_resolves"] is True
+    assert config["configured_java"] == {"java_executable": True, "javac_executable": True, "version": "17.0.12"}
+    assert config["values_redacted"] is True
+
+
+def test_doctor_names_the_broken_configuration_with_an_actionable_reason(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    jre = tmp_path / "jre-only"
+    _write_macho(jre / "bin" / "java", 0x0100000C)
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["configuration"],
+        system="Darwin",
+        environ={"COMSOL_ROOT": str(tmp_path / "no-such-comsol"), "COMSOL_JAVA_HOME": str(jre)},
+    )
+    assert result["status"] == "UNKNOWN"
+    row = result["installations"][0]["checks"][0]
+    assert row["status"] == "INVALID"
+    assert row["comsol_root_resolves"] is False
+    assert row["configured_java"]["java_executable"] is True
+    assert row["configured_java"]["javac_executable"] is False
+    joined = " ".join(row["reasons"])
+    assert "COMSOL_ROOT" in joined
+    assert "COMSOL_JAVA_HOME" in joined
+    assert "javac" in joined
+
+
+def test_doctor_flags_configured_root_that_is_not_a_comsol_installation(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    jdk = tmp_path / "jdk-17"
+    _write_macho(jdk / "bin" / "java", 0x0100000C)
+    _write_macho(jdk / "bin" / "javac", 0x0100000C)
+    (jdk / "release").write_text('JAVA_VERSION="17.0.12"\nOS_ARCH="aarch64"\n', encoding="utf-8")
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["installation", "configuration"],
+        system="Darwin",
+        environ={"COMSOL_ROOT": str(scratch), "COMSOL_JAVA_HOME": str(jdk)},
+    )
+    row = [row for row in result["installations"][0]["checks"] if row["name"] == "configuration"][0]
+    assert row["status"] == "INVALID"
+    assert row["comsol_root_resolves"] is True
+    assert row["comsol_root_is_installation"] is False
+    assert "COMSOL_ROOT" in " ".join(row["reasons"])
+    assert result["status"] == "UNKNOWN"
+
+
+def test_doctor_treats_non_executable_jdk_binaries_as_unusable_on_macos(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    jdk = tmp_path / "jdk-nonexecutable"
+    _write_macho(jdk / "bin" / "java", 0x0100000C)
+    _write_macho(jdk / "bin" / "javac", 0x0100000C)
+    (jdk / "bin" / "java").chmod(0o644)
+    (jdk / "bin" / "javac").chmod(0o644)
+    (jdk / "release").write_text('JAVA_VERSION="17.0.12"\nOS_ARCH="aarch64"\n', encoding="utf-8")
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["configuration"],
+        system="Darwin",
+        environ={"COMSOL_JAVA_HOME": str(jdk)},
+    )
+    row = result["installations"][0]["checks"][0]
+    assert row["status"] == "INVALID"
+    assert row["configured_java"]["java_executable"] is False
+    assert row["configured_java"]["javac_executable"] is False
+    joined = " ".join(row["reasons"])
+    assert "COMSOL_JAVA_HOME" in joined
+    assert "java" in joined
+
+
+def test_doctor_windows_configuration_observes_executable_suffixes(tmp_path: Path) -> None:
+    install = _make_windows_install(tmp_path / "COMSOL63" / "Multiphysics")
+    jre = tmp_path / "jre-only"
+    _write_pe(jre / "bin" / "java.exe", 0x8664)
+    (jre / "bin" / "java.exe").chmod(0o644)
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["configuration"],
+        system="Windows",
+        environ={"COMSOL_ROOT": str(install), "JAVA_HOME": str(jre)},
+    )
+    row = result["installations"][0]["checks"][0]
+    assert row["status"] == "INVALID"
+    assert row["configured_java"]["java_executable"] is True
+    assert "JAVA_HOME" in row["reasons"][0]
+    assert "javac.exe" in row["reasons"][0]
+
+
+def test_doctor_keeps_discovery_diagnostics_when_nothing_is_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = tmp_path / "absent-root"
+    monkeypatch.setattr(runtime, "_default_roots", lambda target, environ: [missing])
+    result = runtime.doctor_installation(None, ["installation"], system="Darwin", environ={})
+    assert result["status"] == "UNKNOWN"
+    assert result["roots_examined"] == []
+    assert result["errors"] == [{"path": str(missing), "status": "UNKNOWN", "reason": "installation root is missing or inaccessible"}]
+    assert "roots_examined" in result["checks"][0]["reason"]
+
+
+def test_doctor_keeps_configuration_verdict_when_nothing_is_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(runtime, "_default_roots", lambda target, environ: [tmp_path / "empty-scan"])
+    result = runtime.doctor_installation(
+        None,
+        ["installation", "configuration"],
+        system="Darwin",
+        environ={"COMSOL_ROOT": str(scratch)},
+    )
+    assert result["status"] == "UNKNOWN"
+    rows = {row["name"]: row for row in result["checks"]}
+    assert rows["installation"]["status"] == "UNKNOWN"
+    assert "roots_examined" in rows["installation"]["reason"]
+    config = rows["configuration"]
+    assert config["status"] == "INVALID"
+    assert config["comsol_root_resolves"] is True
+    assert config["comsol_root_is_installation"] is False
+    assert "COMSOL_ROOT" in " ".join(config["reasons"])
+
+
+def test_doctor_marks_root_only_configuration_invalid_for_the_backend(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["installation", "configuration"],
+        system="Darwin",
+        environ={"COMSOL_ROOT": str(install)},
+    )
+    row = [row for row in result["installations"][0]["checks"] if row["name"] == "configuration"][0]
+    assert row["status"] == "INVALID"
+    assert row["comsol_root_set"] is True
+    assert row["java_home_set"] is False
+    assert "COMSOL_JAVA_HOME" in " ".join(row["reasons"])
+    assert result["status"] == "UNKNOWN"
+
+
+def test_doctor_marks_java_only_configuration_invalid_for_the_backend(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    jdk = tmp_path / "jdk-11"
+    _write_macho(jdk / "bin" / "java", 0x0100000C)
+    _write_macho(jdk / "bin" / "javac", 0x0100000C)
+    (jdk / "release").write_text('JAVA_VERSION="11.0.28"\nOS_ARCH="aarch64"\n', encoding="utf-8")
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["installation", "configuration"],
+        system="Darwin",
+        environ={"COMSOL_JAVA_HOME": str(jdk)},
+    )
+    row = [row for row in result["installations"][0]["checks"] if row["name"] == "configuration"][0]
+    assert row["status"] == "INVALID"
+    assert row["comsol_root_set"] is False
+    assert row["configured_java"] == {"java_executable": True, "javac_executable": True, "version": "11.0.28"}
+    assert "COMSOL_ROOT" in " ".join(row["reasons"])
+    assert result["status"] == "UNKNOWN"
+
+
+def test_doctor_keeps_not_configured_when_neither_variable_is_set(tmp_path: Path) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    result = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["installation", "configuration"],
+        system="Darwin",
+        environ={},
+    )
+    row = [row for row in result["installations"][0]["checks"] if row["name"] == "configuration"][0]
+    assert row["status"] == "NOT_CONFIGURED"
+    assert row["comsol_root_set"] is False
+    assert row["java_home_set"] is False
+    assert result["status"] == "UNKNOWN"
+    install_only = runtime.doctor_installation(
+        runtime.runtime_id_for_root(install),
+        ["installation", "directories"],
+        system="Darwin",
+        environ={},
+    )
+    assert install_only["status"] == "PASS_STATIC"

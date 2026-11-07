@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "updated_utc": "2026-11-07T14:47:01.713031+00:00",
+  "T41": {
+    "status": "IMPLEMENTED",
+    "implementation_scope": "Static discovery/doctor improvements and targeted synthetic tests. Normal installed-entry launch evidence is T05 for previous source bytes; the modified candidate is not yet installed and checked through public MCP.",
+    "source_identity_sha256": {
+      "README.md": "ff56779abcf0f414a77a8043a3ea4bd0b6779ea37f6c977806d1eaa238fed386",
+      "comsol_mcp/_runtime_installation.py": "55af80cf49fb1c187fb9206a2da1f6bec8fb708aa7adf26fed16a07937b3d37f",
+      "comsol_mcp/_g3_runtime.py": "3d91ffd84ff3372188ae6f3b71af672fc12766ea14397879ab1c9bb9ad147909",
+      "tests/test_runtime_installation.py": "3ff7e09a056b0a7e125c8aa2922ee173781ff68227b5f46652c29958a849e755"
+    },
+    "tests": "tests/test_runtime_installation.py + tests/test_g3_runtime.py: 103 passed, reported pytest exit 0; regression control 1 failed before final fix, exit 1.",
+    "test_logs": {
+      "final": {
+        "path": "docs/universal_mcp_execution/evidence/full/T41-final-pytest-20261107.txt",
+        "sha256": "ad320e9be7679f37bcf12530dbf885114fa83a08b37d0679f1db1f820f5db0c0",
+        "reported_pytest_exit": 0
+      },
+      "regression_before_fix": {
+        "path": "docs/universal_mcp_execution/evidence/full/T41-regression_before_fix-pytest-20261107.txt",
+        "sha256": "743a1f64d56f97801e26e3ed4b85d725a928cece9b1fe559f771c997a0f60cb9",
+        "reported_pytest_exit": 1
+      }
+    },
+    "evidence": "docs/universal_mcp_execution/evidence/full/T41-qwen-20261107.md",
+    "live_and_platform_limits": "New candidate installed-entry doctor has not been exercised. License/port/render, Windows and Mac x64 native evidence remain unverified.",
+    "other_observed_errors": "Qwen reported 14 ERROR in tests/test_runtime_observation_binding.py involving _SessionServerProxy; cause and relevance to required integration have not yet been independently established. Do not count as passing.",
+    "modelutil_mirror": "loadCopy synchronizes descriptive Python metadata with the already-existing Java Worker MODEL_UTIL entry; it does not change Worker enforcement."
+  }
+}

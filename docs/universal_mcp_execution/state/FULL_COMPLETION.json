@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "Original T07 job.reconcile completed once from durable events; job remains UNKNOWN. Do not repeat it or replay. Await scoped result patch review, assess session.recover or use a new independent model; T16/T41 software work continues.",
-  "updated_utc": "2026-11-07T14:10:17.594493+00:00",
+  "next_task_hint": "T41 software implementation and regression evidence recorded; T42 software may proceed. T07 repair and T16 documentation work remain in progress; original T07 job stays UNKNOWN and fenced. T19 software work is in progress.",
+  "updated_utc": "2026-11-07T14:47:01.713031+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -332,11 +332,16 @@
       "blocker": null
     },
     "T41": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G8.json",
+        "docs/universal_mcp_execution/evidence/full/T41-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T41-final-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T41-regression_before_fix-pytest-20261107.txt"
+      ],
+      "blocker": "Modified candidate has not yet been installed and exercised through its public MCP doctor entry; Windows/mac-x64 and live capability checks remain scoped separately. Other observed runtime-observation errors require triage."
     },
     "T42": {
       "status": "TODO",

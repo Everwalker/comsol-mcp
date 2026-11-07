@@ -230,7 +230,7 @@ DOCUMENTED_FEATURE_STRINGS = frozenset(FEATURE_STRING_PRODUCTS)
 #: from; the Worker remains the enforcement point.
 WORKER_MODELUTIL_ALLOWLIST = frozenset(
     {
-        "create", "load", "model", "remove", "tags", "uniquetag",
+        "create", "load", "loadCopy", "model", "remove", "tags", "uniquetag",
         "modelsUsedByOtherClients", "getComsolVersion",
         # Requested by ``WORKER_ALLOWLIST_REQUESTS`` and applied by the Worker
         # owner on 2026-09-20 (non-seat-consuming per-product query).

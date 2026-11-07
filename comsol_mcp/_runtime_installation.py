@@ -458,6 +458,100 @@ def inspect_installation(runtime_id: str, *, system: str | None = None) -> dict[
     }
 
 
+def _bin_is_executable(path: Path, target: str) -> bool:
+    """Presence plus, on macOS, the executable bit; mirrors launcher rows."""
+    if not path.is_file():
+        return False
+    return os.access(path, os.X_OK) if target == "macos" else True
+
+
+def _configuration_check(env: Mapping[str, str], target: str) -> dict[str, Any]:
+    """Observe the configured launch environment without starting anything.
+
+    The configuration values themselves stay redacted; only existence and
+    metadata facts needed for an actionable reason are read.  The JDK rule
+    matches the published installation instructions: COMSOL_JAVA_HOME (or
+    JAVA_HOME) must name a full JDK whose bin carries both java and javac
+    (Windows names included), not a runtime-only JRE.  A configured
+    COMSOL_ROOT must itself contain a recognizable installation, matching
+    how the server resolves launchers directly under COMSOL_ROOT; on macOS
+    a JDK binary must additionally carry the executable bit, mirroring the
+    launcher observation, while Windows presence stays extension based.
+    Both variables are required together because the managed backend raises
+    RUNTIME_CONFIGURATION_REQUIRED unless COMSOL_ROOT and COMSOL_JAVA_HOME
+    (or JAVA_HOME) are set; a half-configured environment is therefore
+    INVALID and names the missing variable, while a wholly unset environment
+    stays NOT_CONFIGURED.
+    """
+    configured_root = env.get("COMSOL_ROOT")
+    configured_java = env.get("COMSOL_JAVA_HOME")
+    java_variable = "COMSOL_JAVA_HOME"
+    if not configured_java:
+        configured_java = env.get("JAVA_HOME")
+        java_variable = "JAVA_HOME"
+    if not configured_root and not configured_java:
+        return {"name": "configuration", "status": "NOT_CONFIGURED", "comsol_root_set": False, "java_home_set": False, "values_redacted": True}
+    reasons: list[str] = []
+    exe_name = "java" if target == "macos" else "java.exe"
+    compiler_name = "javac" if target == "macos" else "javac.exe"
+    if not configured_root:
+        reasons.append("COMSOL_ROOT is not set; set it to the Multiphysics installation directory that runtime.discover reports so the server can resolve its launchers")
+    if not configured_java:
+        reasons.append("COMSOL_JAVA_HOME (or JAVA_HOME) is not set; set it to a full JDK root directory whose bin carries both " + exe_name + " and " + compiler_name + "; the server needs COMSOL_ROOT together with a JDK home to start and to compile project Java")
+    root_resolves: bool | None = None
+    root_is_installation: bool | None = None
+    if configured_root:
+        try:
+            root_path = _canonical_directory(configured_root)
+            root_resolves = True
+        except RuntimeInstallationError:
+            root_resolves = False
+            reasons.append("COMSOL_ROOT is set but does not name an accessible directory; point it at the Multiphysics installation directory")
+        else:
+            root_is_installation = _is_installation_root(root_path, target)
+            if not root_is_installation:
+                reasons.append("COMSOL_ROOT is set but the directory does not contain a recognizable COMSOL installation; point it at the Multiphysics installation directory that runtime.discover reports")
+    java_observation: dict[str, Any] | None = None
+    if configured_java:
+        observation = {"java_executable": False, "javac_executable": False, "version": None}
+        try:
+            java_home = Path(configured_java).expanduser()
+            if java_home.is_dir():
+                observation["java_executable"] = _bin_is_executable(java_home / "bin" / exe_name, target)
+                observation["javac_executable"] = _bin_is_executable(java_home / "bin" / compiler_name, target)
+                try:
+                    release_fields: dict[str, str] = {}
+                    for line in (java_home / "release").read_text(encoding="utf-8", errors="replace").splitlines():
+                        match = _JAVA_RELEASE_FIELD.match(line)
+                        if match:
+                            release_fields[match.group(1)] = match.group(2)
+                    version = release_fields.get("JAVA_VERSION")
+                    if isinstance(version, str) and version.strip():
+                        observation["version"] = version.strip()
+                except OSError:
+                    pass
+        except OSError:
+            pass
+        java_observation = observation
+        if not observation["java_executable"]:
+            reasons.append(java_variable + " is set but its bin/" + exe_name + " is missing or not executable; point it at a full JDK root directory")
+        elif not observation["javac_executable"]:
+            reasons.append(java_variable + " is set but its bin/" + compiler_name + " is missing or not executable; a runtime-only JRE cannot compile project Java, point it at a full JDK root directory")
+    row = {
+        "name": "configuration",
+        "status": "INVALID" if reasons else "PASS",
+        "comsol_root_set": bool(configured_root),
+        "comsol_root_resolves": root_resolves,
+        "comsol_root_is_installation": root_is_installation,
+        "java_home_set": bool(configured_java),
+        "configured_java": java_observation,
+        "values_redacted": True,
+    }
+    if reasons:
+        row["reasons"] = reasons
+    return row
+
+
 def doctor_installation(
     runtime_id: str | None = None,
     checks: Sequence[str] | None = None,
@@ -473,18 +567,31 @@ def doctor_installation(
     if target is None:
         return {"schema_version": "comsol-mcp.runtime-doctor/1.0.0", "status": "UNKNOWN", "platform": system or platform.system(), "checks": [], "comsol_started": False}
     env = os.environ if environ is None else environ
+    discovery_errors: list[dict[str, str]] = []
+    scanned: list[dict[str, str]] = []
     if runtime_id:
         installation = inspect_installation(runtime_id, system=system)["installation"]
         candidates = [installation]
     else:
-        candidates = discover_installations(system=system, environ=env)["installations"]
+        discovery = discover_installations(system=system, environ=env)
+        candidates = discovery["installations"]
+        discovery_errors = discovery["errors"]
+        scanned = discovery["roots_examined"]
     if not candidates:
+        missing_reason = "no recognizable local installation was found; compare roots_examined and errors, and set COMSOL_ROOT to the Multiphysics directory if the installation is outside the scanned roots"
+        checks_out = [
+            _configuration_check(env, target) if name == "configuration"
+            else {"name": name, "status": "UNKNOWN", "reason": missing_reason}
+            for name in selected_checks
+        ]
         return {
             "schema_version": "comsol-mcp.runtime-doctor/1.0.0",
             "status": "UNKNOWN",
             "platform": target,
             "installation": None,
-            "checks": [{"name": name, "status": "UNKNOWN", "reason": "no recognizable local installation was found"} for name in selected_checks],
+            "roots_examined": scanned,
+            "errors": discovery_errors,
+            "checks": checks_out,
             "comsol_started": False,
         }
     rows = []
@@ -512,13 +619,15 @@ def doctor_installation(
                 root_path = Path(installation["root"])
                 row = {"name": name, "status": "PASS" if root_path.is_dir() and os.access(root_path, os.R_OK) else "UNKNOWN", "readable": root_path.is_dir() and os.access(root_path, os.R_OK), "write_test": "NOT_RUN"}
             elif name == "configuration":
-                configured_root = env.get("COMSOL_ROOT")
-                configured_java = env.get("COMSOL_JAVA_HOME") or env.get("JAVA_HOME")
-                row = {"name": name, "status": "OBSERVED" if configured_root or configured_java else "NOT_CONFIGURED", "comsol_root_set": bool(configured_root), "java_home_set": bool(configured_java), "values_redacted": True}
+                row = _configuration_check(env, target)
             else:
                 row = {"name": name, "status": "NOT_RUN", "reason": {"license": "use runtime.license_inspect; no seat is checked out by doctor", "port": "no endpoint was supplied", "render": "requires runtime.render_probe with explicit authorization and a finite execution budget"}[name]}
             checks_out.append(row)
-        static_rows = [row for row in checks_out if row["status"] not in {"NOT_RUN", "NOT_CONFIGURED"}]
+        # A selected configuration check also blocks PASS_STATIC when it is
+        # NOT_CONFIGURED: the managed backend needs both environment
+        # variables before it can start, and the row keeps the row-level
+        # NOT_CONFIGURED distinction.  Unselected checks never appear here.
+        static_rows = [row for row in checks_out if row["status"] != "NOT_RUN"]
         status = "PASS_STATIC" if static_rows and all(row["status"] == "PASS" for row in static_rows) else "UNKNOWN"
         rows.append({"runtime_id": installation["runtime_id"], "status": status, "checks": checks_out})
     overall = "PASS_STATIC" if all(item["status"] == "PASS_STATIC" for item in rows) else "UNKNOWN"
