@@ -1,0 +1,20 @@
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+..................................F..................................... [ 53%]
+........................................................................ [ 71%]
+........................................................................ [ 89%]
+.........................................                                [100%]
+=================================== FAILURES ===================================
+________ test_old_a_incomplete_fixture_retained_as_structural_negative _________
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-719/test_old_a_incomplete_fixture_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ba8e270>
+
+    def test_old_a_incomplete_fixture_retained_as_structural_negative(tmp_path,monkeypatch):
+>       from test_unit_a_node_public_api import Worker as OldWorker,ROOT,path
+E       ModuleNotFoundError: No module named 'test_unit_a_node_public_api'
+
+tests/test_unit_d_same_list_copy.py:183: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/test_unit_d_same_list_copy.py::test_old_a_incomplete_fixture_retained_as_structural_negative
+1 failed, 400 passed in 3.00s

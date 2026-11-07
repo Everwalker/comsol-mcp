@@ -313,6 +313,13 @@ def test_flat_mixed_group_uses_real_service_store_claim_and_is_reported_incomple
     assert len(tickets) == 1 and worker.ungroup_calls == [("rootlist", "g1")]
     assert _state(env).dirty is False
     assert "NodeGroupList.ungroup(String)" == result["data"]["semantic_operation"]
+    # T13: the published closed data schema must cover every field this adapter
+    # actually emits (it previously omitted the ungroup readback fields).
+    from comsol_mcp import _g2_registry as _registry
+    _schema = _registry.operation_describe("node.remove")["data_schema"]
+    assert _schema["additionalProperties"] is False
+    assert set(_schema["required"]) <= set(result["data"])
+    assert set(result["data"]) <= set(_schema["properties"])
 
 
 @pytest.mark.parametrize("after", [None, "anchor"])

@@ -180,7 +180,7 @@ def test_structural_source_failure_zero_ticket_zero_mutation(env,case,monkeypatc
     evidence(env,caught.value.as_dict(),'prewrite-'+case)
 
 def test_old_a_incomplete_fixture_retained_as_structural_negative(tmp_path,monkeypatch):
-    from test_unit_a_node_public_api import Worker as OldWorker,ROOT,path
+    from tests.test_unit_a_node_public_api import Worker as OldWorker,ROOT,path
     w=OldWorker();store=OperationStore(tmp_path/'old.sqlite');service=ExecutionService(SessionLedger('session','server'),w,project_root=tmp_path);ref=service.bind_model('m')['execution']['model_ref'];b=ManagedBackend(tmp_path,store,service=service,worker=w,registry={});b.project_root=tmp_path
     monkeypatch.setattr(b,'_require_g2_isolation',lambda:{'scope':'SOFTWARE_ONLY'});tickets=[];monkeypatch.setattr(SessionLedger,'begin_write',lambda *a,**k:tickets.append(a))
     try:

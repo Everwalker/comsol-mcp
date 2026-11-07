@@ -132,9 +132,16 @@ def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: 
             raise PreWriteRefusal("API_UNSUPPORTED", "cascade=true has no reviewed dependency-safe remove adapter",
                                   details={"receiver_accessed": False, "unknown_obligations": ["complete incoming consumer graph", "authorized cascade scope"]})
         if not _g2_group_remove.is_model_root_nodegroup_path(body["path"]):
-            raise PreWriteRefusal("API_UNSUPPORTED", "only a model-root NodeGroup structural ungroup adapter is reviewed",
+            # An incomplete child scan cannot prove that a remove preserves other
+            # objects or incoming consumers. Refuse before accessing the receiver
+            # until a safe general adapter has been established (see T13 evidence).
+            raise PreWriteRefusal("API_UNSUPPORTED", "no reviewed removal adapter for ordinary or nested entities; the impact scope and incoming-consumer graph are not established, so cross-list retention cannot be proven before the first mutation",
                                   details={"receiver_accessed": False, "known_scope": {"path": body["path"]},
-                                           "unknown_obligations": ["ordinary entity-family dependency graph", "component and nested NodeGroup adapters", "incoming expression/selection consumers"],
+                                           "unknown_obligations": ["public descendant-scope contract for remove(String) per receiver family",
+                                                                   "incoming expression/selection/consumer graph (no verified public 6.4 getter)",
+                                                                   "provably complete child enumeration for arbitrary receivers",
+                                                                   "cross-list retention proof before the first mutation"],
+                                           "reviewed_alternative": "model-root NodeGroup structural ungroup only",
                                            "complete": False})
         model = _model(worker, model_tag)
         prepared["group_remove"] = _g2_group_remove.prepare(

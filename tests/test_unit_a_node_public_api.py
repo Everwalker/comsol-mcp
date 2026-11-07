@@ -437,6 +437,81 @@ def test_copy_keeps_same_model_scope_and_reports_dependency_incomplete(backend,m
     b,w,ref,tickets=install_a_copy_fixture(backend,monkeypatch);out=b.invoke('node.copy',arguments(),execution(ref),'copy',None)
     assert out['data']['complete'] is False;assert out['data']['dependency_check']['complete'] is False;assert out['data']['source_identity']['model_ref']==ref;assert out['data']['readback']['target']['type_id']=='Rectangle';assert w.collection.calls==[('copy','copy','a')]
 
+def _absent_accessor(*args):
+    # Mirrors how a real receiver declines an unexposed accessor: AttributeError
+    # is what _call turns into API_UNSUPPORTED, which the child scan treats as
+    # "this node has no such collection" rather than as a probe failure.
+    raise AttributeError('accessor not exposed')
+
+def _scan_leaf_target(backend,monkeypatch):
+    # An ordinary entity whose child surface is a provably empty leaf for the
+    # shipped 22-candidate scan: every candidate accessor is probed and none
+    # yields tags. Stating that premise inside the tests below proves the
+    # removal refusal is scope-based, not a side effect of the scan finding
+    # children.
+    b,w,ref,tickets=backend;node=w.model_node.list.items['a']
+    monkeypatch.setattr(node,'selection',_absent_accessor,raising=False)
+    from comsol_mcp._g2_engine import COLLECTION_CANDIDATES,_collect_children
+    rows,errors,rpc_calls=_collect_children(w,node)
+    assert rows==[] and errors==[] and rpc_calls==len(COLLECTION_CANDIDATES)
+    return b,w,ref,tickets,node
+
+def test_scan_leaf_entity_is_still_refused_before_any_mutation_with_precise_gap(backend,monkeypatch):
+    # T13: even a target the candidate scan reports as a leaf stays refused
+    # pre-write, and the refusal names each unmet proof obligation instead of
+    # posing as a generic delete.
+    b,w,ref,tickets,node=_scan_leaf_target(backend,monkeypatch)
+    with pytest.raises(ExecutionContractError) as e:b.invoke('node.remove',{'path':path('a')},execution(ref),'reject',None)
+    assert e.value.code=='API_UNSUPPORTED';assert e.value.details['receiver_accessed'] is False;assert e.value.details['complete'] is False
+    obligations=' '.join(e.value.details['unknown_obligations'])
+    assert 'descendant-scope' in obligations and 'incoming expression/selection/consumer graph' in obligations
+    assert 'child enumeration' in obligations and 'cross-list retention' in obligations
+    assert not tickets and w.model_node.list.calls==[] and node.calls==[]
+
+def test_cross_list_cascade_fake_is_refused_before_the_engine_can_cascade(backend,monkeypatch):
+    # Negative control: a fake engine whose remove of the scan-leaf target would
+    # also delete entities from another list. The contract must refuse before the
+    # first mutation; a post-dispatch same-list detector would only report the
+    # cascade after it already destroyed non-target nodes, so no mutation may be
+    # issued. Under the rejected generic-remove design this control fails.
+    b,w,ref,tickets,node=_scan_leaf_target(backend,monkeypatch);other=Collection()
+    monkeypatch.setattr(w.model_node,'func',lambda:other,raising=False)
+    def hostile_remove(tag):
+        w.model_node.list.calls.append(('remove',tag))
+        if tag in w.model_node.list.items:del w.model_node.list.items[tag];w.model_node.list.order.remove(tag)
+        for collateral in list(other.items):del other.items[collateral];other.order.remove(collateral)
+    monkeypatch.setattr(w.model_node.list,'remove',hostile_remove)
+    with pytest.raises(ExecutionContractError) as e:b.invoke('node.remove',{'path':path('a')},execution(ref),'reject',None)
+    assert e.value.code=='API_UNSUPPORTED'
+    assert not tickets and w.model_node.list.calls==[]
+    assert w.model_node.list.order==['b','a','c'] and other.order==['b','a','c']
+
+def test_remove_refusal_never_probes_hidden_or_candidate_child_collections(backend,monkeypatch):
+    # Negative control: the scan-leaf target carries an extra child collection the
+    # candidate enumeration does not name, so an empty scan is not a leaf proof.
+    # Because the refusal is scope-based, the hidden receiver is never probed and
+    # no mutation is attempted; an enumeration-completeness bug cannot slip a
+    # blind remove past it.
+    b,w,ref,tickets,node=_scan_leaf_target(backend,monkeypatch);hidden=Collection()
+    monkeypatch.setattr(node,'secretChildList',lambda:hidden,raising=False)
+    monkeypatch.setattr(hidden,'tags',lambda:pytest.fail('a refused remove must not probe child collections'))
+    with pytest.raises(ExecutionContractError) as e:b.invoke('node.remove',{'path':path('a')},execution(ref),'reject',None)
+    assert e.value.code=='API_UNSUPPORTED' and not tickets and hidden.calls==[]
+
+def test_candidate_scan_distinguishes_own_selection_accessor_from_child_entities(backend,monkeypatch):
+    # The tree scan already separates an entity's own selection accessor (no tag,
+    # so not independently deletable) from tagged child entities, and it only ever
+    # names the enumerated candidates: a child list reachable under another name
+    # stays invisible to it, which is why an empty scan cannot certify
+    # removability for an arbitrary receiver.
+    b,w,ref,tickets=backend;node=w.model_node.list.items['a']
+    from comsol_mcp._g2_engine import _collect_children
+    rows,errors,rpc_calls=_collect_children(w,node)
+    assert [row for row in rows if row.get('accessor')]==[{'collection':'selection','tag':None,'accessor':True}]
+    assert [row for row in rows if not row.get('accessor')]==[]
+    hidden=Collection();monkeypatch.setattr(node,'secretChildList',lambda:hidden,raising=False)
+    assert _collect_children(w,node)[0]==rows
+
 @pytest.mark.parametrize('selection',[{'kind':'explicit','entities':[0],'entity_dimension':2},{'kind':'explicit','entities':[1]},{'kind':'explicit','entities':[1],'entity_dimension':2,'component':'foreign'},{'kind':'explicit','entities':[1],'entity_dimension':2,'geometry_revision':0},{'kind':'objects','object_tags':['x'],'component':'c','geometry':'g'},{'kind':'spatial','component':'c','geometry':'g','entity_dimension':2,'query':{} }])
 def test_selection_preflight_precedes_model_geom_or_set_mutations(backend,selection):
     b,w,ref,tickets=backend

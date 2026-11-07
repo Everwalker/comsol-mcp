@@ -714,14 +714,22 @@ def _unit_a_data_schema(operation: str) -> dict[str, Any]:
         "cleanup_failed": {"type": "boolean"}, "dispatch_stage": {"type": "string"},
         "domain_outcome": {"type": "object"}, "effect": {"type": "string"}, "verified_outcome": {"type": "string"},
     }
-    strings = {"type_id", "copy_method", "source_tag_path", "requested_label", "resolved_effect", "runtime_version", "runtime_version_raw", "runtime_version_format", "capability_registry_sha"}
-    arrays = {"applied", "failed", "not_executed", "order_before", "order_after", "methods", "receiver_interfaces", "public_interfaces"}
-    booleans = {"created", "metadata_complete"}
-    integers = {"index_dispatched"}
+    strings = {"type_id", "copy_method", "source_tag_path", "requested_label", "resolved_effect", "runtime_version", "runtime_version_raw", "runtime_version_format", "capability_registry_sha", "semantic_operation"}
+    arrays = {"applied", "failed", "not_executed", "order_before", "order_after", "methods", "receiver_interfaces", "public_interfaces", "retained_member_paths"}
+    booleans = {"created", "metadata_complete", "cascade", "target_group_absent"}
+    integers = {"index_dispatched", "model_revision_at_prepare", "retained_member_count"}
     allowed = {
         "node.create": {"created_path", "type_id", "created", "applied", "failed", "not_executed", "readback", "dependency_check", "property_result"},
         "node.copy": {"source_path", "target_path", "copy_method", "source_tag_path", "readback", "dependency_check"},
-        "node.remove": {"removed_path", "affected", "applied", "failed", "dependency_check", "checkpoint_id"},
+        # Closed schema for the only published node.remove adapter: the model-root
+        # NodeGroup structural ungroup. The fields below were already emitted by that
+        # adapter (_g2_group_remove.execute) but missing from this published schema;
+        # T13 aligns the contract without adding an ordinary-entity removal route
+        # (that route is refused pre-write: no public impact-scope contract).
+        "node.remove": {"removed_path", "affected", "applied", "failed", "dependency_check", "checkpoint_id",
+                        "semantic_operation", "cascade", "model_revision_at_prepare", "readback",
+                        "retained_members", "mutation_dispatch", "target_group_absent",
+                        "retained_member_count", "retained_member_paths"},
         "node.label_set": {"path", "requested_label", "before", "after"},
         "node.active_set": {"path", "before", "after", "validity_observation"},
         "node.move": {"path", "anchor", "order_before", "order_after", "index_dispatched"},
