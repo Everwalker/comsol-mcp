@@ -1,0 +1,383 @@
+................................................................FFFFFFFF [ 75%]
+FF.....................                                                  [100%]
+=================================== FAILURES ===================================
+__ test_memory_only_admission_precedes_worker_and_terminal_release_is_durable __
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_memory_only_admission_pre0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d9540c0>
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_memory_only_admission_precedes_worker_and_terminal_release_is_durable(tmp_path, monkeypatch):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="api.invoke", estimate=1, max_total=1024, max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="api.invoke", operation="api.invoke",
+            arguments=_dynamic_api_write_request(), disk_enabled=False,
+            memory_resource_config=memory_config,
+        )
+        # Admission is independent of the execution deadline: null means the
+        # engine operation has no automatic timeout, not that resource accounting
+        # is disabled.
+        request["execution"]["execution_timeout_s"] = None
+        monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
+                            lambda: {"scope": "SOFTWARE_FIXTURE_ONLY"})
+        try:
+            result = daemon.dispatch(request)
+>           assert result["success"] is True, result
+E           AssertionError: {'success': False, 'data': {'engine_dispatched': False, 'resource_admission': 'REFUSED'}, 'error': {'code': 'MEMORY_OB...: 'd21036ab811c3c90f99615981a889aa1bc506bc95e5a57c99372e53a15f8b55d', 'idempotency_key': 'disk-resource-request', ...}}
+E           assert False is True
+
+tests/test_w26_os_resources.py:1644: AssertionError
+_ test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_sufficient_disk_and_memor0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10da73850>
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal(tmp_path, monkeypatch):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="api.invoke", estimate=1, max_total=1024, reserve_available=0,
+            max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="api.invoke", operation="api.invoke",
+            arguments=_dynamic_api_write_request(), memory_resource_config=memory_config,
+        )
+        monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
+                            lambda: {"scope": "SOFTWARE_FIXTURE_ONLY"})
+        try:
+            result = daemon.dispatch(request)
+>           assert result["success"] is True, result
+E           AssertionError: {'success': False, 'data': {'engine_dispatched': False, 'resource_admission': 'REFUSED'}, 'error': {'code': 'MEMORY_OB...: 'cd10ca75ddb4be86b3f38787033a824fb499bf840a23555dd742315855a60b8a', 'idempotency_key': 'disk-resource-request', ...}}
+E           assert False is True
+
+tests/test_w26_os_resources.py:1679: AssertionError
+_____ test_low_memory_in_combined_admission_rolls_back_disk_before_running _____
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_low_memory_in_combined_ad0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dfa8280>
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_low_memory_in_combined_admission_rolls_back_disk_before_running(tmp_path, monkeypatch):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="api.invoke", estimate=1, max_total=1,
+            reserve_available=2**62, max_task=1,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="api.invoke", operation="api.invoke",
+            arguments=_dynamic_api_write_request(), memory_resource_config=memory_config,
+        )
+        try:
+            result = daemon.dispatch(request)
+            assert result["success"] is False, result
+>           assert result["error"]["code"] == "INSUFFICIENT_MEMORY_BUDGET", result
+E           AssertionError: {'success': False, 'data': {'engine_dispatched': False, 'resource_admission': 'REFUSED'}, 'error': {'code': 'MEMORY_OB...: '40bd395ea8b687e2f473ddfe729372acb599489ca015b3ee945c26849818ff73', 'idempotency_key': 'disk-resource-request', ...}}
+E           assert 'MEMORY_OBSER...N_UNAVAILABLE' == 'INSUFFICIENT_MEMORY_BUDGET'
+E             
+E             - INSUFFICIENT_MEMORY_BUDGET
+E             + MEMORY_OBSERVATION_UNAVAILABLE
+
+tests/test_w26_os_resources.py:1721: AssertionError
+_____ test_low_disk_in_combined_admission_never_writes_memory_reservation ______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_low_disk_in_combined_admi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10df95390>
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_low_disk_in_combined_admission_never_writes_memory_reservation(tmp_path, monkeypatch):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="api.invoke", estimate=1, max_total=1024, reserve_available=0,
+            max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, reserve_free=2**62, allowed_operation="api.invoke", operation="api.invoke",
+            arguments=_dynamic_api_write_request(), memory_resource_config=memory_config,
+        )
+        try:
+            result = daemon.dispatch(request)
+            assert result["success"] is False, result
+>           assert result["error"]["code"] == "INSUFFICIENT_DISK_BUDGET", result
+E           AssertionError: {'success': False, 'data': {'engine_dispatched': False, 'resource_admission': 'REFUSED'}, 'error': {'code': 'MEMORY_OB...: '38799458a7c5a8ab4e446973b4f1afb47da8441ef1eee2e30e25007dd218fd7f', 'idempotency_key': 'disk-resource-request', ...}}
+E           assert 'MEMORY_OBSER...N_UNAVAILABLE' == 'INSUFFICIENT_DISK_BUDGET'
+E             
+E             - INSUFFICIENT_DISK_BUDGET
+E             + MEMORY_OBSERVATION_UNAVAILABLE
+
+tests/test_w26_os_resources.py:1752: AssertionError
+_ test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch _
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_stale_memory_observation_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d9bc280>
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch(
+            tmp_path, monkeypatch):
+        from types import SimpleNamespace
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="api.invoke", estimate=1, max_total=1024, max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="api.invoke", operation="api.invoke",
+            arguments=_dynamic_api_write_request(), memory_resource_config=memory_config,
+        )
+        monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
+                            lambda: {"scope": "SOFTWARE_FIXTURE_ONLY"})
+        coordinator = daemon._memory_resource_coordinator
+        prepare = coordinator.prepare_queued_job
+        prepared_rows = []
+    
+        def prepare_then_advance_clock(job_id):
+            prepared = prepare(job_id)
+            prepared_rows.append(prepared)
+            observed = prepared["observation"]
+            # Advance only the memory module's reservation-time clock after the
+            # native sample has been captured. Disk admission and daemon clocks
+            # remain real; no sleep or timing race is involved.
+            monkeypatch.setattr(memory_resources, "time", SimpleNamespace(
+                monotonic_ns=lambda: observed.observed_monotonic_ns
+                + coordinator.max_observation_age_ns + 1,
+                get_clock_info=time.get_clock_info,
+            ))
+            return prepared
+    
+        monkeypatch.setattr(coordinator, "prepare_queued_job", prepare_then_advance_clock)
+        try:
+            result = daemon.dispatch(request)
+>           assert prepared_rows and prepared_rows[0]["observation"]._attestation \
+                is memory_resources._NATIVE_OBSERVATION_ATTESTATION
+E               assert ([])
+
+tests/test_w26_os_resources.py:1806: AssertionError
+_____ test_dispatched_lost_or_expired_memory_reservation_stays_held[LOST] ______
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_dispatched_lost_or_expire0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10df95da0>
+terminal_status = 'LOST'
+
+    @pytest.mark.parametrize("terminal_status", ["LOST", "EXPIRED", "CANCELLED"])
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_dispatched_lost_or_expired_memory_reservation_stays_held(tmp_path, monkeypatch,
+                                                                      terminal_status):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="parameter.set", estimate=1, max_total=1024, max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="parameter.set", operation="parameter.set",
+            memory_resource_config=memory_config, disk_enabled=False,
+        )
+        daemon.worker.readback_override = "mismatched-readback"
+        try:
+            result = daemon.dispatch(request)
+            assert result["success"] is False
+            job_id = result["execution"]["job_id"]
+>           assert daemon.store.job(job_id)["status"] == "UNKNOWN"
+E           AssertionError: assert 'FAILED' == 'UNKNOWN'
+E             
+E             - UNKNOWN
+E             + FAILED
+
+tests/test_w26_os_resources.py:1847: AssertionError
+____ test_dispatched_lost_or_expired_memory_reservation_stays_held[EXPIRED] ____
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_dispatched_lost_or_expire1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dfaaa50>
+terminal_status = 'EXPIRED'
+
+    @pytest.mark.parametrize("terminal_status", ["LOST", "EXPIRED", "CANCELLED"])
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_dispatched_lost_or_expired_memory_reservation_stays_held(tmp_path, monkeypatch,
+                                                                      terminal_status):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="parameter.set", estimate=1, max_total=1024, max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="parameter.set", operation="parameter.set",
+            memory_resource_config=memory_config, disk_enabled=False,
+        )
+        daemon.worker.readback_override = "mismatched-readback"
+        try:
+            result = daemon.dispatch(request)
+            assert result["success"] is False
+            job_id = result["execution"]["job_id"]
+>           assert daemon.store.job(job_id)["status"] == "UNKNOWN"
+E           AssertionError: assert 'FAILED' == 'UNKNOWN'
+E             
+E             - UNKNOWN
+E             + FAILED
+
+tests/test_w26_os_resources.py:1847: AssertionError
+___ test_dispatched_lost_or_expired_memory_reservation_stays_held[CANCELLED] ___
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_dispatched_lost_or_expire2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e010440>
+terminal_status = 'CANCELLED'
+
+    @pytest.mark.parametrize("terminal_status", ["LOST", "EXPIRED", "CANCELLED"])
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_dispatched_lost_or_expired_memory_reservation_stays_held(tmp_path, monkeypatch,
+                                                                      terminal_status):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="parameter.set", estimate=1, max_total=1024, max_task=1024,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="parameter.set", operation="parameter.set",
+            memory_resource_config=memory_config, disk_enabled=False,
+        )
+        daemon.worker.readback_override = "mismatched-readback"
+        try:
+            result = daemon.dispatch(request)
+            assert result["success"] is False
+            job_id = result["execution"]["job_id"]
+>           assert daemon.store.job(job_id)["status"] == "UNKNOWN"
+E           AssertionError: assert 'FAILED' == 'UNKNOWN'
+E             
+E             - UNKNOWN
+E             + FAILED
+
+tests/test_w26_os_resources.py:1847: AssertionError
+_ test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send _
+
+self = <comsol_mcp._w26_memory_resources.HostMemoryObservationProvider object at 0x10da2ab50>
+
+    def read_observation(self) -> HostMemoryObservation:
+        try:
+>           values = self._api.read()
+                     ^^^^^^^^^^^^^^^^
+
+comsol_mcp/_w26_memory_resources.py:602: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+comsol_mcp/_w26_memory_resources.py:480: in read
+    boot = _DarwinTimeval.from_buffer_copy(self._sysctl(b"kern.boottime", ctypes.sizeof(_DarwinTimeval)))
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <comsol_mcp._w26_memory_resources._DarwinMemoryApi object at 0x10da2ac50>
+name = b'kern.boottime', size = 16
+
+    def _sysctl(self, name: bytes, size: int) -> bytes:
+        buffer = ctypes.create_string_buffer(size)
+        length = ctypes.c_size_t(size)
+        ctypes.set_errno(0)
+        if self.lib.sysctlbyname(name, buffer, ctypes.byref(length), None, 0) != 0:
+            error = ctypes.get_errno()
+>           raise OSError(error, f"sysctlbyname({name.decode('ascii')}) failed")
+E           PermissionError: [Errno 1] sysctlbyname(kern.boottime) failed
+
+comsol_mcp/_w26_memory_resources.py:472: PermissionError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_durable_queued_abort_proo0')
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send(tmp_path):
+        memory_config = _write_memory_config(
+            tmp_path, operation="parameter.set", estimate=1, max_total=1024, max_task=1024,
+        )
+        daemon, _request, _project, project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="parameter.set", operation="parameter.set",
+            memory_resource_config=memory_config, disk_enabled=False,
+        )
+        try:
+            queued = _queued_dispatch_job(daemon.store, project_id,
+                                         inner="parameter.set", wrapper="operation_call")
+>           reserved = daemon._memory_resource_coordinator.reserve_queued_job(queued["job_id"])
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_w26_os_resources.py:1886: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+comsol_mcp/_w26_memory_resources.py:1020: in reserve_queued_job
+    prepared = prepared or self.prepare_queued_job(job_id)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_w26_memory_resources.py:981: in prepare_queued_job
+    observation = self.observation_provider.read_observation()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+comsol_mcp/_w26_memory_resources.py:635: in read_observation
+    _refuse("MEMORY_OBSERVATION_UNAVAILABLE", "host memory observation failed closed",
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = 'MEMORY_OBSERVATION_UNAVAILABLE'
+message = 'host memory observation failed closed'
+details = {'cause_type': 'PermissionError'}
+
+    def _refuse(code: str, message: str, **details: Any) -> None:
+>       raise MemoryResourceError(code, message, details=details or None)
+E       comsol_mcp._w26_memory_resources.MemoryResourceError: host memory observation failed closed
+
+comsol_mcp/_w26_memory_resources.py:55: MemoryResourceError
+__ test_memory_unknown_reservation_survives_restart_and_counts_other_projects __
+
+tmp_path = PosixPath('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-799/test_memory_unknown_reservatio0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dfabd20>
+
+    @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                        reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+    def test_memory_unknown_reservation_survives_restart_and_counts_other_projects(tmp_path, monkeypatch):
+        from comsol_mcp import _g3_ops
+    
+        monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+        memory_config = _write_memory_config(
+            tmp_path, operation="parameter.set", estimate=1, max_total=1,
+            reserve_available=0, max_task=1,
+        )
+        daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
+            tmp_path, allowed_operation="parameter.set", operation="parameter.set",
+            memory_resource_config=memory_config, disk_enabled=False,
+        )
+        daemon.worker.readback_override = "mismatched-readback"
+        home = daemon.home
+        try:
+            result = daemon.dispatch(request)
+            assert result["success"] is False
+>           assert result["error"].get("safe_retry") is False
+E           AssertionError: assert True is False
+E            +  where True = <built-in method get of dict object at 0x10df7c740>('safe_retry')
+E            +    where <built-in method get of dict object at 0x10df7c740> = {'code': 'MEMORY_OBSERVATION_UNAVAILABLE', 'message': 'host memory observation failed closed', 'safe_retry': True, 'stage': 'pre_dispatch', ...}.get
+
+tests/test_w26_os_resources.py:1928: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_w26_os_resources.py::test_memory_only_admission_precedes_worker_and_terminal_release_is_durable
+FAILED tests/test_w26_os_resources.py::test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal
+FAILED tests/test_w26_os_resources.py::test_low_memory_in_combined_admission_rolls_back_disk_before_running
+FAILED tests/test_w26_os_resources.py::test_low_disk_in_combined_admission_never_writes_memory_reservation
+FAILED tests/test_w26_os_resources.py::test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch
+FAILED tests/test_w26_os_resources.py::test_dispatched_lost_or_expired_memory_reservation_stays_held[LOST]
+FAILED tests/test_w26_os_resources.py::test_dispatched_lost_or_expired_memory_reservation_stays_held[EXPIRED]
+FAILED tests/test_w26_os_resources.py::test_dispatched_lost_or_expired_memory_reservation_stays_held[CANCELLED]
+FAILED tests/test_w26_os_resources.py::test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send
+FAILED tests/test_w26_os_resources.py::test_memory_unknown_reservation_survives_restart_and_counts_other_projects
+10 failed, 85 passed in 1.27s

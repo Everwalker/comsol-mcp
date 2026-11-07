@@ -822,8 +822,21 @@ def _disk_operation_effect(operation_id: str) -> str:
     return effect
 
 
+# These legacy model-load routes need the same capacity admission as model.load.
+# Their public effect remains PROJECT_WRITE; both effects map to project_write
+# when admission rechecks the project grant.
+_ADMISSION_EFFECT_OVERRIDES: dict[str, str] = {
+    "model_load": "WRITE",
+    "load_visible_main_model": "WRITE",
+    "load_current_main_model": "WRITE",
+}
+
+
 def _registered_operation_effect(operation_id: str) -> str | None:
-    """Resolve the same canonical effect sources used by production dispatch."""
+    """Resolve an operation's effect for W26 resource admission."""
+    override = _ADMISSION_EFFECT_OVERRIDES.get(operation_id)
+    if override is not None:
+        return override
     from . import _g2_registry
 
     entry = _g2_registry.BY_ID.get(operation_id)

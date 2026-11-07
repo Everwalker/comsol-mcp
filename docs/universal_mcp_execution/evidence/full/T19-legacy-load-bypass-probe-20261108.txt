@@ -1,0 +1,33 @@
+{
+ "disk_requires_reservation_model_load": false,
+ "disk_requires_reservation_save_model": true,
+ "effect_load_current_main_model": "PROJECT_WRITE",
+ "effect_load_visible_main_model": "PROJECT_WRITE",
+ "effect_model_load": "PROJECT_WRITE",
+ "engine_call_witness": [
+  "model_load",
+  "load_visible_main_model",
+  "load_current_main_model"
+ ],
+ "load_current_main_model_events": [
+  "RUNNING",
+  "SUCCEEDED"
+ ],
+ "load_current_main_model_success": true,
+ "load_visible_main_model_events": [
+  "RUNNING",
+  "SUCCEEDED"
+ ],
+ "load_visible_main_model_success": true,
+ "model_load_events": [
+  "RUNNING",
+  "SUCCEEDED"
+ ],
+ "model_load_success": true,
+ "save_model_error": "INSUFFICIENT_DISK_BUDGET",
+ "save_model_events": [
+  "FAILED"
+ ],
+ "save_model_success": false,
+ "trusted_profile_can_name_model_load": "ValueError: operation model_load is not a supported disk-producing effect"
+}
