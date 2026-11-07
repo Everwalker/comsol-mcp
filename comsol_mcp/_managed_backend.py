@@ -3170,6 +3170,85 @@ class ManagedBackend:
             def invoke_domain():
                 domain_body = dict(body)
                 checkpoint_info = None
+                # ``function.data_import`` publishes a required ``artifact_id`` in its
+                # catalog schema, so the engine-visible data file must be the
+                # digest-verified, project-scoped registered copy — never a caller-named
+                # layout path.  This mirrors the geometry.import admission:
+                # resolve_registered_artifact binds the project identity, artifact host,
+                # loopback engine host, and current Worker epoch, and re-hashes the
+                # managed bytes.  No role vocabulary is established for interpolation
+                # data (registration roles are free-form), so the authorization is the
+                # registration itself; inventing a role gate here would fabricate a
+                # contract instead of reusing one.  The caller's file keys are removed
+                # and the single trusted path is injected, so a self-declared
+                # layout.file_path/resolved_path/local_path can never override the
+                # verified source.  The admission raises inside the dispatch witness
+                # scope: the refusal envelope then carries both the explicit validation
+                # stage and the witness proof that no mutation-class engine call was
+                # issued, and every non-provable raise keeps the fail-closed
+                # EXECUTION_STATE_UNKNOWN classification.
+                function_import_resolution = None
+                if operation == "function.data_import":
+                    from ._artifact_store import (
+                        local_artifact_host_identity,
+                        local_engine_host_identity,
+                        resolve_registered_artifact,
+                    )
+                    from ._g3_w13 import _LAYOUT_FILE_KEYS
+
+                    project_id = execution.get("project_id")
+                    if not isinstance(project_id, str) or not project_id:
+                        raise ExecutionContractError(
+                            "PROJECT_IDENTITY_MISMATCH",
+                            "function.data_import requires an outer managed project identity",
+                            stage="validation",
+                        )
+                    resolved_data = resolve_registered_artifact(
+                        self.project_root,
+                        self.store,
+                        body.get("artifact_id"),
+                        project_id=project_id,
+                        current_host_identity=local_artifact_host_identity(),
+                        current_engine_host_identity=local_engine_host_identity(self.endpoint_key),
+                        current_server_instance_id=ref.server_instance_id if ref is not None else "",
+                    )
+                    if resolved_data.get("record_schema_version") != 2:
+                        raise ExecutionContractError(
+                            "ARTIFACT_ROLE_MISMATCH",
+                            "function.data_import requires a schema-v2 project-registered data artifact",
+                            stage="validation",
+                        )
+                    layout = body.get("layout")
+                    if not isinstance(layout, Mapping):
+                        raise ExecutionContractError("INVALID_REQUEST", "function.data_import layout must be an object",
+                                                     stage="validation")
+                    function_import_resolution = resolved_data
+                    trusted_layout = {key: value for key, value in layout.items() if key not in _LAYOUT_FILE_KEYS}
+                    trusted_layout["file_path"] = str(resolved_data["path"])
+                    domain_body["layout"] = trusted_layout
+
+                # ``filename`` is the engine-visible data-file property of Interpolation
+                # functions.  The recipe route already refuses it as a file-backed vector
+                # ("file-backed feature requires registered artifact resolution"); the
+                # direct domain routes must not be weaker: setting it through a plain
+                # definition would let function.data_reload/refresh read whatever path
+                # the caller chose.  The only public domain writer of this property is
+                # function.data_import through the registered-artifact binding above.
+                if operation in {"function.create", "function.update"}:
+                    definition = body.get("definition")
+                    if isinstance(definition, Mapping):
+                        blocked = {"filename"} & set(definition)
+                        nested_properties = definition.get("properties")
+                        if isinstance(nested_properties, Mapping):
+                            blocked |= {"filename"} & set(nested_properties)
+                        if blocked:
+                            raise ExecutionContractError(
+                                "PERMISSION_DENIED",
+                                "function definitions cannot set the engine-visible data-file property "
+                                "'filename' directly; bind interpolation data through function.data_import "
+                                "with a registered artifact_id",
+                                stage="validation",
+                            )
                 managed_context_action = delivery_action or operation in {
                     "model.tree", "model.save", "model.clone", "model.close",
                     "code.recipe_register", "code.recipe_run",
@@ -3384,6 +3463,105 @@ class ManagedBackend:
                     if isinstance(data.get("local_probe"), Mapping):
                         data["local_probe"] = {"is_file": bool(data["local_probe"].get("is_file")),
                                                 "registered_artifact": True}
+                if function_import_resolution is not None and isinstance(data, dict):
+                    # The published identity stays the registered project artifact; the
+                    # absolute managed path chosen by the server must not appear in the
+                    # ActionResult even though the adapter echoes its engine filename and
+                    # a local digest into its own readback.
+                    data["artifact"] = {
+                        "artifact_id": function_import_resolution["artifact_id"],
+                        "sha256": function_import_resolution["sha256"],
+                        "size": function_import_resolution["size"],
+                        "path": function_import_resolution["relative_path"],
+                        "role": function_import_resolution["role"],
+                        "classification": function_import_resolution["classification"],
+                        "record_schema_version": function_import_resolution["record_schema_version"],
+                        "verify_status": "registered_artifact_bound",
+                        "engine_path_verbatim": False,
+                    }
+                    # Redaction never overwrites an observation: a bound filename that
+                    # the engine really returned as the managed path is published as the
+                    # project-relative registration path (same file identity), while a
+                    # readback that differs from the binding is reported as an explicit
+                    # mismatch with its raw value redacted.  Read errors stay untouched.
+                    managed_abs = str(function_import_resolution["path"])
+                    registered_rel = function_import_resolution["relative_path"]
+
+                    def publish_bound_filename(observed):
+                        """Return (published_value, matches_binding, raw_redacted)."""
+                        if observed == managed_abs:
+                            return registered_rel, True, False
+                        if isinstance(observed, str) and observed:
+                            return None, False, True
+                        return observed, False, False
+
+                    readback = data.get("readback")
+                    if isinstance(readback, dict) and isinstance(readback.get("filename"), dict):
+                        row = readback["filename"]
+                        published, matches, redacted = publish_bound_filename(row.get("value"))
+                        row["value"] = published
+                        row["matches_registered_binding"] = matches
+                        if redacted:
+                            row["value_redacted"] = True
+                            row["note"] = ("the engine read back a filename other than the registered managed "
+                                           "copy; the raw engine value is not published")
+                        elif matches:
+                            row["note"] = ("the bound filename is published as the project-relative path of the "
+                                           "registered managed copy")
+                    # The _property_write journal echoes the requested and read-back
+                    # typed values.  The requested value is the server-injected managed
+                    # path (identity-preserving relative swap); the readback is the
+                    # engine observation and is only swapped when it really equals the
+                    # managed path, otherwise it is redacted with an explicit binding
+                    # flag instead of being rewritten to the expected value.
+                    for journal_key in ("applied", "failed", "not_executed"):
+                        journal_rows = data.get(journal_key)
+                        if not isinstance(journal_rows, list):
+                            continue
+                        for row in journal_rows:
+                            if not (isinstance(row, dict) and row.get("name") == "filename"):
+                                continue
+                            binding = {}
+                            for field in ("value", "readback"):
+                                typed = row.get(field)
+                                if not (isinstance(typed, dict) and "data" in typed):
+                                    continue
+                                published, matches, redacted = publish_bound_filename(typed.get("data"))
+                                updated = dict(typed)
+                                updated["data"] = published
+                                if redacted:
+                                    updated["data_redacted"] = True
+                                row[field] = updated
+                                binding[field] = matches
+                            if binding:
+                                row["path_binding_to_registered_artifact"] = binding
+                if operation == "function.data_reload" and isinstance(data, dict):
+                    # function.data_reload consumes model state: the filename is a
+                    # property of the loaded model, not a caller-named path (the public
+                    # domain writers of that property are closed above).  The control
+                    # process still digests the model-referenced file, so its digest is
+                    # only published while the file sits inside the managed project
+                    # boundary; an out-of-project filename keeps the refresh result and
+                    # the raw model property (already inspectable) but the control-side
+                    # digest is withheld with an explicit status instead of pretending
+                    # the read did not happen.
+                    reload_filename = data.get("filename")
+                    if isinstance(reload_filename, str) and reload_filename:
+                        candidate = Path(reload_filename)
+                        if candidate.is_absolute():
+                            try:
+                                root_resolved = str(Path(self.project_root).resolve())
+                                outside = os.path.commonpath([str(candidate.resolve()), root_resolved]) != root_resolved
+                            except (OSError, ValueError):
+                                outside = False
+                            if outside:
+                                data["sha256"] = {
+                                    "status": "not_reported_outside_project_boundary",
+                                    "value": None,
+                                    "size": None,
+                                    "note": "the model's filename property points outside the managed project "
+                                            "root; the control-side digest of that path is withheld (T20)",
+                                }
                 if checkpoint_info is not None and isinstance(data, dict):
                     data["resume_checkpoint"] = {
                         "checkpoint_id": checkpoint_info["checkpoint_id"],
