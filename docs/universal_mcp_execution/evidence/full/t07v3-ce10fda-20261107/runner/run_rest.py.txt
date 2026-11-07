@@ -1,0 +1,100 @@
+import asyncio, json, sys, datetime
+from pathlib import Path
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+sys.path.insert(0, str(Path(__file__).parent))
+from env import B3, base_env
+
+PFX = "t07v3-ce10fda-c-"
+LOGS = B3 / "logs"
+REQS = B3 / "requests"
+
+def dump(name, obj):
+    p = LOGS / (name + ".json")
+    assert not p.exists(), "refusing to overwrite: " + str(p)
+    p.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + chr(10))
+
+def data_of(res):
+    sc = res.get("structuredContent")
+    if sc is None:
+        sc = json.loads(res["content"][0]["text"])
+    return sc
+
+async def main():
+    discover = data_of(json.loads((LOGS / "c01-runtime_discover.json").read_text())["response"])
+    runtime_id = discover["data"]["installations"][0]["runtime_id"]
+    params = StdioServerParameters(command=str(B3 / "venv/bin/comsol-mcp"), args=[], env=base_env(), cwd="/private/tmp/t07v3-client-20261107")
+    async with stdio_client(params) as (r, w):
+        async with ClientSession(r, w, read_timeout_seconds=datetime.timedelta(seconds=300)) as session:
+            await session.initialize()
+
+            async def call(step, op, args, execution):
+                req = {"operation_id": op, "arguments": args, "execution": execution}
+                rp = REQS / (step + ".json")
+                assert not rp.exists(), "refusing to overwrite: " + str(rp)
+                rp.write_text(json.dumps(req, ensure_ascii=False, indent=2) + chr(10))
+                name = step + "-" + op.replace(".", "_")
+                dump(name + ".inflight", {"request": req, "status": "IN_FLIGHT"})
+                res = (await session.call_tool("operation_call", req)).model_dump(mode="json")
+                (LOGS / (name + ".inflight.json")).unlink()
+                dump(name, {"request": req, "response": res})
+                sc = data_of(res)
+                ok = sc.get("success") is True
+                print(step, op, "OK" if ok else "FAIL", "" if ok else json.dumps(sc.get("error"), ensure_ascii=False)[:300], flush=True)
+                if not ok:
+                    print("STOP_ON_FAILURE", step, flush=True)
+                    sys.exit(1)
+                return sc
+
+            K = lambda stem: PFX + stem + "-02"
+            sc = await call("c02b", "project.create", {"idempotency_key": K("project"), "label": "T07v3 native candidate ce10fda (retry-b: fresh workspace after deterministic pre-dispatch conflict)", "workspace": "t07v3-smoke-20261107-b", "policy": {"permissions": ["inspect", "project_write", "compute", "trusted_code", "host_control"]}}, {"request_id": K("project"), "idempotency_key": K("project")})
+            project_id = sc["data"]["project"]["project_id"]
+
+            sc = await call("c03b", "session.start", {"project_id": project_id, "idempotency_key": K("session-start"), "runtime_id": runtime_id}, {"project_id": project_id, "request_id": K("session-start"), "idempotency_key": K("session-start"), "rpc_timeout_s": 180, "execution_timeout_s": 180})
+            session_id = sc["data"]["session_id"]; endpoint = sc["data"]["endpoint"]
+
+            sc = await call("c04b", "session.connect", {"project_id": project_id, "session_id": session_id, "idempotency_key": K("session-connect"), "runtime_id": runtime_id, "endpoint": endpoint}, {"project_id": project_id, "session_id": session_id, "request_id": K("session-connect"), "idempotency_key": K("session-connect"), "rpc_timeout_s": 180, "execution_timeout_s": 180})
+
+            sc = await call("c05b", "runtime.doctor", {"request_id": K("doctor"), "runtime_id": runtime_id}, {"request_id": K("doctor"), "rpc_timeout_s": 60})
+
+            sc = await call("c06b", "model.create", {"project_id": project_id, "session_id": session_id, "idempotency_key": K("model-create"), "label": "T07v3 smoke model", "dimension": 2}, {"project_id": project_id, "session_id": session_id, "request_id": K("model-create"), "idempotency_key": K("model-create"), "rpc_timeout_s": 120, "execution_timeout_s": 120})
+            model_ref = sc["data"]["model_ref"]
+            rev = sc["execution"].get("revision")
+
+            sc = await call("c07b", "code.compile_java", {"project_id": project_id, "idempotency_key": K("java-compile"), "runtime_id": runtime_id, "source_artifact": "src/UniversalSmoke.java", "entrypoint": "UniversalSmoke"}, {"project_id": project_id, "session_id": session_id, "request_id": K("java-compile"), "idempotency_key": K("java-compile"), "rpc_timeout_s": 120, "execution_timeout_s": 120})
+
+            sc = await call("c08b", "code.execute_java", {"project_id": project_id, "session_id": session_id, "model_ref": model_ref, "expected_revision": rev, "idempotency_key": K("java-execute"), "source_artifact": "src/UniversalSmoke.java", "entrypoint": "UniversalSmoke", "arguments": {"expected_model_tag": model_ref["model_tag"]}, "mode": "trusted", "timeout_s": 150}, {"project_id": project_id, "session_id": session_id, "model_ref": model_ref, "expected_revision": rev, "request_id": K("java-execute"), "idempotency_key": K("java-execute"), "rpc_timeout_s": 240, "execution_timeout_s": 220})
+            rev = sc["execution"].get("revision", rev + 1)
+
+            sc = await call("c09b", "result.evaluate", {"project_id": project_id, "session_id": session_id, "model_ref": model_ref, "idempotency_key": K("result-evaluate"), "spec": {"expressions": ["u"], "solution": {"dataset": "dset1", "solution": "sol1"}, "selection": {"kind": "all", "component": "smoke_comp", "geometry": "smoke_geom", "entity_dimension": 2}, "entity_dim": 2, "aggregate": "average", "complex_mode": "real", "storage": "inline"}}, {"project_id": project_id, "session_id": session_id, "model_ref": model_ref, "expected_revision": rev, "request_id": K("result-evaluate"), "idempotency_key": K("result-evaluate"), "rpc_timeout_s": 180, "execution_timeout_s": 180})
+            rev = sc["execution"].get("revision", rev)
+
+            sc = await call("c10b", "plot.render", {"project_id": project_id, "session_id": session_id, "model_ref": model_ref, "idempotency_key": K("plot-render"), "path": "smoke_plot", "options": {"solution": "sol1", "format": "png", "width": 800, "height": 600}}, {"project_id": project_id, "session_id": session_id, "model_ref": model_ref, "expected_revision": rev, "request_id": K("plot-render"), "idempotency_key": K("plot-render"), "rpc_timeout_s": 180, "execution_timeout_s": 180})
+
+            sc = await call("c11b", "artifact.list", {"project_id": project_id, "request_id": K("artifact-list"), "limit": 50}, {"request_id": K("artifact-list"), "rpc_timeout_s": 60})
+            arts = sc["data"].get("artifacts") or sc["data"].get("items") or []
+            print("ARTIFACTS", json.dumps(arts, ensure_ascii=False)[:1200], flush=True)
+            pngs = [a for a in arts if isinstance(a, dict) and str(a.get("name", "")).endswith(".png")]
+            if not pngs:
+                print("NO_PNG_ARTIFACT", flush=True); sys.exit(2)
+            aid = pngs[0]["artifact_id"]
+
+            sc = await call("c12b", "artifact.inspect", {"project_id": project_id, "request_id": K("artifact-inspect"), "artifact_id": aid}, {"request_id": K("artifact-inspect"), "rpc_timeout_s": 60})
+            meta = sc["data"]
+            sha = meta.get("sha256")
+
+            args = {"project_id": project_id, "request_id": K("artifact-read"), "artifact_id": aid}
+            if sha: args["expected_sha256"] = sha
+            sc = await call("c13b", "artifact.read", args, {"request_id": K("artifact-read"), "rpc_timeout_s": 60})
+            rd = sc["data"]
+            b64 = rd.get("data_base64") or rd.get("chunk_base64") or rd.get("base64")
+            if b64:
+                import base64 as b64m
+                out = B3 / "render-readback.png"
+                out.write_bytes(b64m.b64decode(b64))
+                print("PNG_SAVED", str(out), "bytes", out.stat().st_size, flush=True)
+            else:
+                print("READ_KEYS", sorted(rd.keys()), flush=True)
+            print("ALL_STEPS_DONE", flush=True)
+
+asyncio.run(main())

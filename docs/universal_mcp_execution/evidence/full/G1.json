@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:56:37.922161+00:00",
+  "updated_utc": "2026-11-07T16:13:51.294131+00:00",
   "T05": {
     "status": "DONE",
     "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
@@ -184,6 +184,21 @@
       "limitations": "No real getNEntities observation or end-to-end numerical/image validation of this fix. Void/mesh-control geometry count semantics remain unverified; mismatches refuse publication.",
       "evidence": "docs/universal_mcp_execution/evidence/full/T07-roi-fix-qwen-20261107.md",
       "committed_candidate": "ce10fda76441f9eaee46cb58f36edba5a8cb91a2"
+    },
+    "candidate_ce10_native_attempt": {
+      "source_commit": "ce10fda76441f9eaee46cb58f36edba5a8cb91a2",
+      "status": "PROJECT_CREATE_FAILED_BEFORE_ENGINE",
+      "wheel_sha256": "de930c71d74c098c27a249417f4cbe6df28747f81e3adec1116e6c94fd3fa782",
+      "result": "Installed wheel exposed 112 tools and metadata-only runtime.discover; project.create returned PROJECT_WORKSPACE_EXISTS because runner created workspace first. No new project/session/Worker/model was created and no T07/T17 native revalidation took place.",
+      "job_id": "d30f7ed0-9c83-44a7-863a-14538a967bef",
+      "auto_approval": "Rejected same-domain continuation, interpreting it as unauthorized retry after the deterministic failure. No continuation was executed.",
+      "continuation_note": "The proposed run_rest.py text also describes an already existing workspace; do not execute it. Prepare and review a corrected fresh-domain plan before seeking approval.",
+      "evidence": [
+        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/t07v3-ce10fda-20261107/logs/c01-runtime_discover.json",
+        "docs/universal_mcp_execution/evidence/full/t07v3-ce10fda-20261107/logs/c02-project_create.json",
+        "docs/universal_mcp_execution/evidence/full/t07v3-ce10fda-20261107/notes/escalation-rejection-note.json"
+      ]
     }
   }
 }

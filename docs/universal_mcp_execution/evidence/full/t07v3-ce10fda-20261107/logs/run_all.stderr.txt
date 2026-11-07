@@ -1,0 +1,54 @@
+Processing request of type ListToolsRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+  + Exception Group Traceback (most recent call last):
+  |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/runner/run_all.py", line 108, in <module>
+  |     asyncio.run(main())
+  |     ~~~~~~~~~~~^^^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/runner/run_all.py", line 26, in main
+  |     async with stdio_client(params) as (r, w):
+  |                ~~~~~~~~~~~~^^^^^^^^
+  |   File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/contextlib.py", line 235, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 183, in stdio_client
+  |     anyio.create_task_group() as tg,
+  |     ~~~~~~~~~~~~~~~~~~~~~~~^^
+  |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 871, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | BaseExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/venv/lib/python3.14/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/runner/run_all.py", line 27, in main
+    |     async with ClientSession(r, w, read_timeout_seconds=datetime.timedelta(seconds=300)) as session:
+    |                ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/venv/lib/python3.14/site-packages/mcp/shared/session.py", line 238, in __aexit__
+    |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 871, in __aexit__
+    |     raise BaseExceptionGroup(
+    |         "unhandled errors in a TaskGroup", self._exceptions
+    |     ) from None
+    | BaseExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/runner/run_all.py", line 56, in main
+      |     sc = await call("c02", "project.create", {"idempotency_key": PFX + "project-01", "label": "T07v3 native candidate ce10fda", "workspace": "t07v3-smoke-20261107", "policy": {"permissions": ["inspect", "project_write", "compute", "trusted_code", "host_control"]}}, {"request_id": PFX + "project-01", "idempotency_key": PFX + "project-01"})
+      |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |   File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/.g3-private/full-continuation-20261107/t07v3-native-20261107/runner/run_all.py", line 49, in call
+      |     sys.exit(1)
+      |     ~~~~~~~~^^^
+      | SystemExit: 1
+      +------------------------------------

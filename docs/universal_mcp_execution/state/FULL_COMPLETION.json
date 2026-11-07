@@ -4,7 +4,7 @@
   "current_candidate_commit": "ce10fda76441f9eaee46cb58f36edba5a8cb91a2",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Validate candidate ce10fda through a fresh installed MCP, genuinely separate project/session/Worker: recheck Java happy path and T07 numeric/image ROI fix. Never access/replay/clean either prior T07 UNKNOWN. T13 and T19 domain file-budget work continue.",
-  "updated_utc": "2026-11-07T16:03:21.498879+00:00",
+  "updated_utc": "2026-11-07T16:13:51.294131+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -92,9 +92,10 @@
         "docs/universal_mcp_execution/evidence/full/t07v2-b0cbd2d-20261107/logs/b07-java-execute.json",
         "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-observation.json",
         "docs/universal_mcp_execution/evidence/full/T07-roi-fix-qwen-20261107.md",
-        "docs/universal_mcp_execution/evidence/full/T07-roi-final-pytest-20261107.txt"
+        "docs/universal_mcp_execution/evidence/full/T07-roi-final-pytest-20261107.txt",
+        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md"
       ],
-      "blocker": "ROI fix has synthetic regression evidence only; real getNEntities, same-solution numeric/units/image and broad native behavior remain unverified. Two separate prior UNKNOWN model/session fences persist. Existing selected suites still contain failures/errors."
+      "blocker": "ROI fix has synthetic evidence only; ce10 native attempt stopped at project.create (workspace pre-created). Auto approval rejected a continuation; corrected independent retry awaits preparation and approval. Real getNEntities, numeric/units/image remain unverified; two earlier UNKNOWN fences persist."
     },
     "T08": {
       "status": "TODO",
@@ -183,10 +184,11 @@
         "docs/universal_mcp_execution/evidence/full/public_java_describe_T06.json",
         "docs/universal_mcp_execution/evidence/full/public_java_compile_T06.json",
         "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json",
-        "docs/universal_mcp_execution/evidence/full/public_model_T06.json"
+        "docs/universal_mcp_execution/evidence/full/public_model_T06.json",
+        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md"
       ],
-      "blocker": "T18 changed the Java host-source path after the earlier actual Java execution; revalidate the affected happy path on the new pinned candidate. Prior T06/T17 evidence remains scoped to its original source bytes.",
-      "scope_note": "Same current source bytes and actual independent project as T06; macOS arm64 6.4.0.293 only."
+      "blocker": "Changed Java source handling needs a real happy-path recheck; ce10 attempt stopped at project.create before any model or Java call. Auto approval rejected same-domain continuation.",
+      "scope_note": "Earlier T06/T17 run was Mac arm64 6.4.0.293 on earlier source bytes; changed Java source handling remains unverified natively."
     },
     "T18": {
       "status": "IN_PROGRESS",
@@ -559,23 +561,23 @@
   "documentation_head_before_update": "23e5ea5",
   "candidate_identity_note": "Pinned committed production-source candidate including T18 host-side Java refusal and T07 ROI fix. Concurrent T13 uncommitted source/tests are excluded. The earlier b0 and basis wheels have separate evidence.",
   "active_work_observation": {
-    "observed_utc": "2026-11-07T15:59:55.357093+00:00",
+    "observed_utc": "2026-11-07T16:13:51.294131+00:00",
     "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
     "reasoning_effort": "max",
     "agents": [
       {
-        "id": "01a1b6ba-5d8f-71e3-8d27-cf2d3e85e855",
-        "scope": "T07/T17 fresh candidate ce10fda native validation"
-      },
-      {
         "id": "01a1b695-949b-7220-8022-bfeeecbf023d",
-        "scope": "T13 object removal safety and output contract"
+        "scope": "T13 object removal safety and public schema"
       },
       {
         "id": "01a1b6b7-2cd7-7622-b024-eb0078ab0d36",
-        "scope": "T19 domain file-budget design analysis"
+        "scope": "T19 domain file-budget design and T18 empty-source refusal"
+      },
+      {
+        "id": "01a1b6c8-a2f5-7ea2-ab1f-9dfb47965631",
+        "scope": "prepare corrected independent T07/T17 native plan without execution"
       }
     ],
-    "note": "Observation for this running session only; do not infer agent or engine liveness after restart."
+    "note": "Live session observation only; no liveness inference after restart."
   }
 }
