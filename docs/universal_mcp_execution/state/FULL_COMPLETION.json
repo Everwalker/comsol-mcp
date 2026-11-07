@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "3eeb29e18911b05d90861ad628b6cbb52eb3e2e6",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "Qwen: T07 UNKNOWN analysis and recovery-tool verification; downstream T11/T12/T16/T41 software now eligible",
-  "updated_utc": "2026-11-07T12:41:42.754776+00:00",
+  "next_task_hint": "Use durable job.reconcile for original T07 without replay; keep model fenced until separately justified. Continue result patch and T41.",
+  "updated_utc": "2026-11-07T13:33:11.289645+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -81,7 +81,8 @@
       "execution_complete": false,
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
-        "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json"
+        "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json",
+        "docs/universal_mcp_execution/evidence/full/T07-reconcile-analysis-qwen-20261107.md"
       ],
       "blocker": "Original result.evaluate request returned EXECUTION_STATE_UNKNOWN after dispatch, with COMSOL Unknown_solution. Do not replay, replace, signal or cleanup the original job/model; inspect the original job and reconcile only through safe authorized control paths. Independent implementation work may continue."
     },

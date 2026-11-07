@@ -75,6 +75,11 @@
       "ref": "docs/universal_mcp_execution/evidence/full/T07-observation-c25bce5c-job-session-cache-20261107.json",
       "scope": "Original control job remains UNKNOWN; observed Worker reply for last call FAILED and no unmatched submitted/observed calls in recorded log. This alone does not establish absence of partial model changes; reconcile proof still required.",
       "replay": "NOT_PERFORMED"
+    },
+    "analysis": {
+      "ref": "docs/universal_mcp_execution/evidence/full/T07-reconcile-analysis-qwen-20261107.md",
+      "findings": "Original last Worker call was SolutionInfo.getSolnums with empty outer list; all 34 submitted Worker requests have observed terminal replies, with no create/set/remove dispatch in the recorded sequence. Control job remains UNKNOWN; a failed read call does not establish global model state.",
+      "clarification": "Report references to T48/T49 are inapplicable here: this is T07, not the heldout workflow. Job reconciliation does not convert the outcome to success or authorize replay."
     }
   }
 }
