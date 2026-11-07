@@ -431,7 +431,8 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
                sdim: int = 3, length_unit: str = "m", interp_kwargs: Mapping[str, Any] | None = None,
                numerical_kwargs: Mapping[str, Any] | None = None, solver_unavailable: Sequence[str] = (),
                dataset_tags: Sequence[str] = ("dset1",), component_tags: Sequence[str] = ("comp1",),
-               solution_tag: str = "sol1", complex_: bool = False) -> Tree:
+               solution_tag: str = "sol1", complex_: bool = False,
+               geom_entity_counts: Sequence[int] | None = None) -> Tree:
     """Build a fake results tree with one dataset, one solution and one study."""
     entities: list[Entity] = []
 
@@ -447,6 +448,13 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
     # adapter; the fixture publishes the same read instead of relying on a
     # guessed coordinate-name fallback.
     geometry.isAxisymmetric = lambda *args: geometry._guard("isAxisymmetric", args) or False  # type: ignore[assignment]
+    # COMSOL 6.4 GeomSequence publishes getNEntities(): per-entity-dimension
+    # counters of the finalized geometry (Programming Reference, Geometric
+    # Entity Counters).  The all-entity ROI binding proof reads this counter;
+    # the fake publishes it only when the caller declares the geometry shape.
+    if geom_entity_counts is not None:
+        geometry.getNEntities = lambda *args: (
+            geometry._guard("getNEntities", args) or list(geom_entity_counts))  # type: ignore[assignment]
 
     geometries = register(FList())
     geometries.items["geom1"] = geometry
@@ -1317,6 +1325,10 @@ def _stationary_count_tree(count: int = 2):
         solver_level_names=(), solver_levels=0, solver_outer_solnums=(),
         solver_type="Stationary", solver_sequence_type="SolverSequence",
         solver_attached=True, complex_=False,
+        # One-triangle 2D geometry: [vertices, edges, domains]; the fake
+        # aggregate/selection views expose exactly one dim-2 entity [1],
+        # matching the live T07v2 smoke model (domain_count 1).
+        geom_entity_counts=(3, 3, 1),
     )
     return tree
 
@@ -2615,6 +2627,107 @@ def test_result_evaluate_first_unknown_at_native_read_still_latches_fence() -> N
 
     with pytest.raises(_UnknownSolutionFlError):
         results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+
+
+def test_result_evaluate_all_selection_accepts_documented_empty_string_named_readback() -> None:
+    """T07v2 regression: Selection.named() publishes an empty string for a manual selection.
+
+    The live result.evaluate job 4722d099-56ac-4a22-938d-1d60e163cbc3 read the
+    aggregate feature's selection back after geom(smoke_geom, 2)+all(); the
+    persisted control-plane events (docs/.../T07-candidate-b0-joblog-page0.json)
+    show geom='smoke_geom', dim=2, named='', entities=[1], isInheriting=false.
+    Per the 6.4 LocalSelection.named() contract, an empty string means the
+    selection is manual and refers to no named selection, so the before_run ROI
+    binding check must accept it and publish the verified count-only aggregate.
+    """
+    tree = _stationary_count_tree(1)
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+
+    nodes: list[_StationaryAggregateFeature] = []
+
+    def factory(tag: str, *args: Any) -> _StationaryAggregateFeature:
+        node = _StationaryAggregateFeature(tag, str(args[0]) if args else "AvSurface")
+        node.selection_node.named = lambda: (node.selection_node._guard("named", ()) or "")
+        nodes.append(node)
+        return node
+
+    tree.numerical.factory = factory
+
+    result = results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+    assert result["status"]["ok"] is True, result["status"]
+    assert nodes and nodes[0].type_id == "AvSurface"
+    assert "getData" in nodes[0].methods()
+    assert result["cleanup"]["removed"] is True
+    assert tree.numerical.items == {}
+    # The published binding evidence must carry the coverage proof used for
+    # the verdict: the same geometry/dimension getNEntities counters, not
+    # just the selected entity labels.
+    coverage = result["native_result_binding_evidence"]["common_roi_identity"]["all_coverage"]
+    assert coverage["component"] == "comp1"
+    assert coverage["geometry"] == "geom1"
+    assert coverage["entity_dimension"] == 2
+    assert coverage["geometry_entity_count"] == 1
+    assert coverage["entity_counts_per_dimension"] == [3, 3, 1]
+    assert coverage["selected_distinct_entity_count"] == 1
+
+
+def test_result_evaluate_all_selection_still_rejects_nonempty_named_readback() -> None:
+    """Negative control: a real named-selection reference still mismatches.
+
+    Accepting the documented empty-string manual marker must not weaken the
+    ROI binding.  When the engine reports a non-empty named-selection tag for
+    a requested all-entity selection, the before_run check must refuse before
+    any getData payload read and surface the actual readback value.
+    """
+    tree = _stationary_count_tree(1)
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+
+    def factory(tag: str, *args: Any) -> _StationaryAggregateFeature:
+        node = _StationaryAggregateFeature(tag, str(args[0]) if args else "AvSurface")
+        node.selection_node.named = lambda: (node.selection_node._guard("named", ()) or "walls")
+        return node
+
+    tree.numerical.factory = factory
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+    assert exc_info.value.code == "NATIVE_RESULT_BINDING_MISMATCH"
+    assert exc_info.value.details.get("named_readback") == "walls"
+    assert exc_info.value.details.get("role") == "aggregate"
+    assert "getData" not in tree.engine_methods()
+
+
+def test_result_evaluate_all_selection_rejects_partial_membership_readback() -> None:
+    """Counterexample: empty-string named marker plus partial membership is not "all".
+
+    geom()/dim()/named()==""/non-empty entities() only prove the selection is a
+    manual ROI on the right geometry level; they do not prove it covers every
+    entity of that level.  When the geometry publishes two second-dimension
+    entities (the 6.4 documented GeomSequence.getNEntities() counter) while the
+    feature selection reads back only [1], the all-entity binding must be
+    refused instead of publishing an average over an unproven partial ROI.
+    """
+    tree = _stationary_count_tree(1)
+    tree.solver.solution_info.getSolnum = lambda outer, strict: (
+        tree.solver.solution_info._guard("getSolnum", (outer, strict)) or [1])
+    geometry = tree.components.items["comp1"].collections["geom"].items["geom1"]
+    geometry.getNEntities = lambda *args: geometry._guard("getNEntities", args) or [3, 4, 2]
+
+    def factory(tag: str, *args: Any) -> _StationaryAggregateFeature:
+        node = _StationaryAggregateFeature(tag, str(args[0]) if args else "AvSurface")
+        node.selection_node.named = lambda: (node.selection_node._guard("named", ()) or "")
+        return node
+
+    tree.numerical.factory = factory
+
+    with pytest.raises(ExecutionContractError) as exc_info:
+        results.result_evaluate(tree.worker, "Model", _t07_stationary_aggregate_body())
+    assert exc_info.value.code == "NATIVE_RESULT_BINDING_MISMATCH"
+    assert exc_info.value.details.get("geometry_entity_count") == 2
+    assert exc_info.value.details.get("entity_count") == 1
+    assert "getData" not in tree.engine_methods()
 
 
 def test_result_evaluate_explicit_selection_never_runs_singleton_witness() -> None:

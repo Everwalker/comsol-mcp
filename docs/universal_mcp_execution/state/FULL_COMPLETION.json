@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "T18 software refusal fix recorded; T07 ROI and T13 deletion safety work continue. Both T07 UNKNOWN fences remain. T19 domain file-budget obligation and 144 baseline consumer failures require follow-up.",
-  "updated_utc": "2026-11-07T15:53:11.987228+00:00",
+  "next_task_hint": "Pin the new committed ROI candidate and validate only with a genuinely independent fresh project/session/Worker. Never replay or clear either T07 UNKNOWN fence. T13 deletion and T19 file budget work continue; failing historical suites remain open.",
+  "updated_utc": "2026-11-07T15:55:47.672802+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -76,8 +76,8 @@
       "blocker": null
     },
     "T07": {
-      "status": "IN_PROGRESS",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
       "evidence_refs": [
         "docs/universal_mcp_execution/evidence/full/public_result_T07.json",
@@ -90,9 +90,11 @@
         "docs/universal_mcp_execution/evidence/full/public_result_T07_candidate_b0_UNKNOWN.json",
         "docs/universal_mcp_execution/evidence/full/T07v2-native-attempt-qwen-20261107.md",
         "docs/universal_mcp_execution/evidence/full/t07v2-b0cbd2d-20261107/logs/b07-java-execute.json",
-        "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-observation.json"
+        "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-observation.json",
+        "docs/universal_mcp_execution/evidence/full/T07-roi-fix-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/T07-roi-final-pytest-20261107.txt"
       ],
-      "blocker": "Fresh candidate reached a separate result.evaluate post-dispatch UNKNOWN: actual all-entity ROI binding mismatch with mutation issued. This new job/model/session is separately fenced; diagnose/fix from recorded evidence before another independent attempt. Original T07 UNKNOWN also remains fenced. Real numeric/image evidence remains absent."
+      "blocker": "ROI fix has synthetic regression evidence only; real getNEntities, same-solution numeric/units/image and broad native behavior remain unverified. Two separate prior UNKNOWN model/session fences persist. Existing selected suites still contain failures/errors."
     },
     "T08": {
       "status": "TODO",

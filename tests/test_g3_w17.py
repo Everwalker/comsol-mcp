@@ -414,6 +414,13 @@ class FWiredTree:
         self.geom.getSDim = lambda *args: self.geom._guard("getSDim", args) or sdim
         self.geom.lengthUnit = lambda *args: self.geom._guard("lengthUnit", args) or "m"
         self.geom.isAxisymmetric = lambda *args: self.geom._guard("isAxisymmetric", args) or is_axisymmetric
+        # COMSOL 6.4 GeomSequence publishes getNEntities(): the number of
+        # geometric entities per entity dimension (Programming Reference,
+        # Geometric Entity Counters).  The adapter's all-entity ROI coverage
+        # proof reads it; this fake publishes one entity per level, matching
+        # FSelection.all() == [1].
+        self.geom.getNEntities = (
+            lambda *args: self.geom._guard("getNEntities", args) or [1] * (sdim + 1))
 
         # Component
         self.component = FNode(tag="comp1", type_id="Component",

@@ -1,0 +1,85 @@
+........................................................................ [ 27%]
+........................................................................ [ 55%]
+........................................................................ [ 83%]
+......F......................F..............                             [100%]
+=================================== FAILURES ===================================
+_______ test_actual014_raw_reproduces_original_r5_exact_label_rejection ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bbc51d0>
+
+    def test_actual014_raw_reproduces_original_r5_exact_label_rejection(monkeypatch):
+        import importlib.util
+        from pathlib import Path
+        old=Path(__file__).resolve().parents[1] / 'continuation/external-source/cb9949f2055e969d/_g3_results.py'
+        spec=importlib.util.spec_from_file_location('comsol_mcp._activity014_frozen_r5_results',old)
+        import hashlib
+>       assert hashlib.sha256(old.read_bytes()).hexdigest()=='cb9949f2055e969d3bedb19cac1df31f6e3bdfa710c78d749e2363f5ff3c1de3'
+                              ^^^^^^^^^^^^^^^^
+
+tests/test_g3_results.py:3148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/external-source/cb9949f2055e969d/_g3_results.py')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/external-source/cb9949f2055e969d/_g3_results.py'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+__ test_actual015_partial_resolver_reproduces_original_r6_publication_failure __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a017230>
+
+    def test_actual015_partial_resolver_reproduces_original_r6_publication_failure(monkeypatch):
+        import importlib.util,hashlib
+        from pathlib import Path
+        from tests._published_history import published_source
+>       source=published_source('w23-saved-mph-science-readback-20261012-candidate20-r6/comsol_mcp/_g3_results.py')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_g3_results.py:3275: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/_published_history.py:16: in published_source
+    rows = [row for row in _source_map() if row["source"].endswith("/" + logical_path)]
+                           ^^^^^^^^^^^^^
+tests/_published_history.py:12: in _source_map
+    return json.loads((ROOT / "continuation/EXTERNAL_SOURCE_MAP.json").read_text())
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/EXTERNAL_SOURCE_MAP.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/continuation/EXTERNAL_SOURCE_MAP.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/test_g3_results.py::test_actual014_raw_reproduces_original_r5_exact_label_rejection
+FAILED tests/test_g3_results.py::test_actual015_partial_resolver_reproduces_original_r6_publication_failure
+2 failed, 258 passed in 1.14s

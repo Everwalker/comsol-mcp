@@ -6377,6 +6377,17 @@ def _result_evaluate_body(
             actual_geometry = _call(selection_node, "geom")
             actual_dimension = _call(selection_node, "dim")
             actual_named = _call(selection_node, "named")
+            # 6.4 Selection getter contract (com.comsol.model.LocalSelection):
+            # named() returns the referenced named-selection tag, and an empty
+            # string means the selection is manual (it refers to no named
+            # selection).  The live T07v2 result.evaluate job
+            # 4722d099-56ac-4a22-938d-1d60e163cbc3 published exactly
+            # result "" for this readback right after geom(tag, dim) + all(),
+            # and the old is-not-None gate misread that documented manual
+            # marker as a named reference.  Only a non-empty tag counts as a
+            # named reference; any other non-string shape stays a mismatch
+            # instead of silently passing.
+            named_reference = None if actual_named == "" else actual_named
             actual_entities = require_entity_id_array(
                 _call(selection_node, "entities"), "NumericalFeature.selection().entities()", allow_empty=True
             )
@@ -6444,29 +6455,102 @@ def _result_evaluate_body(
                 expected_entities = require_entity_id_array(
                     selected_entities, "spec.selection.entities", allow_empty=False
                 )
-                if actual_named is not None or actual_entities != expected_entities:
+                if named_reference is not None or actual_entities != expected_entities:
                     raise ExecutionContractError(
                         "NATIVE_RESULT_BINDING_MISMATCH",
                         f"{role} actual ROI membership differs from the explicit request",
                         details={
                             "stage": stage, "role": role, "expected_entities": expected_entities,
-                            "actual_entities": actual_entities, "publish_allowed": False,
+                            "actual_entities": actual_entities,
+                            "named_readback": actual_named, "publish_allowed": False,
                         },
                     )
             elif selection_kind == "named":
-                if actual_named != selected_name:
+                if named_reference != selected_name:
                     raise ExecutionContractError(
                         "NATIVE_RESULT_BINDING_MISMATCH",
                         f"{role} actual named ROI differs from the request",
-                        details={"stage": stage, "role": role, "publish_allowed": False},
+                        details={"stage": stage, "role": role, "named_readback": actual_named,
+                                 "named_expected": selected_name, "publish_allowed": False},
                     )
             elif selection_kind == "all":
-                if actual_named is not None or all_selected is not True:
+                if named_reference is not None or all_selected is not True:
                     raise ExecutionContractError(
                         "NATIVE_RESULT_BINDING_MISMATCH",
                         f"{role} actual ROI is not the requested all-entity selection",
-                        details={"stage": stage, "role": role, "publish_allowed": False},
+                        details={"stage": stage, "role": role, "named_readback": actual_named,
+                                 "entity_count": len(actual_entities), "publish_allowed": False},
                     )
+                # Prove the manual selection really covers the whole geometry
+                # at this level instead of accepting any non-empty membership.
+                # Selection.entities() is engine-managed membership for the
+                # (geometry, dim) context verified above; the 6.4-documented
+                # GeomSequence.getNEntities() publishes the entity count per
+                # entity dimension of that same geometry (COMSOL 6.4
+                # Programming Reference, Geometric Entity Counters: a vector
+                # of length space_dim+1).  Equal distinct-cardinality means
+                # the manual selection contains every entity of the bound
+                # level; a missing or malformed counter stays an explicit
+                # UNVERIFIED refusal rather than an inferred pass.
+                space_dimension = context.get("space_dimension")
+                try:
+                    geometry_node = _call(
+                        _call(model, "component", component_tag), "geom", actual_geometry)
+                    entity_counts = _call(geometry_node, "getNEntities")
+                except ExecutionContractError as exc:
+                    if exc.code == "API_UNSUPPORTED":
+                        raise ExecutionContractError(
+                            "NATIVE_RESULT_BINDING_UNVERIFIED",
+                            f"{role} geometry entity counters (getNEntities) are unavailable "
+                            f"on this engine; all-entity coverage cannot be proven",
+                            details={"stage": stage, "role": role,
+                                     "component": component_tag, "geometry": actual_geometry,
+                                     "publish_allowed": False},
+                        ) from exc
+                    raise
+                if (isinstance(entity_counts, (str, bytes)) or not isinstance(entity_counts, Sequence)
+                        or any(type(item) is not int for item in entity_counts)
+                        or len(entity_counts) < entity_dimension + 1
+                        or (type(space_dimension) is int
+                            and len(entity_counts) != space_dimension + 1)):
+                    raise ExecutionContractError(
+                        "NATIVE_RESULT_BINDING_UNVERIFIED",
+                        f"{role} getNEntities readback is not a per-entity-dimension integer vector",
+                        details={"stage": stage, "role": role,
+                                 "entity_counts": (list(entity_counts)[:8]
+                                                   if isinstance(entity_counts, Sequence)
+                                                   and not isinstance(entity_counts, (str, bytes))
+                                                   else entity_counts),
+                                 "publish_allowed": False},
+                    )
+                geometry_level_count = entity_counts[entity_dimension]
+                if len(set(actual_entities)) != geometry_level_count:
+                    raise ExecutionContractError(
+                        "NATIVE_RESULT_BINDING_MISMATCH",
+                        f"{role} actual ROI membership does not cover every entity of the bound geometry level",
+                        details={"stage": stage, "role": role,
+                                 "component": component_tag, "geometry": actual_geometry,
+                                 "entity_dimension": entity_dimension,
+                                 "entity_count": len(set(actual_entities)),
+                                 "geometry_entity_count": geometry_level_count,
+                                 "publish_allowed": False},
+                    )
+                # The published native_result_binding_evidence must carry the
+                # same per-dimension geometry counters the coverage verdict
+                # used, bound to the same component/geometry/dimension; the
+                # actual entities readback alone cannot show full coverage.
+                # The counters join the ROI identity so they participate in
+                # the existing before/after payload-read snapshot comparison
+                # and the cross-feature common-ROI equality check.
+                all_coverage = {
+                    "source": "model.component(<component>).geom(<geometry>).getNEntities()",
+                    "component": component_tag,
+                    "geometry": actual_geometry,
+                    "entity_dimension": entity_dimension,
+                    "geometry_entity_count": geometry_level_count,
+                    "entity_counts_per_dimension": list(entity_counts),
+                    "selected_distinct_entity_count": len(set(actual_entities)),
+                }
             else:
                 raise ExecutionContractError(
                     "API_UNSUPPORTED", f"native count-only binding does not support selection kind {selection_kind!r}"
@@ -6477,6 +6561,8 @@ def _result_evaluate_body(
                 "named": actual_named, "entities": actual_entities,
                 "is_inheriting": inheriting,
             }
+            if selection_kind == "all":
+                roi_identity["all_coverage"] = all_coverage
         unit_map, unit_observation = _feature_units_and_observation(
             target_feature,
             list(expected_expressions),
