@@ -921,6 +921,7 @@ def test_old_worker_without_source_binding_capability_never_receives_code_reques
 def test_source_binding_probe_and_code_request_share_one_authenticated_connection(monkeypatch, tmp_path):
     writes = []
     events = []
+    connections = []
     source = "public class NewTask { // Ω\r\n}\r\n".encode("utf-8")
     source_digest = hashlib.sha256(source).hexdigest()
 
@@ -956,7 +957,12 @@ def test_source_binding_probe_and_code_request_share_one_authenticated_connectio
         def settimeout(self, _value): return None
         def makefile(self, *_args): return stream
 
-    monkeypatch.setattr(java_worker.socket, "create_connection", lambda *_args, **_kwargs: Connection())
+    def connect(*_args, **_kwargs):
+        connection = Connection()
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(java_worker.socket, "create_connection", connect)
     worker = object.__new__(PersistentJavaWorker)
     worker._port = 51322
     worker._token = "test-token"
@@ -975,6 +981,7 @@ def test_source_binding_probe_and_code_request_share_one_authenticated_connectio
                 worker, "mcp1", "NewTask.java", "NewTask", {}, source_bytes=source,
                 expected_source_sha256=source_digest, request_id="bound-code")
     assert reply["ok"] is True
+    assert len(connections) == 1
     assert [row.get("type") for row in writes] == [None, "source_binding_capabilities", "code_execute"]
     code_request = writes[-1]
     assert code_request["expected_worker_build_id"] == java_worker._SOURCE_BINDING_WORKER_BUILD_ID
