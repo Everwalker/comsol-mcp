@@ -7,7 +7,13 @@
     "status": "DONE",
     "receipt": "docs/full_universal_continuation_20261107/RESTORE_RECEIPT.json",
     "integrity_qualification": "Original overlay check failed only on .gitignore size and SHA256; isolated copy rebased only that manifest entry and records both identities in LOCAL_PACKAGE_VARIANCE.json. 39 other entries unchanged and matched original manifest.",
-    "restore_qualification": "Initial sandbox Git fetch failed DNS; escalated pinned partial Git recovery read and reconstructed complete tree but stopped after 67 of 1286 selected files (child stderr not retained). Single-blob and batch fetch of the same pinned source succeeded; continued only our own staging and checked every selected byte against Git blob SHA-1, with SHA-256 recorded. 20,739 historical blobs deferred; no old authority restored."
+    "restore_qualification": "Initial sandbox Git fetch failed DNS; escalated pinned partial Git recovery read and reconstructed complete tree but stopped after 67 of 1286 selected files (child stderr not retained). Single-blob and batch fetch of the same pinned source succeeded; continued only our own staging and checked every selected byte against Git blob SHA-1, with SHA-256 recorded. 20,739 historical blobs deferred; no old authority restored.",
+    "recovery_tool_fix": {
+      "scope": "packet bootstrap batching and stderr diagnosis; fixed pin/tree and per-file blob verification retained",
+      "evidence": "docs/universal_mcp_execution/evidence/full/recovery-tool-qwen-20261107.txt",
+      "tests": "22 recovery tests passed; packet/plan 12 passed with symlink-free TMPDIR. Two packet tests fail under the default macOS TMPDIR in both this candidate and a HEAD comparison.",
+      "limits": "Actual Git 2.30 binary and final modified bootstrap against GitHub not run; previous same-pin bulk blob fetch succeeded. Product/native acceptance not implied."
+    }
   },
   "T02": {
     "status": "DONE",

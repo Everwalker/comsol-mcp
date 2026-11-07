@@ -1,0 +1,133 @@
+# Recovery-package B2 (bootstrap.py / test_recovery.py / PACKAGE_MANIFEST.json) review + offline unit-test evidence
+# date_utc: 2026-11-07 13:19:28 UTC
+# worktree: /Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107 (restored repo; overlay docs/full_universal_continuation_20261107)
+# modified files (only these three, left uncommitted as found): tools/bootstrap.py, tests/test_recovery.py, PACKAGE_MANIFEST.json
+# executing model: local Qwen omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S (max reasoning), this session
+# offline guarantees: no network; every git remote in these tests is a file:// local fixture (GIT_ALLOW_PROTOCOL=file);
+#   no COMSOL started, no pip, no old Worker/SSH access, no T07 model replay/closure.
+# environment: Python 3.14.7; /opt/homebrew/bin/python3; git version 2.54.0 (Apple Git-157)
+
+## A. python3 -m unittest -v tests.test_recovery (cwd: /Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/docs/full_universal_continuation_20261107) -> exit_code 0
+
+test_active_backfill_uses_batched_pinned_blob_ids (tests.test_recovery.RecoveryTests.test_active_backfill_uses_batched_pinned_blob_ids) ... From file:///var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/tmpf4woo6nz/origin
+ * branch            f9bc109e16340dd225da36b090f1200adb18c38b -> FETCH_HEAD
+ * branch            2c69b1abac49d6f939a95fe2f6d3e8dc5839c01a -> FETCH_HEAD
+warning: This repository uses promisor remotes. Some objects may not be loaded.
+ok
+test_active_restore_defers_history_without_deleting_index_entries (tests.test_recovery.RecoveryTests.test_active_restore_defers_history_without_deleting_index_entries) ... ok
+test_archive_tree_and_inert_symlink (tests.test_recovery.RecoveryTests.test_archive_tree_and_inert_symlink) ... ok
+test_backfill_batches_pinned_ids_within_one_arg_budget (tests.test_recovery.RecoveryTests.test_backfill_batches_pinned_ids_within_one_arg_budget) ... ok
+test_bad_archive_tree (tests.test_recovery.RecoveryTests.test_bad_archive_tree) ... ok
+test_blob_budget_and_existing_file (tests.test_recovery.RecoveryTests.test_blob_budget_and_existing_file) ... ok
+test_blob_content (tests.test_recovery.RecoveryTests.test_blob_content) ... ok
+test_case_collisions (tests.test_recovery.RecoveryTests.test_case_collisions) ... ok
+test_empty_tree (tests.test_recovery.RecoveryTests.test_empty_tree) ... ok
+test_git_failure_message_retains_child_stderr (tests.test_recovery.RecoveryTests.test_git_failure_message_retains_child_stderr) ... ok
+test_incomplete_backfill_stops_before_materializing (tests.test_recovery.RecoveryTests.test_incomplete_backfill_stops_before_materializing) ... ok
+test_lfs_pointer_disclosed (tests.test_recovery.RecoveryTests.test_lfs_pointer_disclosed) ... ok
+test_local_object_enumeration_failure_retains_stderr (tests.test_recovery.RecoveryTests.test_local_object_enumeration_failure_retains_stderr) ... ok
+test_no_collision_siblings (tests.test_recovery.RecoveryTests.test_no_collision_siblings) ... ok
+test_path_rejection (tests.test_recovery.RecoveryTests.test_path_rejection) ... ok
+test_pin_validation (tests.test_recovery.RecoveryTests.test_pin_validation) ... ok
+test_probe_reports_missing_without_network (tests.test_recovery.RecoveryTests.test_probe_reports_missing_without_network) ... ok
+test_real_local_git_restore (tests.test_recovery.RecoveryTests.test_real_local_git_restore) ... ok
+test_truncated_blob (tests.test_recovery.RecoveryTests.test_truncated_blob) ... ok
+test_unicode_path (tests.test_recovery.RecoveryTests.test_unicode_path) ... ok
+test_wrong_batch_object_reports_row_context_and_child_stderr (tests.test_recovery.RecoveryTests.test_wrong_batch_object_reports_row_context_and_child_stderr) ... ok
+test_zip_traversal (tests.test_recovery.RecoveryTests.test_zip_traversal) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 1.441s
+
+OK
+
+## B. python3 -m unittest tests.test_packet tests.test_plan (cwd: /Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/docs/full_universal_continuation_20261107, default TMPDIR under /var/folders) -> exit_code 1 (2 failures, PRE-EXISTING; see D/E)
+
+F..F........
+======================================================================
+FAIL: test_complete_archive_entry_copies_all_packet_files_preserves_history (tests.test_packet.PacketTests.test_complete_archive_entry_copies_all_packet_files_preserves_history)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/docs/full_universal_continuation_20261107/tests/test_packet.py", line 70, in test_complete_archive_entry_copies_all_packet_files_preserves_history
+    self.assertEqual(result, 0)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_integrity_and_corruption (tests.test_packet.PacketTests.test_integrity_and_corruption)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/docs/full_universal_continuation_20261107/tests/test_packet.py", line 58, in test_integrity_and_corruption
+    self.assertEqual(v.verify(packet)['status'], 'WORKPACK_INTEGRITY_PASS')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'FAIL' != 'WORKPACK_INTEGRITY_PASS'
+- FAIL
++ WORKPACK_INTEGRITY_PASS
+
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.013s
+
+FAILED (failures=2)
+
+## C. python3 tools/verify_package.py (cwd: /Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107/docs/full_universal_continuation_20261107) -> exit_code 0
+
+{
+  "status": "WORKPACK_INTEGRITY_PASS",
+  "file_count": 40,
+  "errors": [],
+  "product_acceptance": "NOT_ESTABLISHED"
+}
+
+## D. provenance check for B: independent copy at /private/tmp/b2_headcheck containing the COMMITTED (HEAD) versions of the three files, same command -> exit_code 1 with the identical 2 failures, so they are not introduced by this fix
+
+F..F........
+======================================================================
+FAIL: test_complete_archive_entry_copies_all_packet_files_preserves_history (tests.test_packet.PacketTests.test_complete_archive_entry_copies_all_packet_files_preserves_history)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/b2_headcheck/tests/test_packet.py", line 70, in test_complete_archive_entry_copies_all_packet_files_preserves_history
+    self.assertEqual(result, 0)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_integrity_and_corruption (tests.test_packet.PacketTests.test_integrity_and_corruption)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/b2_headcheck/tests/test_packet.py", line 58, in test_integrity_and_corruption
+    self.assertEqual(v.verify(packet)['status'], 'WORKPACK_INTEGRITY_PASS')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'FAIL' != 'WORKPACK_INTEGRITY_PASS'
+- FAIL
++ WORKPACK_INTEGRITY_PASS
+
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.014s
+
+FAILED (failures=2)
+
+## E. same command as B in the working tree with TMPDIR=/private/tmp/b2_realtmp (real, symlink-free path) -> exit_code 0; cause is the committed safe_ancestors() rejecting the /var -> /private/var symlink ancestor under the default macOS TMPDIR, unrelated to the backfill fix and outside this task scope
+
+............
+----------------------------------------------------------------------
+Ran 12 tests in 0.018s
+
+OK
+## Review conclusions (B2 scope)
+
+- git_env() adds GIT_NO_LAZY_FETCH=1 (introduced in Git 2.32; unknown env vars are ignored by Git 2.30/2.31, so the pinned Git 2.30+ floor is preserved). git() now retains child stderr (up to 2000 chars) in the raised ValueError, fixing the earlier silent failure path recorded in RESTORE_ADDITIONAL_CONTEXT.json.
+- missing_blobs() probes with: git cat-file --batch-all-objects --batch-check=%(objectname). Local enumeration never performs per-ID lookups, so it cannot trigger promisor lazy fetches on any supported Git, including 2.30 without GIT_NO_LAZY_FETCH.
+- backfill_blobs() re-fetches only the still-missing selected blobs via: git fetch --no-tags origin <ids>, at most BATCH_FETCH_IDS=400 exact pinned blob IDs per request; no per-blob lazy-fetch fallback. If any selected blob is still missing after backfill, restore aborts before materializing anything.
+- Fixed-tree verification (reconstructed tree_digest must equal the pinned tree) and per-file verification (measured blob == expected pinned blob, trailing-newline check, byte budgets) are unchanged; wrong-batch-object errors now include row index, path, expected blob, and git cat-file stderr.
+- Active scope still defers historical blobs: the deferred historical blob remains absent locally after backfill (asserted via local object enumeration), and skip-worktree index behavior is unchanged.
+- PACKAGE_MANIFEST.json rebased to the two changed files (tools/bootstrap.py: 19924 bytes sha256 04f2406cab3b17e75b78ce5e0daeac19574c14627719561c555a3996f9bdd500; tests/test_recovery.py: 17678 bytes sha256 217de0cbe847bd626b8f1eadda604e5f73da49e02672c0ad8359a052cacf3c52); tools/verify_package.py passes 40 files.
+- test_recovery: 22/22 pass, including new tests for local enumeration without network, batched fetch budget [400,400,150] for 950 ids, incomplete-backfill-aborts-before-materialize, GIT_TRACE proof of exactly 2 visible fetches with GIT_NO_LAZY_FETCH removed (simulating Git < 2.32), and stderr-retention tests.
+
+## Remaining limits
+
+- Offline only: the batched backfill was not exercised this session against the real https://github.com/Everwalker/comsol-mcp.git; it relies on GitHub enabling uploadpack.allowAnySHA1InWant (the same server capability Git partial-clone lazy fetch uses). Local fixtures configure that capability explicitly.
+- Git 2.30/2.31 semantics were simulated on the local git 2.54 binary by stripping GIT_NO_LAZY_FETCH and counting fetches via GIT_TRACE; no real Git 2.30 binary was run here.
+- Pre-existing (committed-code) issue, deliberately not fixed here: packet-level tests fail under the default macOS TMPDIR because the committed safe_ancestors() rejects symlinked ancestors (/var -> /private/var). Real recovery targets (e.g. /Volumes/SSD paths) are unaffected; fixing it would touch out-of-scope files and weaken the symlink guard.
+- This evidence establishes software-level offline behavior of the recovery tool only; it is not product or native acceptance.

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Restore pinned public source to a NEW directory. No pip, engine or repo code runs.
 Python 3.10+; Git preferred, HTTPS ZIP fallback. Full Git tree map is verified.
-Git active scope defers historical blob bytes; full scope restores all tracked bytes.
+Git active scope defers historical blob bytes; missing selected blobs are backfilled
+with batched fetches of the same pinned blob IDs (never lazy per-blob fetches).
 Historical symlinks are written as inert files and recorded, never followed.
 """
 from __future__ import annotations
@@ -88,10 +89,73 @@ def selected_path(path, pin):
     return any(path == prefix or path.startswith(prefix+'/')
                for prefix in pin.get('active_paths', []))
 
+def git_env():
+    env=os.environ.copy();env.update(GIT_TERMINAL_PROMPT='0',GIT_LFS_SKIP_SMUDGE='1',GIT_NO_LAZY_FETCH='1')
+    return env
+
 def git(argv,cwd,**kwargs):
-    env=os.environ.copy();env.update(GIT_TERMINAL_PROMPT='0',GIT_LFS_SKIP_SMUDGE='1')
     cmd=['git','-c','core.autocrlf=false','-c','core.symlinks=false','-c','core.hooksPath='+str(ROOT/'_state/no-hooks'),'-c','protocol.file.allow=never',*argv]
-    return subprocess.run(cmd,cwd=cwd,env=env,check=True,timeout=600,**kwargs)
+    kwargs.setdefault('stderr',subprocess.PIPE)
+    try:
+        return subprocess.run(cmd,cwd=cwd,env=git_env(),check=True,timeout=600,**kwargs)
+    except subprocess.CalledProcessError as exc:
+        label=' '.join(str(a) for a in argv[:4])+(' [+%d more args]'%(len(argv)-4) if len(argv)>4 else '')
+        detail=(exc.stderr or b'').decode('utf-8','replace').strip()[:2000]
+        raise ValueError('git %s exited %d%s'%(label,exc.returncode,': '+detail if detail else '')) from None
+
+def missing_blobs(stage,blob_ids):
+    if not blob_ids:return []
+    # Enumerating locally available objects does not look up missing IDs and
+    # therefore cannot trigger a promisor fetch, including on Git 2.30.
+    missing={blob_id.encode('ascii') for blob_id in blob_ids}
+    with tempfile.TemporaryFile() as errors:
+        process=subprocess.Popen(['git','-c','protocol.file.allow=never','cat-file','--batch-all-objects',
+                                  '--batch-check=%(objectname)'],cwd=stage,env=git_env(),stdout=subprocess.PIPE,stderr=errors)
+        try:
+            for line in process.stdout:missing.discard(line.strip())
+            code=process.wait(timeout=60)
+            if code:
+                errors.seek(0);detail=errors.read(4096).decode('utf-8','replace').strip()
+                raise ValueError('git local object enumeration exited %d%s'%(code,': '+detail if detail else ''))
+        except Exception:
+            process.kill();process.wait();raise
+        finally:
+            if process.stdout is not None:process.stdout.close()
+    return [blob_id for blob_id in blob_ids if blob_id.encode('ascii') in missing]
+
+BATCH_FETCH_IDS=400
+
+def backfill_blobs(stage,blob_ids):
+    for start in range(0,len(blob_ids),BATCH_FETCH_IDS):
+        # Each request wants at most BATCH_FETCH_IDS pinned blob IDs directly;
+        # GitHub enables uploadpack.allowAnySHA1InWant, the same server capability
+        # Git's own partial-clone lazy fetch relies on.
+        git(['fetch','--no-tags','origin',*blob_ids[start:start+BATCH_FETCH_IDS]],stage,stdout=subprocess.DEVNULL)
+
+def materialize_batch(stage,rows,batch_input,errors):
+    total=0
+    with batch_input.open('rb') as batch:
+        process=subprocess.Popen(['git','-c','protocol.file.allow=never','cat-file','--batch'],cwd=stage,env=git_env(),stdin=batch,stdout=subprocess.PIPE,stderr=errors)
+        try:
+            for index,row in enumerate(rows,1):
+                header=process.stdout.readline(300).decode().strip().split()
+                if len(header)!=3 or header[0]!=row['blob'] or header[1]!='blob':
+                    raise ValueError('wrong batch object at %d/%d path=%s expected_blob=%s observed=%r'%(index,len(rows),row['path'],row['blob'],' '.join(header)[:120]))
+                size=int(header[2]);total+=size
+                if total>MAX_TOTAL:raise ValueError('total bytes budget')
+                path=stage.joinpath(*valid_path(row['path']))
+                measured=copy_blob(process.stdout,size,path)
+                if measured['blob']!=row['blob'] or process.stdout.read(1)!=b'\n':
+                    raise ValueError('blob mismatch at %d/%d path=%s expected_blob=%s'%(index,len(rows),row['path'],row['blob']))
+                row.update(measured,inert_symlink=row['mode']=='120000')
+                if os.name!='nt' and row['mode']=='100755':path.chmod(0o755)
+            if process.wait(timeout=60)!=0:raise ValueError('cat-file failed')
+        except Exception as exc:
+            process.kill();process.wait()
+            errors.seek(0);detail=errors.read(4096).decode('utf-8','replace').strip()
+            raise ValueError(str(exc)+('; git cat-file stderr: '+detail if detail else '')) from None
+        finally:
+            if process.stdout is not None: process.stdout.close()
 
 def copy_blob(stream,size,target):
     if not 0<=size<=MAX_FILE:raise ValueError('individual file exceeds budget')
@@ -131,28 +195,17 @@ def restore_git(stage,pin,scope='full'):
     all_rows = rows
     rows = [r for r in all_rows if scope == 'full' or selected_path(r['path'], pin)]
     if not rows: raise ValueError('active scope selected no files')
+    missing=missing_blobs(stage,list(dict.fromkeys(r['blob'] for r in rows)))
+    if missing:
+        backfill_blobs(stage,missing)
+        still_missing=missing_blobs(stage,missing)
+        if still_missing:
+            first=still_missing[0];path=next(r['path'] for r in rows if r['blob']==first)
+            raise ValueError('batched fetch left %d selected blob(s) missing; path=%s expected_blob=%s'%(len(still_missing),path,first))
     inp=stage.parent/(stage.name+'.batch-input')
     inp.write_text(''.join(r['blob']+'\n' for r in rows),encoding='ascii')
-    total=0
-    with inp.open('rb') as batch, tempfile.TemporaryFile() as errors:
-        env=os.environ.copy();env.update(GIT_TERMINAL_PROMPT='0',GIT_LFS_SKIP_SMUDGE='1')
-        process=subprocess.Popen(['git','-c','protocol.file.allow=never','cat-file','--batch'],cwd=stage,env=env,stdin=batch,stdout=subprocess.PIPE,stderr=errors)
-        try:
-            for row in rows:
-                header=process.stdout.readline(300).decode().strip().split()
-                if len(header)!=3 or header[0]!=row['blob'] or header[1]!='blob':raise ValueError('wrong batch object')
-                size=int(header[2]);total+=size
-                if total>MAX_TOTAL:raise ValueError('total bytes budget')
-                path=stage.joinpath(*valid_path(row['path']))
-                measured=copy_blob(process.stdout,size,path)
-                if measured['blob']!=row['blob'] or process.stdout.read(1)!=b'\n':raise ValueError('blob mismatch')
-                row.update(measured,inert_symlink=row['mode']=='120000')
-                if os.name!='nt' and row['mode']=='100755':path.chmod(0o755)
-            if process.wait(timeout=60)!=0:raise ValueError('cat-file failed')
-        except Exception:
-            process.kill();process.wait();raise # only this helper-owned process
-        finally:
-            if process.stdout is not None: process.stdout.close()
+    with tempfile.TemporaryFile() as errors:
+        materialize_batch(stage,rows,inp,errors)
     inp.unlink()
     git(['update-ref','refs/heads/'+pin['working_branch'],pin['commit']],stage)
     git(['symbolic-ref','HEAD','refs/heads/'+pin['working_branch']],stage)

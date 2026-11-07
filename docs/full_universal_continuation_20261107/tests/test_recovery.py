@@ -28,6 +28,14 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual(r['blob'],'d670460b4b4aece5915caf5c68d12f560a9fe3e4');self.assertEqual(r['sha256'],hashlib.sha256(v).hexdigest())
     def test_truncated_blob(self):
         with tempfile.TemporaryDirectory() as t,self.assertRaises(ValueError):b.copy_blob(io.BytesIO(b'x'),5,Path(t)/'x')
+    def test_blob_budget_and_existing_file(self):
+        with tempfile.TemporaryDirectory() as t:
+            p=Path(t);existing=p/'existing';existing.write_bytes(b'preserve')
+            with patch.object(b,'MAX_FILE',1),self.assertRaisesRegex(ValueError,'individual file exceeds budget'):
+                b.copy_blob(io.BytesIO(b'xx'),2,p/'too-large')
+            self.assertFalse((p/'too-large').exists())
+            with self.assertRaises(FileExistsError):b.copy_blob(io.BytesIO(b'x'),1,existing)
+            self.assertEqual(existing.read_bytes(),b'preserve')
     def test_lfs_pointer_disclosed(self):
         with tempfile.TemporaryDirectory() as t:
             v=b'version https://git-lfs.github.com/spec/v1\noid sha256:abc\n';r=b.copy_blob(io.BytesIO(v),len(v),Path(t)/'x');self.assertTrue(r['lfs_pointer'])
@@ -57,7 +65,7 @@ class RecoveryTests(unittest.TestCase):
             p=Path(t);origin=p/'origin';stage=p/'stage';origin.mkdir();stage.mkdir()
             (origin/'目录 空格').mkdir();(origin/'目录 空格/x.txt').write_text('fixture\n')
             (origin/'a').write_bytes(b'a')
-            for cmd in (['git','init','--template='],['git','add','.'],['git','-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-m','fixture']):
+            for cmd in (['git','init','--template='],['git','add','.'],['git','-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-m','fixture'],['git','config','uploadpack.allowAnySHA1InWant','true']):
                 subprocess.run(cmd,cwd=origin,check=True,capture_output=True)
             sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=origin).decode().strip()
             tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],cwd=origin).decode().strip()
@@ -70,6 +78,11 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual(len(result),2);self.assertEqual((stage/'目录 空格/x.txt').read_bytes(),b'fixture\n')
             self.assertEqual(subprocess.check_output(['git','rev-parse','HEAD'],cwd=stage).decode().strip(),sha)
             self.assertEqual(subprocess.check_output(['git','status','--porcelain'],cwd=stage).strip(),b'')
+            limited=p/'limited';limited.mkdir()
+            with patch.object(b,'git',local),patch.object(b,'MAX_TOTAL',1),self.assertRaisesRegex(ValueError,'total bytes budget'):
+                b.restore_git(limited,{'remote':origin.as_uri(),'commit':sha,'tree':tree,'working_branch':'handoff/test'})
+            self.assertEqual((limited/'a').read_bytes(),b'a')
+            self.assertFalse((limited/'目录 空格/x.txt').exists())
 
     @unittest.skipUnless(shutil.which('git'),'git not installed')
     def test_active_restore_defers_history_without_deleting_index_entries(self):
@@ -77,7 +90,7 @@ class RecoveryTests(unittest.TestCase):
             p=Path(t);origin=p/'origin';stage=p/'stage';origin.mkdir();stage.mkdir()
             for name,raw in [('README.md',b'current root'),('comsol_mcp/code.py',b'current code'),('history/large.dat',b'historical data')]:
                 path=origin/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
-            for cmd in (['git','init','--template='],['git','add','.'],['git','-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-m','fixture']):
+            for cmd in (['git','init','--template='],['git','add','.'],['git','-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-m','fixture'],['git','config','uploadpack.allowAnySHA1InWant','true']):
                 subprocess.run(cmd,cwd=origin,check=True,capture_output=True)
             sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=origin).decode().strip()
             tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],cwd=origin).decode().strip()
@@ -95,5 +108,128 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual((stage/'comsol_mcp/code.py').read_bytes(),b'current code')
             self.assertEqual(subprocess.check_output(['git','status','--porcelain'],cwd=stage).strip(),b'')
             self.assertIn(b'S history/large.dat',subprocess.check_output(['git','ls-files','-t'],cwd=stage))
+
+    @unittest.skipUnless(shutil.which('git'),'git not installed')
+    def test_active_backfill_uses_batched_pinned_blob_ids(self):
+        # Protocol v2 makes the fixture origin actually apply blob:none, so the
+        # selected blobs are missing and must come back in one batched fetch.
+        with tempfile.TemporaryDirectory() as t:
+            p=Path(t);origin=p/'origin';stage=p/'stage';origin.mkdir();stage.mkdir()
+            for name,raw in [('README.md',b'current root'),('comsol_mcp/code.py',b'current code'),('history/large.dat',b'historical data')]:
+                path=origin/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+            for cmd in (['git','init','--template='],['git','add','.'],['git','-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-m','fixture'],['git','config','uploadpack.allowAnySHA1InWant','true'],['git','config','uploadpack.allowFilter','true']):
+                subprocess.run(cmd,cwd=origin,check=True,capture_output=True)
+            sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=origin).decode().strip()
+            tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],cwd=origin).decode().strip()
+            def blob_of(name):
+                return subprocess.check_output(['git','ls-tree',sha,name],cwd=origin).decode().split()[2]
+            selected={blob_of('README.md'),blob_of('comsol_mcp/code.py')};deferred=blob_of('history/large.dat')
+            original=b.git;original_env=b.git_env;fetches=[]
+            def local(args,cwd,**kw):
+                if args[0]=='fetch':
+                    fetches.append(list(args))
+                    return subprocess.run(['git','-c','protocol.file.allow=always','-c','protocol.version=2',*args],cwd=cwd,check=True,timeout=30,**kw)
+                return original(args,cwd,**kw)
+            def old_git_env():
+                env=original_env();env.pop('GIT_NO_LAZY_FETCH',None)
+                return env
+            pin={'remote':origin.as_uri(),'commit':sha,'tree':tree,'working_branch':'handoff/backfill-test',
+                 'active_paths':['comsol_mcp'],'active_root_files':True,'active_root_excluded':[]}
+            trace=p/'git-trace'
+            with patch.dict(os.environ,{'GIT_TRACE':str(trace),'GIT_ALLOW_PROTOCOL':'file'}), \
+                    patch.object(b,'git',local),patch.object(b,'git_env',old_git_env):
+                rows=b.restore_git(stage,pin,scope='active')
+            self.assertEqual(len(rows),2)
+            self.assertEqual((stage/'README.md').read_bytes(),b'current root')
+            self.assertEqual((stage/'comsol_mcp/code.py').read_bytes(),b'current code')
+            self.assertEqual(len(fetches),2,'exactly the pinned commit fetch plus one batched blob backfill')
+            self.assertEqual(fetches[1][:3],['fetch','--no-tags','origin'])
+            self.assertEqual(set(fetches[1][3:]),selected,'backfill requests exactly the missing pinned blob ids in one request')
+            self.assertEqual(trace.read_text().count('built-in: git fetch '),2,
+                             'Git must not launch hidden per-blob fetches when GIT_NO_LAZY_FETCH is absent')
+            local_objects=subprocess.check_output(['git','cat-file','--batch-all-objects','--batch-check=%(objectname)'],cwd=stage).splitlines()
+            self.assertNotIn(deferred.encode(),local_objects,'deferred historical blob must remain absent locally')
+            self.assertEqual(subprocess.check_output(['git','status','--porcelain'],cwd=stage).strip(),b'')
+
+    @unittest.skipUnless(shutil.which('git'),'git not installed')
+    def test_incomplete_backfill_stops_before_materializing(self):
+        with tempfile.TemporaryDirectory() as t:
+            p=Path(t);origin=p/'origin';stage=p/'stage';origin.mkdir();stage.mkdir()
+            (origin/'README.md').write_bytes(b'fixture')
+            for cmd in (['git','init','--template='],['git','add','.'],['git','-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-m','fixture'],['git','config','uploadpack.allowFilter','true']):
+                subprocess.run(cmd,cwd=origin,check=True,capture_output=True)
+            sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=origin).decode().strip()
+            tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],cwd=origin).decode().strip()
+            blob_id=subprocess.check_output(['git','rev-parse','HEAD:README.md'],cwd=origin).decode().strip()
+            original=b.git;original_env=b.git_env
+            def local(args,cwd,**kw):
+                if args[0]=='fetch':
+                    return subprocess.run(['git','-c','protocol.file.allow=always','-c','protocol.version=2',*args],cwd=cwd,check=True,timeout=30,**kw)
+                return original(args,cwd,**kw)
+            def old_git_env():
+                env=original_env();env.pop('GIT_NO_LAZY_FETCH',None)
+                return env
+            pin={'remote':origin.as_uri(),'commit':sha,'tree':tree,'working_branch':'handoff/incomplete-test'}
+            with patch.dict(os.environ,{'GIT_ALLOW_PROTOCOL':'file'}),patch.object(b,'git',local), \
+                    patch.object(b,'git_env',old_git_env),patch.object(b,'backfill_blobs') as backfill, \
+                    patch.object(b,'materialize_batch') as materialize:
+                with self.assertRaisesRegex(ValueError,blob_id):b.restore_git(stage,pin,scope='active')
+            backfill.assert_called_once_with(stage,[blob_id])
+            materialize.assert_not_called()
+            self.assertFalse((stage/'README.md').exists())
+
+    def test_backfill_batches_pinned_ids_within_one_arg_budget(self):
+        calls=[]
+        def fake_git(argv,cwd,**kw):calls.append(list(argv))
+        with patch.object(b,'git',fake_git):b.backfill_blobs(Path('unused'),['%040x'%i for i in range(950)])
+        self.assertEqual([len(c)-3 for c in calls],[b.BATCH_FETCH_IDS,b.BATCH_FETCH_IDS,150])
+        self.assertTrue(all(c[:3]==['fetch','--no-tags','origin'] for c in calls))
+        self.assertEqual([c[3] for c in calls],[('%040x'%0),('%040x'%400),('%040x'%800)])
+
+    @unittest.skipUnless(shutil.which('git'),'git not installed')
+    def test_probe_reports_missing_without_network(self):
+        with tempfile.TemporaryDirectory() as t:
+            repo=Path(t)/'repo';repo.mkdir()
+            for cmd in (['git','init','--template='],):subprocess.run(cmd,cwd=repo,check=True,capture_output=True)
+            (repo/'x').write_text('x\n')
+            for cmd in (['git','add','.'],['git','-c','user.name=F','-c','user.email=f@example.invalid','-c','commit.gpgsign=false','commit','-m','f']):
+                subprocess.run(cmd,cwd=repo,check=True,capture_output=True)
+            real=subprocess.check_output(['git','rev-parse','HEAD:x'],cwd=repo).decode().strip()
+            self.assertEqual(b.missing_blobs(repo,[real,'0'*40]),['0'*40])
+            self.assertEqual(b.missing_blobs(repo,[real]),[])
+
+    @unittest.skipUnless(shutil.which('git'),'git not installed')
+    def test_git_failure_message_retains_child_stderr(self):
+        with tempfile.TemporaryDirectory() as t:
+            with self.assertRaises(ValueError) as ctx:b.git(['status'],Path(t))
+        message=str(ctx.exception)
+        self.assertIn('git status exited',message)
+        self.assertIn('not a git repository',message)
+
+    @unittest.skipUnless(shutil.which('git'),'git not installed')
+    def test_local_object_enumeration_failure_retains_stderr(self):
+        with tempfile.TemporaryDirectory() as t:
+            with self.assertRaises(ValueError) as ctx:b.missing_blobs(Path(t),['0'*40])
+        self.assertIn('local object enumeration exited',str(ctx.exception))
+        self.assertIn('not a git repository',str(ctx.exception))
+
+    def test_wrong_batch_object_reports_row_context_and_child_stderr(self):
+        with tempfile.TemporaryDirectory() as t:
+            p=Path(t);stage=p/'stage';stage.mkdir();batch=p/'ids'
+            rows=[{'path':'a.txt','mode':'100644','blob':'0'*40}]
+            batch.write_text('0'*40+'\n',encoding='ascii')
+            class FakePopen:
+                def __init__(self,argv,cwd=None,env=None,stdin=None,stdout=None,stderr=None,**kw):
+                    os.write(stderr.fileno(),b'remote: error: pack-objects died of signal 13')
+                    self.stdout=io.BytesIO(b'0'*40+b' missing\n')
+                    self.killed=False
+                def wait(self,timeout=None):return 0
+                def kill(self):self.killed=True
+            with tempfile.TemporaryFile() as errors,patch.object(b.subprocess,'Popen',FakePopen):
+                with self.assertRaises(ValueError) as ctx:b.materialize_batch(stage,rows,batch,errors)
+            message=str(ctx.exception)
+            self.assertIn('wrong batch object at 1/1',message)
+            self.assertIn('path=a.txt',message);self.assertIn('expected_blob='+'0'*40,message)
+            self.assertIn('pack-objects died',message,'child stderr must be retained in the failure')
 
 if __name__=='__main__':unittest.main()
