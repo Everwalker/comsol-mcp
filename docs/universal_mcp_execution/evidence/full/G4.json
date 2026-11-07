@@ -1,14 +1,20 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T16:48:23.820015+00:00",
+  "updated_utc": "2026-11-07T23:31:14.698601+00:00",
   "T20": {
     "status": "RUNNING",
     "implementation_done": false,
-    "source_commit": "468be21d2eba665f82489053cee5c3738510ff2d",
+    "source_commit": "a3d835fa0932f585afaf51eb2388765925be95b0",
     "software_scope": "Interpolation funcs StringMatrix is accepted subject to engine metadata; fake-engine component/variable/function tests recorded.",
     "evidence": "docs/universal_mcp_execution/evidence/full/T20-qwen-20261108.md",
     "tests": "Qwen reported 5 new tests and 270/100/119 selected tests passing on a shared worktree that also contained concurrent T14 selection edits; final integration must consider source identity.",
-    "open_issue": "function.data_import requires artifact_id but appears to use caller-provided layout path without proving that it belongs to the registered artifact. Public-route synthetic reproduction and safe binding are in progress; do not claim fail-closed until established.",
-    "native": "Two-component evaluation, interpolation file and typed import on actual targets not yet verified."
+    "open_issue": "General property setter and legacy data_reload paths remain open; domain import direct binding alone does not establish project file boundary.",
+    "native": "Two-component evaluation, interpolation file and typed import on actual targets not yet verified.",
+    "artifact_boundary_followup": {
+      "evidence": "docs/universal_mcp_execution/evidence/full/T20-artifact-boundary-qwen-20261108.md",
+      "scope": "Registered project-artifact resolution for function.data_import; direct function.create/update filename setter refused; readback mismatch redacted without fabricating equality.",
+      "tests": "11 focused passed and 431 selected regression passed per Qwen software report; fake engine only.",
+      "remaining": "Generic node.property_set can still set filename when isolation succeeds; existing model function.data_reload can cause engine and adapter-side reads of paths outside project before digest withholding. Relative paths and resolution errors require additional validation; do not claim project-wide closure."
+    }
   }
 }

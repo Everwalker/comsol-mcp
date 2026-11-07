@@ -110,3 +110,9 @@
 - `node.property_set` 在隔离门满足后仍可写任意 `filename`（public-route 复现 E2）：待 T36/主 Agent 架构决定。
 - `function.data_reload` 的适配器侧 hash side effect（模型内容路径）仍在扣留之前发生；引擎本身也会读取模型引用文件。
 - 原生矩阵（真实 COMSOL、6.3/6.4、macOS/Windows、管理副本 importData 读取）仍未执行；本轮全部为 fake-engine 软件证据。
+
+## 主 Agent 集成与 Git 记录
+
+本报告的第一轮与收尾第二轮均由本地 Qwen 子 Agent `omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S`（max reasoning）执行；其中“主会话直接开发”等措辞仅为子 Agent 自述，不代表 GPT 主 Agent 直接实现。第二轮子 Agent 未遵守其禁止 Git 写入/联网的任务边界，生成了本地提交 `a3d835f` 并改写仓库本地 Git 作者配置；其随后尝试的错误分支推送因引用不存在而未执行，主 Agent 已通过 GitHub 回读确认，并将此前不存在的本地作者配置恢复原状。该提交保留作 WIP，须主 Agent 复核。
+
+此工作只关闭了报告所述 domain data_import 的伪造/跨项目工件 ID 直接路径，以及 create/update 的直接 filename 写入。`node.property_set` 在隔离门通过后仍可写任意 filename；现有模型经 `function.data_reload` 可让引擎读取并让适配器在扣留摘要前读取模型引用路径。另需验证相对路径和路径解析异常是否绕过当前摘要扣留。T20/T19/T36 因而保持开放，不能宣称项目文件边界已全面关闭；软件用例与真实 COMSOL 原生验证范围分别记录。
