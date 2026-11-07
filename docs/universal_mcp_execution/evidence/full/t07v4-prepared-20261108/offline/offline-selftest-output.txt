@@ -1,0 +1,89 @@
+TOOLS 112
+c01 runtime.discover OK 
+PLATFORM fake fake
+c02 project.create OK 
+SRC_COPIED_AFTER_CREATE 33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670
+c03 session.start OK 
+c04 session.connect OK 
+c05 runtime.doctor OK 
+c06 model.create OK 
+c07 code.compile_java OK 
+c08 code.execute_java OK 
+c09 result.evaluate OK 
+c10 plot.render OK 
+c11 artifact.list OK 
+c12 artifact.inspect OK 
+c13 artifact.read OK 
+PNG_SAVED /var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/t07v4-offline-lxifakuz/readback.png bytes 28
+ALL_STEPS_DONE
+PASS S1 exit 0
+PASS S1 full order == 13 planned operations
+PASS S1 copy strictly between create and session.start
+PASS S1 copied file bytes match expected sha
+PASS S1 no fence records
+PASS S1 no leftover IN_FLIGHT markers
+PASS S1 png readback saved
+TOOLS 112
+c01 runtime.discover OK 
+PLATFORM fake fake
+PRECHECK_REFUSAL workspace already exists, refusing: /var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/t07v4-offline-pr0f1hlp/independent-projects/t07v4-smoke-20261108
+PASS S2 refusal exit 4
+PASS S2 project.create never dispatched
+PASS S2 no source copy event
+TOOLS 112
+c01 runtime.discover OK 
+PLATFORM fake fake
+c02 project.create FAIL {"code": "INVALID_REQUEST", "message": "injected deterministic failure", "safe_retry": false}
+STOP_ON_FAILURE c02
+PASS S3 stop exit 1
+PASS S3 calls stop at project.create
+PASS S3 no source copy on failure
+TOOLS 112
+c01 runtime.discover OK 
+PLATFORM fake fake
+c02 project.create OK 
+SRC_COPIED_AFTER_CREATE 33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670
+c03 session.start OK 
+c04 session.connect OK 
+c05 runtime.doctor OK 
+c06 model.create FAIL {"code": "EXECUTION_STATE_UNKNOWN", "message": "injected unknown state", "safe_retry": false}
+FENCED_UNKNOWN_STOP c06 response_code_EXECUTION_STATE_UNKNOWN
+PASS S4 fence exit 3
+PASS S4 no calls after the unknown step
+PASS S4 exactly one fence record
+TOOLS 112
+c01 runtime.discover OK 
+PLATFORM fake fake
+c02 project.create OK 
+SRC_COPIED_AFTER_CREATE 33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670
+c03 session.start OK 
+c04 session.connect OK 
+c05 runtime.doctor OK 
+c06 model.create OK 
+c07 code.compile_java OK 
+FENCED_UNKNOWN_STOP c08 no_response:TimeoutError
+PASS S5 fence exit 3
+PASS S5 no calls after the hung step
+PASS S5 fence record written
+PASS S5 IN_FLIGHT marker kept as evidence
+PASS S5 no further request files
+WHEEL_SHA_OK b9577b007fa0bf51b02e1d1b2b5d7e4572167974c5eec6895bbd48804ccb759b
+PASS S6 gates pass exit 0
+PASS S6 client cwd created exclusively by the gate
+WHEEL_SHA_OK b9577b007fa0bf51b02e1d1b2b5d7e4572167974c5eec6895bbd48804ccb759b
+FRESHNESS_REFUSAL client cwd already exists; refusing to reuse: /var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/t07v4-gate-ob4x9h8z/client
+PASS S6 second call refuses reuse (roots now exist)
+WHEEL_SHA_REFUSAL wheel sha mismatch: b9577b007fa0bf51b02e1d1b2b5d7e4572167974c5eec6895bbd48804ccb759b
+PASS S7 wheel sha mismatch exit 4
+PASS S7 client cwd NOT created on mismatch
+WHEEL_SHA_OK b9577b007fa0bf51b02e1d1b2b5d7e4572167974c5eec6895bbd48804ccb759b
+PASS S7 same wheel passes with the recorded sha
+WHEEL_SHA_OK b9577b007fa0bf51b02e1d1b2b5d7e4572167974c5eec6895bbd48804ccb759b
+FRESHNESS_REFUSAL client cwd already exists; refusing to reuse: /var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/t07v4-gate-yudfili1/client
+PASS S8 existing client cwd refused exit 4
+PASS S8 existing cwd contents preserved
+WHEEL_SHA_OK b9577b007fa0bf51b02e1d1b2b5d7e4572167974c5eec6895bbd48804ccb759b
+FRESHNESS_REFUSAL domain D already initialized; this runner is single-use
+PASS S9 pre-existing mcp-home-d refused exit 4
+PASS S9 client cwd NOT created when roots exist
+SELFTEST_ALL_PASS

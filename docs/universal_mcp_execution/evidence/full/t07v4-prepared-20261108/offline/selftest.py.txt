@@ -1,0 +1,231 @@
+"""Offline stand-in test for run_t07v4.py.txt. No native/MCP/COMSOL contact.
+
+Loads the runner text (lazy .py.txt) and drives run_sequence with a
+FakeSession under a throwaway directory in /private/tmp. Proves:
+  1. full happy-path call order and that the Java copy happens only after a
+     successful project.create, into the server-created workspace;
+  2. the client precheck refuses when the workspace already exists (t07v3 c02
+     failure class) and no project.create is dispatched;
+  3. a deterministic failure stops the sequence with no later calls and no
+     source copy;
+  4. an EXECUTION_STATE_UNKNOWN response fences immediately (exit 3), no
+     later calls;
+  5. a transport no-response fences immediately, keeps the IN_FLIGHT marker,
+     and does not call anything after the fenced step.
+
+Run: python3 offline/selftest.py.txt   (from this t07v4-prepared directory)
+"""
+
+import asyncio
+import base64
+import hashlib
+import shutil
+import sys
+import tempfile
+import types
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+RUNNER_TXT = (HERE.parent / "runner" / "run_t07v4.py.txt").read_text()
+REPO_SRC = Path("/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107"
+                "/docs/universal_mcp_execution/evidence/full/sources/UniversalSmoke.java")
+SRC_SHA = hashlib.sha256(REPO_SRC.read_bytes()).hexdigest()
+
+ns = {"__name__": "run_t07v4_under_test"}
+exec(compile(RUNNER_TXT, "run_t07v4.py.txt", "exec"), ns)
+
+PNG_B64 = base64.b64encode(b"\\x89PNG-fake-offline-payload").decode("ascii")
+
+class FakeResult:
+    def __init__(self, sc):
+        self._sc = sc
+    def model_dump(self, mode="json"):
+        return {"structuredContent": self._sc}
+
+def ok(data, execution=None):
+    return FakeResult({"success": True, "data": data, "error": None,
+                       "execution": execution if execution is not None else {}})
+
+def fail(code, message):
+    return FakeResult({"success": False, "data": {},
+                       "error": {"code": code, "message": message, "safe_retry": False},
+                       "execution": {}})
+
+class FakeSession:
+    def __init__(self, project_root, scenario):
+        self.root = Path(project_root)
+        self.scenario = scenario
+        self.calls = []
+    async def initialize(self):
+        pass
+    async def list_tools(self):
+        return types.SimpleNamespace(tools=[types.SimpleNamespace(name="op%03d" % i) for i in range(112)])
+    async def call_tool(self, name, req):
+        op = req["operation_id"]
+        self.calls.append(op)
+        inj = self.scenario.get(op)
+        if inj == "hang":
+            raise asyncio.TimeoutError("offline injected no-response")
+        if isinstance(inj, tuple):
+            return fail(inj[0], inj[1])
+        if op == "runtime.discover":
+            return ok({"platform": "fake", "host_architecture": "fake",
+                       "installations": [{"runtime_id": "fake-runtime"}]})
+        if op == "project.create":
+            ws = self.root / req["arguments"]["workspace"]
+            if ws.exists():  # mirrors the real PROJECT_WORKSPACE_EXISTS contract
+                return fail("PROJECT_WORKSPACE_EXISTS", "project workspace must not already exist")
+            ws.mkdir()
+            return ok({"project": {"project_id": "proj-fake", "workspace": str(ws)}})
+        if op == "session.start":
+            return ok({"session_id": "sess-fake", "endpoint": "tcp://fake"})
+        if op == "session.connect":
+            return ok({"server_instance_id": "srv-fake"})
+        if op == "runtime.doctor":
+            return ok({"status": "READY"})
+        if op == "model.create":
+            return ok({"model_ref": {"model_tag": "model-1"}}, execution={"revision": 1})
+        if op == "code.compile_java":
+            return ok({"compiled": True, "source_sha256": SRC_SHA})
+        if op == "code.execute_java":
+            return ok({"result": {}}, execution={"revision": 2})
+        if op == "result.evaluate":
+            return ok({"values": [[0.0]]}, execution={"revision": 2})
+        if op == "plot.render":
+            return ok({"path": "smoke_plot", "format": "png"})
+        if op == "artifact.list":
+            return ok({"artifacts": [{"name": "smoke_plot.png", "artifact_id": "art-png-1"}]})
+        if op == "artifact.inspect":
+            return ok({"name": "smoke_plot.png", "sha256": "0" * 64})
+        if op == "artifact.read":
+            return ok({"artifact_id": "art-png-1", "data_base64": PNG_B64})
+        raise AssertionError("unexpected operation in fake session: " + op)
+
+FULL_ORDER = ["runtime.discover", "project.create", "session.start", "session.connect",
+              "runtime.doctor", "model.create", "code.compile_java", "code.execute_java",
+              "result.evaluate", "plot.render", "artifact.list", "artifact.inspect", "artifact.read"]
+
+def run_case(scenario, precreate_workspace=False):
+    tmp = Path(tempfile.mkdtemp(prefix="t07v4-offline-"))
+    project_root = tmp / "independent-projects"
+    project_root.mkdir()
+    src = tmp / "UniversalSmoke.java"
+    shutil.copyfile(str(REPO_SRC), str(src))
+    if precreate_workspace:
+        (project_root / "t07v4-smoke-20261108").mkdir()
+    cfg = {"logs": tmp / "logs", "requests": tmp / "requests", "fence": tmp / "fence",
+           "project_root": project_root, "source_java": src, "out_png": tmp / "readback.png"}
+    fake = FakeSession(project_root, scenario)
+    events = []
+    code = 0
+    try:
+        asyncio.run(ns["run_sequence"](fake, cfg, events))
+    except SystemExit as exc:
+        code = exc.code if isinstance(exc.code, int) else 1
+    return {"tmp": tmp, "code": code, "calls": fake.calls, "events": events, "cfg": cfg}
+
+def check(label, cond):
+    print(("PASS " if cond else "FAIL ") + label, flush=True)
+    if not cond:
+        raise SystemExit("SELFTEST_FAILED: " + label)
+
+def gate_case(wheel_bytes, expected_sha, cwd_pre=False, home_pre=False):
+    tmp = Path(tempfile.mkdtemp(prefix="t07v4-gate-"))
+    wheel = tmp / "wheel.whl"
+    wheel.write_bytes(wheel_bytes)
+    domain = tmp / "B4"
+    domain.mkdir()
+    cwd = tmp / "client"
+    if cwd_pre:
+        cwd.mkdir()
+        (cwd / "marker").write_text("keepme")
+    if home_pre:
+        (domain / "mcp-home-d").mkdir()
+    code = 0
+    try:
+        ns["startup_gates"](wheel, expected_sha, cwd, domain)
+    except SystemExit as exc:
+        code = exc.code if isinstance(exc.code, int) else 1
+    return tmp, code, cwd, domain
+
+def main():
+    # 1. happy path
+    r = run_case({})
+    check("S1 exit 0", r["code"] == 0)
+    check("S1 full order == 13 planned operations", r["calls"] == FULL_ORDER)
+    icreate = r["events"].index("call:c02:project.create")
+    icopy = r["events"].index("copy:UniversalSmoke.java")
+    iconnect = r["events"].index("call:c03:session.start")
+    check("S1 copy strictly between create and session.start", icreate < icopy < iconnect)
+    ws = r["cfg"]["project_root"] / "t07v4-smoke-20261108"
+    copied = ws / "src" / "UniversalSmoke.java"
+    check("S1 copied file bytes match expected sha",
+          copied.is_file() and hashlib.sha256(copied.read_bytes()).hexdigest() == SRC_SHA)
+    check("S1 no fence records", not any((r["cfg"]["fence"]).iterdir()))
+    check("S1 no leftover IN_FLIGHT markers",
+          not any(p.name.endswith(".inflight.json") for p in (r["cfg"]["logs"]).iterdir()))
+    check("S1 png readback saved", (r["cfg"]["out_png"]).read_bytes() == base64.b64decode(PNG_B64))
+
+    # 2. t07v3 c02 class: workspace pre-created -> client refuses, no create dispatched
+    r = run_case({}, precreate_workspace=True)
+    check("S2 refusal exit 4", r["code"] == 4)
+    check("S2 project.create never dispatched", "project.create" not in r["calls"])
+    check("S2 no source copy event", "copy:UniversalSmoke.java" not in r["events"])
+
+    # 3. deterministic failure at project.create -> stop, nothing after
+    r = run_case({"project.create": ("INVALID_REQUEST", "injected deterministic failure")})
+    check("S3 stop exit 1", r["code"] == 1)
+    check("S3 calls stop at project.create", r["calls"] == ["runtime.discover", "project.create"])
+    check("S3 no source copy on failure", "copy:UniversalSmoke.java" not in r["events"])
+
+    # 4. EXECUTION_STATE_UNKNOWN response -> immediate fence
+    r = run_case({"model.create": ("EXECUTION_STATE_UNKNOWN", "injected unknown state")})
+    check("S4 fence exit 3", r["code"] == 3)
+    check("S4 no calls after the unknown step", r["calls"] == FULL_ORDER[:6])
+    fences = list((r["cfg"]["fence"]).iterdir())
+    check("S4 exactly one fence record", len(fences) == 1)
+
+    # 5. transport no-response -> fence, IN_FLIGHT kept, nothing after
+    r = run_case({"code.execute_java": "hang"})
+    check("S5 fence exit 3", r["code"] == 3)
+    check("S5 no calls after the hung step", r["calls"] == FULL_ORDER[:8])
+    check("S5 fence record written",
+          (r["cfg"]["fence"] / "c08.json").is_file())
+    check("S5 IN_FLIGHT marker kept as evidence",
+          (r["cfg"]["logs"] / "c08-code_execute_java.inflight.json").is_file())
+    check("S5 no further request files", not (r["cfg"]["requests"] / "c09.json").exists())
+
+    # 6. startup gates pass: wheel sha match, fresh roots, exclusive cwd creation
+    real = b"fake-wheel-bytes-for-gate-test"
+    sha_real = hashlib.sha256(real).hexdigest()
+    tmp, code, cwd, domain = gate_case(real, sha_real)
+    check("S6 gates pass exit 0", code == 0)
+    check("S6 client cwd created exclusively by the gate", cwd.is_dir())
+    code2 = 0
+    try:
+        ns["startup_gates"](tmp / "wheel.whl", sha_real, cwd, domain)
+    except SystemExit as exc:
+        code2 = exc.code if isinstance(exc.code, int) else 1
+    check("S6 second call refuses reuse (roots now exist)", code2 == 4)
+
+    # 7. wheel sha mismatch: refuse before any cwd/domain creation
+    tmp, code, cwd, domain = gate_case(real, "0" * 64)
+    check("S7 wheel sha mismatch exit 4", code == 4)
+    check("S7 client cwd NOT created on mismatch", not cwd.exists())
+    tmp, code, cwd, domain = gate_case(real, sha_real)  # sanity: same bytes with correct sha passes
+    check("S7 same wheel passes with the recorded sha", code == 0)
+
+    # 8. client cwd already exists: fail-closed refusal, contents untouched
+    tmp, code, cwd, domain = gate_case(real, sha_real, cwd_pre=True)
+    check("S8 existing client cwd refused exit 4", code == 4)
+    check("S8 existing cwd contents preserved", (cwd / "marker").read_text() == "keepme")
+
+    # 9. domain-D roots already exist: refuse before creating the cwd
+    tmp, code, cwd, domain = gate_case(real, sha_real, home_pre=True)
+    check("S9 pre-existing mcp-home-d refused exit 4", code == 4)
+    check("S9 client cwd NOT created when roots exist", not cwd.exists())
+
+    print("SELFTEST_ALL_PASS", flush=True)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,308 @@
+"""t07v4 prepared runner -- NOT EXECUTED. Requires explicit user approval.
+
+Single fresh-pass native verification of candidate
+f49cc0fb2a1acd14336402f4dda5a87cb61e6ca0 (supersedes ce10fda; adds the T13
+node.remove schema alignment and the T18 empty-source pre-write classification,
+neither of which changes any operation or argument used here) against an
+independently installed MCP in fresh control domain D (see REPORT.md).
+
+Rules encoded here:
+- Fresh resources only: control home D, project root, workspace
+  "t07v4-smoke-20261108", fresh venv built from the f49 wheel (SHA-256
+  recorded in REPORT.md), request/idempotency prefix "t07v4-f49cc0f-d-".
+  Nothing from control domains A/B/C is read or reused.
+- Ordering contract (fixes the t07v3 c02 failure): the client REFUSES to run if
+  the workspace directory already exists; project.create runs first and the
+  server creates the workspace; UniversalSmoke.java is copied into the
+  server-created workspace ONLY after project.create returns success.
+- One request per step; the IN_FLIGHT marker is written before every dispatch.
+- Any deterministic failure: stop immediately, no retry.
+- Startup gates run BEFORE any project-root/control-domain creation and
+  before any dispatch: the wheel SHA-256 must match the recorded value, the
+  domain-D roots must not exist, and the client cwd is created exclusively
+  (an existing client cwd is refused, never reused).
+- Any EXECUTION_STATE_UNKNOWN response or transport-level no-response:
+  fence immediately (exit 3). No retry, no reconcile, no cleanup, no cancel,
+  no signal. The IN_FLIGHT marker is kept as fence evidence.
+"""
+
+import asyncio
+import base64
+import datetime
+import hashlib
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+PFX = "t07v4-f49cc0f-d-"
+WORKSPACE_NAME = "t07v4-smoke-20261108"
+EXPECTED_SRC_SHA256 = "33771c5a69e21ebad071d86904e05a4da4b9cd4be6782e50ac2f729889494670"
+
+def data_of(res):
+    sc = res.get("structuredContent")
+    if sc is None:
+        sc = json.loads(res["content"][0]["text"])
+    return sc
+
+async def run_sequence(session, cfg, events):
+    """Drive the full native sequence over one connected MCP client session.
+
+    cfg keys: logs, requests, fence, project_root, source_java, out_png.
+    events is an append-only log of local dispatch/copy markers for audit.
+    """
+    logs = Path(cfg["logs"]); reqs = Path(cfg["requests"]); fence = Path(cfg["fence"])
+    logs.mkdir(parents=True, exist_ok=True)
+    reqs.mkdir(parents=True, exist_ok=True)
+    fence.mkdir(parents=True, exist_ok=True)
+
+    def dump(name, obj):
+        p = logs / (name + ".json")
+        assert not p.exists(), "refusing to overwrite: " + str(p)
+        p.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + chr(10))
+
+    def fence_step(step, op, reason):
+        p = fence / (step + ".json")
+        assert not p.exists(), "refusing to overwrite fence record: " + str(p)
+        p.write_text(json.dumps({
+            "step": step,
+            "operation": op,
+            "reason": reason,
+            "fence": "EXECUTION_STATE_UNKNOWN",
+            "actions": {"retry": False, "reconcile": False,
+                        "cleanup": False, "cancel_or_signal": False},
+        }, indent=2) + chr(10))
+        print("FENCED_UNKNOWN_STOP", step, reason, flush=True)
+        sys.exit(3)
+
+    async def call(step, op, args, execution):
+        req = {"operation_id": op, "arguments": args, "execution": execution}
+        rp = reqs / (step + ".json")
+        assert not rp.exists(), "refusing to overwrite request: " + str(rp)
+        rp.write_text(json.dumps(req, ensure_ascii=False, indent=2) + chr(10))
+        name = step + "-" + op.replace(".", "_")
+        dump(name + ".inflight", {"request": req, "status": "IN_FLIGHT"})
+        events.append("call:" + step + ":" + op)
+        try:
+            res = (await session.call_tool("operation_call", req)).model_dump(mode="json")
+        except BaseException as exc:
+            # No response observed: the outcome is unknown. Fence now and do
+            # nothing else -- the IN_FLIGHT marker is deliberately left in place.
+            fence_step(step, op, "no_response:" + type(exc).__name__)
+        (logs / (name + ".inflight.json")).unlink()
+        dump(name, {"request": req, "response": res})
+        sc = data_of(res)
+        ok = sc.get("success") is True
+        print(step, op, "OK" if ok else "FAIL",
+              "" if ok else json.dumps(sc.get("error"), ensure_ascii=False)[:300], flush=True)
+        if not ok:
+            err = sc.get("error") or {}
+            code = err.get("code") if isinstance(err, dict) else str(err)
+            if code == "EXECUTION_STATE_UNKNOWN":
+                fence_step(step, op, "response_code_EXECUTION_STATE_UNKNOWN")
+            print("STOP_ON_FAILURE", step, flush=True)
+            sys.exit(1)
+        return sc
+
+    await session.initialize()
+    tools_ = await session.list_tools()
+    names = sorted(t.name for t in tools_.tools)
+    dump("c00-tools-list", {"tool_count": len(names), "tools": names})
+    events.append("c00:tools-list")
+    print("TOOLS", len(names), flush=True)
+
+    sc = await call("c01", "runtime.discover",
+                    {"idempotency_key": PFX + "discover-01"},
+                    {"request_id": PFX + "discover-01", "idempotency_key": PFX + "discover-01"})
+    runtime_id = sc["data"]["installations"][0]["runtime_id"]
+    print("PLATFORM", sc["data"].get("platform"), sc["data"].get("host_architecture"), flush=True)
+
+    # Client-side precheck mirroring the server contract: the workspace must
+    # NOT exist before project.create. This is what t07v3 violated.
+    ws_target = Path(cfg["project_root"]) / WORKSPACE_NAME
+    if ws_target.exists():
+        print("PRECHECK_REFUSAL", "workspace already exists, refusing:", ws_target, flush=True)
+        sys.exit(4)
+
+    sc = await call("c02", "project.create",
+                    {"idempotency_key": PFX + "project-01",
+                     "label": "T07v4 native candidate f49cc0f (fresh domain D; source copied only after create)",
+                     "workspace": WORKSPACE_NAME,
+                     "policy": {"permissions": ["inspect", "project_write", "compute", "trusted_code", "host_control"]}},
+                    {"request_id": PFX + "project-01", "idempotency_key": PFX + "project-01"})
+    project_id = sc["data"]["project"]["project_id"]
+
+    # Ordering contract: copy the Java source ONLY after a successful
+    # project.create, into the workspace the server itself just created.
+    workspace = Path(sc["data"]["project"]["workspace"])
+    if workspace != ws_target:
+        print("STOP_ON_FAILURE", "c02-workspace-identity-mismatch", workspace, flush=True)
+        sys.exit(1)
+    src_dir = workspace / "src"
+    src_dir.mkdir()
+    dest = src_dir / "UniversalSmoke.java"
+    shutil.copyfile(str(cfg["source_java"]), str(dest))
+    sha = hashlib.sha256(dest.read_bytes()).hexdigest()
+    if sha != EXPECTED_SRC_SHA256:
+        print("STOP_ON_FAILURE", "source-copy-sha-mismatch", sha, flush=True)
+        sys.exit(1)
+    events.append("copy:UniversalSmoke.java")
+    print("SRC_COPIED_AFTER_CREATE", sha, flush=True)
+
+    sc = await call("c03", "session.start",
+                    {"project_id": project_id, "idempotency_key": PFX + "session-start-01", "runtime_id": runtime_id},
+                    {"project_id": project_id, "request_id": PFX + "session-start-01",
+                     "idempotency_key": PFX + "session-start-01", "rpc_timeout_s": 180, "execution_timeout_s": 180})
+    session_id = sc["data"]["session_id"]; endpoint = sc["data"]["endpoint"]
+
+    sc = await call("c04", "session.connect",
+                    {"project_id": project_id, "session_id": session_id,
+                     "idempotency_key": PFX + "session-connect-01", "runtime_id": runtime_id, "endpoint": endpoint},
+                    {"project_id": project_id, "session_id": session_id,
+                     "request_id": PFX + "session-connect-01", "idempotency_key": PFX + "session-connect-01",
+                     "rpc_timeout_s": 180, "execution_timeout_s": 180})
+
+    sc = await call("c05", "runtime.doctor",
+                    {"request_id": PFX + "doctor-01", "runtime_id": runtime_id},
+                    {"request_id": PFX + "doctor-01", "rpc_timeout_s": 60})
+
+    sc = await call("c06", "model.create",
+                    {"project_id": project_id, "session_id": session_id,
+                     "idempotency_key": PFX + "model-create-01", "label": "T07v4 smoke model", "dimension": 2},
+                    {"project_id": project_id, "session_id": session_id,
+                     "request_id": PFX + "model-create-01", "idempotency_key": PFX + "model-create-01",
+                     "rpc_timeout_s": 120, "execution_timeout_s": 120})
+    model_ref = sc["data"]["model_ref"]
+    rev = sc["execution"].get("revision")
+
+    sc = await call("c07", "code.compile_java",
+                    {"project_id": project_id, "idempotency_key": PFX + "java-compile-01",
+                     "runtime_id": runtime_id, "source_artifact": "src/UniversalSmoke.java",
+                     "entrypoint": "UniversalSmoke"},
+                    {"project_id": project_id, "session_id": session_id,
+                     "request_id": PFX + "java-compile-01", "idempotency_key": PFX + "java-compile-01",
+                     "rpc_timeout_s": 120, "execution_timeout_s": 120})
+
+    sc = await call("c08", "code.execute_java",
+                    {"project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                     "expected_revision": rev, "idempotency_key": PFX + "java-execute-01",
+                     "source_artifact": "src/UniversalSmoke.java", "entrypoint": "UniversalSmoke",
+                     "arguments": {"expected_model_tag": model_ref["model_tag"]},
+                     "mode": "trusted", "timeout_s": 150},
+                    {"project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                     "expected_revision": rev, "request_id": PFX + "java-execute-01",
+                     "idempotency_key": PFX + "java-execute-01", "rpc_timeout_s": 240, "execution_timeout_s": 220})
+    rev = sc["execution"].get("revision", rev + 1)
+
+    sc = await call("c09", "result.evaluate",
+                    {"project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                     "idempotency_key": PFX + "result-evaluate-01",
+                     "spec": {"expressions": ["u"], "solution": {"dataset": "dset1", "solution": "sol1"},
+                              "selection": {"kind": "all", "component": "smoke_comp",
+                                           "geometry": "smoke_geom", "entity_dimension": 2},
+                              "entity_dim": 2, "aggregate": "average", "complex_mode": "real",
+                              "storage": "inline"}},
+                    {"project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                     "expected_revision": rev, "request_id": PFX + "result-evaluate-01",
+                     "idempotency_key": PFX + "result-evaluate-01", "rpc_timeout_s": 180, "execution_timeout_s": 180})
+    rev = sc["execution"].get("revision", rev)
+
+    sc = await call("c10", "plot.render",
+                    {"project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                     "idempotency_key": PFX + "plot-render-01", "path": "smoke_plot",
+                     "options": {"solution": "sol1", "format": "png", "width": 800, "height": 600}},
+                    {"project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                     "expected_revision": rev, "request_id": PFX + "plot-render-01",
+                     "idempotency_key": PFX + "plot-render-01", "rpc_timeout_s": 180, "execution_timeout_s": 180})
+
+    sc = await call("c11", "artifact.list",
+                    {"project_id": project_id, "request_id": PFX + "artifact-list-01", "limit": 50},
+                    {"request_id": PFX + "artifact-list-01", "rpc_timeout_s": 60})
+    arts = sc["data"].get("artifacts") or sc["data"].get("items") or []
+    pngs = [a for a in arts if isinstance(a, dict) and str(a.get("name", "")).endswith(".png")]
+    if not pngs:
+        print("NO_PNG_ARTIFACT", flush=True)
+        sys.exit(2)
+    aid = pngs[0]["artifact_id"]
+
+    sc = await call("c12", "artifact.inspect",
+                    {"project_id": project_id, "request_id": PFX + "artifact-inspect-01", "artifact_id": aid},
+                    {"request_id": PFX + "artifact-inspect-01", "rpc_timeout_s": 60})
+    sha_art = sc["data"].get("sha256")
+
+    read_args = {"project_id": project_id, "request_id": PFX + "artifact-read-01", "artifact_id": aid}
+    if sha_art:
+        read_args["expected_sha256"] = sha_art
+    sc = await call("c13", "artifact.read", read_args,
+                    {"request_id": PFX + "artifact-read-01", "rpc_timeout_s": 60})
+    rd = sc["data"]
+    b64 = rd.get("data_base64") or rd.get("chunk_base64")
+    if b64:
+        out = Path(cfg["out_png"])
+        out.write_bytes(base64.b64decode(b64))
+        print("PNG_SAVED", out, "bytes", out.stat().st_size, flush=True)
+    else:
+        print("READ_KEYS", sorted(rd.keys()), flush=True)
+    print("ALL_STEPS_DONE", flush=True)
+
+def startup_gates(wheel_path, expected_sha256, client_cwd, domain_root):
+    """Fail-closed gates; must run before any project-root/control-domain
+    creation and before any dispatch.
+
+    1. the candidate wheel exists and its SHA-256 equals the recorded value;
+    2. the domain-D roots (mcp-home-d, independent-projects) do not exist yet;
+    3. the client cwd is created exclusively via os.mkdir -- an existing cwd
+       is refused (fail-closed, no reuse of an unknown working directory).
+    """
+    wheel = Path(wheel_path)
+    if not wheel.is_file():
+        print("WHEEL_SHA_REFUSAL", "wheel file missing:", wheel, flush=True)
+        sys.exit(4)
+    sha = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    if sha != expected_sha256:
+        print("WHEEL_SHA_REFUSAL", "wheel sha mismatch:", sha, flush=True)
+        sys.exit(4)
+    print("WHEEL_SHA_OK", sha, flush=True)
+
+    root = Path(domain_root)
+    if (root / "mcp-home-d").exists() or (root / "independent-projects").exists():
+        print("FRESHNESS_REFUSAL", "domain D already initialized; this runner is single-use", flush=True)
+        sys.exit(4)
+
+    try:
+        os.mkdir(str(client_cwd))
+    except FileExistsError:
+        print("FRESHNESS_REFUSAL", "client cwd already exists; refusing to reuse:", client_cwd, flush=True)
+        sys.exit(4)
+
+def main():
+    import env
+    from mcp import ClientSession
+    from mcp.client.stdio import StdioServerParameters, stdio_client
+
+    # Gates first: wheel identity, then domain-D freshness, then the
+    # exclusive client cwd. Only after all three may the project root be
+    # created and any request dispatched.
+    startup_gates(env.WHEEL, env.WHEEL_SHA256, env.CLIENT_CWD, env.B4)
+
+    cfg = {
+        "logs": env.B4 / "logs",
+        "requests": env.B4 / "requests",
+        "fence": env.B4 / "fence",
+        "project_root": env.B4 / "independent-projects",
+        "source_java": env.SOURCE_JAVA,
+        "out_png": env.B4 / "render-readback.png",
+    }
+    Path(cfg["project_root"]).mkdir(parents=True)
+    events = []
+    params = StdioServerParameters(command=str(env.B4 / "venv/bin/comsol-mcp"), args=[],
+                                   env=env.base_env(), cwd=str(env.CLIENT_CWD))
+    async def go():
+        async with stdio_client(params) as (r, w):
+            async with ClientSession(r, w, read_timeout_seconds=datetime.timedelta(seconds=300)) as session:
+                await run_sequence(session, cfg, events)
+    asyncio.run(go())
+
+if __name__ == "__main__":
+    main()
