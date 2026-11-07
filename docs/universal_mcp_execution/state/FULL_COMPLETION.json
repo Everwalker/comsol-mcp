@@ -4,7 +4,7 @@
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Both T07 UNKNOWN model/session fences remain. A single read-only attach-only job.log observation is permitted only for the newly created candidate-b0 job 4722d099-56ac-4a22-938d-1d60e163cbc3; no original-job query or Worker/model calls. Diagnose ROI from persisted evidence; T13 and T19 file-budget work continue.",
-  "updated_utc": "2026-11-07T15:24:20.645452+00:00",
+  "updated_utc": "2026-11-07T15:27:47.994596+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -542,5 +542,25 @@
     ]
   },
   "documentation_head_before_update": "23e5ea5",
-  "candidate_identity_note": "Pinned production-source candidate for fresh T07 validation; T05/T06/T17 wheel evidence belongs to the earlier source identity recorded in G1. Current source edits by other agents are not part of this pinned candidate."
+  "candidate_identity_note": "Pinned production-source candidate for fresh T07 validation; T05/T06/T17 wheel evidence belongs to the earlier source identity recorded in G1. Current source edits by other agents are not part of this pinned candidate.",
+  "active_work_observation": {
+    "observed_utc": "2026-11-07T15:27:47.994596+00:00",
+    "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
+    "reasoning_effort": "max",
+    "agents": [
+      {
+        "id": "01a1b694-707e-77f1-853b-310535b9de96",
+        "scope": "T07 ROI source diagnosis and permitted new-job read-only log"
+      },
+      {
+        "id": "01a1b690-0138-7e60-84e1-ad66cb7d76ba",
+        "scope": "T19 file-budget cross-route analysis"
+      },
+      {
+        "id": "01a1b695-949b-7220-8022-bfeeecbf023d",
+        "scope": "T13 object create/copy/remove"
+      }
+    ],
+    "note": "Observation for this running session only; do not infer that agents or any engine resource remain live after a later restart."
+  }
 }
