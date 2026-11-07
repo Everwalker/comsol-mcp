@@ -66,8 +66,10 @@ def _relative_source_path(root: Path, requested: str | Path) -> tuple[Path, tupl
 
 def read_source_snapshot(project_root: str | Path | ProjectRootBinding,
                          source_artifact: str | Path) -> SourceSnapshot:
+    # Invalid source input is refused before opening the project root or making
+    # any engine call; the dispatch witness still verifies that no write began.
     if not isinstance(source_artifact, (str, Path)) or not str(source_artifact).strip():
-        raise ExecutionContractError("INVALID_REQUEST", "source_artifact is required")
+        raise PreWriteRefusal("INVALID_REQUEST", "source_artifact is required")
     owned_binding = not isinstance(project_root, ProjectRootBinding)
     binding = open_project_root_binding(project_root) if owned_binding else project_root
     try:
