@@ -3,8 +3,8 @@
   "basis_commit": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
   "current_candidate_commit": "b0cbd2d398c66023ab45dc658fd8f2f09ff8edc4",
   "global_status": "ACTIVE_NOT_COMPLETE",
-  "next_task_hint": "Preserve BOTH original T07 UNKNOWN and candidate-b0 UNKNOWN fences; diagnose ROI binding mismatch from persisted response/source and implement a general fix. Do not replay, query, signal or clean either fenced model/session. T12 and T19 file-budget software work continue.",
-  "updated_utc": "2026-11-07T15:14:47.121120+00:00",
+  "next_task_hint": "T12 software milestone unblocks T13/T14 where other dependencies permit. Preserve both T07 UNKNOWN fences; Qwen is diagnosing the new ROI mismatch. T19 file-budget analysis continues.",
+  "updated_utc": "2026-11-07T15:16:34.234366+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -122,14 +122,17 @@
         "docs/universal_mcp_execution/evidence/full/G2.json",
         "docs/universal_mcp_execution/evidence/full/T11-qwen-20261107.md"
       ],
-      "blocker": "Only synthetic tree and source inspection available; real multi-component/renamed/nested model and public MCP readback remain unverified. A separate standalone unit-a invocation reported 3 import failures."
+      "blocker": "Only synthetic tree and source inspection available; real multi-component/renamed/nested model and public MCP readback remain unverified. Prior standalone import errors were fixed and rerun as recorded in G2."
     },
     "T12": {
-      "status": "TODO",
-      "implementation_done": false,
+      "status": "IMPLEMENTED",
+      "implementation_done": true,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/G2.json",
+        "docs/universal_mcp_execution/evidence/full/T12-qwen-20261107.md"
+      ],
+      "blocker": "Only synthetic typed-property behavior established; real COMSOL type/allowed-value round trips, installed MCP and native targets remain unverified."
     },
     "T13": {
       "status": "TODO",
