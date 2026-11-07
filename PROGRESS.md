@@ -1,6 +1,6 @@
 # Current progress — U01–U12 continuation
 
-Status: ACTIVE_NOT_COMPLETE. Fixed basis `cd2c9cdc` recovered with active files verified; full historical blob bytes are not claimed. Java snapshot v2 ACCEPT is software-only. T01/T02 and their evidence: [FULL_COMPLETION](docs/universal_mcp_execution/state/FULL_COMPLETION.json), [G0](docs/universal_mcp_execution/evidence/full/G0.json). Next: T03 coverage, T04 target preflight, T05 source-external installed MCP entry; proceed with other independent tasks as ready. Final acceptance requires a genuinely independent Reviewer and applicable native evidence. Historical progress follows.
+Status: ACTIVE_NOT_COMPLETE. Fixed basis `cd2c9cdc` recovered with active files verified; full historical blob bytes are not claimed. T01–T06 are recorded in [FULL_COMPLETION](docs/universal_mcp_execution/state/FULL_COMPLETION.json), [G0](docs/universal_mcp_execution/evidence/full/G0.json) and [G1](docs/universal_mcp_execution/evidence/full/G1.json). Current installed wheel performed an actual local COMSOL 6.4.0.293 project Java build and stationary solve. T07 result evaluation returned post-dispatch UNKNOWN; preserve the original request and job, do not replay. Parallel Qwen implementation work continues. Final acceptance requires a genuinely independent Reviewer, both Windows targets and all other applicable native evidence. Historical progress follows.
 
 ---
 
