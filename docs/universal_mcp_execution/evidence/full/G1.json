@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T15:24:20.645452+00:00",
+  "updated_utc": "2026-11-07T15:31:58.691196+00:00",
   "T05": {
     "status": "DONE",
     "source_basis": "cd2c9cdc1d862e335851bb7b2b254f01f7c8609c",
@@ -133,7 +133,21 @@
         "scope": "Only job.log for new job 4722d099-56ac-4a22-938d-1d60e163cbc3 in its own existing domain B, via attach-only control mode. Source inspection: _control_daemon._control_read job_log -> OperationStore.events SELECT; no Worker RPC or model call.",
         "purpose": "Read already-persisted native reply events to determine selection.named readback if present; retain exact returned evidence.",
         "bounds": "No original-job query, no job.reconcile, session.recover, model.inspect, Worker RPC, replay, cancellation, cleanup, process signal, daemon creation or fallback. If endpoint cannot be attached, stop and preserve fence.",
-        "status": "PLANNED_NOT_YET_OBSERVED"
+        "status": "OBSERVED_READ_ONLY",
+        "evidence": "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-observation.json",
+        "pages": [
+          {
+            "path": "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-page0.json",
+            "sha256": "d80838f980036dc578c0d10bb8a8fd6b3d30da0ff43c5fac1d099ade79c65265",
+            "events": 394
+          },
+          {
+            "path": "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-page1.json",
+            "sha256": "df8099d3a6240973b31043df24b6cd3a7fca949337bd8587cdcc4cc708d1d289",
+            "events": 0
+          }
+        ],
+        "result": "Recorded named() = empty string, geom smoke_geom, dim 2, entities [1], isInheriting false; original job and both model/session fences unchanged."
       }
     },
     "fresh_control_domain_note": "The sandbox preflight in the task-created control domain A did not submit the description request; an escalated read-only description then used that domain before fresh-domain guidance. Domain A was retained; all new project/session/model work used separate domain B. Native agent is recording full provenance.",

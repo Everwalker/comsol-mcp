@@ -1,0 +1,103 @@
+"""Pinned read-only job.log observer (main-agent exception, 2026-11-07).
+
+Scope is deliberately frozen:
+* exactly one MCP operation: job.log, for job 4722d099-56ac-4a22-938d-1d60e163cbc3;
+* COMSOL_SERVER_MCP_CONTROL_MODE=attach-only (preflight failure stops here;
+  the client cannot start or repair a daemon in this mode);
+* limit<=500 per page, bounded cursor pagination, no retries;
+* raw page responses are written verbatim; stdout prints counts and the
+  selection named()/geom()/dim()/entities()/isInheriting() event results only.
+No job.reconcile/wait/cancel/cleanup, no session.recover, no model.inspect,
+no Worker RPC, no other job ids.
+"""
+import asyncio
+import datetime
+import json
+import os
+from pathlib import Path
+
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+
+B2 = Path("/Volumes/SSD/Comsol-MCP/workspaces/universal-completion-20261107"
+          "/.g3-private/full-continuation-20261107/t07v2-native-20261107")
+JOB_ID = "4722d099-56ac-4a22-938d-1d60e163cbc3"
+PROJECT_ID = "5b89bbb1-dd17-41b4-b1da-4f585127df45"
+OUTDIR = B2 / "logs-joblog-readonly-20261107"
+OUTDIR.mkdir(parents=True, exist_ok=False)
+
+base_env = {k: v for k, v in os.environ.items()
+            if not (k.startswith("COMSOL_") or k in ("PYTHONPATH", "PYTHONHOME"))}
+base_env.update({
+    "COMSOL_ROOT": "/Applications/COMSOL64/Multiphysics",
+    "COMSOL_JAVA_HOME": "/Applications/COMSOL64/Multiphysics/java/macarm64/jre/Contents/Home",
+    "COMSOL_PROJECT_ROOT": str(B2 / "independent-projects"),
+    "COMSOL_SERVER_MCP_HOME": str(B2 / "mcp-home-b"),
+    "COMSOL_SERVER_MCP_CONTROL_MODE": "attach-only",
+})
+
+
+def summarize_page(index: int, body: dict, res: dict) -> tuple[bool, str | None, int]:
+    out = OUTDIR / f"joblog-page{index}.json"
+    assert not out.exists(), out
+    out.write_text(json.dumps({"request": body, "response": res}, ensure_ascii=False, indent=2) + "\n")
+    text_body = None
+    for item in res.get("content") or []:
+        if item.get("type") == "text":
+            text_body = item.get("text")
+            break
+    parsed = json.loads(text_body) if isinstance(text_body, str) else (res.get("structuredContent") or {})
+    success = bool(parsed.get("success"))
+    data = parsed.get("data") if isinstance(parsed.get("data"), dict) else {}
+    events = data.get("events") or []
+    next_cursor = data.get("next_cursor")
+    print(f"page={index} success={success} events={len(events)} next_cursor={next_cursor!r}")
+    if not success:
+        err = parsed.get("error") or {}
+        print(f"page={index} error code={err.get('code')!r} message={err.get('message')!r}")
+    for event in events:
+        blob = json.dumps(event, ensure_ascii=False)
+        if any(method in blob for method in ("\"named\"", "isInheriting", "\"entities\"", "\"dim\"")):
+            print("EVENT", blob[:1200])
+    return success, (str(next_cursor) if next_cursor is not None else None), len(events)
+
+
+async def main() -> None:
+    params = StdioServerParameters(command=str(B2 / "venv/bin/comsol-mcp"), args=[],
+                                   env=base_env, cwd="/private/tmp")
+    cursor: str | None = "0"
+    page = 0
+    total = 0
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write, read_timeout_seconds=datetime.timedelta(seconds=60)) as session:
+            await session.initialize()
+            while cursor is not None and page < 8:
+                arguments: dict = {"job_id": JOB_ID, "limit": 500}
+                assert cursor is not None
+                arguments["cursor"] = cursor
+                body = {
+                    "operation_id": "job.log",
+                    "arguments": arguments,
+                    "execution": {
+                        "project_id": PROJECT_ID,
+                        "request_id": f"t07roi-joblog-20261107-p{page}",
+                        "idempotency_key": f"t07roi-joblog-20261107-p{page}",
+                    },
+                }
+                assert body["operation_id"] == "job.log"
+                assert body["arguments"]["job_id"] == JOB_ID
+                res = (await session.call_tool("operation_call", body)).model_dump(mode="json")
+                success, next_cursor, count = summarize_page(page, body, res)
+                if not success:
+                    print(f"STOP page={page}: non-success response retained")
+                    return
+                total += count
+                if count == 0 or next_cursor is None or next_cursor == cursor:
+                    cursor = None
+                else:
+                    cursor = next_cursor
+                page += 1
+    print(f"DONE total_events={total}")
+
+
+asyncio.run(main())
