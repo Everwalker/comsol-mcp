@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-07T14:47:01.713031+00:00",
+  "updated_utc": "2026-11-07T22:40:34.363991+00:00",
   "T41": {
     "status": "IMPLEMENTED",
     "implementation_scope": "Static discovery/doctor improvements and targeted synthetic tests. Normal installed-entry launch evidence is T05 for previous source bytes; the modified candidate is not yet installed and checked through public MCP.",
@@ -27,5 +27,14 @@
     "live_and_platform_limits": "New candidate installed-entry doctor has not been exercised. License/port/render, Windows and Mac x64 native evidence remain unverified.",
     "other_observed_errors": "Qwen reported 14 ERROR in tests/test_runtime_observation_binding.py involving _SessionServerProxy; cause and relevance to required integration have not yet been independently established. Do not count as passing.",
     "modelutil_mirror": "loadCopy synchronizes descriptive Python metadata with the already-existing Java Worker MODEL_UTIL entry; it does not change Worker enforcement."
+  },
+  "T42": {
+    "status": "RUNNING",
+    "implementation_done": false,
+    "temporary_source_commit": "dab6dfd8873d67870de5163590cf5b5e31aebac8",
+    "evidence": "docs/universal_mcp_execution/evidence/full/T42-packaging-qwen-20261108.md",
+    "artifacts": "Offline app wheel plus Windows x64 and macOS ARM64 temporary bundles were built from the same pinned source; wheelhouse hashes verified. macOS Intel has 41/42 dependencies and no current-lock bundle.",
+    "validation": "macOS ARM64 offline pip flags install, entry and pip check passed; Windows cross-platform offline wheel resolution passed. sandbox-exec network-isolation test failed EPERM; no Windows/native acceptance.",
+    "remaining": "Bind Intel derived wheel provenance honestly to current lock or rebuild from verified inputs; complete Intel bundle; rebuild all packages after source freeze. Windows requirements file pins uvicorn 0.54.0 while uv.lock uses 0.53.0; reconcile."
   }
 }

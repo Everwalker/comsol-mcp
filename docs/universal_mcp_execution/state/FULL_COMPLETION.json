@@ -4,7 +4,7 @@
   "current_candidate_commit": "c5006849856a94696743fa8549d19e65cb58e4bb",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Continue T14 selection, T19 legacy resource admission and T20 artifact-boundary work. The f49 native validation plan is prepared; user approval is pending after the auto-review rejection. Preserve earlier UNKNOWN model/session fences.",
-  "updated_utc": "2026-11-07T17:10:19.876769+00:00",
+  "updated_utc": "2026-11-07T22:40:34.363991+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -402,8 +402,11 @@
       "status": "RUNNING",
       "implementation_done": false,
       "execution_complete": false,
-      "evidence_refs": [],
-      "blocker": null
+      "evidence_refs": [
+        "docs/universal_mcp_execution/evidence/full/T42-packaging-qwen-20261108.md",
+        "docs/universal_mcp_execution/evidence/full/G8.json"
+      ],
+      "blocker": "Temporary Windows/macOS ARM packages are built from older dab6dfd; Intel bundle lacks current-lock derived cryptography provenance, and final same-source artifacts await code freeze. Windows requirement pin differs from uv.lock."
     },
     "T43": {
       "status": "TODO",
@@ -578,23 +581,23 @@
   "documentation_head_before_update": "23e5ea5",
   "candidate_identity_note": "Current source c500684 includes T20 interpolation funcs and T19 legacy load admission. Concurrent T14 selection edits are uncommitted. Native plan and wheel remain separately pinned to f49; assess later changes against affected scope.",
   "active_work_observation": {
-    "observed_utc": "2026-11-07T17:10:19.876769+00:00",
+    "observed_utc": "2026-11-07T22:40:34.363991+00:00",
     "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
     "reasoning_effort": "max",
     "agents": [
       {
-        "id": "01a1b6f7-166c-74e1-b8d9-9a9d3a511007",
-        "scope": "T14 multi-component binding negative control and fix"
+        "id": "01a1b827-5e39-7f73-b033-e2e4a5697c6d",
+        "scope": "GitHub public snapshot scope and disclosure audit"
       },
       {
-        "id": "01a1b6e7-7973-7e22-921b-2ea9310a009a",
-        "scope": "T20 artifact/path boundary reproduction and repair"
+        "id": "01a1b827-5e1c-7920-a7be-daf3cc62bc94",
+        "scope": "T14 selection changes review and integration readiness"
       },
       {
-        "id": "01a1b6f3-6e3b-72c0-80b9-2d2d00ca4d76",
-        "scope": "T42 offline multi-architecture packaging preparation"
+        "id": "01a1b827-5e54-7450-8082-bf0bb73bf67c",
+        "scope": "T20 artifact/project boundary follow-up"
       }
     ],
-    "note": "Observation for this running session only; do not infer agent or engine liveness after restart."
+    "note": "Live session observation only; do not infer agent or engine liveness after restart."
   }
 }
