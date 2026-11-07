@@ -4,7 +4,7 @@
   "current_candidate_commit": "f49cc0fb2a1acd14336402f4dda5a87cb61e6ca0",
   "global_status": "ACTIVE_NOT_COMPLETE",
   "next_task_hint": "Continue T20 software and T19 budget/T18 refusal work; seek a safe general T13 deletion route and T14 selection support. T07/T17 native ce10 attempt failed before model creation; approval review rejected same-domain continuation, so prepare a corrected independent plan before requesting approval. Keep both old UNKNOWN fences intact.",
-  "updated_utc": "2026-11-07T16:25:17.297055+00:00",
+  "updated_utc": "2026-11-07T16:37:24.165798+00:00",
   "independent_review": {
     "status": "NOT_RUN",
     "reviewer_identity": null,
@@ -93,9 +93,10 @@
         "docs/universal_mcp_execution/evidence/full/T07-candidate-b0-joblog-observation.json",
         "docs/universal_mcp_execution/evidence/full/T07-roi-fix-qwen-20261107.md",
         "docs/universal_mcp_execution/evidence/full/T07-roi-final-pytest-20261107.txt",
-        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md"
+        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/t07v4-prepared-20261108/REPORT.md"
       ],
-      "blocker": "ROI fix has synthetic evidence only; ce10 native attempt stopped at project.create (workspace pre-created). Auto approval rejected a continuation; corrected independent retry awaits preparation and approval. Real getNEntities, numeric/units/image remain unverified; two earlier UNKNOWN fences persist."
+      "blocker": "Independent f49 candidate native attempt prepared and pending user approval after auto-review rejection of same-domain continuation. Numeric/units/image and getNEntities not yet revalidated; two earlier UNKNOWN fences persist."
     },
     "T08": {
       "status": "TODO",
@@ -190,9 +191,10 @@
         "docs/universal_mcp_execution/evidence/full/public_java_compile_T06.json",
         "docs/universal_mcp_execution/evidence/full/public_java_execute_T06.json",
         "docs/universal_mcp_execution/evidence/full/public_model_T06.json",
-        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md"
+        "docs/universal_mcp_execution/evidence/full/T07v3-native-attempt-qwen-20261107.md",
+        "docs/universal_mcp_execution/evidence/full/t07v4-prepared-20261108/REPORT.md"
       ],
-      "blocker": "Changed Java source handling needs a real happy-path recheck; ce10 attempt stopped at project.create before any model or Java call. Auto approval rejected same-domain continuation.",
+      "blocker": "Independent f49 installed Java happy-path revalidation prepared and pending user approval after auto-review rejected prior continuation; no current native compile or execute has occurred.",
       "scope_note": "Earlier T06/T17 run was Mac arm64 6.4.0.293 on earlier source bytes; changed Java source handling remains unverified natively."
     },
     "T18": {
@@ -570,14 +572,10 @@
   "documentation_head_before_update": "23e5ea5",
   "candidate_identity_note": "Current source candidate f49cc0f includes T13 group schema and T18 empty-source refusal; ce10fda native wheel belongs to an earlier source and stopped before a model was created. Concurrent uncommitted edits are not included.",
   "active_work_observation": {
-    "observed_utc": "2026-11-07T16:25:17.297055+00:00",
+    "observed_utc": "2026-11-07T16:37:24.165798+00:00",
     "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S",
     "reasoning_effort": "max",
     "agents": [
-      {
-        "id": "01a1b6c8-a2f5-7ea2-ab1f-9dfb47965631",
-        "scope": "prepare corrected independent T07/T17 native plan without execution"
-      },
       {
         "id": "01a1b6cb-b06d-7c33-903f-daf78434353e",
         "scope": "T20 parameter/variable/function software"
@@ -585,6 +583,10 @@
       {
         "id": "01a1b6d1-1f7d-7031-be8a-37022651c8d2",
         "scope": "T14 selection semantics software"
+      },
+      {
+        "id": "01a1b6de-e46e-7923-ae50-f6b5b83271e0",
+        "scope": "T19 legacy load budget admission coverage"
       }
     ],
     "note": "Live session observation only; no liveness inference after restart."
