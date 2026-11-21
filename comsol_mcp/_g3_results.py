@@ -6651,7 +6651,9 @@ def _result_evaluate_body(
         component = resolved["component"]
         comp = _call(bound_model(worker, model_tag), "component", component)
         if kind == "all":
-            entities = all_entities_of_dimension(comp, resolved["entity_dimension"])
+            entities = all_entities_of_dimension(
+                comp, resolved["entity_dimension"], geometry=resolved["geometry"]
+            )
             return {
                 "kind": kind, "component": component, "geometry": resolved["geometry"],
                 "entity_dimension": resolved["entity_dimension"],

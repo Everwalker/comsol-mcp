@@ -31,6 +31,112 @@ _FINGERPRINT_COMPONENT_KEYS = frozenset({
 _FINGERPRINT_PARAMETER_KEYS = frozenset({"name", "expression"})
 _SIGNED_LONG_MAX = (1 << 63) - 1
 
+#: The four immediate cause keys of a post-dispatch envelope always identify
+#: the immediate callback exception.  A callback may legally attach its own
+#: ``details`` mapping, including keys with these names (or the reserved
+#: preservation-container name below), so colliding entries never overwrite
+#: the top-level immediate values.
+#:
+#: Disclosure boundary (T08 F-2 parent adjudication 2026-11-09): the baseline
+#: envelope's ``with_cause`` overwrote a callback's own top-level
+#: ``cause_type``/``cause_message``, so those two original values were never
+#: part of the published JSON.  This merge keeps that prior suppression
+#: boundary: neither value is re-published via an alias, a container, or
+#: anywhere else in ``as_dict()``.  They remain available in memory on the
+#: preserved ``__cause__`` exception chain.  The original colliding
+#: ``cause_code``/``cause_stage`` (which the baseline did publish top-level)
+#: are kept as distinguishable nested facts under the container key.
+_IMMEDIATE_CAUSE_KEYS = ("cause_type", "cause_message", "cause_code", "cause_stage")
+_SUPPRESSED_CALLBACK_CAUSE_KEYS = ("cause_type", "cause_message")
+_CALLBACK_CAUSE_FACTS_KEY = "callback_cause_facts"
+
+
+def _merge_callback_cause_details(details: dict[str, Any], original_details: Mapping[str, Any]) -> None:
+    """Merge a structured callback's own evidence without layer aliasing.
+
+    * A mapping that never touches the immediate cause keys or the reserved
+      container name merges flat, byte-compatibly with the historical shape.
+    * Otherwise the four immediate keys keep only the immediate error's own
+      values; the callback's original ``cause_code``/``cause_stage`` (facts
+      the baseline published top-level) move verbatim into one small nested
+      facts container instead of being dropped or aliased over the top level.
+    * The callback's original ``cause_type``/``cause_message`` values are not
+      published at all — matching the baseline's post-``with_cause`` public
+      disclosure exactly — and are not duplicated into any container; they
+      stay in memory on the ``__cause__`` chain.  The complete unrelated
+      original mapping is never copied wholesale.
+    * Every other original key (publication facts and any pre-existing
+      ``nested_cause_*`` claims) keeps its existing top-level name and value;
+      no original key is ever overwritten.
+    * If the callback itself used the reserved container name, that original
+      top-level value is preserved verbatim inside the facts container under
+      the same name.  The top-level entry at that name then becomes a dict
+      (a disclosed, type-changing compatibility note for a naive consumer of
+      that exact key); no value is lost.
+    """
+    if not any(key in _IMMEDIATE_CAUSE_KEYS or key == _CALLBACK_CAUSE_FACTS_KEY
+               for key in original_details):
+        details.update(original_details)
+        return
+    for key, value in original_details.items():
+        if key in _IMMEDIATE_CAUSE_KEYS or key == _CALLBACK_CAUSE_FACTS_KEY:
+            continue
+        details[key] = value
+    facts: dict[str, Any] = {key: original_details[key]
+                             for key in ("cause_code", "cause_stage") if key in original_details}
+    if _CALLBACK_CAUSE_FACTS_KEY in original_details:
+        facts[_CALLBACK_CAUSE_FACTS_KEY] = original_details[_CALLBACK_CAUSE_FACTS_KEY]
+    if facts:
+        details[_CALLBACK_CAUSE_FACTS_KEY] = facts
+
+
+#: --- T08 F-2 r3: wrapper-origin private cause-claim carrier ---------------
+#: Hypothesis made testable per the r3 brief; NOT a security boundary against
+#: arbitrary trusted in-process Python code.
+#:
+#: Baseline projected the callback's own ``cause_code``/``cause_stage``
+#: mapping claims onto durable stage evidence because the wrapper merged the
+#: callback's details over the immediate values.  The F-2 envelope fix stops
+#: that shadowing, which also silently removed the lower layer from the
+#: daemon's stage projection.  This carrier re-records, at the trusted
+#: wrapper construction site, the exact effective values the baseline
+#: projection would have published (the callback's mapping entry when the
+#: key was present, otherwise the exception's own attributes), so
+#: ``comsol_mcp._control_daemon._stage_failure_cause_details`` can restore
+#: them as a provenance-checked *claim*.  A claim is not proof that any
+#: publication or dispatch stage actually happened.  The carrier is never
+#: serialised (not in ``details`` nor ``as_dict()``) and the projection
+#: re-validates exact carrier class, token-sealed construction and live
+#: ``__cause__`` chain identity.  No mapping spelling is whitelisted for
+#: this purpose; forged plain mappings are never read for it.
+_WRAPPED_CAUSE_CLAIMS_KEY = "_legacy_wrapped_cause_claims"
+_WRAPPED_CAUSE_CLAIMS_TOKEN = object()
+
+
+class _WrappedCauseClaims:
+    """Sealed in-process record of a wrapped callback's lower cause claims."""
+
+    __slots__ = ("_source", "effective_code", "effective_stage")
+
+    def __init__(self, token: object, source: BaseException,
+                 effective_code: Any, effective_stage: Any) -> None:
+        if token is not _WRAPPED_CAUSE_CLAIMS_TOKEN:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                "wrapped-cause carrier is constructed only by the execution service wrapper",
+            )
+        self._source = source
+        self.effective_code = effective_code
+        self.effective_stage = effective_stage
+
+    def claims_for(self, wrapper_exc: Any) -> "dict[str, Any] | None":
+        """Return the recorded claims only while the real chain still matches."""
+        if not isinstance(wrapper_exc, BaseException):
+            return None
+        if wrapper_exc.__cause__ is not self._source:
+            return None
+        return {"cause_code": self.effective_code, "cause_stage": self.effective_stage}
+
 
 def _java_string_sort_key(value: str) -> bytes:
     """Match Java String.compareTo ordering over UTF-16 code units."""
@@ -194,19 +300,27 @@ class ExecutionService:
     @contextmanager
     def project_root_scope(self, root: str | Path):
         """Thread-local path plus its already-open project-root identity."""
-        from ._project_root import ProjectRootBinding, open_project_root_binding
+        from ._project_root import (ProjectRootBinding, close_binding_releasing,
+                                    open_project_root_binding)
         owns_binding = not isinstance(root, ProjectRootBinding)
         binding = open_project_root_binding(root) if owns_binding else root
         candidate = binding.path
         token = self._project_root_context.set(candidate)
         binding_token = self._project_root_binding_context.set(binding)
+        primary_error: BaseException | None = None
         try:
             yield candidate
+        except BaseException as exc:
+            # Local capture (never sys.exc_info): a failed release in the
+            # finally must be recorded on the in-flight primary instead of
+            # replacing it, and an unrelated outer handler must not be fed.
+            primary_error = exc
+            raise
         finally:
             self._project_root_binding_context.reset(binding_token)
             self._project_root_context.reset(token)
             if owns_binding:
-                binding.close()
+                close_binding_releasing(binding, primary_error)
 
     @contextmanager
     def _owned_branch_scope(self):
@@ -462,11 +576,136 @@ class ExecutionService:
                 details["cause_code"] = exc.code
                 details["cause_stage"] = exc.stage
                 if isinstance(original_details, Mapping):
-                    details.update(original_details)
-            raise ExecutionContractError(
+                    _merge_callback_cause_details(details, original_details)
+            wrapped = ExecutionContractError(
                 "EXECUTION_STATE_UNKNOWN", "legacy callback raised after write dispatch",
                 stage="post_dispatch", details=details,
-            ).with_cause(exc) from exc
+            ).with_cause(exc)
+            if isinstance(exc, ExecutionContractError):
+                # T08 F-2 r3: record the baseline-effective lower cause values
+                # at the trusted construction site: the callback's own mapping
+                # entry when it carried the key (even an explicit None, which
+                # the baseline projection then omitted), otherwise the
+                # exception's own code/stage attributes.  The daemon restores
+                # these only after re-validating the sealed carrier against
+                # the live exception chain; a claim, never an attestation.
+                if isinstance(original_details, Mapping):
+                    effective_code = (original_details["cause_code"]
+                                      if "cause_code" in original_details else exc.code)
+                    effective_stage = (original_details["cause_stage"]
+                                       if "cause_stage" in original_details else exc.stage)
+                else:
+                    effective_code, effective_stage = exc.code, exc.stage
+                setattr(wrapped, _WRAPPED_CAUSE_CLAIMS_KEY, _WrappedCauseClaims(
+                    _WRAPPED_CAUSE_CLAIMS_TOKEN, exc, effective_code, effective_stage))
+            raise wrapped from exc
+        # T13 bound write: a callback that already declared an unresolved engine
+        # state must not be followed by a fresh model snapshot.  That snapshot
+        # would itself be a new engine operation taken while the real state is
+        # exactly the reported uncertainty.  The shared classifier decides the
+        # first stop condition on the returned envelope; additionally an
+        # explicit EXECUTION_STATE_UNKNOWN/UNKNOWN code on a declared immediate
+        # error/refusal/engine_error record is a local bound-path stop signal.
+        # This changes no classifier, fallback, cursor, exception or read path.
+        returned_outcome = classify_envelope(data)
+        returned_state_unknown = returned_outcome.state == "unknown"
+        if not returned_state_unknown:
+            for declared in (data, data.get("data")):
+                if not isinstance(declared, Mapping):
+                    continue
+                for record_key in ("error", "refusal", "engine_error"):
+                    record = declared.get(record_key)
+                    if (isinstance(record, Mapping)
+                            and record.get("code") in ("EXECUTION_STATE_UNKNOWN", "UNKNOWN")):
+                        returned_state_unknown = True
+                        break
+                if returned_state_unknown:
+                    break
+        if returned_state_unknown:
+            # Resolve the existing ticket UNKNOWN with a dirty, untrusted post
+            # fingerprint instead of dispatching another snapshot.  The
+            # classifier record stays as judged; the published execution state
+            # escalates to UNKNOWN so a code-only signal cannot leave a definite
+            # failed/clean result.  Observed partial_change=True is retained at
+            # its recognized top/immediate-data positions, and published
+            # safe_retry on immediate declared error-like records is projected
+            # to false by copy — the callback's own mappings are never mutated
+            # and code/message/other fields are preserved verbatim.
+            result = self.ledger.finish(ticket, outcome="unknown", changed=True, fingerprint=None)
+            self._emit("finished", model_ref, operation_id=ticket.operation_id)
+            detail_before = data.get("data")
+            reported_partial = (data.get("partial_change") is True
+                                or (isinstance(detail_before, Mapping)
+                                    and detail_before.get("partial_change") is True))
+            data = {**data, "success": False,
+                    "partial_change": True if reported_partial else result["partial_change"],
+                    "execution_state_unknown": True,
+                    # The branch has decided the execution state is UNKNOWN;
+                    # the published execution axis must say so instead of the
+                    # classifier's pre-escalation state. The verification axis
+                    # below is separate and stays exactly as classified.
+                    "verified_outcome": "unknown",
+                    "verification_status": returned_outcome.verification_status}
+            # Keep empty placeholders empty so they cannot mask a later error.
+            for record_key in ("error", "refusal", "engine_error"):
+                record = data.get(record_key)
+                if isinstance(record, Mapping):
+                    data[record_key] = {**record, "safe_retry": False} if record else {}
+            detail_after = data.get("data")
+            if isinstance(detail_after, Mapping):
+                detail_copy = dict(detail_after)
+                for record_key in ("error", "refusal", "engine_error"):
+                    record = detail_copy.get(record_key)
+                    if isinstance(record, Mapping):
+                        detail_copy[record_key] = {**record, "safe_retry": False} if record else {}
+                data["data"] = detail_copy
+            # The final published error is chosen here, never from the stale
+            # classifier object: a declared direct or immediate-data
+            # error/refusal/engine_error record (already a copy with
+            # safe_retry projected false) keeps its code, message and
+            # diagnostic fields; otherwise the classifier's own non-success
+            # envelope is copied; only when neither exists — an
+            # originally-successful classification — is the ordinary UNKNOWN
+            # error synthesized honestly. The copy pins safe_retry=False and
+            # never mutates callback-owned mappings.
+            final_error: dict[str, Any] | None = None
+            for declared in (data, data.get("data")):
+                if not isinstance(declared, Mapping):
+                    continue
+                for record_key in ("error", "refusal", "engine_error"):
+                    record = declared.get(record_key)
+                    if isinstance(record, Mapping) and record:
+                        final_error = dict(record)
+                        break
+                if final_error is not None:
+                    break
+            if final_error is None:
+                final_error = (returned_outcome.error_envelope()
+                               or {"code": "EXECUTION_STATE_UNKNOWN",
+                                   "message": "the operation left an unresolved engine state",
+                                   "safe_retry": False})
+            final_error = {**final_error, "safe_retry": False}
+            envelope = self._metadata(model_ref)
+            envelope["execution"].update({
+                "request_id": ticket.request_id,
+                "operation_id": ticket.operation_id,
+                "request_hash": ticket.request_hash,
+            })
+            preserved_detail = data.get("data")
+            preserved = dict(preserved_detail) if isinstance(preserved_detail, Mapping) else {}
+            for name, value in data.items():
+                if name not in {"success", "data", "error"}:
+                    if (name in {"partial_change", "execution_state_unknown"}
+                            and (preserved.get(name) is True or value is True)):
+                        preserved[name] = True
+                        continue
+                    preserved[name] = value
+            return {
+                "success": False,
+                "data": preserved,
+                "error": final_error,
+                **envelope,
+            }
         if terminal_model_close and model_ref is not None and data.get("success") is True:
             detail = data.get("data")
             proof = isinstance(detail, Mapping) and (

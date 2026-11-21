@@ -4,6 +4,10 @@
 
 The current user instruction and `docs/full_universal_continuation_20261107/MASTER_GOAL.md` supersede conflicting historical role assignments, W01–W26/science-case gates, phase stops, and automatic push-to-main instructions below. Use at most three concurrent sub-agents. Spawn each with `omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S` at max reasoning; only if the local model is unavailable may the approved GPT-6 luna max fallback be used. Do not switch models for speed. Do not use `resume_agent` for these roles: this session observed it switch to an unapproved model; spawn a fresh explicitly configured agent instead. Main coordinates and integrates continuous U01–U12 work; independent implementation and testing are delegated to local Qwen within the current limits. Main may develop when necessary; a genuinely independent sub-Reviewer performs the final unified acceptance and rechecks fixes. Use `docs/universal_mcp_execution/state/FULL_COMPLETION.json` as the canonical current task progress. The older sections remain historical guidance where compatible; retain all resource, model, permission and data-protection fences.
 
+## Codex 子 Agent 回报
+
+- 主 Agent 委派时明确以下要求；子 Agent 在任务范围内完成工作和必要验证，简洁报告结论、关键修改、测试结果、未解决事项和证据位置。
+- 如实保留重要安全事实、失败与 UNKNOWN 状态；默认不粘贴完整日志，必要时提供关键证据或引用已有记录。
 
 ## Project Overview
 

@@ -63,13 +63,26 @@ def test_verification_and_publish_failures_do_not_replace_existing_checkpoint(tm
     with pytest.raises(AtomicSaveError) as invalid:
         atomic_save(destination, lambda temp: temp.write_bytes(b"not a zip"), tmp_path)
     assert invalid.value.stage == "verification" and invalid.value.original_preserved
+    assert invalid.value.publication_status == "not_attempted"
+    assert invalid.value.original_preservation == "preserved"
+    assert invalid.value.temporary_retained is True
     assert invalid.value.temporary_path and invalid.value.temporary_path.exists()
 
     monkeypatch.setattr(os, "replace", lambda *_: (_ for _ in ()).throw(OSError("rename denied")))
     with pytest.raises(AtomicSaveError) as publish:
         atomic_save(destination, lambda temp: write_mph(temp, b"new"), tmp_path)
-    assert publish.value.stage == "publish" and publish.value.original_preserved
+    # Contract fix (T08): a publish syscall that raises has an unconfirmable
+    # effect, so the error must not claim the prior checkpoint was preserved.
+    # ``original_preserved is False`` here records that preservation could
+    # not be confirmed, not that loss was proven.
+    assert publish.value.stage == "publish"
+    assert publish.value.publication_status == "unknown"
+    assert publish.value.original_preservation == "unverified"
+    assert publish.value.original_preserved is False
+    assert publish.value.temporary_retained is True
     assert publish.value.temporary_path and publish.value.temporary_path.exists()
+    # Positive control: this stub performs no effect, so the old checkpoint
+    # is observed (by the test, not claimed by the library) still intact.
     with zipfile.ZipFile(destination) as archive:
         assert archive.read("model/model.mphbin") == b"old"
 
@@ -137,7 +150,17 @@ def test_no_clobber_publish_refuses_a_destination_created_after_preflight(tmp_pa
     monkeypatch.setattr(os, "link", race)
     with pytest.raises(AtomicSaveError) as raised:
         atomic_save(destination, lambda temp: write_mph(temp, b"candidate"), tmp_path, overwrite=False)
-    assert raised.value.stage == "publish" and raised.value.original_preserved is True
+    # Contract fix (T08): the link syscall raised, so the library reports an
+    # unknown publish outcome; the old True was inferred from destination
+    # existence alone, which proves nothing about a prior version (none
+    # existed at preflight) and must not be claimed.
+    assert raised.value.stage == "publish"
+    assert raised.value.publication_status == "unknown"
+    assert raised.value.original_preservation == "unverified"
+    assert raised.value.original_preserved is False
+    assert raised.value.temporary_retained is True
+    # Positive control: observed reality — the racing writer's bytes remain,
+    # the candidate refused publication in this no-lost-ack stub.
     with zipfile.ZipFile(destination) as archive:
         assert archive.read("model/model.mphbin") == b"racing writer"
 

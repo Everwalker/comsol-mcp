@@ -334,7 +334,7 @@ class ActionEntry:
                 "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
                 "effect_resolution": "api.invoke: pure exact overload at project ACL; actual receiver/interface/version before write ticket; caller declaration is assertion only",
                 "verification_scope": "software implementation only; native capability/dependency verification remains separately UNVERIFIED",
-                "limits": ["same-list copy only until cross-parent tag-path native verification", "remove refuses unknown dependency coverage", "selection geometric revision and spatial/object adapters remain unsupported"],
+                "limits": ["same-list copy only until cross-parent tag-path native verification", "node.remove has a separate model-root NodeGroup ungroup route; ordinary/nested removal requires explicit target-subtree consent, reports external-reference risk UNSCANNED, and observes only candidate-vocabulary non-target fields, not complete preservation", "selection geometric revision and spatial/object adapters remain unsupported"],
             }
         if self.operation_id in {"checkpoint.branch", "api.probe"}:
             from ._g2_checkpoint_ops import data_schema
@@ -721,15 +721,16 @@ def _unit_a_data_schema(operation: str) -> dict[str, Any]:
     allowed = {
         "node.create": {"created_path", "type_id", "created", "applied", "failed", "not_executed", "readback", "dependency_check", "property_result"},
         "node.copy": {"source_path", "target_path", "copy_method", "source_tag_path", "readback", "dependency_check"},
-        # Closed schema for the only published node.remove adapter: the model-root
-        # NodeGroup structural ungroup. The fields below were already emitted by that
-        # adapter (_g2_group_remove.execute) but missing from this published schema;
-        # T13 aligns the contract without adding an ordinary-entity removal route
-        # (that route is refused pre-write: no public impact-scope contract).
+        # Closed schema for the two published node.remove adapters: the model-root
+        # NodeGroup structural ungroup (_g2_group_remove) and the consent-gated
+        # ordinary/nested entity removal (_g2_general_remove candidate). Neither
+        # claims a complete external dependency closure; the general adapter
+        # stays status=INCOMPLETE/complete=false with explicit UNSCANNED risk.
         "node.remove": {"removed_path", "affected", "applied", "failed", "dependency_check", "checkpoint_id",
                         "semantic_operation", "cascade", "model_revision_at_prepare", "readback",
                         "retained_members", "mutation_dispatch", "target_group_absent",
-                        "retained_member_count", "retained_member_paths"},
+                        "retained_member_count", "retained_member_paths",
+                        "authorization", "retention", "reference_risk"},
         "node.label_set": {"path", "requested_label", "before", "after"},
         "node.active_set": {"path", "before", "after", "validity_observation"},
         "node.move": {"path", "anchor", "order_before", "order_after", "index_dispatched"},
@@ -885,6 +886,25 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         properties["properties"]["default"] = []
     elif operation_id == "node.remove":
         properties["cascade"]["default"] = False
+        # T13 candidate: additive consent for ordinary/nested entity removal.
+        # The catalog body is unchanged; the engine re-validates every field
+        # with an executable validator and refuses without consent.
+        properties["authorization"] = {
+            "type": "object",
+            "required": ["scope", "target_path", "acknowledge"],
+            "properties": {
+                "scope": {"enum": ["target_subtree"]},
+                "target_path": {"$ref": "common.schema.json#/$defs/NodePath"},
+                "acknowledge": {"type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": True, "items": {"enum": [
+                    "external_reference_impact_unverified",
+                    "descendant_scope_follows_engine_semantics",
+                    "enumeration_scope_candidate_vocabulary"]}},
+            },
+            "additionalProperties": False,
+            "description": ("Explicit consent required for ordinary/nested entity removal: the exact target "
+                            "path is repeated and every open proof obligation is acknowledged. Model-root "
+                            "NodeGroup ungroup never accepts this field."),
+        }
     elif operation_id == "node.move":
         effective["oneOf"] = [{"required": ["before"], "not": {"required": ["after"]}}, {"required": ["after"], "not": {"required": ["before"]}}]
     elif operation_id == "api.invoke":

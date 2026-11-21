@@ -120,10 +120,21 @@ def env(tmp_path,monkeypatch):
     b.worker_identity={'runtime_id':'synthetic','worker_instance_id':'synthetic','connection_epoch':1};b._bind_model_project(ref,'p');b.persist();monkeypatch.setattr(b,'_require_g2_isolation',lambda:{'scope':'SYNTHETIC_OWNED_ONLY'})
     cp=tmp_path/'g2_artifacts/checkpoints/old.mph';cp.parent.mkdir(parents=True);cp.write_bytes(b'synthetic-checkpoint')
     row={'checkpoint_id':'exact-old','path':str(cp),'sha256':hashlib.sha256(cp.read_bytes()).hexdigest(),'project_id':'p','runtime_version':diff.VERSION,'source_binding':{'model_ref':ref,'revision':0,'fingerprint':'historical'}};store.persist_checkpoint(row['sha256'],row)
-    saved=ops.pointer();monkeypatch.setattr(saved[0],'_current_model',w.model_node);monkeypatch.setattr(saved[0],'_current_model_origin','synthetic');monkeypatch.setattr(saved[0],'_current_model_path',str(cp))
-    tickets=[];begin=SessionLedger.begin_write;monkeypatch.setattr(SessionLedger,'begin_write',lambda self,*a,**kw:(tickets.append((a,kw)),begin(self,*a,**kw))[1])
-    yield b,w,ref,row,tickets
-    b.docs_index.close();store.close()
+    saved=ops.pointer()
+    # pytest>=9.2 records monkeypatch.setattr old values from the instance
+    # __dict__ and undoes absent entries with delattr.  _SessionServerProxy
+    # routes dynamic state attributes to _server globals/session context and
+    # never fills the instance __dict__, so its undo raises AttributeError and
+    # leaks the patched pointer into later tests.  Save the exact triple and
+    # restore it on the same proxy through the identical setattr routing,
+    # covering normal and exception (GeneratorExit) teardown paths.
+    try:
+        setattr(saved[0],'_current_model',w.model_node);setattr(saved[0],'_current_model_origin','synthetic');setattr(saved[0],'_current_model_path',str(cp))
+        tickets=[];begin=SessionLedger.begin_write;monkeypatch.setattr(SessionLedger,'begin_write',lambda self,*a,**kw:(tickets.append((a,kw)),begin(self,*a,**kw))[1])
+        yield b,w,ref,row,tickets
+    finally:
+        for name,value in zip(('_current_model','_current_model_origin','_current_model_path'),saved[1]):setattr(saved[0],name,value)
+        b.docs_index.close();store.close()
 
 def envelope(ref):return {'project_id':'p','session_id':'session','model_ref':ref,'request_id':'c-request','idempotency_key':'c-key'}
 def invoke(env,left='current',right='current',scope=None,route='checkpoint.diff'):

@@ -112,6 +112,7 @@ from ._g2_engine import (
     _cursor_encode,
     _cursor_verify,
     _sha256_json,
+    _worker_failure_unknown,
     property_set,
 )
 from ._g3_common import (
@@ -139,7 +140,6 @@ from ._g3_common import (
     expression_read,
     expression_remove,
     expression_write,
-    geometry_length_unit,
     geometry_node,
     geometry_sdim,
     measure_selection,
@@ -150,6 +150,7 @@ from ._g3_common import (
     operation_arguments,
     path_with_segment,
     probe_geometry_tag,
+    probe_state_unknown,
     property_definition,
     property_read_rows,
     quantity,
@@ -157,6 +158,7 @@ from ._g3_common import (
     require_entity_id_array,
     require_int,
     require_mapping,
+    require_number,
     require_named_selection,
     require_string,
     require_string_array,
@@ -211,12 +213,16 @@ def _status(applied: Sequence[Any], failed: Sequence[Any], not_executed: Sequenc
 
 
 def _property_write(node_path: Mapping[str, Any], worker: Any, model_tag: str,
-                    payload: list[dict[str, Any]]) -> dict[str, Any]:
+                    payload: list[dict[str, Any]], *,
+                    on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, Any]:
     """Run the G2 property-set discipline and normalise its envelope."""
     if not payload:
         return {"applied": [], "failed": [], "not_executed": [], "execution_state_unknown": False,
                 "readback_values": {}}
-    result = property_set(worker, model_tag, node_path, payload)
+    if on_probe_error is None:
+        result = property_set(worker, model_tag, node_path, payload)
+    else:
+        result = property_set(worker, model_tag, node_path, payload, on_probe_error=on_probe_error)
     data = result.get("data") if isinstance(result, Mapping) else None
     data = data if isinstance(data, Mapping) else {}
     applied = list(data.get("applied") or [])
@@ -238,6 +244,27 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     component = validate_tag(component, "component")
     model = bound_model(worker, model_tag)
     probe = call_probe(model, "component")
+    if probe_state_unknown(probe):
+        # G3 shared-helper class correction (w13, 2026-11-10; same structured
+        # predicate the w14 sibling already uses): a structured
+        # EXECUTION_STATE_UNKNOWN from this shared component() collection probe
+        # is the probe's own uncertainty, not an optional-getter miss, so this
+        # helper raises a typed error here - before the component(tag) lookup
+        # and before every later call this helper itself would make.  That is
+        # only the helper boundary: an enclosing caller that deliberately
+        # catches ExecutionContractError decides its own propagation, so the
+        # W13 measure/validate chains re-raise this code explicitly below.
+        # An ordinary (non-structured) probe miss still falls through to the
+        # pre-existing optional-miss lookup below, and the existing success
+        # paths - including W13's probe.ok + value=None counting as an empty
+        # tag list - are unchanged.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the existence of component {component!r} is unknown: the model component() "
+            "collection probe ended in an uncertain execution state; this request stops "
+            "before the component(tag) lookup and every later dependent call, so no "
+            "existence, mutation or retry outcome is claimed",
+        )
     if probe["ok"]:
         tags = [str(item) for item in (tag_list(probe["value"]) if probe["value"] is not None else [])]
         if component not in tags:
@@ -249,6 +276,23 @@ def _require_geometry(worker: Any, model_tag: str, component: str, geometry: str
     geometry = validate_tag(geometry, "geometry")
     comp = _require_component(worker, model_tag, component)
     probe = call_probe(comp, "geom")
+    if probe_state_unknown(probe):
+        # Same G3 shared-helper class correction as _require_component above:
+        # a structured EXECUTION_STATE_UNKNOWN from the component geom()
+        # collection probe makes this helper raise before the geom(tag)
+        # lookup and every later call it would make itself; callers that
+        # deliberately catch ExecutionContractError still decide their own
+        # propagation, so the W13 measure/validate chains re-raise this code
+        # explicitly.  An ordinary (non-structured) probe miss still falls
+        # through to the pre-existing optional-miss lookup, and probe.ok +
+        # value=None keeps skipping membership as before.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the existence of geometry {geometry!r} in component {component!r} is unknown: the component geom() "
+            "collection probe ended in an uncertain execution state; this request stops "
+            "before the geom(tag) lookup and every later dependent call, so no "
+            "existence, mutation or retry outcome is claimed",
+        )
     if probe["ok"] and probe["value"] is not None:
         tags = [str(item) for item in tag_list(probe["value"])]
         if geometry not in tags:
@@ -1207,9 +1251,12 @@ def _function_inspect_payload(node: Any, type_id: str | None) -> dict[str, Any]:
     }
 
 
-def _metadata_rows(node: Any, names: Sequence[str]) -> dict[str, dict[str, Any]]:
+def _metadata_rows(node: Any, names: Sequence[str], *,
+                   on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, dict[str, Any]]:
     from ._g2_contract import property_schema_from_engine
 
+    if on_probe_error is not None:
+        return {name: property_schema_from_engine(node, name, on_probe_error=on_probe_error) for name in names}
     return {name: property_schema_from_engine(node, name) for name in names}
 
 
@@ -1394,7 +1441,31 @@ def function_data_import(worker: Any, model_tag: str, arguments: Mapping[str, An
     return result
 
 
+#: Request-private capability key injected by the managed backend for
+#: ``function.data_reload`` (see ManagedBackend._project_model_file_digest_provider).
+#: The adapter may only digest the model's filename through this gate; the
+#: backend strips any caller-supplied value before dispatch.
+_RELOAD_DIGEST_PROVIDER_KEY = "_project_model_file_digest"
+
+
 def function_data_reload(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Refresh one file-backed function from model state.
+
+    The managed route injects a request-private, project-bound digest
+    capability: the control process opens and hashes the model's filename
+    only after that gate proves the path sits inside the approved project
+    record, and reports an explicit ``not_reported_*`` status otherwise — an
+    unadjudicated path is never opened here.  Direct adapter-level calls
+    without the capability keep the legacy local digest as an internal-only
+    API behaviour; every public daemon route injects the gate.
+    """
+    digest_provider = (arguments.get(_RELOAD_DIGEST_PROVIDER_KEY)
+                       if isinstance(arguments, Mapping) else None)
+    if not callable(digest_provider):
+        digest_provider = None
+    if isinstance(arguments, Mapping) and _RELOAD_DIGEST_PROVIDER_KEY in arguments:
+        arguments = {key: value for key, value in arguments.items()
+                     if key != _RELOAD_DIGEST_PROVIDER_KEY}
     args = operation_arguments(arguments, ("path",), ("path",))
     path, node = resolve_path(worker, model_tag, args["path"], label="path")
     type_id = node_type(node)
@@ -1421,7 +1492,8 @@ def function_data_reload(worker: Any, model_tag: str, arguments: Mapping[str, An
         "path": path,
         "type_id": type_id,
         "filename": filename,
-        "sha256": _local_sha256(filename),
+        "sha256": (digest_provider(filename) if digest_provider is not None
+                   else _local_sha256(filename)),
         "refresh": refresh_result,
         "readback_before": before,
         "readback_after": after,
@@ -2237,29 +2309,48 @@ def selection_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     return result
 
 
+def _selection_inspect_probe(node: Any, method: str) -> dict[str, Any]:
+    probe = call_probe(node, method)
+    if probe_state_unknown(probe):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN", f"selection {method}() probe returned an unknown execution state",
+            stage="post_dispatch", details={"execution_state_unknown": True, "probe": method},
+        )
+    return probe
+
+
+def _selection_inspect_metadata_error(exc: Exception, method: str) -> None:
+    if _worker_failure_unknown(exc):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN", f"selection metadata {method}() probe returned an unknown execution state",
+            stage="post_dispatch", details={"execution_state_unknown": True, "probe": method},
+        ) from exc
+
+
 def selection_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("component", "tag"), ("component", "tag"))
     component = validate_tag(args["component"], "component")
     tag = validate_tag(args["tag"])
     comp = _require_component(worker, model_tag, component)
     container = _call(comp, "selection")
-    probe = call_probe(container, "tags")
+    probe = _selection_inspect_probe(container, "tags")
     if probe["ok"] and tag not in [str(item) for item in probe["value"]]:
         raise node_not_found(f"selection {tag!r} does not exist in {component!r}")
     node = child_node(worker, model_tag, _component_path(component), "selection", tag)
-    type_id = node_type(node)
-    label_probe = call_probe(node, "label")
-    entities_probe = call_probe(node, "entities")
+    type_probe = _selection_inspect_probe(node, "getType")
+    type_id = str(type_probe["value"]) if type_probe["value"] is not None else None
+    label_probe = _selection_inspect_probe(node, "label")
+    entities_probe = _selection_inspect_probe(node, "entities")
     entities = list(entities_probe["value"]) if entities_probe["ok"] and isinstance(entities_probe["value"], (list, tuple)) else None
     properties: dict[str, Any] = {}
     metadata: dict[str, Any] = {}
     if type_id in SELECTION_REGION_PROPERTIES or type_id == "Explicit":
         names = sorted(_selection_property_allowance(type_id))
-        properties = property_read_rows(node, names)
+        properties = property_read_rows(node, names, strict_unknown=True)
         metadata = {
             name: {"kind": row.get("kind"), "shape_rank": row.get("shape_rank"),
                    "value_type": row.get("value_type"), "allowed_values": row.get("allowed_values")}
-            for name, row in _metadata_rows(node, names).items()
+            for name, row in _metadata_rows(node, names, on_probe_error=_selection_inspect_metadata_error).items()
         }
     return {
         "component": component,
@@ -2268,13 +2359,13 @@ def selection_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         "type_id": type_id,
         "label": label_probe["value"] if label_probe["ok"] else None,
         "label_error": None if label_probe["ok"] else label_probe["error"],
-        "entity_dimension": call_probe(node, "dim")["value"],
-        "dimension": call_probe(node, "dimension")["value"],
+        "entity_dimension": _selection_inspect_probe(node, "dim")["value"],
+        "dimension": _selection_inspect_probe(node, "dimension")["value"],
         "entities": entities,
         "entity_count": len(entities) if entities is not None else None,
         "entities_sha256": entity_list_hash(entities) if entities is not None else None,
         "entities_error": None if entities_probe["ok"] else entities_probe["error"],
-        "state": selection_state(node),
+        "state": selection_state(node, strict_unknown=True),
         "properties": properties,
         "property_metadata": metadata,
         "notes": ["entity ids are geometry-version dependent; no cross-revision stability is promised"],
@@ -2413,17 +2504,34 @@ def selection_measure(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         )
     comp = component_node(worker, model_tag, component)
     measure, _selection = measure_selection(comp, int(dimension), entities)
-    geometry_tag = resolved.get("geometry") or probe_geometry_tag(_selection)
+    geometry_tag = resolved.get("geometry") or _selection_geometry_tag(_selection, "measurement")
     length_unit = None
     if geometry_tag:
         try:
-            length_unit = geometry_length_unit(_geometry_for(worker, model_tag, component, geometry_tag))
-        except ExecutionContractError:
-            length_unit = None
+            geometry = _geometry_for(worker, model_tag, component, geometry_tag)
+        except ExecutionContractError as exc:
+            # An ordinary optional miss (e.g. NODE_NOT_FOUND for an absent
+            # component) keeps the pre-existing "no length unit" behavior;
+            # a structured UNKNOWN from the geometry lookup stops the whole
+            # request instead of being demoted into a missing unit.
+            if exc.code == "EXECUTION_STATE_UNKNOWN":
+                raise
+            geometry = None
+        if geometry is not None:
+            length_unit = _geometry_length_unit_checked(geometry, "measurement")
     results: dict[str, Any] = {}
     for name in metrics:
         getter = MEASURE_METRICS[name]
         probe = call_probe(measure, getter)
+        if probe_state_unknown(probe):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"the requested measure {name!r} ({getter}()) probe ended in an uncertain "
+                "execution state; this request stops before any later metric or engine probe, "
+                "and no retry, staging, rollback or engine-quiescence outcome is claimed",
+                details={"probe_state_unknown": True, "probe": getter,
+                         "execution_state_unknown": True},
+            )
         if not probe["ok"]:
             results[name] = {"error": probe["error"]}
             continue
@@ -2461,11 +2569,63 @@ def _geometry_for(worker: Any, model_tag: str, component: str, geometry: str) ->
     return _require_geometry(worker, model_tag, component, geometry)
 
 
+def _selection_geometry_tag(selection_node: Any, context: str) -> str | None:
+    """W13-local ``selection.geom()`` geometry-tag fallback probe.
+
+    Same tag shape as ``_g3_common.probe_geometry_tag``, but this caller
+    inspects the structured ``execution_state_unknown`` marker: a structured
+    UNKNOWN from this probe is the endpoint's own uncertainty, so the
+    operation stops here, before any length-unit read or metric probe,
+    instead of continuing on a missing geometry tag.  Ordinary
+    (non-structured) misses keep the pre-existing ``None`` behavior.
+    """
+    probe = call_probe(selection_node, "geom")
+    if probe_state_unknown(probe):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the {context} selection geom() probe ended in an uncertain execution state; "
+            "this request stops before any length-unit or metric probe, and no retry, "
+            "staging, rollback or engine-quiescence outcome is claimed",
+            details={"probe_state_unknown": True, "probe": "geom",
+                     "execution_state_unknown": True},
+        )
+    if probe["ok"] and isinstance(probe["value"], str) and probe["value"]:
+        return probe["value"]
+    return None
+
+
+def _geometry_length_unit_checked(geometry: Any, context: str) -> str | None:
+    """W13-local checked ``GeomSequence.lengthUnit()`` read (single probe).
+
+    Propagates a structured UNKNOWN instead of collapsing it into "missing
+    length unit", and never issues a second lengthUnit call.  Ordinary
+    failures keep the pre-existing ``None`` behavior; successful reads keep
+    the existing ``str`` value shape.
+    """
+    probe = call_probe(geometry, "lengthUnit")
+    if probe_state_unknown(probe):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the {context} geometry lengthUnit() probe ended in an uncertain execution "
+            "state; this request stops before any further engine probe, and no retry, "
+            "staging, rollback or engine-quiescence outcome is claimed",
+            details={"probe_state_unknown": True, "probe": "lengthUnit",
+                     "execution_state_unknown": True},
+        )
+    return str(probe["value"]) if probe["ok"] and probe["value"] is not None else None
+
+
 _SPATIAL_QUERY_SPECS: dict[str, dict[str, Any]] = {
     "box": {"selection_type": "Box", "required": ("xmin", "xmax")},
     "ball": {"selection_type": "Ball", "required": ("r",)},
     "cylinder": {"selection_type": "Cylinder", "required": ("r",)},
     "disk": {"selection_type": "Disk", "required": ("r", "posx", "posy")},
+}
+
+# Non-scalar coordinate properties documented for component selections.
+# The engine's property metadata remains authoritative for the actual write.
+_SPATIAL_REGION_VALUE_SHAPES = {
+    "Cylinder": {"axistype": "string", "pos": "number_array"},
 }
 
 
@@ -2484,7 +2644,7 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
     if not isinstance(kind, str) or not kind:
         raise ExecutionContractError("INVALID_REQUEST", "query.kind is required")
     condition = query.get("condition", "intersects")
-    if condition not in SPATIAL_CONDITIONS:
+    if not isinstance(condition, str) or condition not in SPATIAL_CONDITIONS:
         raise ExecutionContractError(
             "INVALID_REQUEST", f"query.condition must be one of {sorted(SPATIAL_CONDITIONS)}"
         )
@@ -2497,19 +2657,29 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
                 f"{sorted(list(_SPATIAL_QUERY_SPECS) + ['all'])} (point/normal/measure queries are not "
                 "documented as coordinate-based selection conditions)",
             )
-        unknown = sorted(set(query) - {"kind", "condition"} -
-                         {name for name in SELECTION_REGION_PROPERTIES[spec["selection_type"]]} -
-                         {"center"})
+        selection_type = spec["selection_type"]
+        region_names = SELECTION_REGION_PROPERTIES[selection_type]
+        shorthand_names = {"center"} if kind == "ball" else set()
+        unknown = sorted(set(query) - {"kind", "condition"} - set(region_names) - shorthand_names)
         if unknown:
             raise ExecutionContractError("INVALID_REQUEST", f"query has unsupported fields for {kind!r}: {unknown}")
         for required in spec["required"]:
             if required not in query:
                 raise ExecutionContractError("INVALID_REQUEST", f"query.{required} is required for kind {kind!r}")
-        region = {name: float(query[name]) for name in query
-                  if name in SELECTION_REGION_PROPERTIES[spec["selection_type"]]}
-        for key, value in list(region.items()):
-            if isinstance(query.get(key), bool) or not isinstance(query.get(key), (int, float)):
-                raise ExecutionContractError("INVALID_REQUEST", f"query.{key} must be a number")
+        region: dict[str, Any] = {}
+        shapes = _SPATIAL_REGION_VALUE_SHAPES.get(selection_type, {})
+        for name, value in query.items():
+            if name not in region_names:
+                continue
+            label = f"query.{name}"
+            if shapes.get(name) == "string":
+                region[name] = require_string(value, label)
+            elif shapes.get(name) == "number_array":
+                if not isinstance(value, Sequence) or isinstance(value, (str, bytes, Mapping)) or len(value) != 3:
+                    raise ExecutionContractError("INVALID_REQUEST", f"{label} must be an array of three numbers")
+                region[name] = [require_number(item, f"{label}[{index}]") for index, item in enumerate(value)]
+            else:
+                region[name] = require_number(value, label)
         if kind == "box":
             if "ymin" not in region or "ymax" not in region:
                 raise ExecutionContractError("INVALID_REQUEST", "query requires ymin/ymax for a box")
@@ -2519,16 +2689,19 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
                 if region.get("zmin", 0.0) > region.get("zmax", 0.0):
                     raise ExecutionContractError("INVALID_REQUEST", "box zmin must not exceed zmax")
         if kind == "ball":
-            center = query.get("center")
-            if center is not None:
+            if "center" in query:
+                center = query["center"]
                 if not isinstance(center, Sequence) or isinstance(center, (str, bytes, Mapping)):
                     raise ExecutionContractError("INVALID_REQUEST", "query.center must be an array of numbers")
-                for axis, name in enumerate(("posx", "posy", "posz")):
-                    if axis < len(center):
-                        region[name] = float(center[axis])
+                if not 1 <= len(center) <= 3:
+                    raise ExecutionContractError("INVALID_REQUEST", "query.center must have one to three coordinates")
+                names = ("posx", "posy", "posz")[:len(center)]
+                if any(name in region for name in names):
+                    raise ExecutionContractError("INVALID_REQUEST", "query.center overlaps explicit position coordinates")
+                for axis, name in enumerate(names):
+                    region[name] = require_number(center[axis], f"query.center[{axis}]")
         if region.get("r", 0.0) < 0:
             raise ExecutionContractError("INVALID_REQUEST", "query.r must be non-negative")
-        selection_type = spec["selection_type"]
     else:
         unknown = sorted(set(query) - {"kind"})
         if unknown:
@@ -2541,7 +2714,7 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
         raise ExecutionContractError(
             "INVALID_REQUEST", f"dimension {dimension} exceeds the geometry space dimension {sdim}"
         )
-    length_unit = geometry_length_unit(geom)
+    length_unit = _geometry_length_unit_checked(geom, "spatial query")
     if length_unit is None:
         raise ExecutionContractError(
             "API_UNSUPPORTED",
@@ -2564,8 +2737,11 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
             region["zmin"] -= inflation
         if "zmax" in region:
             region["zmax"] += inflation
+        for name in ("xmin", "xmax", "ymin", "ymax", "zmin", "zmax"):
+            if name in region:
+                require_number(region[name], f"query.{name} after tolerance")
     elif kind in {"ball", "disk", "cylinder"}:
-        region["r"] = float(region.get("r", 0.0)) + inflation
+        region["r"] = require_number(float(region.get("r", 0.0)) + inflation, "query.r after tolerance")
 
     container = _call(comp, "selection")
     existing = [str(item) for item in tag_list(container, collection_spec("selection"))]
@@ -2589,16 +2765,24 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
         raise ExecutionContractError(
             "EXECUTION_STATE_UNKNOWN", "the temporary query selection was created but the readback does not show it"
         )
-    node = child_node(worker, model_tag, _component_path(component), "selection", temp_tag)
     write = {}
+    skip_cleanup = False
+    primary_error = None
+
+    def metadata_probe_error(exc: Exception, _method: str) -> None:
+        if _worker_failure_unknown(exc):
+            raise exc
+
     try:
+        # Apply the same cleanup/UNKNOWN policy to the post-create lookup.
+        node = child_node(worker, model_tag, _component_path(component), "selection", temp_tag)
         properties: dict[str, Any] = {"entitydim": dimension}
         if kind != "all":
             properties["condition"] = condition
             properties.update(region)
         payload = definition_properties(node, properties, _selection_property_allowance(selection_type),
-                                        label="query")
-        write = _property_write(node_path, worker, model_tag, payload)
+                                        label="query", on_probe_error=metadata_probe_error)
+        write = _property_write(node_path, worker, model_tag, payload, on_probe_error=metadata_probe_error)
         if write["failed"] or write["execution_state_unknown"]:
             raise ExecutionContractError(
                 "EXECUTION_STATE_UNKNOWN" if write["execution_state_unknown"] else "ENGINE_CALL_FAILED",
@@ -2607,21 +2791,43 @@ def selection_query_spatial(worker: Any, model_tag: str, arguments: Mapping[str,
         if selection_type == "Explicit":
             _call(node, "all")
         entities = require_entity_id_array(_call(node, "entities"), "entities()", allow_empty=True)
-    finally:
-        cleanup_error = None
-        try:
-            _call(container, "remove", temp_tag)
-            remaining = [str(item) for item in tag_list(container, collection_spec("selection"))]
-            if temp_tag in remaining:
-                cleanup_error = "the temporary query selection still appears in the tag readback"
-        except ExecutionContractError as exc:
-            cleanup_error = f"{exc.code}: {exc}"
-        if cleanup_error:
+    except Exception as exc:
+        primary_error = exc
+        if _worker_failure_unknown(exc):
+            skip_cleanup = True
+            if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN" and exc.safe_retry is False:
+                raise
             raise ExecutionContractError(
-                "EXECUTION_STATE_UNKNOWN",
-                f"temporary query selection {temp_tag!r} could not be removed ({cleanup_error}); the model "
-                "tree still holds it and it must be reconciled manually",
-            )
+                "EXECUTION_STATE_UNKNOWN", "the temporary query selection encountered an uncertain engine operation",
+                details={"execution_state_unknown": True},
+            ) from exc
+        raise
+    except BaseException:
+        skip_cleanup = True
+        raise
+    finally:
+        if not skip_cleanup:
+            cleanup_error = None
+            cleanup_cause = None
+            try:
+                _call(container, "remove", temp_tag)
+                remaining = [str(item) for item in tag_list(container, collection_spec("selection"))]
+                if temp_tag in remaining:
+                    cleanup_error = "the temporary query selection still appears in the tag readback"
+            except ExecutionContractError as exc:
+                cleanup_cause = exc
+                cleanup_error = f"{exc.code}: {exc}"
+            if cleanup_error:
+                error = ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"temporary query selection {temp_tag!r} removal could not be confirmed ({cleanup_error}); "
+                    "verify and reconcile before further model use",
+                )
+                if primary_error is not None:
+                    raise error from primary_error
+                if cleanup_cause is not None:
+                    raise error from cleanup_cause
+                raise error
     return {
         "component": component,
         "geometry": geometry,
@@ -2781,6 +2987,12 @@ def selection_validate(worker: Any, model_tag: str, arguments: Mapping[str, Any]
     component = resolved.get("component")
     geometry = resolved.get("geometry")
     measure_results: dict[str, Any] = {}
+    if measures and not component:
+        # Requested measures cannot even be attempted without the component;
+        # record a failed check instead of an empty-measures PASS.
+        checks.append({"check": "measures", "status": "ERROR",
+                       "reason": "selection.validate needs the component: requested measures "
+                                 "cannot be attempted without component.measure()"})
     if measures and component:
         comp = component_node(worker, model_tag, component)
         if dimension is None:
@@ -2789,22 +3001,49 @@ def selection_validate(worker: Any, model_tag: str, arguments: Mapping[str, Any]
         else:
             measure, selection_node = measure_selection(comp, int(dimension), entities)
             if not geometry:
-                geometry = probe_geometry_tag(selection_node)
+                geometry = _selection_geometry_tag(selection_node, "validation")
             length_unit = None
             if geometry:
                 try:
-                    length_unit = geometry_length_unit(_geometry_for(worker, model_tag, component, geometry))
-                except ExecutionContractError:
-                    length_unit = None
+                    geometry_node = _geometry_for(worker, model_tag, component, geometry)
+                except ExecutionContractError as exc:
+                    # Ordinary optional miss keeps "no length unit"; a
+                    # structured UNKNOWN from the geometry lookup stops the
+                    # whole request instead of being demoted.
+                    if exc.code == "EXECUTION_STATE_UNKNOWN":
+                        raise
+                    geometry_node = None
+                if geometry_node is not None:
+                    length_unit = _geometry_length_unit_checked(geometry_node, "validation")
             for name, payload in measures.items():
                 probe = call_probe(measure, MEASURE_METRICS[name])
+                if probe_state_unknown(probe):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        f"the requested measure {name!r} ({MEASURE_METRICS[name]}()) probe ended "
+                        "in an uncertain execution state; this request stops before any later "
+                        "metric or engine probe, and no retry, staging, rollback or "
+                        "engine-quiescence outcome is claimed",
+                        details={"probe_state_unknown": True, "probe": MEASURE_METRICS[name],
+                                 "execution_state_unknown": True},
+                    )
                 if not probe["ok"]:
                     measure_results[name] = {"status": "ERROR", "error": probe["error"]}
+                    # A requested measure that cannot be read must never
+                    # accompany a PASS verdict: record it as a failed check.
+                    checks.append({"check": f"measure.{name}", "status": "ERROR",
+                                   "reason": "the requested measure could not be read, so it "
+                                             "cannot satisfy its expectation"})
                     continue
                 actual = probe["value"]
                 if isinstance(actual, (list, tuple)):
                     measure_results[name] = {"status": "NOT_COMPARABLE", "actual": list(actual),
                                              "reason": "the metric returns an array; compare it explicitly"}
+                    # A non-comparable requested measure is likewise a failed
+                    # check, never a silent PASS.
+                    checks.append({"check": f"measure.{name}", "status": "NOT_COMPARABLE",
+                                   "reason": "the requested measure returned an array and is not "
+                                             "comparable against its expectation"})
                     continue
                 requested = float(payload["value"])
                 abs_tol = float(payload.get("abs_tol", 0.0) or 0.0)

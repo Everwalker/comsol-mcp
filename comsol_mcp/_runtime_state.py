@@ -90,7 +90,14 @@ def restore_runtime_state(store: Any, session_id: str, worker_identity: Mapping[
     for tag, raw in state["models"].items():
         ownership = raw["ownership"]
         if same_worker and server == state["server_instance_id"]:
-            ref = ModelRef(**raw["ref"]); ledger._models[tag] = _ModelState(ref=ref, revision=int(raw["revision"]), fingerprint=raw.get("fingerprint"), external_event_counter=int(raw["external_event_counter"]), observed_external_event_counter=int(raw["observed_external_event_counter"]), dirty=bool(raw["dirty"]), retired=bool(raw["retired"]), active_operation_id=None)
+            ref_data = raw["ref"]
+            # Older versions accepted JSON true as schema 1.  Preserve an
+            # already-bound same-worker identity without mutating the stored
+            # mapping or creating a new generation and resetting its counters.
+            # Normalize to the historical version, not a future current one.
+            if isinstance(ref_data, Mapping) and ref_data.get("schema_version") is True:
+                ref_data = {**ref_data, "schema_version": 1}
+            ref = ModelRef(**ref_data); ledger._models[tag] = _ModelState(ref=ref, revision=int(raw["revision"]), fingerprint=raw.get("fingerprint"), external_event_counter=int(raw["external_event_counter"]), observed_external_event_counter=int(raw["observed_external_event_counter"]), dirty=bool(raw["dirty"]), retired=bool(raw["retired"]), active_operation_id=None)
             ledger.model_ownership[tag] = ownership
         else:
             # Never reuse a ref across worker/epoch replacement: retain the

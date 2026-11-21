@@ -5,6 +5,11 @@ Example: python -m tools.universal_release --source . --lock uv.lock
   --operations docs/full_project_execution/release/RELEASE_OPERATIONS.md
   --wheelhouse macos_arm64=/path/to/prepared/wheels --output /new/output
 
+For a macos_x86_64 derived Intel wheel whose provenance declares a
+build_evidence claim, also pass --derived-intel-wheel, --derived-provenance,
+--openssl-license and the explicit --derived-build-evidence file; the
+provenance's own path claim is never opened.
+
 Installation, engine control and lifecycle transitions remain in full_project_release.
 """
 from __future__ import annotations
@@ -188,14 +193,20 @@ def audit_inputs(project, requirements, house, target, derived=None):
 
 
 def build_target(project, target, house, exported, lock, app, output, build_evidence, operations,
-                 derived=None, provenance=None, openssl_license=None, primary_notices=None):
+                 derived=None, provenance=None, openssl_license=None, primary_notices=None,
+                 derived_build_evidence=None, primary_notice_receipt=None):
+    if derived_build_evidence is not None and derived is None:
+        raise release.ReleaseError("derived build evidence input requires the derived Intel wheel")
     output.mkdir()
     basis = exported
     options = {}
     if derived:
         basis = output / "requirements-derived.lock"
-        release.compose_derived_wheel_lock(exported, derived, lock, provenance, openssl_license, target, basis)
+        release.compose_derived_wheel_lock(exported, derived, lock, provenance, openssl_license, target, basis,
+                                           derived_build_evidence=derived_build_evidence)
         options = {"derived_provenance": provenance, "openssl_license": openssl_license}
+        if derived_build_evidence is not None:
+            options["derived_build_evidence"] = derived_build_evidence
     pins, rows, graph, missing = audit_inputs(project, basis, house, target, derived)
     summary = {"status": "MISSING_INPUT" if missing else "INPUTS_VERIFIED", "target": target,
                "expected_dependency_count": len(pins), "dependency_count": len(rows), "missing": missing,
@@ -220,6 +231,8 @@ def build_target(project, target, house, exported, lock, app, output, build_evid
     release.compose_install_lock(runtime_lock, app, target, install_lock)
     if primary_notices and target != "win_amd64":
         options["primary_notice_manifest"] = primary_notices
+    if primary_notice_receipt is not None:
+        options["primary_notice_receipt"] = primary_notice_receipt
     manifest = release.create_bundle_manifest(wheelhouse, target, install_lock, lock, output / "metadata", **options)
     if derived:
         summary["derived_input"] = manifest["derived_wheel"]
@@ -242,6 +255,8 @@ def run(args):
     derived_args = (args.derived_intel_wheel, args.derived_provenance, args.openssl_license)
     if any(derived_args) and not all(derived_args):
         raise release.ReleaseError("derived Intel input requires wheel, provenance and OpenSSL license")
+    if getattr(args, "derived_build_evidence", None) is not None and not all(derived_args):
+        raise release.ReleaseError("derived build evidence input requires the derived Intel wheel, provenance and OpenSSL license")
     output.mkdir(mode=0o700)
     try:
         snapshot = release.source_snapshot(source, output / "source")
@@ -275,9 +290,11 @@ def run(args):
         results = {}
         for target, house in args.wheelhouse.items():
             derived = args.derived_intel_wheel if target == "macos_x86_64" else None
+            derived_evidence = getattr(args, "derived_build_evidence", None) if target == "macos_x86_64" else None
             results[target] = build_target(project, target, house, exported, inputs / "uv.lock", app,
                 output / target, output / "build-evidence", args.operations.resolve(strict=True), derived,
-                args.derived_provenance, args.openssl_license, args.primary_notices)
+                args.derived_provenance, args.openssl_license, args.primary_notices, derived_evidence,
+                args.primary_notices_lock_receipt)
         verify_snapshot(output / "source", snapshot)
         result = {"schema": "comsol-mcp-universal-release/1", "source_manifest_sha256": snapshot["manifest_sha256"],
                   "source_file_count": snapshot["file_count"], "wheel": build, "targets": results,
@@ -296,7 +313,8 @@ def main(argv=None):
     for name in ("source", "lock", "builder-python", "uv", "operations", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--wheelhouse", action="append", required=True, metavar="TARGET=PATH")
-    for name in ("derived-intel-wheel", "derived-provenance", "openssl-license", "primary-notices"):
+    for name in ("derived-intel-wheel", "derived-provenance", "openssl-license", "primary-notices",
+                 "derived-build-evidence", "primary-notices-lock-receipt"):
         parser.add_argument("--" + name, type=Path)
     args = parser.parse_args(argv)
     houses = {}

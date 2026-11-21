@@ -150,7 +150,7 @@ def test_source_wheel_package_member_drift_is_rejected(tmp_path):
         tool.validate_wheel(p, wheel, snapshot)
 
 
-def test_403_derived_target_records_actual_native_version_and_legacy_license_alias(tmp_path):
+def test_403_derived_target_records_actual_native_version_and_versioned_license_member(tmp_path):
     _house, wheel, exported, lock, provenance, _sha = make_derived_crypto_inputs(tmp_path)
     payload = json.loads(provenance.read_text())
     payload["native_component"].update(version="4.0.3",
@@ -175,4 +175,17 @@ def test_403_derived_target_records_actual_native_version_and_legacy_license_ali
     with zipfile.ZipFile(out / "offline.zip") as z:
         sbom = json.loads(z.read("SBOM.cdx.json"))
         assert next(c for c in sbom["components"] if c["name"] == "OpenSSL")["version"] == "4.0.3"
-        assert z.read("licenses/openssl-4.0.2-LICENSE.txt") == (tmp_path / "OpenSSL-4.0.2-LICENSE.txt").read_bytes()
+        # The bundle license member follows the attested native version, not the
+        # legacy on-disk input filename; bytes must still bind the exact input file.
+        manifest = json.loads(z.read("PACKAGE_MANIFEST.json"))
+        license_file = manifest["derived_wheel"]["native_component"]["license_file"]
+        assert license_file["path"] == "licenses/openssl-4.0.3-LICENSE.txt"
+        assert license_file["sha256"] == tool.release.sha256_file(tmp_path / "OpenSSL-4.0.2-LICENSE.txt")
+        licenses_doc = json.loads(z.read("LICENSES.json"))
+        openssl_row = next(c for c in licenses_doc["components"] if c["name"] == "OpenSSL")
+        assert openssl_row["version"] == "4.0.3" and openssl_row["license_files"] == [license_file]
+        assert z.read("licenses/openssl-4.0.3-LICENSE.txt") == (tmp_path / "OpenSSL-4.0.2-LICENSE.txt").read_bytes()
+        assert "licenses/openssl-4.0.2-LICENSE.txt" not in z.namelist()
+        # Legacy fixture provenance declares no build_evidence block: unchanged UNVERIFIED posture.
+        assert manifest["derived_wheel"]["build_evidence"]["status"] == "NOT_RECORDED"
+        assert manifest["derived_wheel"]["build_evidence"]["verification"] == "UNVERIFIED"

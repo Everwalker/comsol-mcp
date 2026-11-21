@@ -111,6 +111,7 @@ from ._g3_common import (
     is_typed_value,
     path_with_segment,
     probe_geometry_tag,
+    probe_state_unknown,
     property_definition,
     property_row,
     reject_unknown_keys,
@@ -541,6 +542,27 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     component = validate_tag(component, "component")
     model = bound_model(worker, model_tag)
     probe = call_probe(model, "component")
+    if probe_state_unknown(probe):
+        # G3 shared-helper class correction (w15, 2026-11-10; same structured
+        # predicate the w14 sibling already uses): a structured
+        # EXECUTION_STATE_UNKNOWN from this shared component() collection probe
+        # is the probe's own uncertainty, not an optional-getter miss, so this
+        # helper raises a typed error here - before the component(tag) lookup
+        # and before every later call this helper itself would make.  That is
+        # only the helper boundary: an enclosing caller that deliberately
+        # catches ExecutionContractError decides its own propagation (several
+        # W15 callers record the code and keep execution_state_unknown).  An
+        # ordinary (non-structured) probe miss still falls through to the
+        # pre-existing optional-miss lookup below, and the existing success
+        # paths - including W15's probe.ok + value=None skipping the
+        # membership check - are unchanged.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the existence of component {component!r} is unknown: the model component() "
+            "collection probe ended in an uncertain execution state; this request stops "
+            "before the component(tag) lookup and every later dependent call, so no "
+            "existence, mutation or retry outcome is claimed",
+        )
     if probe["ok"] and probe["value"] is not None:
         tags = [str(item) for item in tag_list(probe["value"])]
         if component not in tags:
@@ -561,6 +583,22 @@ def _require_geometry(worker: Any, model_tag: str, component: str, geometry: str
     geometry = validate_tag(geometry, "geometry")
     comp = _require_component(worker, model_tag, component)
     probe = call_probe(comp, "geom")
+    if probe_state_unknown(probe):
+        # Same G3 shared-helper class correction as _require_component above:
+        # a structured EXECUTION_STATE_UNKNOWN from the component geom()
+        # collection probe makes this helper raise before the geom(tag)
+        # lookup and every later call it would make itself; callers that
+        # deliberately catch ExecutionContractError still decide their own
+        # propagation.  An ordinary (non-structured) probe miss still falls
+        # through to the pre-existing optional-miss lookup, and probe.ok +
+        # value=None keeps skipping membership as before.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the existence of geometry {geometry!r} in component {component!r} is unknown: the component geom() "
+            "collection probe ended in an uncertain execution state; this request stops "
+            "before the geom(tag) lookup and every later dependent call, so no "
+            "existence, mutation or retry outcome is claimed",
+        )
     if probe["ok"] and probe["value"] is not None:
         tags = [str(item) for item in tag_list(probe["value"])]
         if geometry not in tags:

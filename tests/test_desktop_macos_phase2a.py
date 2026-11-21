@@ -98,10 +98,21 @@ def test_packaging_extra_only_darwin_and_core_unchanged():
     assert current['project']['dependencies']==['mcp>=1.30,<2','MPh','JPype1']
     assert current['project']['optional-dependencies']['dev']==['pytest']
     extra=[Requirement(x) for x in current['project']['optional-dependencies']['desktop']]
-    assert {x.name for x in extra}=={'psutil','pyobjc-framework-ApplicationServices','pyobjc-framework-Quartz','pyobjc-framework-Cocoa'}
+    # The desktop extra is cross-platform-gated now (same reality pinned by
+    # tests/test_universal_release.py::test_current_metadata_has_actual_platform_desktop_dependencies_and_valid_generated_lock):
+    # Windows gets the pinned pywin32 route, Darwin gets the metadata/capture
+    # frameworks, Linux stays empty. The manifest itself is not edited here.
+    def active(sys_platform):
+        return {x.name:str(x.specifier) for x in extra if x.marker.evaluate({'sys_platform':sys_platform})}
+    assert active('darwin')=={'psutil':'',
+        'pyobjc-framework-ApplicationServices':'>=12.2.2','pyobjc-framework-Quartz':'>=12.2.2',
+        'pyobjc-framework-Cocoa':'>=12.2.2','pyobjc-framework-CoreMedia':'>=12.2.2',
+        'pyobjc-framework-ScreenCaptureKit':'>=12.2.2'}
+    assert active('win32')=={'pywin32':'==312'}
+    assert active('linux')=={}
     for item in extra:
-        assert item.marker.evaluate({'sys_platform':'darwin'})
-        assert not item.marker.evaluate({'sys_platform':'linux'})
-        assert not item.marker.evaluate({'sys_platform':'win32'})
+        marks={p:item.marker.evaluate({'sys_platform':p}) for p in ('darwin','win32','linux')}
+        assert marks['darwin']!=marks['win32']
+        assert not marks['linux']
     # Complete pyproject field preservation belongs to the frozen diff/manifest
     # audit; this deliverable test must not depend on a sibling scratch baseline.

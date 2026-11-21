@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from ._execution_contract import ExecutionContractError, PreWriteRefusal
-from ._project_root import ProjectRootBinding, open_project_root_binding
+from ._project_root import (ProjectRootBinding, close_binding_releasing,
+                            open_project_root_binding)
 
 
 _ENTRYPOINT_RE = re.compile(r"(?:class|interface|record)\s+([A-Za-z_$][\w$]*)")
@@ -72,6 +73,7 @@ def read_source_snapshot(project_root: str | Path | ProjectRootBinding,
         raise PreWriteRefusal("INVALID_REQUEST", "source_artifact is required")
     owned_binding = not isinstance(project_root, ProjectRootBinding)
     binding = open_project_root_binding(project_root) if owned_binding else project_root
+    primary_error: BaseException | None = None
     try:
         try:
             path, parts = _relative_source_path(binding.path, source_artifact)
@@ -84,9 +86,14 @@ def read_source_snapshot(project_root: str | Path | ProjectRootBinding,
                                   sha256=hashlib.sha256(raw).hexdigest(), file_identity=dict(identity))
         except ExecutionContractError as exc:
             raise _host_side_refusal(exc) from exc
+    except BaseException as exc:
+        # Local capture (never sys.exc_info) so a failed release below can be
+        # recorded on the primary instead of replacing it in the finally.
+        primary_error = exc
+        raise
     finally:
         if owned_binding:
-            binding.close()
+            close_binding_releasing(binding, primary_error)
 
 
 def worker_source_payload(snapshot: SourceSnapshot) -> dict[str, str]:

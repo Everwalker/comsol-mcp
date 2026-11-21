@@ -25,7 +25,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from ._artifact_store import ArtifactStore, trusted_project_root
 from ._execution_contract import ExecutionContractError
-from ._g2_engine import _call
+from ._g2_engine import _call, _worker_failure_unknown
 
 
 # 1. Three-Layer Status Model (B06)
@@ -745,6 +745,16 @@ def validate_expressions(worker: Any, model_tag: str, arguments: Mapping[str, An
                     findings.append({"name": name, "expr": expr, "status": STATUS_FAIL, "reason": "Engine evaluated to NaN/Inf"})
                     continue
             except Exception as exc:
+                if _worker_failure_unknown(exc):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "engine parameter/evaluate probe ended with an unknown execution state; the operation may have completed and no retry is implied",
+                        stage="post_dispatch",
+                        details={
+                            "expression": name,
+                            "cause_type": type(exc).__name__,
+                        },
+                    ) from exc
                 findings.append({"name": name, "expr": expr, "status": STATUS_FAIL, "reason": f"Engine evaluate failed: {exc}"})
                 continue
 

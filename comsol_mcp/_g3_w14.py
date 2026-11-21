@@ -92,10 +92,20 @@ definition.coordinate_manage
 definition.pair_manage
     ``pair().create(<tag>,<type>[,<gtag>])`` with the documented type
     vocabulary Contact|GeneralContact|Identity|SectorSymmetry,
-    ``pair().remove(<tag>)``, ``getType()``.  ``source()``/``destination()``/
-    ``type()``/``pairName()`` are documented on the pair node but are not in the
-    worker method allow-list, so a selection-binding request is refused before
-    the first write and the allow-list entry is reported.
+    ``pair().remove(<tag>)``, ``getType()``.  ``source()``/``destination()``
+    return a ``LocalSelection`` (javap of the installed 6.4 jar:
+    ``Pair.source()``/``Pair.destination()``, Programming Reference
+    ``model.pair()``); a ``definition.source``/``definition.destination``
+    SelectionSpec binds through ``named(<seltag>)`` (named) or
+    ``geom(<gtag>,<dim>)+set(<int...>)`` (explicit), each confirmed by reading
+    ``named()``/``entities()``/``dim()`` back off the selection itself.  The
+    pre-write checks (owner component, named existence in that component,
+    geometry existence, entity dimension vs ``getSDim()``) run before
+    ``pair().create()``; a post-create binding failure is returned as data
+    (``created``/``partial_change``/``execution_state_unknown``) and never
+    rolls the pair or another user's node back.  ``type()``/``pairName()``/
+    ``swap()`` and the contact-search members remain outside the worker
+    allow-list and are reported as unavailable.
 definition.coupling_manage
     ``cpl().create(<tag>,<type>[,<gtag>])`` with the documented type vocabulary
     (GeneralExtrusion, LinearExtrusion, BoundarySimilarity, IdentityMapping,
@@ -107,8 +117,7 @@ definition.coupling_manage
 Known, reported gaps (refused before the first write, never guessed):
 ``axisymmetric`` geometry sequences (the documented setter
 ``GeomSequence.axisymmetric(boolean)`` is not in the worker allow-list),
-component ``duplicate`` (not in the worker allow-list), pair source/destination
-binding, coordinate system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
+component ``duplicate`` (not in the worker allow-list), coordinate system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
 readback, geometry ``object()``/``problems()``/
 ``isBuilt()``/``current()``/``angularUnit()`` readback, per-feature properties
 of a type whose documented table was not retrieved offline (the engine's own
@@ -121,7 +130,7 @@ never edits Java): ``axisymmetric``, ``isAxisymmetric``, ``angularUnit``,
 ``current``, ``isBuilt``, ``status``, ``problems``, ``problem``, ``message``,
 ``hasError``, ``errors``, ``warnings``, ``object``, ``objects``, ``obj``,
 ``coord``, ``isLinear``, ``isOrthonormal``, ``masterSystem``,
-``source``, ``destination``, ``type``, ``pairName``, ``swap``,
+``type``, ``pairName``, ``swap``,
 ``hasAutoSelection``, ``manualSelection``, ``searchMethod``, ``searchDist``,
 ``duplicate``.
 
@@ -130,7 +139,11 @@ measure needs the native flag), so the geometry readback probes it for real
 instead of claiming it is unavailable; the setter ``axisymmetric`` is still
 refused before the first write. ``objectNames()`` is also available only on a
 ``GeomSequence`` receiver, and geometry inspection reads it through that
-receiver-scoped worker entry.
+receiver-scoped worker entry.  ``source``/``destination`` were added to the
+worker allow-list for the T21 Pair source/destination binding (2026-11-08,
+javap-verified zero-argument ``Pair.source()``/``Pair.destination()`` getters
+only); ``type()``/``pairName()``/``swap()`` and the contact-search members
+remain refused before the first write.
 """
 
 from __future__ import annotations
@@ -140,16 +153,19 @@ import os
 from typing import Any, Callable, Mapping, Sequence
 
 from ._g2_contract import ExecutionContractError, NodePath
-from ._g2_engine import _call, property_set
+from ._g2_engine import _call, _worker_failure_unknown, property_set
+from ._execution_contract import PreWriteRefusal
 from ._g3_common import (
     MEASURE_METRICS,
     all_entities_of_dimension,
+    apply_local_selection,
     call_probe,
     definition_properties,
     measure_selection,
     node_type,
     node_not_found,
     operation_arguments,
+    probe_state_unknown,
     property_definition,
     property_read_rows,
     reject_unknown_keys,
@@ -160,9 +176,12 @@ from ._g3_common import (
     require_string,
     require_string_array,
     resolve_path,
+    selection_readback_completed,
+    selection_state,
     tag_conflict,
     tag_list,
     typed_value_from_json,
+    validate_selection_spec,
     validate_tag,
 )
 
@@ -481,13 +500,17 @@ COMPONENT_TYPE_IDS = frozenset({"Component", "ExtraDim", "MeshComponent"})
 #: removed here so this table keeps meaning "still absent from the worker".
 #: ``copy`` was verified for the component-list receiver from
 #: ``ModelNodeList extends ModelEntityList`` (COMSOL 6.4 API docs; installed
-#: javap) and removed from this set in W14 repair work.
+#: javap) and removed from this set in W14 repair work.  ``source`` and
+#: ``destination`` were removed from this set on 2026-11-08 for T21: the worker
+#: allow-list now carries the javap-verified ``Pair.source()``/
+#: ``Pair.destination()`` getters, and ``definition.pair_manage`` binds and
+#: reads the pair selections through them instead of refusing.
 WORKER_UNAVAILABLE_METHODS = frozenset(
     {
         "axisymmetric", "angularUnit", "isBuilt",
         "status", "message", "errors",
         "warnings", "obj", "coord",
-        "isLinear", "isOrthonormal", "masterSystem", "source", "destination",
+        "isLinear", "isOrthonormal", "masterSystem",
         "pairName", "swap", "hasAutoSelection", "manualSelection",
         "searchMethod", "searchDist", "duplicate",
     }
@@ -534,17 +557,26 @@ GEOMETRY_REFUSED_EXPECTATION_KEYS = frozenset(
 
 
 def _status(applied: Sequence[Any], failed: Sequence[Any], not_executed: Sequence[Any],
-            execution_state_unknown: bool) -> dict[str, Any]:
+            execution_state_unknown: bool, pre_committed_mutation: bool = False) -> dict[str, Any]:
+    """Normalise the applied/failed/not_executed envelope.
+
+    ``pre_committed_mutation`` must be set by callers that had already issued
+    an engine mutation *before* the loop this envelope summarises (T21 pair
+    create commits ``pair().create()`` before the selection-binding loop):
+    without it the ``partial_change`` formula assumes the loop's first
+    mutation is the operation's first mutation and would report
+    ``partial_change=false`` next to ``created=true``.
+    """
     if execution_state_unknown:
         status = "EXECUTION_STATE_UNKNOWN"
     elif failed:
-        status = "PARTIAL_FAILURE" if applied else "FAILED"
+        status = "PARTIAL_FAILURE" if (applied or pre_committed_mutation) else "FAILED"
     else:
         status = "APPLIED"
     return {
         "ok": not failed,
         "status": status,
-        "partial_change": bool(applied) or bool(execution_state_unknown),
+        "partial_change": bool(applied) or bool(execution_state_unknown) or bool(pre_committed_mutation),
         "execution_state_unknown": bool(execution_state_unknown),
         "applied_count": len(applied),
         "failed_count": len(failed),
@@ -685,6 +717,26 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
     component = validate_tag(component, "component")
     model = _call(worker.client(), "model", model_tag)
     probe = call_probe(model, "component")
+    if probe_state_unknown(probe):
+        # T21 r4 correction (r3 parent assessment, shared-helper class): a
+        # structured UNKNOWN from this shared component() collection probe is
+        # the probe's own uncertainty, not one route's option, so the r3
+        # opt-in flag is gone and every caller that reaches this helper stops
+        # here - before the component(tag) lookup and every later dependent
+        # call made through this helper's own return path.  That boundary is
+        # this helper's direct callers only; paths that bypass the helper are
+        # not covered by this guard.
+        # probe_state_unknown is the structured predicate only: an ordinary
+        # (non-structured) probe miss still falls through to the pre-existing
+        # optional-miss lookup below, and the successful-collection paths
+        # (NODE_NOT_FOUND / return) are unchanged.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the existence of component {component!r} is unknown: the model component() "
+            "collection probe ended in an uncertain execution state; this request stops "
+            "before the component(tag) lookup and every later dependent call, so no "
+            "existence, mutation or retry outcome is claimed",
+        )
     if probe["ok"] and probe["value"] is not None:
         tags = tag_list(probe["value"])
         if component not in tags:
@@ -2464,6 +2516,29 @@ def _split_definition_path(path: Any, collection: str, *, label: str = "path") -
     return str(first.tag), str(last.tag)
 
 
+def _definition_list_scope_component(args: Mapping[str, Any]) -> str:
+    """Validate a list's component scope before its first domain worker call."""
+    try:
+        component = _optional_tag(args.get("component"), "component")
+        path = args.get("path")
+        if path is None:
+            if component is None:
+                raise ExecutionContractError("INVALID_REQUEST", "action 'list' requires a component scope")
+            return component
+        parsed = NodePath.from_wire(path)
+        if (len(parsed.segments) != 1 or parsed.segments[0].accessor is not None
+                or parsed.segments[0].collection != "component"):
+            raise ExecutionContractError(
+                "INVALID_NODE_PATH", "list path must address exactly one component:<tag> node"
+            )
+        scoped = validate_tag(parsed.segments[0].tag, "path component tag")
+        if component is not None and component != scoped:
+            raise ExecutionContractError("INVALID_REQUEST", "component conflicts with the list path")
+        return scoped
+    except ExecutionContractError as exc:
+        raise PreWriteRefusal(exc.code, str(exc), details={"cause_code": exc.code}).with_cause(exc) from exc
+
+
 def definition_component_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("action", "tag", "source_tag", "definition"), ("action",))
     action = require_string(args["action"], "action", max_length=32)
@@ -2606,10 +2681,7 @@ def definition_coordinate_manage(worker: Any, model_tag: str, arguments: Mapping
     if readback_names is not None:
         readback_names = require_string_array(readback_names, "definition.readback_properties")
     if action == "list":
-        component = _optional_tag(args.get("component"), "component")
-        if component is None:
-            path = _definition_node_path(args)
-            component, _ = _split_definition_path(path, "component")
+        component = _definition_list_scope_component(args)
         container = _definition_list(worker, model_tag, component, "coordSystem")
         rows = []
         for tag in _definition_tags(container):
@@ -2638,6 +2710,15 @@ def definition_coordinate_manage(worker: Any, model_tag: str, arguments: Mapping
         type_id = definition.get("type")
         comp = _require_component(worker, model_tag, component)
         geom_list = call_probe(comp, "geom")
+        if probe_state_unknown(geom_list):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"coordinate system {tag!r} was not created: the component geom() "
+                "collection probe ended in an uncertain execution state; this "
+                "request dispatched no coordSystem create call and the geometry "
+                "existence check, the create call and every later dependent call "
+                "are withheld",
+            )
         if geom_list["ok"] and geometry not in tag_list(geom_list["value"]):
             raise node_not_found(
                 f"geometry {geometry!r} does not exist in component {component!r}; "
@@ -2734,6 +2815,395 @@ def definition_coordinate_manage(worker: Any, model_tag: str, arguments: Mapping
     raise ExecutionContractError("INVALID_REQUEST", "action must be one of list/create/inspect/update/remove")
 
 
+#: SelectionSpec kinds ``definition.pair_manage`` can honour on a Pair
+#: ``LocalSelection`` with verified calls: ``Selection.named(String)`` for a
+#: named reference, ``Selection.geom(<gtag>,<dim>)/geom(<dim>)`` +
+#: ``Selection.set(int...)`` for explicit entities (javap of the installed
+#: 6.4 jar).  ``all``/``inherited``/``spatial``/``objects`` have no reviewed
+#: pair adapter here and are refused before any engine change.
+PAIR_SELECTION_KINDS: tuple[str, ...] = ("named", "explicit")
+
+
+def _pair_selection_plan(spec: Any, label: str, component: str) -> dict[str, Any]:
+    """Validate one Pair source/destination SelectionSpec before any write.
+
+    The T14b owner gate applies here as it does for variable groups: a named
+    reference resolves where the entity lives (``Selection.named()`` and
+    ``model()`` resolve in the owning component), so a spec naming another
+    component would validate one component's selection list while the binding
+    resolved the same tag in another - refused pre-dispatch instead.
+    """
+    resolved = validate_selection_spec(spec, label=label, allowed_kinds=PAIR_SELECTION_KINDS)
+    if resolved.get("component") is not None and resolved["component"] != component:
+        raise PreWriteRefusal(
+            "INVALID_REQUEST",
+            "selection component differs from its actual owner path: "
+            f"{label}.component {resolved['component']!r}, pair component {component!r}",
+        )
+    if resolved["kind"] == "explicit" and "entity_dimension" not in resolved:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            f"{label}: kind 'explicit' requires entity_dimension to bind a pair selection",
+        )
+    return resolved
+
+
+def _pair_side_probe(node: Any, side: str, *, probe: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Report one Pair side's selection state as the engine holds it.
+
+    Read-only probes (``source``/``destination`` then ``named()``/
+    ``entities()``/``dim()``); a value here is never the request echo.
+    ``probe`` lets a caller that already dispatched the side getter reuse that
+    single observation instead of reading the endpoint twice.
+    """
+    probe = call_probe(node, side) if probe is None else probe
+    if not probe["ok"] or probe["value"] is None:
+        return {"available": False, "probe_error": probe["error"]}
+    # Read-only reporting keeps the lenient data shape, but a *dispatched*
+    # state getter that came back structured-UNKNOWN ends the probe pass
+    # instead of reading further getters behind it (T21 additional paths);
+    # ordinary optional misses still report as *_error data.
+    return {"available": True, **selection_state(probe["value"], stop_at_first_unknown=True)}
+
+
+def _pair_read_skipped_row(field: str, abort: Mapping[str, Any]) -> dict[str, Any]:
+    """Report one Pair read field as unobserved - without dispatching anything.
+
+    After the first structured UNKNOWN in a read-only Pair pass, the only
+    honest statement about a field behind that UNKNOWN is "not read"; a
+    ``False`` there would claim an answered "method absent", which this
+    operation did not observe.
+    """
+    return {
+        "available": None,
+        "probe_skipped": True,
+        "state_unknown": True,
+        "reason": (f"the {field}() getter was not dispatched: a structured "
+                   f"EXECUTION_STATE_UNKNOWN was already recorded in this read-only Pair pass "
+                   f"(probe {str(abort.get('probe'))!r}), and the worker request behind a timeout "
+                   "may still be executing, so no further getter on that same worker follows it"),
+    }
+
+
+def _pair_read_skip_record(field: str, probe: str, abort: Mapping[str, Any]) -> dict[str, Any]:
+    """not_executed entry for one Pair read field left unobserved."""
+    return {
+        "stage": "pair_read", "field": field, "probe": probe, "dispatched": False,
+        "reason": (f"not dispatched: the read-only Pair pass stopped at the structured "
+                   f"EXECUTION_STATE_UNKNOWN from probe {str(abort.get('probe'))!r}"),
+    }
+
+
+def _pair_report_fields(node: Any, abort: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Read one Pair node's report fields, fenced at the first structured UNKNOWN.
+
+    ``getType``/``label``/``isActive`` go through ``call_probe`` here rather
+    than the shared ``node_type()``/bare ``call_probe(...)["value"]`` forms,
+    because those flatten a structured ``EXECUTION_STATE_UNKNOWN`` or
+    ``JavaWorkerTimeout`` into a plain ``None`` and the marker is lost (T21
+    read-only parent findings, 2026-11-09).  The stop rule is the create-route
+    rule applied to the read route: a Worker timeout means the request may
+    still be executing (``_java_worker.py``) and the persistent worker
+    accepts and queues follow-up requests to the same executor
+    (``PersistentComsolWorker.java``), so every later getter here depends on a
+    possibly-busy endpoint.  After the first structured UNKNOWN every
+    remaining field is reported as unobserved data with no new engine call,
+    and the caller publishes the UNKNOWN at the top level (``partial_change``
+    stays false: this route dispatches no model write).  An ordinary optional
+    miss (METHOD_REJECTED/API_UNSUPPORTED - a deterministic "this method is
+    absent") is not an UNKNOWN: it keeps the lenient ``*_error`` data shape
+    and the pass continues.
+    """
+    fields: dict[str, Any] = {}
+    not_executed: list[dict[str, Any]] = []
+
+    def _aborted() -> bool:
+        return "probe" in abort
+
+    def _abort_at(probe: str, error: Any) -> None:
+        abort["probe"] = probe
+        abort["error"] = error
+
+    kind_probe = call_probe(node, "getType")
+    if probe_state_unknown(kind_probe):
+        _abort_at("getType", kind_probe["error"])
+        fields["type_id"] = None
+    else:
+        value = kind_probe["value"] if kind_probe["ok"] else None
+        fields["type_id"] = str(value) if value is not None else None
+
+    for field, probe_name in (("label", "label"), ("active", "isActive")):
+        if _aborted():
+            fields[field] = None
+            not_executed.append(_pair_read_skip_record(field, probe_name, abort))
+            continue
+        probe = call_probe(node, probe_name)
+        if probe_state_unknown(probe):
+            _abort_at(probe_name, probe["error"])
+            fields[field] = None
+        else:
+            fields[field] = probe["value"]
+
+    for side in ("source", "destination"):
+        if _aborted():
+            fields[side] = _pair_read_skipped_row(side, abort)
+            not_executed.append(_pair_read_skip_record(side, side, abort))
+            continue
+        side_probe = call_probe(node, side)
+        row = _pair_side_probe(node, side, probe=side_probe)
+        fields[side] = row
+        if probe_state_unknown(side_probe):
+            # The side getter itself never answered: keep its probe_error data
+            # and fence everything after it.
+            _abort_at(side, side_probe["error"])
+        elif row.get("state_unknown") is True:
+            # The getter completed but a nested state getter came back
+            # structured-UNKNOWN (selection_state stopped at it already); the
+            # other side and any next pair are not read behind it.
+            _abort_at(str(row.get("state_unknown_probe") or side), row.get("state_unknown_error"))
+    return fields, not_executed
+
+
+def _pair_read_unknown_update(abort: Mapping[str, Any], not_executed: Sequence[Mapping[str, Any]],
+                              not_read: Sequence[str] | None = None) -> dict[str, Any]:
+    """Publish a stopped read-only Pair pass as data, never as a clean success.
+
+    The top-level ``execution_state_unknown``/``status`` pair is exactly what
+    ``_domain_outcome.classify`` and
+    ``_managed_backend._dispatch_with_witness`` read (UNKNOWN outranks every
+    success token), so a list/inspect whose reads stopped behind a Worker
+    UNKNOWN can no longer surface as an ordinary success.  A read pass issued
+    no model write, so ``partial_change`` stays false and there is nothing to
+    roll back.
+    """
+    error = abort.get("error") if isinstance(abort.get("error"), Mapping) else {}
+    update: dict[str, Any] = {
+        "status": "EXECUTION_STATE_UNKNOWN",
+        "execution_state_unknown": True,
+        "partial_change": False,
+        "failed": [{
+            "stage": "pair_read_probe", "probe": abort.get("probe"),
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "message": (f"the {str(abort.get('probe'))!r} getter dispatched during this read-only "
+                        f"Pair pass returned an unknown execution state (code "
+                        f"{error.get('code')!r}); this adapter stops at the first structured "
+                        "UNKNOWN inside one operation and dispatches no further pair getter behind it"),
+            "mutation_issued": False, "partial_change": False,
+            "execution_state_unknown": True,
+        }],
+        "not_executed": list(not_executed),
+        "notes": [
+            "the read-only Pair pass stopped at the first structured EXECUTION_STATE_UNKNOWN: the "
+            "worker request behind a timeout may still be executing and the persistent worker "
+            "queues later requests to the same executor, so no further getter depending on that "
+            "worker was dispatched; fields in not_executed (and pair tags in not_read) are "
+            "unobserved, not proven absent",
+            "this read-only route dispatched no model write, so partial_change stays false and "
+            "there is nothing to roll back",
+        ],
+    }
+    if not_read is not None:
+        update["traversal_completed"] = False
+        update["not_read"] = list(not_read)
+    return update
+
+
+def _refuse_pair_mutation_on_probe_unknown(probe: Mapping[str, Any], label: str) -> None:
+    """Stop a Pair write when its pre-write probe returned a structured UNKNOWN.
+
+    ``not_verifiable_engine_tags_unreadable`` is only honest for ordinary
+    optional-getter failures (METHOD_REJECTED/API_UNSUPPORTED): a structured
+    ``EXECUTION_STATE_UNKNOWN`` says the engine may still be working on that
+    very call, so demoting it to "unreadable, continue" and running
+    ``pair().create()`` behind it dispatches a mutation after an unfinished
+    call (T21 parent finding 2026-11-08, case B).  The raise stays an
+    ``EXECUTION_STATE_UNKNOWN``, never a ``PreWriteRefusal``: this layer
+    cannot prove the probe call itself had no engine effect.
+    """
+    if not probe_state_unknown(probe):
+        return
+    error = probe.get("error") or {}
+    raise ExecutionContractError(
+        "EXECUTION_STATE_UNKNOWN",
+        f"pair pre-write {label} probe returned an unknown execution state "
+        f"(code {error.get('code')!r}); this adapter stops at the first structured "
+        "UNKNOWN inside the operation and does not dispatch the pair mutation behind it",
+        details={"probe_state_unknown": True, "probe": label,
+                 "execution_state_unknown": True},
+    )
+
+
+def _pair_transport_unknown_failure(exc: BaseException) -> bool:
+    """True when a Pair binding failure bottoms out in a worker/engine UNKNOWN.
+
+    ``_worker_failure_unknown`` on the top-level exception also matches a bare
+    ``EXECUTION_STATE_UNKNOWN`` code, and this layer raises that code for
+    *logical* readback mismatches (a completed probe whose value contradicts
+    the request).  Those mismatches must keep the post-attempt engine-state
+    probe - the endpoint demonstrably finished answering - while a cause chain
+    carrying a worker failure with the structured unknown signal means the
+    engine may still be working on the dispatched call, so no further probe
+    may run behind it.  Contract-error raises for transport reads always carry
+    ``probe_state_unknown`` details and are recognised by the caller directly.
+    """
+    cause = exc.__cause__
+    seen: set[int] = set()
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        if not isinstance(cause, ExecutionContractError) and _worker_failure_unknown(cause):
+            return True
+        cause = cause.__cause__
+    return False
+
+
+def _pair_geometry_presence(comp: Any, component: str, geometry_tag: str) -> str:
+    """Gate a geometry reference against the component's own geometry list.
+
+    Mirrors ``definition_coordinate_manage``: a geometry the container does
+    not report is refused before ``pair().create()``; an unreadable container
+    steps aside and is reported as ``not_verifiable`` rather than claimed.
+    A *structured UNKNOWN* from the container probe is the exception (T21
+    parent finding 2026-11-08): it is not an unreadable container, it is an
+    endpoint whose state is unknown, and create must not follow it.
+    """
+    list_probe = call_probe(comp, "geom")
+    _refuse_pair_mutation_on_probe_unknown(list_probe, "component geom()")
+    if list_probe["ok"] and list_probe["value"] is not None:
+        available = tag_list(list_probe["value"])
+        if geometry_tag not in available:
+            raise node_not_found(
+                f"geometry {geometry_tag!r} does not exist in component {component!r}; "
+                f"the engine reports {available}"
+            )
+        return "validated"
+    return "not_verifiable_engine_tags_unreadable"
+
+
+def _pair_named_selection_presence(worker: Any, model_tag: str, comp: Any, component: str, tag: str) -> str:
+    """Gate a named-selection reference in the pair's own component.
+
+    The canonical NODE_NOT_FOUND (naming the engine's actual members) uses the
+    same wording as ``require_named_selection`` so the message matches the
+    selection routes; the local probe records whether that gate could actually
+    run or had to step aside, so the caller can label it instead of claiming a
+    completed check.
+
+    T21 additional-paths fix (2026-11-08): this gate used to call
+    ``require_named_selection`` as a second reader of the very same
+    ``component.selection()``/``tags()`` pair.  A structured UNKNOWN on that
+    duplicate read was swallowed inside the shared lenient gate - reported as
+    ``not_verifiable_engine_tags_unreadable`` - and ``pair().create()`` then
+    ran behind a call whose state is unknown.  The single probe pass below is
+    the operation's only read of these two accessors: an ordinary optional
+    miss (METHOD_REJECTED/unreadable container) still steps aside as
+    not_verifiable, while a structured UNKNOWN has already raised in
+    ``_refuse_pair_mutation_on_probe_unknown`` before any decision is recorded.
+    """
+    container_probe = call_probe(comp, "selection")
+    _refuse_pair_mutation_on_probe_unknown(container_probe, "component selection()")
+    available: list[str] | None = None
+    if container_probe["ok"] and container_probe["value"] is not None:
+        tags_probe = call_probe(container_probe["value"], "tags")
+        _refuse_pair_mutation_on_probe_unknown(tags_probe, "selection tags()")
+        if tags_probe["ok"] and isinstance(tags_probe["value"], (list, tuple)):
+            available = [str(item) for item in tags_probe["value"]]
+    if available is None:
+        return "not_verifiable_engine_tags_unreadable"
+    if tag not in available:
+        raise node_not_found(
+            f"selection {tag!r} does not exist in component {component!r}; the engine reports {available}"
+        )
+    return "validated"
+
+
+def _pair_named_tag_shadows(worker: Any, model_tag: str, component: str, tag: str) -> list[str] | None:
+    """Read-only scan for the same named-selection tag in other components.
+
+    ``Selection.named(tag)`` resolves in the entity's own component per the
+    T14 contract, but that resolution authority cannot be proven offline; a
+    same-tag selection in a sibling component therefore has to be recorded as
+    a shadow limitation instead of the pre-write check claiming uniqueness.
+    ``None`` means the scan itself could not be completed.
+    """
+    model = _call(worker.client(), "model", model_tag)
+    probe = call_probe(model, "component")
+    _refuse_pair_mutation_on_probe_unknown(probe, "model component()")
+    if not probe["ok"] or probe["value"] is None:
+        return None
+    shadows: list[str] = []
+    for ctag in tag_list(probe["value"]):
+        if ctag == component:
+            continue
+        comp_probe = call_probe(model, "component", ctag)
+        _refuse_pair_mutation_on_probe_unknown(comp_probe, f"model component({ctag!r})")
+        if not comp_probe["ok"] or comp_probe["value"] is None:
+            return None
+        sel_probe = call_probe(comp_probe["value"], "selection")
+        _refuse_pair_mutation_on_probe_unknown(sel_probe, f"component {ctag!r} selection()")
+        if not sel_probe["ok"] or sel_probe["value"] is None:
+            return None
+        tags_probe = call_probe(sel_probe["value"], "tags")
+        _refuse_pair_mutation_on_probe_unknown(tags_probe, f"component {ctag!r} selection tags()")
+        if not tags_probe["ok"] or not isinstance(tags_probe["value"], (list, tuple)):
+            return None
+        if tag in [str(item) for item in tags_probe["value"]]:
+            shadows.append(ctag)
+    return shadows
+
+
+def _pair_plan_pre_checks(worker: Any, model_tag: str, comp: Any, component: str,
+                          plans: Mapping[str, Mapping[str, Any] | None],
+                          geometry_tag: str | None) -> dict[str, Any]:
+    """Run every statically possible check for both sides before create."""
+    pre_checks: dict[str, Any] = {}
+    if geometry_tag is not None:
+        pre_checks["pair_geometry_existence"] = _pair_geometry_presence(comp, component, geometry_tag)
+    for side, plan in plans.items():
+        if plan is None:
+            continue
+        if plan["kind"] == "named":
+            pre_checks[f"{side}_named_existence"] = _pair_named_selection_presence(
+                worker, model_tag, comp, component, plan["tag"])
+            shadows = _pair_named_tag_shadows(worker, model_tag, component, plan["tag"])
+            if shadows is None:
+                pre_checks[f"{side}_named_tag_scope"] = "not_verifiable_sibling_component_scan"
+            elif shadows:
+                pre_checks[f"{side}_named_tag_scope"] = (
+                    f"shadowed_in_{','.join(sorted(shadows))}: the named tag also exists in another "
+                    "component, and offline validation cannot prove which component Selection.named() "
+                    "resolves (the pre-write gate only confirms the owning component)"
+                )
+            else:
+                pre_checks[f"{side}_named_tag_scope"] = "unique_in_model_components"
+        else:
+            gtag = plan.get("geometry") or geometry_tag
+            if gtag is None:
+                pre_checks[f"{side}_entity_dimension_vs_geometry"] = "not_verifiable_no_geometry_context"
+                continue
+            if plan.get("geometry") is not None:
+                _pair_geometry_presence(comp, component, str(gtag))
+            geom_probe = call_probe(comp, "geom", str(gtag))
+            _refuse_pair_mutation_on_probe_unknown(geom_probe, f"geometry {gtag!r} handle")
+            if not geom_probe["ok"] or geom_probe["value"] is None:
+                pre_checks[f"{side}_entity_dimension_vs_geometry"] = "not_verifiable_geometry_handle_unreadable"
+                continue
+            sdim_probe = call_probe(geom_probe["value"], "getSDim")
+            _refuse_pair_mutation_on_probe_unknown(sdim_probe, f"geometry {gtag!r} getSDim()")
+            sdim = sdim_probe["value"]
+            if sdim_probe["ok"] and isinstance(sdim, int) and not isinstance(sdim, bool):
+                if int(plan["entity_dimension"]) > int(sdim):
+                    raise PreWriteRefusal(
+                        "INVALID_REQUEST",
+                        f"definition.{side}.entity_dimension {plan['entity_dimension']} cannot select "
+                        f"{plan['entity_dimension']}-dimensional entities in geometry {gtag!r}: "
+                        f"getSDim() == {sdim}",
+                    )
+                pre_checks[f"{side}_entity_dimension_vs_geometry"] = "validated"
+            else:
+                pre_checks[f"{side}_entity_dimension_vs_geometry"] = "not_verifiable_getSDim_unreadable"
+    return pre_checks
+
+
 def definition_pair_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(
         arguments, ("action", "path", "definition", "component", "tag"), ("action",)
@@ -2741,44 +3211,74 @@ def definition_pair_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
     action = require_string(args["action"], "action", max_length=32)
     definition = require_mapping(args.get("definition") or {}, "definition")
     reject_unknown_keys(definition, ("type", "geometry", "source", "destination"), "definition")
-    if "source" in definition or "destination" in definition:
-        raise _refuse_unavailable(
-            "source", "binding a pair source/destination selection (Pair.source()/destination() and their "
-            "named()/set() methods are documented but not in the worker method allow-list)"
+    if action != "create" and ("source" in definition or "destination" in definition):
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            "definition.source/definition.destination are only accepted for action 'create' "
+            "(this layer does not rebind the selections of an existing pair)",
         )
     if action == "list":
-        component = _optional_tag(args.get("component"), "component")
-        if component is None:
-            path = _definition_node_path(args)
-            component, _ = _split_definition_path(path, "component")
+        component = _definition_list_scope_component(args)
         container = _definition_list(worker, model_tag, component, "pair")
-        rows = []
+        abort: dict[str, Any] = {}
+        rows: list[dict[str, Any]] = []
+        not_executed: list[dict[str, Any]] = []
+        not_read: list[str] = []
         for tag in _definition_tags(container):
+            if abort:
+                # A structured UNKNOWN already stopped this pass: fetching and
+                # reading a later pair is another call to the possibly-busy
+                # worker, so the tag is recorded unobserved instead (T21
+                # read-only parent findings, 2026-11-09).
+                not_read.append(tag)
+                continue
             node = _call(container, "get", tag)
+            fields, field_skips = _pair_report_fields(node, abort)
+            not_executed.extend(field_skips)
             rows.append({
                 "tag": tag,
-                "type_id": _node_kind(node),
-                "label": call_probe(node, "label")["value"],
-                "active": call_probe(node, "isActive")["value"],
+                **fields,
                 "unavailable": {
                     "pair_type": _unavailable("type"),
                     "pairName": _unavailable("pairName"),
-                    "source": _unavailable("source"),
-                    "destination": _unavailable("destination"),
                 },
             })
-        return {
+        result: dict[str, Any] = {
             "action": action,
             "component": component,
+            # ``pair_count``/``readback`` only ever cover the pairs actually
+            # read; on a stopped pass the result carries traversal_completed=
+            # false plus the not_read tags, so a partial read is never
+            # reported as a completed traversal.
             "pair_count": len(rows),
             "pairs": rows,
             "readback": {"tags": [row["tag"] for row in rows]},
         }
+        if abort:
+            result.update(_pair_read_unknown_update(abort, not_executed, not_read=not_read))
+        return result
     if action == "create":
         component = validate_tag(require_string(args.get("component"), "component"), "component")
         tag = validate_tag(args.get("tag"), "tag")
         type_id = definition.get("type")
         geometry = definition.get("geometry")
+        # The two selection specs are request *shape*, so both are fully
+        # validated before the first engine change (definition.coupling_manage
+        # applies the same contract): a statically invalid source/destination
+        # must never leave a half-configured pair behind.
+        source_plan = _pair_selection_plan(definition["source"], "definition.source", component) \
+            if "source" in definition else None
+        destination_plan = _pair_selection_plan(definition["destination"], "definition.destination", component) \
+            if "destination" in definition else None
+        if geometry is not None:
+            geometry = validate_tag(geometry, "definition.geometry")
+        comp = _require_component(worker, model_tag, component)
+        pre_checks = _pair_plan_pre_checks(
+            worker, model_tag, comp, component,
+            {"source": source_plan, "destination": destination_plan}, geometry,
+        )
+        if source_plan is None and destination_plan is None:
+            pre_checks.setdefault("pair_selections_requested", "none")
         if geometry is not None:
             # The three-argument form create(<tag>,<type>,<gtag>) is declared on
             # PairList (javap) and documented on the model.pair() page; the
@@ -2786,13 +3286,32 @@ def definition_pair_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
             # ComponentPairList.create(String,String) (javap).
             created = _definition_create(
                 worker, model_tag, component, "pair", tag, PAIR_TYPE_IDS, type_id,
-                extra=(validate_tag(geometry, "definition.geometry"),), display="pair",
+                extra=(geometry,), display="pair",
                 extra_position="after_type",
             )
         else:
             created = _definition_create(worker, model_tag, component, "pair", tag, PAIR_TYPE_IDS, type_id,
                                          display="pair")
-        return {
+        notes = [
+            "the pair type vocabulary is quoted from the model.pair() page (Contact, GeneralContact, "
+            "Identity, SectorSymmetry); a Pair is not a PropFeature in the verified API surface, so this "
+            "layer does not accept a property block for it",
+            "source/destination bindings run through Pair.source()/Pair.destination() (LocalSelection) "
+            "with named()/geom()/set(), and each applied side is confirmed by reading the endpoint back "
+            "off the selection itself - named() for named bindings, entities() plus the authoritative "
+            "geom()/inputDimension() readbacks for explicit bindings; dim() (maximum entity dimension) "
+            "is reported as endpoint state but never corroborates the input dimension, and an unreadable "
+            "inputDimension() fails closed as EXECUTION_STATE_UNKNOWN; the pre_checks records state which "
+            "pre-write checks ran, and anything not verifiable offline is labelled not_verifiable rather "
+            "than assumed",
+        ]
+        if any(str(value).startswith("shadowed_in_") for value in pre_checks.values()):
+            notes.append(
+                "a same-tag named selection also exists in a sibling component (shadowed); the pre-write "
+                "gate only proves presence in the owning component, and Selection.named()'s component "
+                "resolution authority for identically tagged selections is not provable offline (see pre_checks)"
+            )
+        result: dict[str, Any] = {
             "action": action,
             "component": component,
             "path": created["path"],
@@ -2802,21 +3321,248 @@ def definition_pair_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
             "geometry": geometry,
             "created": True,
             "readback": created["readback"],
+            "selection": {"source": None, "destination": None},
+            "pre_checks": pre_checks,
+            "applied": [],
+            "failed": [],
+            "not_executed": [],
+            "execution_state_unknown": False,
             "unavailable": {
                 "pair_type": _unavailable("type"),
                 "pairName": _unavailable("pairName"),
-                "source": _unavailable("source"),
-                "destination": _unavailable("destination"),
                 "swap": _unavailable("swap"),
             },
-            "notes": [
-                "the pair type vocabulary is quoted from the model.pair() page (Contact, GeneralContact, "
-                "Identity, SectorSymmetry); a Pair is not a PropFeature in the verified API surface, so this "
-                "layer does not accept a property block for it",
-                "binding the source/destination selections is refused before the first write because "
-                "Pair.source()/destination() are not in the worker method allow-list",
-            ],
+            "notes": notes,
         }
+        node = resolve_path(worker, model_tag, created["path"], label="path")[1]
+        # F2 (T21 independent review): once one side fails the readback/engine
+        # contract, the loop must not keep dispatching further side mutations -
+        # same stop-and-record envelope convention as the _g3_w13 multi-item
+        # loops (break plus the remainder in not_executed).  A logical
+        # readback UNKNOWN here is distinct from a Worker transport UNKNOWN,
+        # which the outer dispatch fence already handles; within this one
+        # operation the fence cannot intervene, so the loop itself stops.
+        binding_aborted = False
+        unknown_abort = False
+        for side, plan in (("source", source_plan), ("destination", destination_plan)):
+            if plan is None:
+                continue
+            if binding_aborted:
+                result["not_executed"].append({
+                    "stage": "selection", "side": side, "kind": plan["kind"],
+                    "reason": "the earlier selection side failed; this adapter stops dispatching "
+                              "further side mutations after a failure and reports the remainder here",
+                })
+                continue
+            try:
+                selection = _call(node, side)
+                applied = apply_local_selection(selection, worker, model_tag, None, plan,
+                                                strict_state_readback=True)
+                result["selection"][side] = {
+                    "kind": plan["kind"],
+                    "requested": {key: value for key, value in plan.items() if key != "component"},
+                    "applied": applied["applied"],
+                    "engine_state": selection_state(selection, strict_unknown=True),
+                }
+                result["applied"].append({"stage": "selection", "side": side, "kind": plan["kind"]})
+            except ExecutionContractError as exc:
+                binding_aborted = True
+                # The pair node already exists (pair().create() was issued), so
+                # this is returned as data, never raised and never rolled back:
+                # removing the pair or touching another user's node is not this
+                # operation's call to make.
+                entry = {"stage": "selection", "side": side, "code": exc.code, "message": str(exc),
+                         "mutation_issued": True, "partial_change": True}
+                # A worker failure can carry execution_state_unknown=True under a
+                # different code; _worker_failure_unknown walks __cause__, so a
+                # structured UNKNOWN is never recorded as a plain failure.
+                unknown_execution = exc.code == "EXECUTION_STATE_UNKNOWN" or _worker_failure_unknown(exc)
+                if unknown_execution:
+                    entry["execution_state_unknown"] = True
+                    result["execution_state_unknown"] = True
+                # Fail-closed fence (T21 pair independent re-review item C +
+                # additional-paths fix): any unknown-execution-state failure
+                # inside this operation fences UNLESS the adapter that raised
+                # positively marked the raise as a completed readback
+                # observation (local provenance in _g3_common, not a class-name
+                # guess and not a foreign ``details`` key).  A bare
+                # EXECUTION_STATE_UNKNOWN carried by the dispatched mutation
+                # itself - outcome never confirmed - fences by default.
+                if ((unknown_execution
+                        or exc.details.get("probe_state_unknown")
+                        or _pair_transport_unknown_failure(exc))
+                        and not selection_readback_completed(exc)):
+                    # A transport-level UNKNOWN inside this operation - either
+                    # the engine read behind the failure went UNKNOWN or the
+                    # dispatched mutation itself carries the structured unknown
+                    # flag (T21 parent findings 2026-11-08): probing that same
+                    # side again, or reading the untouched side afterwards,
+                    # would add engine calls behind a possibly-still-running
+                    # call, so the unknown state is reported as data instead of
+                    # re-dispatched.  A logical readback mismatch (the probe
+                    # completed and contradicted the request) stays distinct and
+                    # keeps its post-attempt engine-state probe below.
+                    unknown_abort = True
+                    entry["engine_state_after_attempt"] = {
+                        "state_unknown": True,
+                        "probe": exc.details.get("probe") or "mutation",
+                        "reason": "the endpoint readback or the dispatched mutation itself "
+                                  "returned an unknown execution state; this adapter does not "
+                                  "dispatch any further engine read or write behind a structured "
+                                  "UNKNOWN inside one operation",
+                    }
+                    result["selection"][side] = {
+                        "kind": plan["kind"],
+                        "requested": {key: value for key, value in plan.items() if key != "component"},
+                        "engine_state": None,
+                        "state_unknown": True,
+                    }
+                else:
+                    post = call_probe(node, side)
+                    if post["ok"] and post["value"] is not None:
+                        # One honest engine-state read after a completed
+                        # readback mismatch, but it stops at its own first
+                        # structured UNKNOWN (stop_at_first_unknown) instead of
+                        # probing further getters behind it; the partially
+                        # observed state is still reported (T21 additional
+                        # paths: a diagnostic read that went UNKNOWN used to be
+                        # swallowed here and the untouched side was then probed
+                        # as if nothing had happened).
+                        state = selection_state(post["value"], stop_at_first_unknown=True)
+                        entry["engine_state_after_attempt"] = state
+                        if state.get("state_unknown") is True:
+                            unknown_abort = True
+                            entry["execution_state_unknown"] = True
+                            result["execution_state_unknown"] = True
+                    elif probe_state_unknown(post):
+                        unknown_abort = True
+                        entry["execution_state_unknown"] = True
+                        result["execution_state_unknown"] = True
+                        entry["engine_state_after_attempt"] = {
+                            "state_unknown": True,
+                            "probe": side,
+                            "reason": f"the post-attempt {side}() read of the pair node itself "
+                                      "returned an unknown execution state; no further engine read "
+                                      "is dispatched behind it",
+                        }
+                result["failed"].append(entry)
+        tail_probe_unknown = False
+        for side in ("source", "destination"):
+            if result["selection"][side] is None:
+                plan = source_plan if side == "source" else destination_plan
+                if unknown_abort or tail_probe_unknown:
+                    # No engine read is dispatched behind the structured
+                    # UNKNOWN; the side is reported without probing (T21
+                    # unknown-tail parent findings 2026-11-08).
+                    row: dict[str, Any] = {
+                        "engine_state": None,
+                        "state_unknown": True,
+                        "probe_skipped": True,
+                        "reason": "a structured EXECUTION_STATE_UNKNOWN was already recorded in "
+                                  "this operation; this adapter reports the remaining side "
+                                  "without dispatching further engine probes behind it",
+                    }
+                    if plan is not None:
+                        row["kind"] = plan["kind"]
+                        row["requested"] = {key: value for key, value in plan.items()
+                                            if key != "component"}
+                    result["selection"][side] = row
+                    continue
+                probe = call_probe(node, side)
+                if probe_state_unknown(probe):
+                    # T21 additional paths: the closing report probe is itself a
+                    # dispatched engine call.  When the side getter comes back
+                    # with a structured UNKNOWN, the operation cannot be reported
+                    # as APPLIED (an applied write plus an unreadable endpoint is
+                    # an unknown outcome), and no further probe may follow.
+                    tail_probe_unknown = True
+                    result["execution_state_unknown"] = True
+                    error = probe["error"] or {}
+                    row = {
+                        "engine_state": None,
+                        "state_unknown": True,
+                        "probe_error": error,
+                        "reason": f"the closing {side}() report probe returned an unknown execution "
+                                  f"state (code {error.get('code')!r}); the engine outcome cannot be "
+                                  "reported as applied and no further probe is dispatched behind it",
+                    }
+                    if plan is not None:
+                        row["kind"] = plan["kind"]
+                        row["requested"] = {key: value for key, value in plan.items()
+                                            if key != "component"}
+                    result["selection"][side] = row
+                    result["failed"].append({
+                        "stage": "selection_state_probe", "side": side,
+                        "code": "EXECUTION_STATE_UNKNOWN",
+                        "message": f"the closing {side}() engine-state report could not be read: the "
+                                   f"dispatched {side}() getter returned an unknown execution state "
+                                   f"(code {error.get('code')!r})",
+                        "mutation_issued": False, "partial_change": True,
+                        "execution_state_unknown": True,
+                    })
+                    continue
+                row = _pair_side_probe(node, side, probe=probe)
+                result["selection"][side] = row
+                if row.get("state_unknown") is True:
+                    # T21 nested-tail fix (2026-11-09): the side getter itself
+                    # completed, but a nested state getter (named()/
+                    # isInheriting()/entities()/dim()/geom()) dispatched on
+                    # the pair's own selection came back with a structured
+                    # EXECUTION_STATE_UNKNOWN.  pair().create() (and possibly a
+                    # side binding) already mutated the model, so this is not
+                    # the lenient read-only inspect/list shape: an applied
+                    # write plus an endpoint whose nested readback went
+                    # UNKNOWN is an unknown outcome.  Same semantics as the
+                    # side getter itself being UNKNOWN above - no second probe
+                    # is forced, the observed partial state stays reported as
+                    # data, the failed row records the read-only probe
+                    # (mutation_issued false) with partial_change true, the
+                    # already-dispatched bindings stay as they are (no
+                    # rollback), and tail_probe_unknown fences any remaining
+                    # side as probe_skipped.  Ordinary optional misses
+                    # (METHOD_REJECTED/API_UNSUPPORTED) never set
+                    # state_unknown and keep reporting as data, not errors.
+                    tail_probe_unknown = True
+                    result["execution_state_unknown"] = True
+                    nested_error = row.get("state_unknown_error") or {}
+                    nested_probe = row.get("state_unknown_probe")
+                    row["reason"] = (
+                        f"the closing {side}() report probe completed, but its nested "
+                        f"{nested_probe!r} state getter returned an unknown execution state "
+                        f"(code {nested_error.get('code')!r}); the engine outcome cannot be "
+                        "reported as applied and no further probe is dispatched behind it"
+                    )
+                    result["failed"].append({
+                        "stage": "selection_state_probe", "side": side,
+                        "code": "EXECUTION_STATE_UNKNOWN",
+                        "message": f"the closing {side}() engine-state report could not be "
+                                   f"completed: the {nested_probe!r} state getter dispatched on "
+                                   f"the {side} selection returned an unknown execution state "
+                                   f"(code {nested_error.get('code')!r})",
+                        "mutation_issued": False, "partial_change": True,
+                        "execution_state_unknown": True,
+                    })
+        if any(row["stage"] == "selection" for row in result["failed"]):
+            result["notes"].append(
+                "a failed selection binding after pair().create() keeps the created pair and every "
+                "other user node untouched: no automatic rollback is attempted, and the engine's own "
+                "post-attempt state (engine_state_after_attempt) is reported instead of the request"
+            )
+        if tail_probe_unknown:
+            result["notes"].append(
+                "a closing engine-state probe of a pair side returned a structured "
+                "EXECUTION_STATE_UNKNOWN: the operation is reported as unknown rather than applied, "
+                "the already-dispatched side bindings stay as they are (no rollback), and no further "
+                "engine read was dispatched behind that UNKNOWN"
+            )
+        # pair().create() was already committed before this loop: a later
+        # failure is a partial change even when the loop itself applied
+        # nothing (F3, T21 independent review).  A fully applied create is
+        # not a partial change, so the flag rides on the presence of failures.
+        result.update(_status(result["applied"], result["failed"], result["not_executed"],
+                              result["execution_state_unknown"],
+                              pre_committed_mutation=bool(result["failed"])))
+        return result
     if action in {"inspect", "remove"}:
         path = _definition_node_path(args)
         component, tag = _split_definition_path(path, "pair")
@@ -2824,19 +3570,17 @@ def definition_pair_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
             return {"action": action, **_definition_remove(worker, model_tag, component, "pair", tag,
                                                            display="pair")}
         node = resolve_path(worker, model_tag, path, label="path")[1]
-        return {
+        abort: dict[str, Any] = {}
+        fields, not_executed = _pair_report_fields(node, abort)
+        result: dict[str, Any] = {
             "action": action,
             "component": component,
             "path": path,
             "tag": tag,
-            "type_id": _node_kind(node),
-            "label": call_probe(node, "label")["value"],
-            "active": call_probe(node, "isActive")["value"],
+            **fields,
             "unavailable": {
                 "pair_type": _unavailable("type"),
                 "pairName": _unavailable("pairName"),
-                "source": _unavailable("source"),
-                "destination": _unavailable("destination"),
                 "hasAutoSelection": _unavailable("hasAutoSelection"),
                 "manualSelection": _unavailable("manualSelection"),
                 "searchMethod": _unavailable("searchMethod"),
@@ -2845,8 +3589,15 @@ def definition_pair_manage(worker: Any, model_tag: str, arguments: Mapping[str, 
             "notes": [
                 "a Pair is not a PropFeature in the verified API surface, so no property read or write is "
                 "attempted for it",
+                "source/destination report what Pair.source()/Pair.destination() actually hold on the "
+                "engine (named()/entities()/dim() probes), not what an earlier request asked for",
             ],
         }
+        if abort:
+            unknown_update = _pair_read_unknown_update(abort, not_executed)
+            result["notes"].extend(unknown_update.pop("notes"))
+            result.update(unknown_update)
+        return result
     raise ExecutionContractError("INVALID_REQUEST", "action must be one of list/create/inspect/remove")
 
 
@@ -2860,10 +3611,7 @@ def definition_coupling_manage(worker: Any, model_tag: str, arguments: Mapping[s
         definition, ("type", "geometry", "properties", "selection", "readback_properties"), "definition",
     )
     if action == "list":
-        component = _optional_tag(args.get("component"), "component")
-        if component is None:
-            path = _definition_node_path(args)
-            component, _ = _split_definition_path(path, "component")
+        component = _definition_list_scope_component(args)
         container = _definition_list(worker, model_tag, component, "cpl")
         rows = []
         for tag in _definition_tags(container):

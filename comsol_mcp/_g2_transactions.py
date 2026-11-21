@@ -15,7 +15,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import hashlib
 import json
-import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -91,7 +90,7 @@ def _invariant_path_error(value: Any) -> tuple[str, str] | None:
 
 def _validate_invariant_declaration(kind: str, declaration: Mapping[str, Any]) -> tuple[str | None, str | None]:
     """Return ``(error, code)`` for one declaration of a supported type."""
-    from ._g2_contract import validate_typed_value
+    from ._g2_contract import _is_finite_number, validate_typed_value
 
     unknown = sorted(set(declaration) - ({"type", "required"} | INVARIANT_TYPES[kind]))
     if unknown:
@@ -113,7 +112,7 @@ def _validate_invariant_declaration(kind: str, declaration: Mapping[str, Any]) -
     elif kind == "property_tolerance":
         for field_name in ("value", "tolerance"):
             number = declaration.get(field_name)
-            if isinstance(number, bool) or not isinstance(number, (int, float)) or not math.isfinite(float(number)):
+            if not _is_finite_number(number):
                 return f"property_tolerance {field_name} must be a finite number", "INVALID_INVARIANT"
         if float(declaration["tolerance"]) < 0:
             return "property_tolerance tolerance must not be negative", "INVALID_INVARIANT"

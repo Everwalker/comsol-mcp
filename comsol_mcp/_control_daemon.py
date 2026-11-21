@@ -98,6 +98,22 @@ CACHED_JOB_ACTIONS = frozenset({
     "job.list", "job.status", "job.log", "job.result", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
     "solver.log_read",
 })
+_SCOPED_CACHED_JOB_READS = frozenset({"job.list", "job.status", "job.log", "job.result", "job.wait"})
+_SCOPED_LEGACY_JOB_READS = frozenset({
+    "job_list", "job_status", "job_log", "job_result", "job_wait",
+    "run_study_status", "visible_main_workflow_status",
+})
+
+# Proposed operational admission caps for the bounded job.log read path
+# wired through store.job_log_read_snapshot / job_log_page_bounded.
+# Compatibility change: a job.log page whose single event exceeds the
+# response budget, or whose read transaction cannot be closed in a known
+# state, now fails closed with EXECUTION_STATE_UNKNOWN instead of
+# serving an unbounded page. These caps are proposed operational
+# admission limits only: they are not a C/RSS usage ceiling and not a
+# real-principal security guarantee.
+_JOB_LOG_ADMISSION_MAX_BINDING_BYTES = 4 * 1024 * 1024
+_JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 DESKTOP_OPERATIONS = frozenset({
     "desktop.status", "desktop.bind", "desktop.show_model", "desktop.select_node",
     "desktop.capture", "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
@@ -115,6 +131,16 @@ ARTIFACT_READ_ALIASES = {
     "artifact_verify": "artifact.verify",
     "artifact_preview": "artifact.preview",
 }
+
+
+def _authorize_cached_job_read(project_authority: ProjectAuthority, execution: dict[str, Any]) -> str:
+    """Check the outer project grant before accessing cached job contents."""
+    project_id = execution.get("project_id")
+    if not isinstance(project_id, str) or not project_id:
+        raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "job reads require outer execution.project_id")
+    project_authority.authorize_operation(project_id, "inspect")
+    return project_id
+
 
 _PRESERVE_SERVER_PROCESS_IDENTITY = object()
 _CONTROL_DAEMON_IDENTITY_SCHEMA = "COMSOL_CONTROL_DAEMON_IDENTITY_V1"
@@ -321,6 +347,130 @@ class WorkerRetirementLease:
 def configure_remote_backend(worker):
     import comsol_mcp._server as server
     server._remote_client_factory = worker.client
+
+
+#: Machine-readable cause keys a stage failure may carry into durable
+#: evidence.  The publication keys keep a publisher's three-state
+#: publication status from being reduced to exception text.
+_STAGE_CAUSE_DETAIL_KEYS = (
+    "cause_type", "cause_code", "cause_stage", "cause_message",
+    "publication_status", "original_preservation", "temporary_retention_observed",
+)
+
+
+def _stage_failure_cause_details(exc: BaseException) -> dict[str, Any]:
+    """Project an exception's structured cause record onto durable stage evidence.
+
+    Values keep the historical wire shape: stringified and capped at 300
+    characters, with absent keys omitted rather than invented when the
+    exception carries no such field.  A missing or non-Mapping ``details``
+    attribute yields an empty record, exactly as the previous inline
+    filter did.
+
+    Provenance-aware lower layer (T08 F-2 r3): only when the exception
+    carries the sealed in-process carrier that ``ExecutionService.execute_legacy``
+    attaches (exact carrier class, token-sealed construction, and the live
+    ``__cause__`` chain still identical to the recorded source) are the
+    baseline-effective lower ``cause_code``/``cause_stage`` claims projected
+    in their historical key positions, stringified and capped like every
+    other value.  A missing, wrong-class, token-invalid or chain-mismatched
+    carrier changes nothing.  No mapping spelling is whitelisted for this
+    purpose: an arbitrary ``details`` mapping can never create the claim.
+    The projected value remains a wrapper-recorded *claim* about the
+    callback's self-reported stage, never proof a dispatch or publication
+    actually occurred.  The carrier is an in-process provenance record, not
+    a security boundary against arbitrary trusted in-process Python.
+
+    r4 evaluation-order correction: for a validated carrier the effective
+    ``cause_code``/``cause_stage`` values are decided **before** any
+    stringification, so the top-level envelope values those keys will be
+    replaced with are never read or stringified.  (The F-2 envelope keeps the
+    immediate error's own attribute values at top level; evaluating a value
+    the carrier will replace can raise on side-effecting ``str`` subclasses
+    and abort the whole projection, a regression vs the baseline which
+    overwrote the slot before projecting.)  Keys not owned by the carrier
+    keep the exact historical read semantics: presence via ``get``, value
+    via indexing, ``str`` then 300-char cap, in ``_STAGE_CAUSE_DETAIL_KEYS``
+    order.  An explicit-None claim omits its key, matching the baseline
+    projection of an explicit-None mapping entry.  A carrier on an exception
+    whose ``details`` is not a Mapping contributes nothing, matching the
+    baseline's empty record for that shape (unreachable via the wrapper,
+    which always builds a dict envelope).
+    """
+    raw_details = getattr(exc, "details", None)
+    carrier = getattr(exc, "_legacy_wrapped_cause_claims", None)
+    claims: dict[str, Any] | None = None
+    if carrier is not None:
+        from ._execution_service import _WrappedCauseClaims
+        if type(carrier) is _WrappedCauseClaims:
+            claims = carrier.claims_for(exc)
+    details: dict[str, Any] = {}
+    if isinstance(raw_details, Mapping):
+        for key in _STAGE_CAUSE_DETAIL_KEYS:
+            if claims is not None and key in ("cause_code", "cause_stage"):
+                value = claims.get(key)
+                if value is not None:
+                    details[key] = str(value)[:300]
+                continue
+            if raw_details.get(key) is not None:
+                details[key] = str(raw_details[key])[:300]
+    return details
+
+
+class _StageUnknownReportingFailure(RuntimeError):
+    """Route nested UNKNOWN-reporting failures without treating them as preflight refusals."""
+
+
+def _claim_stage_callback(daemon, record, timeouts, submitted):
+    """Claim one queued stage callback before any stage side effects."""
+    def unknown(reason, **details):
+        result = daemon._error(
+            "EXECUTION_STATE_UNKNOWN", reason,
+            data={"job_id": record["job_id"], "engine_dispatched": None},
+            safe_retry=False, **details,
+        )
+        result["execution"] = {
+            key: record[key] for key in ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")
+        }
+        return result
+
+    claim_id = None
+    try:
+        claim_id = uuid4().hex
+        claimed, status, job = daemon.store.transition_status(
+            record["job_id"], ("QUEUED",), "RUNNING",
+            metadata={"stage_callback_claim_id": claim_id},
+            event_name="RUNNING", event_meta={"operation_id": record["operation_id"], "at": time.time()},
+        )
+    except Exception as exc:
+        result = unknown("stage callback admission could not be established; inspect the original job",
+                         type=type(exc).__name__)
+        if claim_id is not None:
+            try:
+                authoritative = daemon.store.record_stage_claim_failure(
+                    record["job_id"], record["operation_id"], claim_id, result,
+                )
+            except Exception:
+                pass
+            else:
+                if authoritative is not None:
+                    return authoritative
+        return result
+    if not claimed:
+        if job and job.get("result") is not None:
+            return job["result"]
+        if job and status in {"STARTING", "RUNNING", "UNKNOWN", "RECONCILING"}:
+            return daemon._pending(record, engine_dispatched=None)
+        return unknown("stage callback was not admitted and its job state is unavailable",
+                       observed_status=status)
+    if timeouts["queue_timeout_s"] is not None and time.monotonic() - submitted > timeouts["queue_timeout_s"]:
+        return daemon._finish(
+            record,
+            daemon._error("QUEUE_TIMEOUT", "request expired before stage dispatch",
+                          data={"status": "NOT_EXECUTED", "engine_dispatched": False}, safe_retry=True),
+            "EXPIRED",
+        )
+    return None
 
 
 class ControlDaemon:
@@ -948,6 +1098,24 @@ class ControlDaemon:
                     return self._dispatch_job_reconcile(arguments, execution=execution)
                 if operation in {"job_cancel", "job.cancel"} and arguments.get("force_stop") is True:
                     return self._dispatch_job_cancel(arguments, execution=execution)
+                if operation in {"job_cancel", "job.cancel"}:
+                    # Legacy ordinary cancel: same explicit gate as the
+                    # canonical/nested branch in _dispatch_catalog_job_control_impl.
+                    # The outer envelope project is the only authority — a
+                    # project_id inside domain arguments is never consulted —
+                    # and it must be authorized for the HOST_CONTROL cancel
+                    # effect before any job content is read or written.
+                    cancel_project_id = execution.get("project_id")
+                    if not isinstance(cancel_project_id, str) or not cancel_project_id:
+                        raise ExecutionContractError(
+                            "PROJECT_IDENTITY_REQUIRED",
+                            "ordinary job.cancel requires outer execution.project_id",
+                        )
+                    self.project_authority.authorize_operation(cancel_project_id, "host_control")
+                    return self._control_read(operation, arguments, scoped_project_id=cancel_project_id)
+                if operation in _SCOPED_LEGACY_JOB_READS:
+                    project_id = _authorize_cached_job_read(self.project_authority, execution)
+                    return self._control_read(operation, arguments, scoped_project_id=project_id)
                 return self._control_read(operation, arguments)
             if operation in EXPERIMENT_DURABLE_READS:
                 return self._dispatch_experiment_durable_read(operation, arguments, execution)
@@ -2628,8 +2796,9 @@ class ControlDaemon:
                 metadata=record_metadata,
                 timeouts=timeouts,
             )
-            if reused and record.get("result") is not None:
-                return record["result"]
+            if reused:
+                return record["result"] if record.get("result") is not None else self._pending(record)
+            submitted = time.monotonic()
 
         try:
             context = self._execution_session_context(normalized_execution)
@@ -2639,6 +2808,9 @@ class ControlDaemon:
 
         def register_definition() -> dict[str, Any]:
             try:
+                admission = _claim_stage_callback(self, record, timeouts, submitted)
+                if admission is not None:
+                    return admission
                 # Recheck policy and revision after scheduler admission, when
                 # preceding accepted model writes have completed.
                 self._authorize_project_execution("experiment.stage_define", operation_arguments, normalized_execution)
@@ -2732,7 +2904,9 @@ class ControlDaemon:
                 self._log_exception()
                 unknown = self._error(
                     "EXECUTION_STATE_UNKNOWN",
-                    "stage plan registration state could not be established; replay with the same idempotency key",
+                    "stage plan registration state could not be established; inspect the original job; "
+                    "do not retry execution while unresolved; the same idempotency key and payload "
+                    "can retrieve the recorded result without re-execution",
                     engine_dispatched=False,
                     safe_retry=False,
                     type=type(exc).__name__,
@@ -2865,12 +3039,12 @@ class ControlDaemon:
                 }
             matched = next(
                 (row for row in reversed(rows)
-                 if row.get("request_id") == request_id
+                 if row.get("operation_id") == record["operation_id"]
                  and row.get("idempotency_key") == idempotency_key),
                 None,
             )
             return {
-                "engine_dispatched": bool(matched and matched.get("engine_dispatched")),
+                "engine_dispatched": matched.get("engine_dispatched") if matched is not None else None,
                 "stage_attempt_id": matched.get("attempt_id") if matched else None,
                 "stage_attempt_status": matched.get("status") if matched else None,
             }
@@ -2884,6 +3058,7 @@ class ControlDaemon:
                 if record.get("result") is not None:
                     return record["result"]
                 return self._pending(record, reused_pending=True, **pending_attempt_details())
+            submitted = time.monotonic()
 
         try:
             context = self._execution_session_context(normalized_execution)
@@ -2893,6 +3068,9 @@ class ControlDaemon:
         def preflight_and_record() -> dict[str, Any]:
             attempt: dict[str, Any] | None = None
             try:
+                admission = _claim_stage_callback(self, record, timeouts, submitted)
+                if admission is not None:
+                    return admission
                 self._authorize_project_execution("experiment.stage_run", scoped, normalized_execution)
                 backend = context.backend if context is not None else self._default_backend
                 service = context.service if context is not None else getattr(backend, "service", None)
@@ -3118,24 +3296,37 @@ class ControlDaemon:
                 return self._finish(record, self._exception(exc), "FAILED")
             except Exception as exc:
                 self._log_exception()
+                confirmed_pre_dispatch = False
                 if attempt is not None:
+                    attempt_id = attempt["attempt_id"]
                     try:
                         attempt = self.store.update_stage_attempt(
-                            project_id, model_ref.as_dict(), attempt["attempt_id"],
+                            project_id, model_ref.as_dict(), attempt_id,
                             expected_version=attempt["version"], status="UNKNOWN",
                             engine_dispatched=False, execution_status="UNKNOWN",
                             acceptance_status="UNKNOWN",
                             evidence=[*attempt["evidence"], {"kind": "control-state", "error_type": type(exc).__name__}],
                             result={"reason": "durable no-dispatch completion could not be established"},
                         )
+                        confirmed_pre_dispatch = True
                     except Exception:
-                        pass
+                        try:
+                            attempt = self.store.get_stage_attempt(project_id, model_ref.as_dict(), attempt_id)
+                        except Exception:
+                            attempt = None
+                observed_dispatch = (
+                    True if attempt is not None and attempt.get("engine_dispatched") is True
+                    else False if confirmed_pre_dispatch else None
+                )
                 result = self._error(
                     "EXECUTION_STATE_UNKNOWN",
-                    "stage attempt control state could not be durably established; replay with the same idempotency key",
-                    data={"stage_id": stage_id, "engine_dispatched": False,
+                    "stage attempt control state could not be established; inspect the original job; "
+                    "do not retry execution while unresolved; the same matching request and idempotency key "
+                    "can retrieve a recorded result without re-execution",
+                    data={"stage_id": stage_id, "engine_dispatched": observed_dispatch,
                           "attempt": attempt}, safe_retry=False,
-                    type=type(exc).__name__,
+                    type=type(exc.__cause__ if isinstance(exc, _StageUnknownReportingFailure)
+                              and exc.__cause__ is not None else exc).__name__,
                 )
                 return self._finish(record, result, "UNKNOWN")
 
@@ -3375,14 +3566,7 @@ class ControlDaemon:
 
         def unknown_result(exc: Exception) -> dict[str, Any]:
             current = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
-            raw_details = getattr(exc, "details", None)
-            details = {}
-            if isinstance(raw_details, Mapping):
-                details = {
-                    key: str(raw_details[key])[:300]
-                    for key in ("cause_type", "cause_code", "cause_stage", "cause_message")
-                    if raw_details.get(key) is not None
-                }
+            details = _stage_failure_cause_details(exc)
             if current is not None and current["status"] in {"DISPATCH_INTENT", "RUNNING"}:
                 try:
                     self.store.update_stage_attempt(
@@ -3404,7 +3588,8 @@ class ControlDaemon:
             result = self._error(
                 "EXECUTION_STATE_UNKNOWN",
                 "stage dispatch or output persistence was interrupted; the durable attempt is not replayable",
-                data={"attempt": final_attempt, "engine_dispatched": bool(final_attempt and final_attempt["engine_dispatched"])},
+                data={"attempt": final_attempt,
+                      "engine_dispatched": final_attempt["engine_dispatched"] if final_attempt is not None else None},
                 safe_retry=False, type=type(exc).__name__,
             )
             return self._finish(record, result, "UNKNOWN")
@@ -3988,7 +4173,10 @@ class ControlDaemon:
                 }
                 return self._finish(record, result, "FAILED")
         except Exception as exc:
-            return unknown_result(exc)
+            try:
+                return unknown_result(exc)
+            except (StagePlanStoreConflict, ExecutionContractError) as reporting_exc:
+                raise _StageUnknownReportingFailure("stage UNKNOWN reporting failed") from reporting_exc
 
     def _dispatch_experiment_durable_read(
         self, operation: str, arguments: dict[str, Any], execution: dict[str, Any],
@@ -11905,6 +12093,10 @@ class ControlDaemon:
         if "project_id" in inner_arguments and inner_operation != "job.list":
             raise ExecutionContractError("INVALID_REQUEST", f"project_id is not an argument for {inner_operation}")
 
+        scoped_project_id = (
+            _authorize_cached_job_read(self.project_authority, execution)
+            if entry.operation_id in _SCOPED_CACHED_JOB_READS else None
+        )
         mapped = dict(inner_arguments)
         if entry.operation_id == "job.list":
             if "cursor" in mapped and "offset" in mapped:
@@ -11923,7 +12115,7 @@ class ControlDaemon:
                     if name in mapped:
                         raise ExecutionContractError("INVALID_REQUEST", f"job.list {name} cannot be set both directly and in filter")
                     mapped[name] = value
-            response = self._control_read("job_list", mapped)
+            response = self._control_read("job_list", mapped, scoped_project_id=scoped_project_id)
             if response.get("success") and isinstance(response.get("data"), dict):
                 data = response["data"]
                 data["next_cursor"] = str(data["offset"] + len(data["jobs"])) if data.get("has_more") else None
@@ -11933,7 +12125,7 @@ class ControlDaemon:
             cursor = mapped.pop("cursor", None)
             offset = self._page_cursor_offset(cursor, "job.log cursor") if cursor is not None else 0
             mapped["offset"] = offset
-            response = self._control_read("job_log", mapped)
+            response = self._control_read("job_log", mapped, scoped_project_id=scoped_project_id)
             if response.get("success") and isinstance(response.get("data"), dict):
                 response["data"]["next_cursor"] = str(response["data"].get("next_offset", offset))
             return response
@@ -11953,10 +12145,11 @@ class ControlDaemon:
             metadata_only = policy.get("metadata_only", True)
             if type(metadata_only) is not bool or not metadata_only:
                 raise ExecutionContractError("INVALID_REQUEST", "job.cleanup policy.metadata_only must be true")
+            project_id = execution.get("project_id")
+            if not isinstance(project_id, str) or not project_id:
+                raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "job.cleanup requires outer execution.project_id")
+            self.project_authority.authorize_operation(project_id, "host_control")
             try:
-                project_id = execution.get("project_id")
-                if project_id is not None and (not isinstance(project_id, str) or not project_id):
-                    raise ExecutionContractError("INVALID_REQUEST", "execution.project_id must be a non-empty string")
                 cleaned_ids = self.store.compact_terminal_job_metadata(job_ids, project_id=project_id)
             except JobCleanupError as exc:
                 return self._error(exc.code, str(exc), safe_retry=False)
@@ -11973,6 +12166,24 @@ class ControlDaemon:
             return self._dispatch_job_reconcile(mapped, execution=execution)
         if entry.operation_id == "job.cancel" and mapped.get("force_stop") is True:
             return self._dispatch_job_cancel(mapped, execution=execution)
+        if entry.operation_id == "job.cancel":
+            # Canonical and nested (registry_call/operation_call) ordinary
+            # cancel share this gate: the outer envelope project is the only
+            # authority (a project_id in domain arguments was already refused
+            # above for this operation), the 'host_control' grant for the
+            # catalog HOST_CONTROL cancel effect is checked before any job
+            # content is read or written, and the same authorized scope is
+            # then carried down as the durable store binding check.
+            cancel_project_id = execution.get("project_id")
+            if not isinstance(cancel_project_id, str) or not cancel_project_id:
+                raise ExecutionContractError(
+                    "PROJECT_IDENTITY_REQUIRED",
+                    "ordinary job.cancel requires outer execution.project_id",
+                )
+            self.project_authority.authorize_operation(cancel_project_id, "host_control")
+            return self._control_read("job_cancel", mapped, scoped_project_id=cancel_project_id)
+        if scoped_project_id is not None:
+            return self._control_read(operation_map[entry.operation_id], mapped, scoped_project_id=scoped_project_id)
         return self._control_read(operation_map[entry.operation_id], mapped)
 
     def _dispatch_project_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
@@ -12069,14 +12280,44 @@ class ControlDaemon:
             status = "UNKNOWN"
         return self._finish(record, result, status)
 
+    #: Project grants for the legacy effect spellings the daemon itself
+    #: produces (``model.inspect`` refresh, legacy tool table).  Catalogue
+    #: effects never use this table; they resolve through the trusted tables.
+    _DAEMON_LEGACY_EFFECTS: dict[str, str] = {
+        "INSPECT": "inspect", "PROJECT_WRITE": "project_write",
+        "COMPUTE": "compute", "TRUSTED_CODE": "trusted_code",
+        "HOST_CONTROL": "host_control",
+    }
+
     @staticmethod
     def _permission_for_effect(effect: Any) -> str | None:
-        return {
-            "INSPECT": "inspect", "PROJECT_WRITE": "project_write",
-            "READ": "inspect", "WRITE": "project_write", "STATE_WRITE": "project_write",
-            "FILE_WRITE": "project_write", "COMPUTE": "compute", "EVALUATE": "project_write",
-            "TRUSTED_CODE": "trusted_code", "HOST_CONTROL": "host_control",
-        }.get(str(effect).upper())
+        """Project grant required for a server-classified effect.
+
+        Every effect string reaching here was decided server-side: the action
+        catalogue (``_g2_registry``/``_g3_ops.EFFECTS``), the reviewed
+        public-API capability table, the legacy tool table, or this daemon's
+        own ``model.inspect`` branch.  Catalogue effects are derived from
+        ``_execution_contract._G3_CATALOG_EFFECTS`` — the same trusted table
+        the ManagedBackend resolves for its own write ticket (its ``DYNAMIC``
+        entry is the write class, so a dynamic G3 operation can never be
+        admitted on an inspection-only grant) — and flattened to the project
+        vocabulary by ``EFFECT_PERMISSIONS``.  A caller-declared lowercase
+        ``dynamic`` marker stays unmapped exactly like
+        ``permission_for_effect`` refuses it, and any effect absent from both
+        tables still returns ``None`` so the caller refuses the request with
+        ``PROJECT_SCOPE_UNSUPPORTED`` before any dispatch.
+        """
+        from ._execution_contract import EFFECT_PERMISSIONS, _G3_CATALOG_EFFECTS
+        name = str(effect)
+        if name == "dynamic":
+            return None
+        permission = EFFECT_PERMISSIONS.get(name)
+        if permission is not None:
+            return permission
+        legacy = _G3_CATALOG_EFFECTS.get(name.upper())
+        if legacy is not None:
+            return EFFECT_PERMISSIONS.get(legacy)
+        return ControlDaemon._DAEMON_LEGACY_EFFECTS.get(name.upper())
 
     def _require_t037_policy(self, operation: str, *, runtime_id: str | None = None) -> None:
         """Reject T037-bound work unless fresh native policy is fully verified."""
@@ -12881,9 +13122,16 @@ class ControlDaemon:
                 # concise error without the retry bit. Once the durable outer
                 # job is UNKNOWN, make the public retry contract explicit
                 # without replacing the domain's primary code or message.
+                # A declared safe_retry=True must not survive onto this outer
+                # UNKNOWN envelope either: pin the retry bit on a copy of the
+                # published error mapping so the adapter's own mapping and any
+                # nested diagnostic records stay untouched.
                 result["execution_state_unknown"] = True
-                if isinstance(error, dict):
-                    error.setdefault("safe_retry", False)
+                published_error = result.get("error")
+                if isinstance(published_error, dict) and published_error.get("safe_retry") is not False:
+                    pinned_error = dict(published_error)
+                    pinned_error["safe_retry"] = False
+                    result["error"] = pinned_error
             if result.get("execution", {}).get("dirty"):
                 # A completed callback with a dirty model is a failed operation;
                 # explicit model reconciliation is still required for next writes.
@@ -12892,6 +13140,16 @@ class ControlDaemon:
             result = self._exception(exc)
             if exc.code == "EXECUTION_STATE_UNKNOWN":
                 status = "UNKNOWN"
+                # The exception object keeps its own declared safe_retry claim
+                # as evidence, but once this job is decided UNKNOWN the outer
+                # published error must not advertise retry. Pin it on a copy
+                # so the freshly published as_dict() mapping's nested details
+                # are not overwritten.
+                published_error = result.get("error")
+                if isinstance(published_error, dict) and published_error.get("safe_retry") is not False:
+                    pinned_error = dict(published_error)
+                    pinned_error["safe_retry"] = False
+                    result["error"] = pinned_error
             elif exc.code == "ENGINE_UNRESPONSIVE":
                 # A transport failure before the callback was dispatched leaves no
                 # engine work to reconcile: report it as a retryable failure
@@ -12900,8 +13158,19 @@ class ControlDaemon:
             else:
                 status = "FAILED"
         except Exception as exc:
-            self._log_exception()
             result = self._error("EXECUTION_STATE_UNKNOWN", "backend execution failed; inspect worker evidence", type=type(exc).__name__)
+            try:
+                self._log_exception()
+            except Exception as log_exc:
+                # A second fault while logging the backend failure must not
+                # mask the UNKNOWN verdict or leak past _finish.  Only the
+                # logger exception type is recorded; durability of the log
+                # write is NOT confirmed either way.
+                result["data"]["diagnostics"] = {
+                    "log_attempt": "FAILED",
+                    "cause_type": type(log_exc).__name__,
+                    "diagnostic_durable": False,
+                }
             status = "UNKNOWN"
         finally:
             with self.lock:
@@ -12941,31 +13210,60 @@ class ControlDaemon:
         return result
 
     def _release_terminal_accounting(self, job_id, coordinator, kind):
-        """Return exact release/held/diagnostic durability; ordinary finish stays compatible."""
+        """Return exact release/held/diagnostic durability; ordinary finish stays compatible.
+
+        Fault diagnostics separate the failed stage: 'coordinator' when the
+        coordinator raised before returning any outcome (observed_status
+        None, nothing observed) versus 'release_audit' when an outcome was
+        returned but its audit write or payload failed (observed_status is
+        that returned status).  Neither case may assert retention, so
+        reservation_retained is an explicit None (unknown), and no logging
+        fault promotes a state to COMPLETE.  The real release may already
+        have occurred; no release-state guarantee is implied.
+        """
         if coordinator is None:
             return {"state": "COMPLETE", "reservation_state": "NOT_CONFIGURED", "diagnostic_durable": True}
-        try:
-            outcome = coordinator.release_terminal_if_reserved(job_id)
-            if outcome is None:
-                return {"state": "COMPLETE", "reservation_state": "ABSENT_AFTER_DURABLE_QUERY", "diagnostic_durable": True}
-            self.store.add_event(job_id, f"W26{kind}ReservationReleased", {
-                "status": outcome.get("status"), "reservation_id": outcome.get("reservation_id"),
-                "idempotent": outcome.get("idempotent") is True,
-                "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY")})
-            complete = outcome.get("status") in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}
-            return {"state": "COMPLETE" if complete else "HELD",
-                    "reservation_state": outcome.get("status"), "diagnostic_durable": True}
-        except Exception as exc:
+
+        def fault_diagnostic(exc, failure_stage, observed_status):
             durable = False
             try:
                 self.store.add_event(job_id, f"W26{kind}ReservationReleaseDeferred", {
                     "cause_type": type(exc).__name__, "code": getattr(exc, "code", None),
-                    "reservation_retained": True})
+                    "reservation_retained": None, "failure_stage": failure_stage,
+                    "observed_status": observed_status})
                 durable = True
             except Exception:
                 pass
             return {"state": "DEFERRED" if durable else "UNKNOWN", "diagnostic_durable": durable,
                     "cause_type": type(exc).__name__}
+
+        try:
+            outcome = coordinator.release_terminal_if_reserved(job_id)
+        except Exception as exc:
+            # Raised before any return: no confirmed release or retention
+            # evidence exists, and the coordinator is never called again.
+            return fault_diagnostic(exc, "coordinator", None)
+        if outcome is None:
+            return {"state": "COMPLETE", "reservation_state": "ABSENT_AFTER_DURABLE_QUERY", "diagnostic_durable": True}
+        observed_status = None
+        try:
+            observed_status = outcome.get("status")
+            complete = observed_status in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}
+            self.store.add_event(job_id, f"W26{kind}ReservationReleased" if complete
+                                 else f"W26{kind}ReservationReleaseNotConfirmed", {
+                "status": observed_status, "reservation_id": outcome.get("reservation_id"),
+                "idempotent": outcome.get("idempotent") is True,
+                "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY")})
+        except Exception as exc:
+            # The coordinator returned this outcome; only the audit write or
+            # its payload failed.
+            return fault_diagnostic(exc, "release_audit", observed_status)
+        if complete:
+            return {"state": "COMPLETE", "reservation_state": observed_status, "diagnostic_durable": True}
+        # HELD only for an observed HELD-family status; anything else is an
+        # unrecognized outcome, not a proven hold.
+        return {"state": "HELD" if str(observed_status).startswith("HELD") else "UNKNOWN",
+                "reservation_state": observed_status, "diagnostic_durable": True}
 
     def _release_terminal_disk_reservation(self, job_id):
         return self._release_terminal_accounting(job_id, self._disk_resource_coordinator, "Disk")
@@ -13002,7 +13300,14 @@ class ControlDaemon:
         return {"success": True, "data": {"job_id": job_id, "status": job["status"] if job else "UNKNOWN", **extra},
                 "execution": {**{k: record[k] for k in ("request_id", "operation_id", "request_hash", "idempotency_key")}, "job_id": job_id}}
 
-    def _control_read(self, operation, arguments):
+    def _control_read(self, operation, arguments, *, scoped_project_id=None):
+        def job_snapshot(job_id):
+            if scoped_project_id is None:
+                return nullcontext(True)
+            if not isinstance(job_id, str):
+                return nullcontext(False)
+            return self.store.project_job_read_snapshot(job_id, scoped_project_id)
+
         if operation in {"registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe"}:
             from . import _g2_registry
             try:
@@ -13070,7 +13375,15 @@ class ControlDaemon:
                 return self._error("INVALID_REQUEST", "status filter must be a string")
             if project_id is not None and not isinstance(project_id, str):
                 return self._error("INVALID_REQUEST", "project_id filter must be a string")
-            jobs = self.store.list_jobs(offset=offset, limit=limit, status=status, project_id=project_id)
+            if scoped_project_id is not None:
+                if project_id is not None and project_id != scoped_project_id:
+                    return self._error("PROJECT_IDENTITY_MISMATCH", "job.list filter differs from the execution envelope")
+                jobs = self.store.list_jobs(
+                    offset=offset, limit=limit, status=status, project_id=scoped_project_id,
+                    enforce_project_binding=True,
+                )
+            else:
+                jobs = self.store.list_jobs(offset=offset, limit=limit, status=status, project_id=project_id)
             return {
                 "success": True,
                 "data": {
@@ -13085,7 +13398,8 @@ class ControlDaemon:
             job_id = arguments.get("job_id")
             if not isinstance(job_id, str) or not job_id:
                 return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
-            job = self.store.job(job_id)
+            with job_snapshot(job_id) as authorized:
+                job = self.store.job(job_id) if authorized else None
             if not job:
                 return self._error("NODE_NOT_FOUND", "job not found")
             timeout_s = arguments.get("timeout_s", 30.0)
@@ -13098,7 +13412,8 @@ class ControlDaemon:
 
             start_wait = time.monotonic()
             while True:
-                job = self.store.job(job_id)
+                with job_snapshot(job_id) as authorized:
+                    job = self.store.job(job_id) if authorized else None
                 if not job:
                     return self._error("NODE_NOT_FOUND", "job not found")
                 if job["status"] in TERMINAL:
@@ -13113,35 +13428,101 @@ class ControlDaemon:
                     "force-stop requires routing through the durable job Worker binding",
                     safe_retry=False,
                 )
-            return self._cancel_job(arguments)
+            # Every ordinary route reached from _dispatch_admitted passes its
+            # authorized outer project here; the default None keeps existing
+            # unscoped private callers on the legacy path.
+            return self._cancel_job(arguments, scoped_project_id=scoped_project_id)
 
         norm_op = operation.replace(".", "_")
         job_id = arguments.get("job_id")
-        job = self.store.job(job_id) if isinstance(job_id, str) else None
-        if not job:
-            return self._error("NODE_NOT_FOUND", "job not found")
         if norm_op == "job_log":
-            offset, limit = arguments.get("offset", 0), arguments.get("limit", 100)
-            if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 1000:
-                return self._error("INVALID_REQUEST", "invalid log offset/limit")
-            events = self.store.events(job_id, offset=offset, limit=limit)
-            return {"success": True, "data": {"job_id": job_id, "events": events, "next_offset": offset + len(events)}}
-        if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
-            return self._error(
-                "WORKER_BINDING_UNKNOWN",
-                "reconciliation requires routing through the durable job Worker binding",
-                safe_retry=False,
-            )
-        success = not (norm_op == "job_result" and job.get("result") is not None and not job["result"].get("success"))
-        return {"success": success, "data": job}
+            # Dedicated bounded path placed before the generic job() load
+            # so a log page never pulls the stored result. A non-string
+            # job_id keeps the existing NODE_NOT_FOUND. The snapshot
+            # binding/existence check runs before offset/limit validation
+            # so a cross-project probe stays a plain NODE_NOT_FOUND and
+            # cannot infer inputs through INVALID_REQUEST. A ValueError
+            # raised by parameter validation at snapshot entry (empty or
+            # invalid scoped_project_id) keeps its primitive exception
+            # type. Once the transaction opens, any failure — page fetch,
+            # budget overflow, corruption, SQL error, or the transaction
+            # exit itself — fails closed with a static
+            # EXECUTION_STATE_UNKNOWN response describing this read, never
+            # claiming the job itself is UNKNOWN, and never falling back
+            # to the unbounded job()/events() path.
+            if not isinstance(job_id, str):
+                return self._error("NODE_NOT_FOUND", "job not found")
+            transaction_open = False
+            try:
+                with self.store.job_log_read_snapshot(
+                    job_id, scoped_project_id,
+                    max_binding_bytes=_JOB_LOG_ADMISSION_MAX_BINDING_BYTES,
+                ) as authorized:
+                    transaction_open = True
+                    if not authorized:
+                        return self._error("NODE_NOT_FOUND", "job not found")
+                    offset, limit = arguments.get("offset", 0), arguments.get("limit", 100)
+                    if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 1000:
+                        return self._error("INVALID_REQUEST", "invalid log offset/limit")
+                    events = self.store.job_log_page_bounded(
+                        job_id, offset, limit,
+                        max_response_bytes=_JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES,
+                    )
+                    page_response = {
+                        "success": True,
+                        "data": {
+                            "job_id": job_id,
+                            "events": events,
+                            "next_offset": offset + len(events),
+                        },
+                    }
+                return page_response
+            except ValueError:
+                if not transaction_open:
+                    raise
+                return {
+                    "success": False,
+                    "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "job log page read state is indeterminate", "safe_retry": False},
+                    "data": {},
+                }
+            except Exception:
+                return {
+                    "success": False,
+                    "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "job log page read state is indeterminate", "safe_retry": False},
+                    "data": {},
+                }
+        with job_snapshot(job_id) as authorized:
+            job = self.store.job(job_id) if authorized and isinstance(job_id, str) else None
+            if not job:
+                return self._error("NODE_NOT_FOUND", "job not found")
+            if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
+                return self._error(
+                    "WORKER_BINDING_UNKNOWN",
+                    "reconciliation requires routing through the durable job Worker binding",
+                    safe_retry=False,
+                )
+            success = not (norm_op == "job_result" and job.get("result") is not None and not job["result"].get("success"))
+            return {"success": success, "data": job}
 
-    def _cancel_job(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _cancel_job(self, arguments: dict[str, Any], *, scoped_project_id: str | None = None) -> dict[str, Any]:
         job_id = arguments.get("job_id")
         if not isinstance(job_id, str) or not job_id:
             return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
-        job = self.store.job(job_id)
-        if not job:
-            return self._error("NODE_NOT_FOUND", "job not found")
+        if scoped_project_id is not None:
+            # Ordinary cancel arrived through an authorized outer route: the
+            # durable project binding is verified inside one store read
+            # snapshot before any job content is materialized, and a missing
+            # or mismatched job yields a refusal that discloses no content.
+            # The write transaction below only opens after this snapshot
+            # exits, so the same connection never nests BEGIN.
+            with self.store.project_job_read_snapshot(job_id, scoped_project_id) as bound:
+                job = self.store.job(job_id) if bound else None
+            if not job:
+                return self._error("NODE_NOT_FOUND", "job not found")
+        else:
+            job = self.store.job(job_id)
+            if not job:
+                return self._error("NODE_NOT_FOUND", "job not found")
 
         reason = str(arguments.get("reason", "cancelled by user"))
         status = job["status"]
@@ -13186,8 +13567,51 @@ class ControlDaemon:
             }
 
         if status == "QUEUED":
-            success, code, updated_job = self.store.cancel_queued(job_id, reason=reason)
+            strict_binding = scoped_project_id is not None
+            if strict_binding:
+                # Same-transaction project binding: the store re-validates
+                # the durable job/operation project consistency and QUEUED
+                # status inside its own write transaction.
+                success, code, updated_job = self.store.cancel_queued(
+                    job_id,
+                    reason=reason,
+                    project_id=scoped_project_id,
+                    enforce_project_binding=True,
+                )
+            else:
+                success, code, updated_job = self.store.cancel_queued(job_id, reason=reason)
+            if not success and code == "STATE_MISMATCH":
+                return self._error(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "queued cancel was refused by an inconsistent durable job state; the cancellation is not confirmed",
+                    safe_retry=False,
+                )
             if success:
+                if code == "ALREADY_CANCELLED":
+                    # The store validated the durable project binding (when
+                    # strict) and its own status inside the write transaction
+                    # before emitting this success code: another actor already
+                    # completed the QUEUED->CANCELLED transition between this
+                    # request's read snapshot and its write transaction.  The
+                    # honest response is the same terminal no-op shape used
+                    # above -- this request accepted nothing new and dispatches
+                    # no engine work.
+                    already_status = (
+                        updated_job["status"]
+                        if updated_job is not None
+                        else "CANCELLED"
+                    )
+                    return {
+                        "success": True,
+                        "data": {
+                            "job_id": job_id,
+                            "status": already_status,
+                            "cancel_accepted": False,
+                            "reason": f"job transitioned to {already_status} during cancel",
+                            "engine_stopped": False,
+                            "mode": "TERMINAL_NOOP",
+                        },
+                    }
                 return {
                     "success": True,
                     "data": {
@@ -13199,7 +13623,22 @@ class ControlDaemon:
                         "mode": "QUEUED_ABORT",
                     },
                 }
-            job = self.store.job(job_id) or job
+            if strict_binding:
+                # A strict-binding refusal never falls back to an unscoped
+                # read or write.  Only the job record the store validated
+                # inside its own transaction may drive further branching;
+                # without such a record the state is not confirmable.
+                if code in {"NOT_FOUND", "PROJECT_BINDING_UNKNOWN", "PROJECT_SCOPE_MISMATCH"}:
+                    return self._error("NODE_NOT_FOUND", "job not found")
+                if updated_job is None:
+                    return self._error(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "queued cancel was refused without a transaction-validated job record; the cancellation is not confirmed",
+                        safe_retry=False,
+                    )
+                job = updated_job
+            else:
+                job = self.store.job(job_id) or job
             status = job["status"]
             if status in TERMINAL:
                 return {
@@ -13218,21 +13657,44 @@ class ControlDaemon:
             server_scope = arguments.get("server_scope")
             return self._scoped_force_stop(job, reason=reason, server_scope=server_scope)
 
-        # D02 FIX: For non-force_stop cancellation, record cancel intent
-        self.store.add_event(job_id, "CancelRequested", {
-            "reason": reason,
-            "mode": "UNSUPPORTED_NATIVE_CANCEL",
-            "cancel_accepted": True,
-            "engine_stopped": False,
-            "at": time.time(),
-        })
+        if scoped_project_id is not None:
+            # Scoped ordinary (non-force-stop) cancel: one atomic store-side
+            # intent write that re-checks the durable project binding and the
+            # observed status inside its own transaction.  No outcome ever
+            # falls back to the legacy unscoped add_event/update_job pair,
+            # and a legitimate RUNNING intent is not blocked by this gate.
+            success, code = self.store.record_cancel_intent(
+                job_id,
+                project_id=scoped_project_id,
+                expected_status=status,
+                reason=reason,
+            )
+            if not success:
+                if code in {"NOT_FOUND", "PROJECT_BINDING_UNKNOWN", "PROJECT_SCOPE_MISMATCH"}:
+                    return self._error("NODE_NOT_FOUND", "job not found")
+                # STATE_MISMATCH, STATUS_CHANGED, or any unexpected refusal:
+                # fail closed without claiming an invisible or unchanged state.
+                return self._error(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "the cancel intent could not be confirmed against the durable job state; the cancellation is not confirmed",
+                    safe_retry=False,
+                )
+        else:
+            # D02 FIX: For non-force_stop cancellation, record cancel intent
+            self.store.add_event(job_id, "CancelRequested", {
+                "reason": reason,
+                "mode": "UNSUPPORTED_NATIVE_CANCEL",
+                "cancel_accepted": True,
+                "engine_stopped": False,
+                "at": time.time(),
+            })
 
-        # D02: If status is UNKNOWN or RECONCILING, keep observed status! Never write back RUNNING!
+            # D02: If status is UNKNOWN or RECONCILING, keep observed status! Never write back RUNNING!
+            self.store.update_job(job_id, status, {
+                "cancel_requested": True,
+                "cancel_reason": reason,
+            })
         target_status = status
-        self.store.update_job(job_id, target_status, {
-            "cancel_requested": True,
-            "cancel_reason": reason,
-        })
         return {
             "success": True,
             "data": {

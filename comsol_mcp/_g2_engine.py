@@ -10,10 +10,12 @@ import json
 import math
 from pathlib import Path
 import time
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 from uuid import uuid4
 
-from ._atomic_save import AtomicSaveError, atomic_save
+import stat as stat_module
+
+from ._atomic_save import AtomicSaveError, _observed_presence, atomic_save
 from ._execution_contract import ExecutionContractError, PreWriteRefusal, canonical_project_path
 from ._g2_code import describe_source, execution_result
 from ._g2_contract import (
@@ -27,7 +29,7 @@ from ._g2_transactions import INVARIANT_TYPES, TransactionRecord, run_transactio
 NODE_ACTION_FIELDS = {
     "node.create": ({"parent", "collection", "tag", "type_id"}, {"properties"}),
     "node.copy": ({"source", "target_parent", "tag"}, set()),
-    "node.remove": ({"path"}, {"cascade"}),
+    "node.remove": ({"path"}, {"cascade", "authorization"}),
     "node.label_set": ({"path", "label"}, set()),
     "node.active_set": ({"path", "active"}, set()),
     "node.move": ({"path"}, {"before", "after"}),
@@ -75,6 +77,12 @@ def validate_node_action(operation: str, arguments: Mapping[str, Any]) -> dict[s
         body.setdefault("cascade", False)
         if type(body["cascade"]) is not bool:
             raise PreWriteRefusal("INVALID_REQUEST", "cascade must be a boolean")
+        if "authorization" in body:
+            from . import _g2_general_remove, _g2_group_remove
+            if _g2_group_remove.is_model_root_nodegroup_path(body["path"]):
+                raise PreWriteRefusal("INVALID_REQUEST", "authorization belongs to the consent-gated ordinary-entity route and never applies to the model-root NodeGroup ungroup",
+                                      details={"receiver_accessed": False, "mutation_dispatched": False})
+            _g2_general_remove.validate_consent(body["path"], body["authorization"])
     elif operation == "node.move":
         if ("before" in body) == ("after" in body):
             raise PreWriteRefusal("INVALID_REQUEST", "move requires exactly one before/after anchor")
@@ -131,10 +139,22 @@ def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: 
         if body["cascade"] is not False:
             raise PreWriteRefusal("API_UNSUPPORTED", "cascade=true has no reviewed dependency-safe remove adapter",
                                   details={"receiver_accessed": False, "unknown_obligations": ["complete incoming consumer graph", "authorized cascade scope"]})
-        if not _g2_group_remove.is_model_root_nodegroup_path(body["path"]):
-            # An incomplete child scan cannot prove that a remove preserves other
-            # objects or incoming consumers. Refuse before accessing the receiver
-            # until a safe general adapter has been established (see T13 evidence).
+        if _g2_group_remove.is_model_root_nodegroup_path(body["path"]):
+            if body.get("authorization") is not None:
+                raise PreWriteRefusal("INVALID_REQUEST", "authorization belongs to the consent-gated ordinary-entity route and never applies to the model-root NodeGroup ungroup",
+                                      details={"receiver_accessed": False, "mutation_dispatched": False})
+            model = _model(worker, model_tag)
+            prepared["group_remove"] = _g2_group_remove.prepare(
+                worker, model, body["path"], model_tag=model_tag, model_revision=model_revision
+            )
+            prepared["descriptor"] = prepared["group_remove"].get("model_descriptor")
+            return prepared
+        if "authorization" not in body:
+            # A removal of an ordinary or nested entity without the exact closed
+            # consent keeps the original T13 pre-write refusal: impact scope,
+            # incoming consumers, enumeration completeness, and cross-list
+            # retention all remain open.  With the consent, the bounded
+            # snapshot-compare adapter below carries those obligations openly.
             raise PreWriteRefusal("API_UNSUPPORTED", "no reviewed removal adapter for ordinary or nested entities; the impact scope and incoming-consumer graph are not established, so cross-list retention cannot be proven before the first mutation",
                                   details={"receiver_accessed": False, "known_scope": {"path": body["path"]},
                                            "unknown_obligations": ["public descendant-scope contract for remove(String) per receiver family",
@@ -143,11 +163,10 @@ def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: 
                                                                    "cross-list retention proof before the first mutation"],
                                            "reviewed_alternative": "model-root NodeGroup structural ungroup only",
                                            "complete": False})
-        model = _model(worker, model_tag)
-        prepared["group_remove"] = _g2_group_remove.prepare(
-            worker, model, body["path"], model_tag=model_tag, model_revision=model_revision
-        )
-        prepared["descriptor"] = prepared["group_remove"].get("model_descriptor")
+        from . import _g2_general_remove
+        prepared["general_remove"] = _g2_general_remove.prepare(
+            worker, model_tag, body, model_revision=model_revision)
+        prepared["descriptor"] = prepared["general_remove"]["container_descriptor"]
         return prepared
     model = _model(worker, model_tag)
     string = "java.lang.String"
@@ -266,13 +285,29 @@ def _node_action_data(operation, prepared, model_ref):
             "coverage": [{"path": path, "field": "requested action readback", "status": "VERIFIED"}], "errors": []}
 
 
-def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: Mapping[str, Any], *, model_ref: Mapping[str, Any]) -> dict[str, Any]:
+def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: Mapping[str, Any], *,
+                        model_ref: Mapping[str, Any], path_guard: Any | None = None) -> dict[str, Any]:
     from ._g3_common import apply_local_selection, selection_state
     body = prepared["body"]
     data = _node_action_data(operation, prepared, model_ref)
     mutation_possible = False
     try:
         if operation == "node.create":
+            if path_guard is not None:
+                # T20 independent-review B1 (2026-11-09) dispatch-boundary re-check.
+                # The managed backend already screened these same validated initial
+                # property values *before* it took the write ticket, so the normal
+                # public route refuses without ever creating the node.  This second
+                # pass costs one bounded re-walk of the path-shaped leaves and can
+                # only refuse here — strictly before the create call — so the
+                # dispatch witness still proves no mutation-class engine call and
+                # the refusal keeps its own code instead of degrading into a
+                # post-create EXECUTION_STATE_UNKNOWN.  It does NOT close TOCTOU:
+                # a same-UID component swap between the pre-dispatch scan and the
+                # engine's later use of the value remains an open, recorded
+                # limitation — the scan is a mitigation, never a sandbox.
+                for item in body["properties"]:
+                    path_guard(item["value"], where=f"initial properties[{item['name']!r}]")
             mutation_possible = True
             _call(prepared["container"], "create", body["tag"], body["type_id"])
             data.update(created=True, created_path=prepared["target_path"], type_id=body["type_id"], applied=[], failed=[], not_executed=[])
@@ -343,14 +378,20 @@ def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: M
                 raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "actual native order differs from the requested move")
             data.update(path=body["path"], anchor=body.get("before", body.get("after")), order_before=prepared["order_before"], order_after=after, index_dispatched=prepared["index"])
         elif operation == "node.remove":
-            from . import _g2_group_remove
+            from . import _g2_general_remove, _g2_group_remove
             def mark_group_remove_dispatch() -> None:
                 nonlocal mutation_possible
                 mutation_possible = True
-            _g2_group_remove.execute(
-                worker, prepared["group_remove"], _model(worker, model_tag), model_ref, data,
-                before_dispatch=mark_group_remove_dispatch
-            )
+            if prepared.get("general_remove") is not None:
+                _g2_general_remove.execute(
+                    worker, prepared["general_remove"], _model(worker, model_tag), model_ref, data,
+                    before_dispatch=mark_group_remove_dispatch
+                )
+            else:
+                _g2_group_remove.execute(
+                    worker, prepared["group_remove"], _model(worker, model_tag), model_ref, data,
+                    before_dispatch=mark_group_remove_dispatch
+                )
         elif operation in {"node.selection_get", "node.selection_set"}:
             selection = prepared["selection"]
             data.update(path=body["path"], selection_name=body.get("selection_name"), public_interfaces=prepared["descriptor"]["interfaces"])
@@ -396,11 +437,12 @@ def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: M
         if operation == "node.copy":
             data["evidence"]["copy_failure"] = exc.as_dict() if isinstance(exc, ExecutionContractError) else {"cause_type": type(exc).__name__, "message": str(exc)}
         elif operation == "node.remove":
-            data["evidence"]["group_remove_failure"] = (
+            failure = (
                 exc.as_dict() if isinstance(exc, ExecutionContractError)
                 else {"cause_type": type(exc).__name__, "message": str(exc),
                       "worker_reply": dict(getattr(exc, "reply", {}) or {})}
             )
+            data["evidence"]["general_remove_failure" if prepared.get("general_remove") is not None else "group_remove_failure"] = failure
         data["errors"].append({"code": getattr(exc, "code", "NODE_ACTION_FAILED"), "message": str(exc), "stage": "post_dispatch", "dispatched": True, "mutation_possible": True})
         return {"success": False, "execution_state_unknown": True, "partial_change": True, "data": data,
                 "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": str(exc), "safe_retry": False}}
@@ -690,6 +732,23 @@ def _unsupported_collection(exc: ExecutionContractError) -> bool:
     return _worker_failure_code(exc) in {"METHOD_NOT_APPLICABLE"}
 
 
+def _discovery_unknown_error(exc: BaseException, context: str) -> ExecutionContractError:
+    """Abort record for one structured UNKNOWN inside a discovery operation.
+
+    Only the structured signals already read by ``_worker_failure_unknown``
+    (the explicit ``EXECUTION_STATE_UNKNOWN`` code, an
+    ``execution_state_unknown``/``engine_state_unknown`` record, or a cause
+    chain carrying one) qualify; message text alone never does.  Callers must
+    raise this immediately: after the first UNKNOWN the operation performs no
+    further dispatch to that worker and never reports completeness.
+    """
+    if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN":
+        return exc
+    wrapped = ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"{context}: {exc}")
+    wrapped.__cause__ = exc
+    return wrapped
+
+
 def _parse_search_budget(value: Any) -> dict[str, Any]:
     budget = dict(_DEFAULT_SEARCH_BUDGET)
     if value is None:
@@ -903,6 +962,13 @@ def _children_from_batch_reply(reply: Any) -> tuple[list[dict[str, Any]], list[d
 
 
 def _probe_children_via_node(node: Any, candidates: list[Mapping[str, str]] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+    """Probe child collections through one node's proxy accessors.
+
+    A structured UNKNOWN from any probe aborts the whole operation via
+    ``_discovery_unknown_error``: no further candidate is dispatched and the
+    caller cannot report a complete listing.  Genuine absence stays omitted,
+    other probe failures are recorded and probing continues.
+    """
     rows: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     rpc = 0
@@ -912,6 +978,8 @@ def _probe_children_via_node(node: Any, candidates: list[Mapping[str, str]] | No
         try:
             container = _call(node, method)
         except ExecutionContractError as exc:
+            if _worker_failure_unknown(exc):
+                raise _discovery_unknown_error(exc, f"{collection} collection probe")
             if not _unsupported_collection(exc):
                 errors.append({"collection": collection, "code": _worker_failure_code(exc) or exc.code, "message": str(exc)})
             continue
@@ -922,6 +990,8 @@ def _probe_children_via_node(node: Any, candidates: list[Mapping[str, str]] | No
         try:
             tags = _call(container, "tags")
         except ExecutionContractError as exc:
+            if _worker_failure_unknown(exc):
+                raise _discovery_unknown_error(exc, f"{collection} tags probe")
             if _unsupported_collection(exc):
                 # A zero-arg accessor that returns a node (for example a Work
                 # Plane's inner geometry) rather than a tag container.
@@ -942,12 +1012,38 @@ def _safe_node_field(node: Any, method: str) -> str | None:
     return None if value is None else str(value)
 
 
-def _matches_query(node: Any, query: Mapping[str, Any], path_tag: str | None = None) -> tuple[bool, str | None, str | None, str | None]:
-    tag = _safe_node_field(node, "tag")
+def _discovery_node_field(node: Any, method: str, errors: list[dict[str, Any]] | None) -> str | None:
+    """Read one identity getter inside a discovery walk, classifying its failure.
+
+    * genuine absence (API_UNSUPPORTED / METHOD_NOT_APPLICABLE) stays tolerated
+      and yields no error row;
+    * a completed ordinary failure is recorded as an explicit error row so the
+      enclosing search cannot claim completeness;
+    * a structured UNKNOWN aborts the whole operation through
+      ``_discovery_unknown_error`` — no further dispatch after the first
+      UNKNOWN, and never a match silently dropped as if the getter were absent.
+    """
+    try:
+        value = _call(node, method)
+    except Exception as exc:
+        if _worker_failure_unknown(exc):
+            raise _discovery_unknown_error(exc, f"node {method} getter")
+        code = getattr(exc, "code", None) or "ENGINE_CALL_FAILED"
+        absent = code == "API_UNSUPPORTED" or _worker_failure_code(exc) == "METHOD_NOT_APPLICABLE"
+        if not absent and errors is not None and len(errors) < 50:
+            errors.append({"collection": "@node", "code": str(code),
+                           "message": f"identity getter {method}() failed: {exc}"})
+        return None
+    return None if value is None else str(value)
+
+
+def _matches_query(node: Any, query: Mapping[str, Any], path_tag: str | None = None,
+                   errors: list[dict[str, Any]] | None = None) -> tuple[bool, str | None, str | None, str | None]:
+    tag = _discovery_node_field(node, "tag", errors)
     if (tag is None or not tag) and path_tag:
         tag = path_tag
-    type_id = _safe_node_field(node, "getType")
-    label = _safe_node_field(node, "label")
+    type_id = _discovery_node_field(node, "getType", errors)
+    label = _discovery_node_field(node, "label", errors)
     if "tag" in query and query.get("tag") != tag:
         return False, tag, type_id, label
     wanted_type = query.get("type_id", query.get("type"))
@@ -1022,7 +1118,7 @@ def _walk_fixture(worker: Any, node: Any, query: Mapping[str, Any], budget: Mapp
         visited += 1
         if visited > skip_visited:
             path_tag = segments[-1].get("tag") if segments and isinstance(segments[-1], Mapping) else None
-            matched, tag, type_id, label = _matches_query(current, query, path_tag=path_tag)
+            matched, tag, type_id, label = _matches_query(current, query, path_tag=path_tag, errors=errors)
             if matched:
                 results.append({"path": {"segments": list(segments)}, "tag": tag, "type_id": type_id, "label": label})
                 if len(results) >= limit:
@@ -1038,6 +1134,8 @@ def _walk_fixture(worker: Any, node: Any, query: Mapping[str, Any], budget: Mapp
             try:
                 child = _call(current, row["collection"]) if row.get("accessor") else _call(current, row["collection"], row["tag"])
             except ExecutionContractError as exc:
+                if _worker_failure_unknown(exc):
+                    raise _discovery_unknown_error(exc, "child resolve")
                 if len(errors) < 50:
                     errors.append({"collection": row["collection"], "code": "CHILD_RESOLVE_FAILED", "message": str(exc)})
                 continue
@@ -1103,9 +1201,12 @@ def children_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, curso
     One worker batch per call on the production path.  ``complete`` is true
     only when this page is the last one and every collection probe succeeded;
     ``errors`` lists probe failures explicitly instead of turning them into an
-    empty list.  A cursor is bound to the model epoch (worker generation and
-    managed revision) and to the exact children list; a stale cursor is
-    rejected, never restarted from the first child.
+    empty list.  A structured ``EXECUTION_STATE_UNKNOWN`` probe failure aborts
+    the whole call: no further probe is dispatched to the worker and the
+    operation surfaces as ``EXECUTION_STATE_UNKNOWN`` rather than as a merely
+    incomplete listing.  A cursor is bound to the model epoch (worker
+    generation and managed revision) and to the exact children list; a stale
+    cursor is rejected, never restarted from the first child.
     """
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
         raise ExecutionContractError("INVALID_REQUEST", "limit must be between 1 and 500")
@@ -1169,8 +1270,13 @@ def find_nodes(worker: Any, model_tag: str, query: Mapping[str, Any], *, root: M
     (``walk_nodes``); fixture/plain workers use an equivalent Python BFS.  A
     resumed cursor re-walks the already-visited prefix (re-validated against
     the model epoch) and continues with new nodes only, so budgets are not
-    consumed twice.  Search interruption due to probe errors is reported as
-    ``errors`` with ``complete=false``; it is never reported as NOT_FOUND.
+    consumed twice.  Search interruption due to ordinary probe or getter
+    errors is reported as ``errors`` with ``complete=false``; it is never
+    reported as NOT_FOUND.  A page with such errors has no continuation
+    cursor: a later clean page cannot establish coverage of the gap.  Start
+    a fresh search instead.  A structured ``EXECUTION_STATE_UNKNOWN`` failure
+    aborts the walk immediately: no further dispatch follows it, and the
+    operation surfaces as ``EXECUTION_STATE_UNKNOWN``.
     """
     if not isinstance(query, Mapping):
         raise ExecutionContractError("INVALID_REQUEST", "query must be an object")
@@ -1204,7 +1310,7 @@ def find_nodes(worker: Any, model_tag: str, query: Mapping[str, Any], *, root: M
                     "type_id": row.get("type_id"), "label": row.get("label")} for row in results]
     complete = bool(data["complete"]) and not data["errors"]
     next_cursor = None
-    if data["truncated_reason"] is not None:
+    if data["truncated_reason"] is not None and not data["errors"]:
         payload = _cursor_context(worker, model_tag, model_revision, "find", scope_hash)
         payload.update({"visited": data["visited"]})
         next_cursor = _cursor_encode(payload)
@@ -1251,12 +1357,13 @@ def property_get(worker: Any, model_tag: str, path: Mapping[str, Any], names: li
     return {"path": NodePath.from_wire(path).as_dict(), "properties": values}
 
 
-def _schemas_for(node: Any, properties: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def _schemas_for(node: Any, properties: list[dict[str, Any]], *,
+                 on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, dict[str, Any]]:
     # As in ``property_get``, keep the metadata query bounded by the caller's
     # requested names.  This also ensures a multi-property setter does not
     # perform an unrelated whole-node enumeration before validating input.
     by_name = {
-        name: property_schema_from_engine(node, name)
+        name: property_schema_from_engine(node, name, on_probe_error=on_probe_error)
         for name in dict.fromkeys(
             item.get("name") for item in properties if isinstance(item, Mapping) and isinstance(item.get("name"), str)
         )
@@ -1320,9 +1427,11 @@ def _typed_readback_matches(requested: Mapping[str, Any], returned: Mapping[str,
     return bool(_typed_readback_comparison(requested, returned)["matched"])
 
 
-def property_set(worker: Any, model_tag: str, path: Mapping[str, Any], properties: list[dict[str, Any]]) -> dict[str, Any]:
+def property_set(worker: Any, model_tag: str, path: Mapping[str, Any], properties: list[dict[str, Any]],
+                 *, path_guard: Any | None = None,
+                 on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, Any]:
     node = resolve_node_path(_model(worker, model_tag), path)
-    schemas = _schemas_for(node, properties)
+    schemas = _schemas_for(node, properties, on_probe_error=on_probe_error)
     for item in properties:
         row = schemas.get(item.get("name")) if isinstance(item, Mapping) else None
         if not row or row.get("metadata_status") != "KNOWN":
@@ -1351,6 +1460,25 @@ def property_set(worker: Any, model_tag: str, path: Mapping[str, Any], propertie
             raise PreWriteRefusal("API_UNSUPPORTED", f"property {item['name']!r} has no authoritative readback getter")
         if not item["value"].get("java_signature"):
             item["value"]["java_signature"] = row.get("java_signature")
+    if path_guard is not None:
+        # T20 path-shape partial mitigation: screen every typed value (plain
+        # strings and array/matrix string leaves) for every property BEFORE
+        # the first set() dispatch, so one crossing item cannot mutate the
+        # engine before a later item is refused.  A caller-supplied explicit
+        # Java signature (EXPLICIT metadata route) does not exempt a value
+        # from this adjudication.  A None screen means the guard is not wired
+        # at THIS call site.  Since the 2026-11-09 B1 fix every public managed
+        # write route supplies one: node.property_set/index/entry pass it here,
+        # and managed node.create screens the same validated initial properties
+        # before the write ticket and the create mutation (plus a re-check in
+        # execute_node_action), so this function's post-create internal call
+        # only ever receives pre-screened values.  Before that fix the create
+        # route really did reach a None screen; the old comment claiming None
+        # was "never a public managed route" was false and has been removed.
+        # A still-unwired None is only reachable from direct adapter-level
+        # callers, which carry their own all-or-nothing obligation.
+        for item in validated:
+            path_guard(item["value"], where=f"properties[{item['name']!r}]")
     applied, failed, not_executed = [], [], []
     execution_state_unknown = False
     for index, item in enumerate(validated):
@@ -1529,7 +1657,8 @@ def _indexed_envelope(*, path: Mapping[str, Any], name: str, indices: list[int],
     }
 
 
-def property_index_set(worker: Any, model_tag: str, path: Mapping[str, Any], name: str, indices: list[int], value: Mapping[str, Any]) -> dict[str, Any]:
+def property_index_set(worker: Any, model_tag: str, path: Mapping[str, Any], name: str, indices: list[int], value: Mapping[str, Any],
+                       *, path_guard: Any | None = None) -> dict[str, Any]:
     if not isinstance(indices, list) or not indices or not all(isinstance(item, int) and not isinstance(item, bool) and item >= 0 for item in indices):
         raise PreWriteRefusal("INVALID_REQUEST", "indices must be non-negative integers")
     node = resolve_node_path(_model(worker, model_tag), path)
@@ -1566,6 +1695,11 @@ def property_index_set(worker: Any, model_tag: str, path: Mapping[str, Any], nam
         raise PreWriteRefusal("INVALID_REQUEST", "COMSOL setIndex accepts one vector or two matrix indices")
     if len(indices) == 2 and typed["shape"]:
         raise PreWriteRefusal("PROPERTY_TYPE_MISMATCH", "matrix cell assignment requires a scalar typed value")
+    if path_guard is not None:
+        # Same pre-write screen as property_set: array/matrix string leaves
+        # are screened before setIndex (and before the pre-write readback),
+        # and an EXPLICIT caller signature grants no path authority.
+        path_guard(typed, where=f"value[{name!r}]")
     getter = row.get("getter")
     verification_scope = {
         "scope": "engine_positional_readback", "authoritative_readback": True,
@@ -1637,7 +1771,7 @@ def _read_entry_table(node: Any, name: str, kind: str | None) -> dict[str, dict[
 
 
 def property_entry_set(worker: Any, model_tag: str, path: Mapping[str, Any], name: str, key: str, value: Mapping[str, Any],
-                       *, allow_unverified: bool = False) -> dict[str, Any]:
+                       *, allow_unverified: bool = False, path_guard: Any | None = None) -> dict[str, Any]:
     if not isinstance(name, str) or not name or not isinstance(key, str): raise PreWriteRefusal("INVALID_REQUEST", "name and key are required")
     node = resolve_node_path(_model(worker, model_tag), path)
     row = property_schema_from_engine(node, name)
@@ -1658,6 +1792,11 @@ def property_entry_set(worker: Any, model_tag: str, path: Mapping[str, Any], nam
         typed["java_signature"] = {"boolean": "boolean", "int32": "int", "int64": "long",
                                     "float64": "double", "string": "java.lang.String",
                                     "expression": "java.lang.String"}.get(typed["kind"])
+    if path_guard is not None:
+        # Screen before the unverified dispatch branch and before the
+        # keyed-readback path: setEntry must never see a path shape the
+        # managed route could not prove project-local.
+        path_guard(typed, where=f"value[{name!r}]")
     kind = row.get("kind")
     if allow_unverified:
         # Explicitly requested unverified dispatch: the caller accepts that the
@@ -1783,9 +1922,79 @@ def create_checkpoint(worker: Any, model_tag: str, destination: Path, label: str
     try:
         published = atomic_save(final, lambda temporary: model.save(str(temporary)), final.parent, overwrite=False)
     except AtomicSaveError as exc:
-        raise ExecutionContractError("ARTIFACT_MISSING", "COMSOL checkpoint save failed") from exc
-    if not final.is_file() or final.stat().st_size <= 0 or not published.get("checkpoint", {}).get("verified"):
-        raise ExecutionContractError("ARTIFACT_MISSING", "checkpoint save produced no complete file")
+        status = getattr(exc, "publication_status", "not_attempted")
+        cause = exc.details if isinstance(getattr(exc, "details", None), dict) else {
+            "cause_type": type(exc).__name__,
+            "cause_stage": str(getattr(exc, "stage", "unknown")),
+            "cause_message": str(exc)[:500],
+        }
+        if status in ("unknown", "published"):
+            # The local publish syscall was actually dispatched for this
+            # checkpoint, so this is a publication-state failure for the
+            # artifact, not a proven-missing artifact.  ``post_dispatch``
+            # records that the engine save callback had already returned;
+            # it is not a claim that the engine is still executing.  A
+            # retry must re-dispatch a fresh unique save, so safe_retry
+            # stays False (no blind retry).  A fresh re-observation of the
+            # destination accompanies the wrapper as an observation, not
+            # as a physical-state claim.
+            presence = _observed_presence(exc.destination)
+            details = {**cause, "destination_presence": (
+                "observed_present" if presence is True
+                else "observed_absent" if presence is False else "observation_denied")}
+            raise ExecutionContractError(
+                "ARTIFACT_PUBLISH_UNKNOWN",
+                f"COMSOL checkpoint publication state is unresolved: {exc}",
+                safe_retry=False, stage="post_dispatch", details=details) from exc
+        # The publish syscall never started, so this publisher never
+        # created the checkpoint name; for the caller the checkpoint
+        # record is missing.  The structured cause is carried instead of
+        # discarded, and safe_retry stays False.
+        raise ExecutionContractError("ARTIFACT_MISSING", "COMSOL checkpoint save failed",
+                                     safe_retry=False, details=cause) from exc
+    receipt_verified = bool(published.get("checkpoint", {}).get("verified"))
+    presence = _observed_presence(final)
+    if presence is None:
+        # Publication returned; only the readback observation was refused.
+        # Claiming the artifact is "missing" here would treat an
+        # unobservable destination as absent.
+        raise ExecutionContractError(
+            "ARTIFACT_PUBLISH_UNKNOWN",
+            "checkpoint publication returned but the destination could not be observed on readback",
+            safe_retry=False, stage="post_dispatch",
+            details={"publication_status": "published", "destination_presence": "observation_denied",
+                     "publisher_receipt_verified": receipt_verified})
+    if presence is False:
+        # Publication itself returned earlier; the name is now observed
+        # absent.  The checkpoint record is missing, and the details say
+        # honestly that publication had returned rather than hiding it.
+        raise ExecutionContractError(
+            "ARTIFACT_MISSING", "checkpoint save produced no complete file",
+            safe_retry=False,
+            details={"publication_status": "published", "destination_presence": "observed_absent",
+                     "publisher_receipt_verified": receipt_verified})
+    try:
+        final_stat = final.stat()
+    except OSError as exc:
+        raise ExecutionContractError(
+            "ARTIFACT_PUBLISH_UNKNOWN", "checkpoint destination changed before it could be statted",
+            safe_retry=False, stage="post_dispatch",
+            details={"publication_status": "published", "destination_presence": "observation_failed",
+                     "publisher_receipt_verified": receipt_verified,
+                     "cause_type": type(exc).__name__, "cause_message": str(exc)[:500]}) from exc
+    if (not receipt_verified or not stat_module.S_ISREG(final_stat.st_mode)
+            or final_stat.st_size <= 0):
+        # The destination was observed present but does not verify as a
+        # complete regular file after a returned publication; that is a
+        # publication/divergence state, not an artifact simply missing.
+        raise ExecutionContractError(
+            "ARTIFACT_PUBLISH_UNKNOWN",
+            "checkpoint publication returned but the destination did not verify as a complete regular file",
+            safe_retry=False, stage="post_dispatch",
+            details={"publication_status": "published", "destination_presence": "observed_present",
+                     "publisher_receipt_verified": receipt_verified,
+                     "observed_size": final_stat.st_size,
+                     "regular_file": stat_module.S_ISREG(final_stat.st_mode)})
     digest = hashlib.sha256(final.read_bytes()).hexdigest()
     elapsed_ms = round((time.monotonic_ns() - started_ns) / 1_000_000, 3)
     return {"checkpoint_id": f"checkpoint-{digest[:20]}", "path": str(final), "label": label,

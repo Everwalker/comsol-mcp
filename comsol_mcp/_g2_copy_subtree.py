@@ -6,6 +6,7 @@ from typing import Mapping
 
 from ._execution_contract import ExecutionContractError, PreWriteRefusal
 from ._g2_checkpoint_diff import Budget, Reader, canonical, compare, normalize, path_key
+from ._g2_public_api import supports_release
 
 _AUXILIARY = {
     'property': 'no verified generic numeric PropFeature unit getter',
@@ -43,8 +44,16 @@ def require_structure(projection, root):
     descriptors = {path_key(r['path']): r['descriptor']['interfaces'] for r in projection['receiver_receipts']}
     if projection.get('unknown') or not projection['nodes']:
         faults.append({'field': 'scope', 'reason': 'unknown or empty observed source'})
-    if projection['runtime_version'] != '6.4.0.293' or projection['normalized_scope'] != {'mode': 'paths', 'paths': [root], 'properties': []}:
-        faults.append({'field': 'scope', 'reason': 'unexpected runtime or exact scope'})
+    # Bind the actual observed full build on a reviewed release; the 6.4.0.293
+    # literal is a compatibility constant, not the capability domain. The
+    # projection's locked build must match every receiver receipt.
+    observed_build = projection.get('runtime_version')
+    receiver_builds = [r['descriptor'].get('runtime_version') for r in projection['receiver_receipts']]
+    if (not isinstance(observed_build, str) or not supports_release(observed_build)
+            or any(build != observed_build for build in receiver_builds)):
+        faults.append({'field': 'scope', 'reason': 'runtime version is not one complete reviewed-release build observed consistently by every receiver'})
+    if projection['normalized_scope'] != {'mode': 'paths', 'paths': [root], 'properties': []}:
+        faults.append({'field': 'scope', 'reason': 'unexpected exact scope'})
     root_node = next((n for n in projection['nodes'] if n['path'] == root), None)
     if root_node is None or root_node['fields'].get('tag', {}).get('value', {}).get('data') != root['segments'][-1]['tag']:
         faults.append({'field': 'tag', 'reason': 'exact selected root tag missing'})
@@ -118,7 +127,18 @@ def _obligations(projection):
                    for row in projection['coverage']], key=canonical)
 
 
+def _same_observed_build(left, right):
+    # Each projection locks one complete build internally; across the copy
+    # observations (prepare/fresh/post) the same full build must be observed.
+    builds = [left.get('runtime_version'), right.get('runtime_version')]
+    if (any(not isinstance(build, str) for build in builds) or builds[0] != builds[1]
+            or not supports_release(builds[0])):
+        raise ExecutionContractError('EXECUTION_STATE_UNKNOWN', 'observed copy COMSOL build is not one full reviewed-release build across observations',
+                                     details={'observed_builds': builds})
+
+
 def match_observed(source, target, source_root, target_root):
+    _same_observed_build(source, target)
     left = _mapped(source, source_root, target_root)
     changes = compare(left, target)
     # compare intentionally withholds added/removed fields on incomplete views.

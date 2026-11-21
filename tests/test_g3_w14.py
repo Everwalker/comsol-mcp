@@ -2483,16 +2483,24 @@ class TestPairManage:
         comp.collections["pair"].items["pair1"] = FNode(tag="pair1", type_id="Identity")
         result = call("definition.pair_manage", worker, {"action": "list", "component": "comp1"})
         assert [row["tag"] for row in result["pairs"]] == ["pair1"]
-        assert result["pairs"][0]["unavailable"]["source"]["allowlist_entry_required"] == "source"
+        # T21 (2026-11-08): source/destination are no longer reported as
+        # unavailable worker methods; the row carries the endpoint probe.  The
+        # bare FNode fake exposes no Pair.source(), so the probe must fail
+        # truthfully instead of echoing or inventing a value.
+        assert result["pairs"][0]["source"]["available"] is False
+        assert result["pairs"][0]["source"]["probe_error"] is not None
+        assert "source" not in result["pairs"][0]["unavailable"]
         assert result["pair_count"] == 1
 
     def test_list_accepts_the_component_path_form(self):
         worker, _, comp = world()
         comp.collections["pair"].items["pair1"] = FNode(tag="pair1", type_id="Identity")
-        path = {"segments": [{"collection": "component", "tag": "comp1"},
-                             {"collection": "component", "tag": "comp1"}]}
+        path = {"segments": [{"collection": "component", "tag": "comp1"}]}
         result = call("definition.pair_manage", worker, {"action": "list", "path": path})
         assert result["component"] == "comp1" and result["pair_count"] == 1
+        repeated_path = {"segments": path["segments"] * 2}
+        expect_error("INVALID_NODE_PATH", call, "definition.pair_manage", worker,
+                     {"action": "list", "path": repeated_path})
         expect_error("INVALID_REQUEST", call, "definition.pair_manage", worker, {"action": "list"})
 
     def test_create_identity_pair(self):
@@ -2504,7 +2512,11 @@ class TestPairManage:
         assert ("create", ("pair1", "Identity")) in comp.collections["pair"].calls
 
     def test_create_pair_on_a_geometry_uses_the_three_argument_form(self):
-        worker, _, comp = world()
+        # T21 (2026-11-08): pair creation now gates definition.geometry
+        # against the component's geometry list before pair().create()
+        # (same pre-write contract as definition.coordinate_manage), so the
+        # fake world must actually carry geom1 for the positive case.
+        worker, _, comp = world(geometries={"geom1": geometry("geom1")})
         result = call("definition.pair_manage", worker, {
             "action": "create", "component": "comp1", "tag": "pair2",
             "definition": {"type": "GeneralContact", "geometry": "geom1"},
@@ -2520,14 +2532,23 @@ class TestPairManage:
         })
         assert comp.collections["pair"].mutation_calls() == before
 
-    def test_source_binding_is_refused_before_the_create(self):
+    def test_invalid_selection_specs_are_refused_before_the_create(self):
+        # T21 (2026-11-08) repaired the stale "source/destination binding is
+        # always refused" case: binding is supported now, but statically
+        # invalid selection specs are still refused before pair().create().
         worker, _, comp = world()
         before = list(comp.collections["pair"].mutation_calls())
         error = expect_error("API_UNSUPPORTED", call, "definition.pair_manage", worker, {
             "action": "create", "component": "comp1", "tag": "pair1",
-            "definition": {"type": "Identity", "source": {"tag": "sel1"}},
+            "definition": {"type": "Identity",
+                           "source": {"kind": "spatial", "component": "comp1", "geometry": "geom1",
+                                      "entity_dimension": 2, "query": {"mode": "box"}}},
         })
         assert "source" in str(error)
+        expect_error("INVALID_REQUEST", call, "definition.pair_manage", worker, {
+            "action": "create", "component": "comp1", "tag": "pair1",
+            "definition": {"type": "Identity", "source": {"kind": "named", "tag": "sel1"}},
+        })
         assert comp.collections["pair"].mutation_calls() == before
 
     def test_inspect_and_remove(self):
@@ -2535,7 +2556,11 @@ class TestPairManage:
         comp.collections["pair"].items["pair1"] = FNode(tag="pair1", type_id="Identity")
         inspected = call("definition.pair_manage", worker, {"action": "inspect", "path": pair_path("pair1")})
         assert inspected["type_id"] == "Identity"
-        assert inspected["unavailable"]["destination"]["method"] == "destination"
+        # T21 (2026-11-08): destination is probed from the endpoint instead of
+        # reported as an unavailable worker method; the bare fake node has no
+        # Pair.destination(), so the probe must fail truthfully.
+        assert inspected["destination"]["available"] is False
+        assert "destination" not in inspected["unavailable"]
         removed = call("definition.pair_manage", worker, {"action": "remove", "path": pair_path("pair1")})
         assert removed["removed"] is True
 
@@ -2581,10 +2606,12 @@ class TestCouplingManage:
     def test_list_accepts_the_component_path_form(self):
         worker, _, comp = world()
         comp.collections["cpl"].items["int1"] = FNode(tag="int1", type_id="Integration")
-        path = {"segments": [{"collection": "component", "tag": "comp1"},
-                             {"collection": "component", "tag": "comp1"}]}
+        path = {"segments": [{"collection": "component", "tag": "comp1"}]}
         result = call("definition.coupling_manage", worker, {"action": "list", "path": path})
         assert result["component"] == "comp1" and result["coupling_count"] == 1
+        repeated_path = {"segments": path["segments"] * 2}
+        expect_error("INVALID_NODE_PATH", call, "definition.coupling_manage", worker,
+                     {"action": "list", "path": repeated_path})
         expect_error("INVALID_REQUEST", call, "definition.coupling_manage", worker, {"action": "list"})
 
     def test_create_integration_coupling_with_a_named_selection(self):

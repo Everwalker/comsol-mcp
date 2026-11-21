@@ -61,7 +61,7 @@ import hashlib
 import json
 import math
 import re
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from ._g2_contract import (
     ExecutionContractError,
@@ -656,7 +656,10 @@ def require_bool(value: Any, label: str) -> bool:
 def require_number(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a number")
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError as exc:
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} is outside the finite float range") from exc
     if not math.isfinite(number):
         raise ExecutionContractError("INVALID_REQUEST", f"{label} must be finite")
     return number
@@ -801,12 +804,26 @@ def call_probe(node: Any, method: str, *args: Any,
     ``allowlist_entry_required`` records that so the caller can be told which
     worker allow-list entry the path needs instead of silently reporting
     "no data".
+
+    A *structured* ``EXECUTION_STATE_UNKNOWN`` (explicit code, or the worker's
+    ``execution_state_unknown``/``engine_state_unknown`` flag on
+    ``failure``/``reply``/``details``, T21 parent finding 2026-11-08) is never
+    an optional-getter miss: the probe record carries
+    ``execution_state_unknown=True`` at the top level and in its error record
+    so a caller cannot demote it into "unreadable, continue".  Ordinary
+    METHOD_REJECTED/API_UNSUPPORTED probe failures keep their optional
+    data-shaped behaviour.  Success records keep their pre-existing shape
+    unchanged (``ok``/``value``/``error``); the marker is added only to
+    failure records, where the demotion could happen.
     """
     try:
         return {"ok": True, "value": getattr(node, method)(*args), "error": None}
     except Exception as exc:  # noqa: BLE001 - probe must not raise
         if include_engine_failure_details:
-            return {"ok": False, "value": None, "error": describe_engine_failure(exc, method)}
+            error = describe_engine_failure(exc, method)
+            return {"ok": False, "value": None, "error": error,
+                    "execution_state_unknown": bool(error.get("execution_state_unknown"))}
+        unknown = _worker_failure_unknown(exc) or error_code_of(exc) == "EXECUTION_STATE_UNKNOWN"
         return {
             "ok": False,
             "value": None,
@@ -814,8 +831,63 @@ def call_probe(node: Any, method: str, *args: Any,
                 "code": error_code_of(exc),
                 "message": f"COMSOL {method} probe failed: {type(exc).__name__}",
                 "allowlist_entry_required": method if allowlist_rejected(exc) else None,
+                "execution_state_unknown": unknown,
             },
+            "execution_state_unknown": unknown,
         }
+
+
+def probe_state_unknown(probe: Mapping[str, Any]) -> bool:
+    """True when a probe record reports a structured unknown execution state."""
+    if probe.get("execution_state_unknown") is True:
+        return True
+    error = probe.get("error")
+    return isinstance(error, Mapping) and error.get("execution_state_unknown") is True
+
+
+# T21 additional-paths fix (2026-11-08, independent re-review item B): a write
+# adapter that *finished reading the endpoint back* and then refused the result
+# (a logical readback mismatch, or a readback the endpoint refuses to answer)
+# is a different animal from a dispatched call whose outcome was never
+# confirmed: the endpoint demonstrably completed the read, so one honest
+# post-attempt engine-state probe stays allowed.  The distinction must not be
+# guessed from the exception's class name, and it must not be forgeable by a
+# foreign ``details`` mapping that happens to travel with a worker failure.
+# It is therefore recorded as a private attribute set by this module at the
+# raise site (local provenance); nothing in the public error shape changes.
+_SELECTION_READBACK_COMPLETED_MARKER = "_g3_selection_readback_completed"
+
+
+def mark_selection_readback_completed(exc: ExecutionContractError) -> ExecutionContractError:
+    """Positively mark an adapter raise as a *completed* readback observation.
+
+    Only the raise sites in this module call it, immediately before the raise,
+    so the marker's provenance is the code that produced the exception.
+    """
+    try:
+        setattr(exc, _SELECTION_READBACK_COMPLETED_MARKER, True)
+    except (AttributeError, TypeError):  # pragma: no cover - exotic exception
+        pass
+    return exc
+
+
+def selection_readback_completed(exc: BaseException) -> bool:
+    """True when this module positively marked this raise as a completed read.
+
+    A bare ``EXECUTION_STATE_UNKNOWN`` code - with or without foreign
+    ``details`` - never implies it.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if getattr(current, _SELECTION_READBACK_COMPLETED_MARKER, False) is True:
+            return True
+        # Only an explicit ``raise ... from`` chain carries provenance; an
+        # implicit __context__ could be any unrelated exception that happened
+        # to be in flight and must never lend this marker to a foreign raise.
+        current = current.__cause__
+    return False
 
 
 def error_code_of(exc: BaseException) -> str:
@@ -1091,7 +1163,8 @@ def geometry_sdim(geometry: Any) -> int | None:
     return None
 
 
-def measure_selection(component: Any, entity_dimension: int, entities: Sequence[int] | None) -> tuple[Any, Any]:
+def measure_selection(component: Any, entity_dimension: int, entities: Sequence[int] | None,
+                      *, geometry: str | None = None) -> tuple[Any, Any]:
     """Return ``(measure node, mesh selection)`` positioned on ``entity_dimension``.
 
     ``ModelNode.measure()`` -> ``GeomMeasureFinal`` measures the *finalized*
@@ -1103,20 +1176,26 @@ def measure_selection(component: Any, entity_dimension: int, entities: Sequence[
     """
     measure = _call(component, "measure")
     selection = _call(measure, "selection")
-    _call(selection, "geom", entity_dimension)
+    if geometry is None:
+        _call(selection, "geom", entity_dimension)
+    else:
+        _call(selection, "geom", geometry, entity_dimension)
     if entities is not None:
         _call(selection, "set", [int(item) for item in entities])
     return measure, selection
 
 
-def all_entities_of_dimension(component: Any, entity_dimension: int) -> list[int]:
+def all_entities_of_dimension(component: Any, entity_dimension: int, *,
+                              geometry: str | None = None) -> list[int]:
     """Enumerate every entity of a dimension using the measure tool (``all()``).
 
     Read-only with respect to the model tree; the measurement tool's transient
     selection is the only state touched.
     """
-    _, selection = measure_selection(component, entity_dimension, None)
+    _, selection = measure_selection(component, entity_dimension, None, geometry=geometry)
     _call(selection, "all")
+    if geometry is not None:
+        _verify_local_selection_endpoint(selection, geometry, entity_dimension)
     raw = _call(selection, "entities")
     return require_entity_id_array(raw, "entities()", allow_empty=True)
 
@@ -1264,7 +1343,7 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _compo
     component = resolved["component"]
     comp = component_node(worker, model_tag, component)
     dimension = resolved["entity_dimension"]
-    entities = all_entities_of_dimension(comp, dimension)
+    entities = all_entities_of_dimension(comp, dimension, geometry=resolved["geometry"])
     return {
         "kind": kind,
         "component": component,
@@ -1275,7 +1354,8 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _compo
         "source": "measure_tool_all",
         "notes": [
             "entities come from the measurement tool's finalized-geometry enumeration "
-            "(component.measure().selection().geom(dim).all())"
+            "(component.measure().selection().geom(geometry, dim).all()), with geometry and "
+            "input dimension read back from the measurement selection"
         ],
     }
 
@@ -1295,8 +1375,153 @@ def probe_geometry_tag(node: Any) -> str | None:
     return None
 
 
+def _verify_local_selection_endpoint(node: Any, geometry: str | None,
+                                     dimension: int | None) -> dict[str, Any]:
+    """Compare what the endpoint reports after ``geom(...)`` with what was requested.
+
+    ``apply_local_selection`` used to trust the zero-argument ``entities()``
+    round trip alone, but per the COMSOL 6.4 API documentation an entity-list
+    match cannot confirm the geometry or the input dimension:
+    ``entities()`` returns the entities "in the selection's maximum dimension"
+    and "can sometimes return less entities than have been assigned"
+    (Programming Reference, Selections, offline KB doc 4082/chunk 16692,
+    SHA-256 e83f428fe1baed130a0a275f814660110cfc1fc5149418500ff3e7641ca78a2b),
+    and entity ids from different levels can coincide.  ``geom()`` returns the
+    geometry tag (null when global) and ``dim()`` the (maximum) entity
+    dimension, or -1 when nothing is selected on a geometry
+    (``com.comsol.model.AbstractSelection``, offline KB doc 7494/chunk 22758,
+    SHA-256 aef44dde64261d06e8e1fce38fbdab3876b6160c84dfa497143b7360cb493127);
+    ``dim()`` is therefore *not* a readback of the requested input dimension.
+    ``Selection.inputDimension()`` is the documented input dimension and is
+    the authoritative comparison when the endpoint exposes it
+    (``com.comsol.model.Selection``, offline KB doc 7700/chunk 23053,
+    SHA-256 451cce8061404cde87fb8fe72d85ae1a1a4c3a7887f4e779a73916f8a24184d6).
+
+    A contradiction between the endpoint and the request - or an
+    ``inputDimension()`` that cannot be read back as an ``int`` - raises
+    ``EXECUTION_STATE_UNKNOWN`` (T21 parent finding 2026-11-08): the parent
+    adapter used to fall back to ``dim()`` when the ``inputDimension()``
+    probe failed, and a swallowing endpoint whose ``geom()``/``entities()``/
+    ``dim()`` happen to coincide with the request was then reported as a
+    clean ``APPLIED`` even though the applied input level was never seen.
+    ``dim()`` is therefore never corroboration of the input dimension here,
+    only context in the failure message; the probe is zero-argument so this
+    adds no new mutation, and a transport-level failure of the getter is
+    reported honestly instead of being swallowed into further side effects.
+    When the caller supplied no
+    geometry tag (``geom(dim)``, documented as equivalent only when the
+    geometry is unambiguous, doc 4082/chunk 16692) the tag cannot be compared;
+    that is reported as ``not_verifiable_no_geometry_context`` rather than
+    silently treated as verified - the legitimate single-argument path stays
+    runnable.  No readback at all is never a clean ``APPLIED``.
+    """
+    record: dict[str, Any] = {}
+    notes: list[str] = []
+    geom_probe = call_probe(node, "geom")
+    if probe_state_unknown(geom_probe):
+        # T21 parent finding 2026-11-08: a zero-argument geom() getter that
+        # fails with a structured UNKNOWN is not an optional-getter miss.
+        # Stopping here keeps the first UNKNOWN of the operation intact: no
+        # later readable inputDimension()/dim() probe may overwrite it into a
+        # clean APPLIED, and no further engine call is issued behind a getter
+        # that may still be in flight.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"local selection geom() probe returned an unknown execution state "
+            f"({(geom_probe['error'] or {}).get('code')}); the endpoint state is unknown and a "
+            "later readable probe cannot rewrite it into verification",
+            details={"probe_state_unknown": True, "probe": "geom", "execution_state_unknown": True},
+        )
+    if geometry:
+        value = geom_probe["value"]
+        if geom_probe["ok"] and isinstance(value, str) and value == geometry:
+            record["geometry_verified"] = True
+            record["geometry_verification"] = "geom_tag"
+        elif geom_probe["ok"] and (value is None or isinstance(value, str)):
+            raise mark_selection_readback_completed(ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"local selection geom() readback reports {value!r}, not the requested "
+                f"geometry {geometry!r}; the geometry context was not applied",
+            ))
+        else:
+            raise mark_selection_readback_completed(ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"local selection geom() readback is unavailable ({(geom_probe['error'] or {}).get('code')}); "
+                f"the requested geometry {geometry!r} cannot be confirmed before claiming the selection applied",
+            ))
+    else:
+        record["geometry_verified"] = False
+        record["geometry_verification"] = "not_verifiable_no_geometry_context"
+        notes.append(
+            "geom(dim) was dispatched without a geometry tag; the Programming Reference allows it only "
+            "when the geometry is unambiguous (doc 4082/chunk 16692), which this layer cannot prove offline"
+        )
+    record["endpoint_geometry"] = (geom_probe["value"] if geom_probe["ok"]
+                                   and isinstance(geom_probe["value"], str) else None) or None
+
+    input_probe = call_probe(node, "inputDimension")
+    if probe_state_unknown(input_probe):
+        # Same rule as the geom() probe: stop at the structured UNKNOWN and
+        # do not dispatch the dim() diagnostic behind it.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"local selection inputDimension() probe returned an unknown execution state "
+            f"({(input_probe['error'] or {}).get('code')}); the applied input level is unknown "
+            "and this adapter stops instead of probing further getters past it",
+            details={"probe_state_unknown": True, "probe": "inputDimension",
+                     "execution_state_unknown": True},
+        )
+    input_value = input_probe["value"]
+    if input_probe["ok"] and isinstance(input_value, int) and not isinstance(input_value, bool):
+        if input_value == dimension:
+            record["dimension_verified_by"] = "inputDimension"
+            record["endpoint_input_dimension"] = input_value
+        else:
+            raise mark_selection_readback_completed(ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"local selection inputDimension() readback reports {input_value}, not the requested "
+                f"entity_dimension {dimension}",
+            ))
+    else:
+        # No usable ``inputDimension()`` readback: the applied input level is
+        # unproven, whatever the weaker ``dim()`` getter happens to report.
+        # ``dim()`` is the maximum entity dimension of the selection (or -1
+        # when nothing is selected), so it can coincide with the request even
+        # while the endpoint applied another input level; it is attached as
+        # diagnostic context only and never turns into verification.
+        dim_probe = call_probe(node, "dim")
+        if probe_state_unknown(dim_probe):
+            # T21 additional-paths fix: the diagnostic read is still an engine
+            # call.  When it goes structured-UNKNOWN the failure message would
+            # quote a value that was never observed, and the operation must not
+            # continue behind it (no post-attempt state probe, no other-side
+            # read), so the raise carries the transport-unknown signal instead
+            # of the completed-readback marker.
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"local selection dim() diagnostic probe returned an unknown execution state "
+                f"({(dim_probe['error'] or {}).get('code')}) after the inputDimension() readback "
+                f"proved unavailable; the requested entity_dimension {dimension} cannot be "
+                "confirmed and this adapter stops at the first structured UNKNOWN",
+                details={"probe_state_unknown": True, "probe": "dim",
+                         "execution_state_unknown": True},
+            )
+        dim_value = dim_probe["value"] if dim_probe["ok"] else None
+        raise mark_selection_readback_completed(ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"local selection inputDimension() readback is unavailable "
+            f"({(input_probe['error'] or {}).get('code')}); the requested entity_dimension {dimension} "
+            f"cannot be confirmed, and dim()={dim_value!r} is the maximum entity dimension, not the "
+            f"input dimension, so it cannot substitute for the authoritative readback",
+        ))
+    if notes:
+        record["verification_notes"] = notes
+    return record
+
+
 def apply_local_selection(node: Any, worker: Any, model_tag: str, component: str | None,
-                          spec: Any, *, owner: Any = None) -> dict[str, Any]:
+                          spec: Any, *, owner: Any = None,
+                          strict_state_readback: bool = False) -> dict[str, Any]:
     """Bind a SelectionSpec to a *local* selection (``Selection`` interface).
 
     ``Selection.named(String)`` points a local selection at a named selection.
@@ -1310,6 +1535,12 @@ def apply_local_selection(node: Any, worker: Any, model_tag: str, component: str
 
     ``spatial`` and ``objects`` are rejected: a local ``Selection`` has no
     verified object-scoped or coordinate-query setter in this layer.
+
+    ``strict_state_readback=True`` (T21 unknown-tail fix 2026-11-08) makes the
+    closing ``entity_state`` readback strict: a structured UNKNOWN surfacing
+    in that final probe raises instead of being filed into an ``*_error``
+    field next to an otherwise successful apply, and no probe runs behind it.
+    Read-only callers keep the default lenient shape.
     """
     resolved = validate_selection_spec(spec, allowed_kinds=BINDABLE_SELECTION_KINDS)
     kind = resolved["kind"]
@@ -1324,21 +1555,50 @@ def apply_local_selection(node: Any, worker: Any, model_tag: str, component: str
         # selection chain to ``ModelEntity``.
         entity = owner if owner is not None else node
         current = call_probe(entity, "model")
+        if probe_state_unknown(current):
+            # Reading the owner before deciding on the model() write: an
+            # UNKNOWN read must stop the operation, not become a reason to
+            # dispatch a mutation behind a possibly-still-running call.
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"owner model() probe returned an unknown execution state "
+                f"({(current['error'] or {}).get('code')}); the model component binding cannot be "
+                "assessed and no model() write is dispatched behind the unknown read",
+                details={"probe_state_unknown": True, "probe": "model",
+                         "execution_state_unknown": True},
+            )
         if not (current["ok"] and current["value"] == component):
             _call(entity, "model", component)
+            readback_probe = call_probe(entity, "model")
+            if probe_state_unknown(readback_probe):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "model() readback after the model component write returned an unknown "
+                    "execution state; the binding outcome cannot be confirmed",
+                    details={"probe_state_unknown": True, "probe": "model",
+                             "execution_state_unknown": True},
+                )
             model_binding = {
                 "method": "model",
                 "requested": component,
-                "readback": call_probe(entity, "model")["value"],
+                "readback": readback_probe["value"],
             }
     if kind == "named":
         _call(node, "named", resolved["tag"])
         readback = call_probe(node, "named")
-        if not (readback["ok"] and readback["value"] == resolved["tag"]):
+        if probe_state_unknown(readback):
             raise ExecutionContractError(
                 "EXECUTION_STATE_UNKNOWN",
-                f"selection().named() readback did not confirm {resolved['tag']!r}",
+                f"selection().named() readback probe returned an unknown execution state "
+                f"({(readback['error'] or {}).get('code')}); the binding cannot be confirmed",
+                details={"probe_state_unknown": True, "probe": "named",
+                         "execution_state_unknown": True},
             )
+        if not (readback["ok"] and readback["value"] == resolved["tag"]):
+            raise mark_selection_readback_completed(ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"selection().named() readback did not confirm {resolved['tag']!r}",
+            ))
         applied.append({"method": "named", "requested": resolved["tag"], "readback": readback["value"]})
     elif kind == "explicit":
         geometry = resolved.get("geometry")
@@ -1356,49 +1616,140 @@ def apply_local_selection(node: Any, worker: Any, model_tag: str, component: str
         readback = _call(node, "entities")
         got = require_entity_id_array(readback, "selection.entities()", allow_empty=True)
         if sorted(got) != sorted(entities):
-            raise ExecutionContractError(
+            raise mark_selection_readback_completed(ExecutionContractError(
                 "EXECUTION_STATE_UNKNOWN",
                 "local selection entity readback does not match the requested entity list",
-            )
-        applied.append({"method": "geom/set", "entities": entities, "readback": got})
+            ))
+        # F1 (T21 independent review): the entity round trip alone cannot prove
+        # the geometry context or input dimension were applied; compare the
+        # endpoint's own geom()/inputDimension()/dim() readbacks.
+        verification = _verify_local_selection_endpoint(node, geometry, dimension)
+        applied.append({"method": "geom/set", "entities": entities, "readback": got, **verification})
     elif kind == "all":
         geometry = resolved["geometry"]
         dimension = resolved["entity_dimension"]
         _call(node, "geom", geometry, dimension)
         _call(node, "all")
         readback = require_entity_id_array(_call(node, "entities"), "selection.entities()", allow_empty=True)
-        applied.append({"method": "geom/all", "readback": readback})
+        verification = _verify_local_selection_endpoint(node, geometry, dimension)
+        applied.append({"method": "geom/all", "readback": readback, **verification})
     else:  # inherited
         _call(node, "inherit", True)
         readback = call_probe(node, "isInheriting")
+        if probe_state_unknown(readback):
+            # A getter that went UNKNOWN is not the same as a getter the
+            # worker allow-list rejects: claiming APPLIED on top of an
+            # unreadable inherit() readback would erase the UNKNOWN.
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "selection().isInheriting() readback probe returned an unknown execution state "
+                f"({(readback['error'] or {}).get('code')}); the inherit binding cannot be confirmed",
+                details={"probe_state_unknown": True, "probe": "isInheriting",
+                         "execution_state_unknown": True},
+            )
         value = readback["value"] if readback["ok"] else None
         if value is False:
-            raise ExecutionContractError(
+            raise mark_selection_readback_completed(ExecutionContractError(
                 "EXECUTION_STATE_UNKNOWN", "selection().inherit(true) readback reports isInheriting() == false"
-            )
+            ))
         applied.append({"method": "inherit", "requested": True, "readback": value})
     return {
         "kind": kind,
         "applied": applied,
         "model_binding": model_binding,
-        "entity_state": selection_state(node),
+        "entity_state": selection_state(node, strict_unknown=strict_state_readback),
     }
 
 
-def selection_state(node: Any) -> dict[str, Any]:
-    """Report the node's current selection wiring without inventing values."""
-    named = call_probe(node, "named")
-    inheriting = call_probe(node, "isInheriting")
-    entities = call_probe(node, "entities")
-    return {
+def selection_state(node: Any, *, strict_unknown: bool = False,
+                    stop_at_first_unknown: bool = False) -> dict[str, Any]:
+    """Report the node's current selection wiring without inventing values.
+
+    Default (lenient) shape is unchanged: read-only inspect/list routes keep
+    reporting every probe failure as data (``*_error`` records) instead of
+    raising.  ``strict_unknown=True`` is the mutation-chain control for the
+    T21 unknown-tail fix (2026-11-08): a *structured* UNKNOWN probe - the
+    transport-level kind, not a logical readback mismatch - raises on the
+    first occurrence with ``probe_state_unknown`` details, so a swallowed
+    late getter UNKNOWN can never turn an applied mutation into a clean
+    ``APPLIED`` and no further probe is dispatched behind it.  Ordinary
+    optional misses (a method the node does not expose, METHOD_REJECTED)
+    stay optional in both modes.
+
+    ``stop_at_first_unknown=True`` is the middle control the Pair post-attempt
+    engine-state read needs (T21 additional-paths fix 2026-11-08): the
+    observation that *did* complete is still reported as data, but the first
+    structured UNKNOWN ends the probe pass instead of dispatching further
+    getters behind it, and the returned record says so via ``state_unknown``.
+    """
+    def _probe(method: str) -> dict[str, Any]:
+        record = call_probe(node, method)
+        if strict_unknown and probe_state_unknown(record):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"selection state probe {method}() returned an unknown execution state "
+                f"({(record['error'] or {}).get('code')}); the operation stops at the first "
+                "structured UNKNOWN and does not probe further behind it",
+                details={"probe_state_unknown": True, "probe": method,
+                         "execution_state_unknown": True},
+            )
+        return record
+
+    def _stopped(state: dict[str, Any], method: str, record: dict[str, Any]) -> dict[str, Any]:
+        state["state_unknown"] = True
+        state["state_unknown_probe"] = method
+        state["state_unknown_reason"] = (
+            "the "
+            f"{method}() state probe returned a structured EXECUTION_STATE_UNKNOWN; this adapter "
+            "reports what it observed and dispatches no further probe behind that UNKNOWN"
+        )
+        state["state_unknown_error"] = record["error"]
+        return state
+
+    named = _probe("named")
+    state: dict[str, Any] = {
         "named": named["value"] if named["ok"] else None,
         "named_error": None if named["ok"] else named["error"],
-        "is_inheriting": inheriting["value"] if inheriting["ok"] else None,
-        "entities": list(entities["value"]) if entities["ok"] and isinstance(entities["value"], (list, tuple)) else None,
-        "entities_error": None if entities["ok"] else entities["error"],
-        "dimension": selection_dimension(node),
-        "geometry": probe_geometry_tag(node),
     }
+    if stop_at_first_unknown and probe_state_unknown(named):
+        return _stopped(state, "named", named)
+    inheriting = _probe("isInheriting")
+    state["is_inheriting"] = inheriting["value"] if inheriting["ok"] else None
+    if stop_at_first_unknown and probe_state_unknown(inheriting):
+        return _stopped(state, "isInheriting", inheriting)
+    entities = _probe("entities")
+    state["entities"] = (list(entities["value"]) if entities["ok"]
+                         and isinstance(entities["value"], (list, tuple)) else None)
+    state["entities_error"] = None if entities["ok"] else entities["error"]
+    if stop_at_first_unknown and probe_state_unknown(entities):
+        return _stopped(state, "entities", entities)
+    dimension_probe = _probe("dim")
+    # Candidate fix A (T21 independent re-review, probe unification): the
+    # dict's dimension/geometry fields reuse the strict-fenced probe records
+    # above instead of re-dispatching dim()/geom() through
+    # selection_dimension()/probe_geometry_tag().  Field-for-field equivalent
+    # on success (int-or-None / non-empty-str-or-None), and the fence now
+    # covers the only read that happens: a second, unfenced dispatch used to
+    # let a repeated-getter UNKNOWN be swallowed while the operation went on
+    # to claim APPLIED.  selection_dimension()/probe_geometry_tag() stay for
+    # their other callers.
+    dimension_value = dimension_probe["value"]
+    state["dimension"] = (dimension_value if dimension_probe["ok"]
+                          and isinstance(dimension_value, int)
+                          and not isinstance(dimension_value, bool) else None)
+    # A probe failure is reported, never folded into a bare null (T21
+    # independent review: a real-engine probe failure used to be silent).
+    state["dimension_error"] = None if dimension_probe["ok"] else dimension_probe["error"]
+    if stop_at_first_unknown and probe_state_unknown(dimension_probe):
+        return _stopped(state, "dim", dimension_probe)
+    geometry_probe = _probe("geom")
+    geometry_value = geometry_probe["value"]
+    state["geometry"] = (geometry_value if geometry_probe["ok"]
+                         and isinstance(geometry_value, str) and geometry_value else None)
+    state["geometry_error"] = None if geometry_probe["ok"] else geometry_probe["error"]
+    if stop_at_first_unknown and probe_state_unknown(geometry_probe):
+        return _stopped(state, "geom", geometry_probe)
+    return state
 
 
 # ---------------------------------------------------------------------------
@@ -1527,7 +1878,12 @@ def typed_value_from_json(value: Any, schema: Mapping[str, Any], *, label: str) 
                 raise ExecutionContractError(
                     "PROPERTY_TYPE_MISMATCH", f"{label}{position} must be a number for this property"
                 )
-            number = float(item)
+            try:
+                number = float(item)
+            except OverflowError as exc:
+                raise ExecutionContractError(
+                    "PROPERTY_TYPE_MISMATCH", f"{label}{position} must be finite"
+                ) from exc
             if not math.isfinite(number):
                 raise ExecutionContractError(
                     "PROPERTY_TYPE_MISMATCH", f"{label}{position} must be finite"
@@ -1593,13 +1949,14 @@ def typed_value_from_json(value: Any, schema: Mapping[str, Any], *, label: str) 
     return converted
 
 
-def property_rows(node: Any, names: Sequence[str]) -> dict[str, dict[str, Any]]:
+def property_rows(node: Any, names: Sequence[str], *,
+                  on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, dict[str, Any]]:
     """Read authoritative metadata for the requested properties only."""
     from ._g2_contract import property_schema_from_engine  # local import: shared with G2
 
     rows: dict[str, dict[str, Any]] = {}
     for name in dict.fromkeys(names):
-        rows[name] = property_schema_from_engine(node, name)
+        rows[name] = property_schema_from_engine(node, name, on_probe_error=on_probe_error)
     return rows
 
 
@@ -1608,7 +1965,8 @@ def validate_definition_keys(definition: Mapping[str, Any], allowed: Iterable[st
 
 
 def definition_properties(node: Any, definition: Mapping[str, Any], allowed: Iterable[str] | None,
-                          *, label: str) -> list[dict[str, Any]]:
+                          *, label: str,
+                          on_probe_error: Callable[[Exception, str], None] | None = None) -> list[dict[str, Any]]:
     """Turn a definition object into a validated ``property_set`` payload.
 
     Property names are checked against the node type's documented table
@@ -1627,7 +1985,7 @@ def definition_properties(node: Any, definition: Mapping[str, Any], allowed: Ite
     reject_unknown_keys(definition, allowed, label)
     if not names:
         return []
-    rows = property_rows(node, names)
+    rows = property_rows(node, names, on_probe_error=on_probe_error)
     payload: list[dict[str, Any]] = []
     for name in names:
         row = rows.get(name) or {}
@@ -1640,15 +1998,25 @@ def definition_properties(node: Any, definition: Mapping[str, Any], allowed: Ite
     return payload
 
 
-def property_read_rows(node: Any, names: Sequence[str]) -> dict[str, Any]:
+def property_read_rows(node: Any, names: Sequence[str], *, strict_unknown: bool = False) -> dict[str, Any]:
     """Read a bounded set of property values, reporting per-name failures."""
     out: dict[str, Any] = {}
     for name in names:
         probe = call_probe(node, "getString", name)
+        if strict_unknown and probe_state_unknown(probe):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "property getString() probe returned an unknown execution state",
+                stage="post_dispatch", details={"execution_state_unknown": True, "probe": "getString"},
+            )
         if probe["ok"]:
             out[name] = {"value": probe["value"], "error": None}
             continue
         numeric = call_probe(node, "getDouble", name)
+        if strict_unknown and probe_state_unknown(numeric):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "property getDouble() probe returned an unknown execution state",
+                stage="post_dispatch", details={"execution_state_unknown": True, "probe": "getDouble"},
+            )
         if numeric["ok"]:
             out[name] = {"value": numeric["value"], "error": None, "source_getter": "getDouble"}
             continue
@@ -1698,6 +2066,7 @@ __all__ = [
     "argument_revision",
     "bound_model",
     "call_probe",
+    "probe_state_unknown",
     "child_node",
     "collection_spec",
     "component_node",
@@ -1713,6 +2082,7 @@ __all__ = [
     "geometry_node",
     "geometry_sdim",
     "is_typed_value",
+    "mark_selection_readback_completed",
     "measure_selection",
     "node_create",
     "node_remove",
@@ -1738,6 +2108,7 @@ __all__ = [
     "resolve_path",
     "resolve_selection_entities",
     "selection_dimension",
+    "selection_readback_completed",
     "selection_state",
     "split_parent_path",
     "tag_conflict",

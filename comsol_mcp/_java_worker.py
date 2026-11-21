@@ -261,7 +261,7 @@ def _atomic_export_file(destination: str | Path, save_callback: Callable[[Path],
                         project_root: str | Path, *, overwrite: bool) -> dict[str, Any]:
     """Atomically publish a Java/M source export without treating it as MPH."""
     from ._execution_contract import canonical_project_path
-    from ._atomic_save import _fsync_file, _fsync_parent
+    from ._atomic_save import _fsync_file, _fsync_parent, _observed_presence
 
     target = canonical_project_path(project_root, destination)
     parent = target.parent
@@ -269,13 +269,18 @@ def _atomic_export_file(destination: str | Path, save_callback: Callable[[Path],
     existed = target.exists()
     if existed and not overwrite:
         raise JavaWorkerError("Source export destination exists and overwrite is disabled")
-    if not parent.is_dir():
+    if _observed_presence(parent) is False:
         raise JavaWorkerError("Source export parent directory does not exist")
+    if not parent.is_dir():
+        # A refused observation lands here too: say only that the parent
+        # could not be used as a directory, never that it is absent.
+        raise JavaWorkerError("Source export parent directory could not be used as a directory")
     # COMSOL's Java/M save overload may generate a public Java class or an
     # M-file function from the export filename. Keep the final basename while
     # isolating the candidate in a unique child directory on the same volume.
     temporary_directory = parent / f".comsol-export-{uuid.uuid4().hex}.tmp"
     temporary = temporary_directory / target.name
+    publication_status = "not_attempted"
     try:
         canonical_project_path(project_root, temporary_directory)
         temporary_directory.mkdir(mode=0o700, exist_ok=False)
@@ -311,20 +316,26 @@ def _atomic_export_file(destination: str | Path, save_callback: Callable[[Path],
             raise ValueError("source export temporary directory changed before publication")
         if canonical_project_path(project_root, temporary) != temporary.resolve(strict=False):
             raise ValueError("source export candidate changed before publication")
+        publication_status = "attempted"
         if overwrite:
             os.replace(temporary, target)
             publish_mode = "atomic_replace"
         else:
             os.link(temporary, target)
             publish_mode = "atomic_no_clobber"
+        publication_status = "published"
         parent_fsync = _fsync_parent(target)
-        temporary_file_removed = not temporary.exists()
-        if temporary.exists():
+        temporary_presence = _observed_presence(temporary)
+        if temporary_presence is True:
             try:
                 temporary.unlink()
                 temporary_file_removed = True
             except OSError:
                 temporary_file_removed = False
+        else:
+            # Absent after a consumed replace is proven removal; a refused
+            # observation must never be reported as removed.
+            temporary_file_removed = temporary_presence is False
         temporary_directory_removed = False
         if temporary_file_removed:
             try:
@@ -346,12 +357,53 @@ def _atomic_export_file(destination: str | Path, save_callback: Callable[[Path],
                                "parent_fsync": parent_fsync}}
     except Exception as exc:
         # Keep a partial candidate for inspection, just as the MPH publisher
-        # does; never replace the previous destination on a callback failure.
-        evidence_path = temporary if temporary.exists() else temporary_directory
-        message = f"COMSOL source export was not published: {exc}; temporary evidence retained at {evidence_path}"
+        # does; a callback/verification failure before the publish syscall
+        # provably leaves any previous destination untouched by this
+        # publisher.  A publish syscall that raised has an unknown effect,
+        # and once the syscall returned the export is published even if
+        # durability/cleanup failed.  Temporary-evidence visibility is a
+        # three-state observation: observed retained, observed absent, or
+        # observation refused; a refused observation is never reported as
+        # absence.
+        status = "unknown" if publication_status == "attempted" else publication_status
+        temporary_observation = _observed_presence(temporary)
+        directory_observation = _observed_presence(temporary_directory)
+        if temporary_observation is True or directory_observation is True:
+            temporary_retained = True
+            evidence_path = temporary if temporary_observation is True else temporary_directory
+            evidence_note = f"temporary evidence retained at {evidence_path}"
+        elif temporary_observation is False and directory_observation is False:
+            temporary_retained = False
+            evidence_note = "no temporary evidence remained"
+        else:
+            temporary_retained = None
+            evidence_note = ("temporary evidence visibility is unobserved: the observation was refused, "
+                             "so neither retention nor absence may be claimed")
+        if status == "published":
+            prefix = ("COMSOL source export was published; a post-publication durability/cleanup "
+                      "step failed")
+        elif status == "unknown":
+            prefix = ("COMSOL source export publication outcome is unknown; the publish call raised "
+                      "after a possible effect on the destination")
+        else:
+            prefix = "COMSOL source export was not published"
+        message = f"{prefix}: {exc}; {evidence_note}"
         if isinstance(exc, JavaWorkerError):
-            raise type(exc)(message, reply=exc.reply) from exc
-        raise JavaWorkerError(message) from exc
+            error = type(exc)(message, reply=exc.reply)
+        else:
+            error = JavaWorkerError(message)
+        error.publication_status = status
+        error.temporary_retained = temporary_retained
+        error.details = {
+            "cause_type": type(exc).__name__,
+            "cause_stage": "publication" if status in ("published", "unknown") else "pre_publish",
+            "cause_message": message[:500],
+            "publication_status": status,
+            "temporary_retention_observed": ("observed_retained" if temporary_retained is True
+                                             else "observed_absent" if temporary_retained is False
+                                             else "observation_denied"),
+        }
+        raise error from exc
 
 
 @dataclass(frozen=True)

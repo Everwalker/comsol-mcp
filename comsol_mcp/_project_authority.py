@@ -13,7 +13,7 @@ from typing import Any, Callable, Mapping
 from uuid import uuid4
 
 from comsol_mcp._execution_contract import ExecutionContractError
-from comsol_mcp._project_root import open_project_root_binding
+from comsol_mcp._project_root import close_binding_releasing, open_project_root_binding
 
 
 PROJECT_SCHEMA_VERSION = 1
@@ -98,10 +98,16 @@ class ProjectAuthority:
         if not self.workspace_root.is_dir():
             raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "authorized workspace root must be a directory")
         root_binding = open_project_root_binding(self.workspace_root)
+        primary_error: BaseException | None = None
         try:
             self.workspace_root_identity = root_binding.identity
+        except BaseException as exc:
+            # Local capture (never sys.exc_info) so a failed release cannot
+            # mask or annotate the wrong error from this constructor.
+            primary_error = exc
+            raise
         finally:
-            root_binding.close()
+            close_binding_releasing(root_binding, primary_error)
         self.permission_provider = permission_provider
         if not isinstance(grant_ceiling, (set, frozenset)) or any(
                 not isinstance(item, str) or item not in PROJECT_PERMISSIONS for item in grant_ceiling):

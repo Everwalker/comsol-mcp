@@ -12,7 +12,7 @@ import hashlib
 import itertools
 import json
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, MutableMapping, Sequence
 from typing import Any
 
 from ._execution_contract import ExecutionContractError, PreWriteRefusal
@@ -20,12 +20,43 @@ from ._g2_contract import NodePath, property_schema_from_engine, resolve_node_pa
 from ._g2_engine import _call, property_set
 from ._g3_common import bound_model, call_probe, node_type, tag_list, validate_tag
 from ._g3_results import dataset_solution_indices, result_at_points
+from ._job_project_scope import consistent_project_id
+from ._operation_store import TERMINAL
 
 
 SOLUTION_FIELDS = frozenset({"dataset", "solution", "inner", "outer", "time", "frequency", "parameters"})
 _MAX_GRID_POINTS = 65_536
 _MAX_LOG_LIMIT = 1000
 _MAX_CURSOR_CHARS = 4096
+# T35 streaming-read operational ceilings for solver.log_read.  These are
+# proposed limits for this implementation slice and a compatibility change for
+# oversized prior data (a previously readable over-limit row or an oversized
+# stored error now fails closed as EXECUTION_STATE_UNKNOWN).  They are not
+# requirements from an external spec and are not evidence of a global RSS or
+# full-memory bound: the fold and the bounded result projection bound
+# Python-side admission and retention, but the unbounded stored-document
+# scan, SQLite C allocations and process memory remain outside them.
+_MAX_LOG_EVENT_ROW_BYTES = 4 * 1024 * 1024      # admitted SQLite text bytes per event row
+_MAX_LOG_PAGE_JSON_BYTES = 8 * 1024 * 1024      # selected page event canonical JSON bytes
+_MAX_LOG_PROGRESS_JSON_BYTES = 4 * 1024 * 1024  # buffered progress-evidence canonical JSON bytes
+# max_error_bytes admission ceiling handed to the bounded
+# store.project_operation_result_error projection.  It bounds only the
+# selected last-wins raw result.error JSON subtree admitted into the reader;
+# the whole stored document is still fully validated through bounded store
+# slices, and this ceiling claims no RSS or full-process-memory bound.
+_MAX_LOG_STORED_ERROR_JSON_BYTES = 4 * 1024 * 1024
+
+# Exact issue string published by OperationStore.fold_job_event_prefix when a
+# frozen continuation prefix no longer matches rows at or below its bound.
+_FOLD_ISSUE_FROZEN_PREFIX_MISMATCH = (
+    "frozen continuation prefix count/last-id does not match rows at or below its bound"
+)
+
+_PROGRESS_EVENT_NAMES = frozenset({
+    "COMSOLProgressCaptureRequested", "COMSOLProgressCaptureActivated",
+    "COMSOLProgressCaptureActivationUnknown", "COMSOLProgressCaptureCompleted",
+    "COMSOLProgressCaptureFailed", "COMSOLProgressChunk",
+})
 _RESOURCE_PROPERTIES = frozenset({"ooc", "oocmemory", "memfracooc", "mumpsalloc"})
 _DIRECT_SOLVER_DOC = "COMSOL 6.4 API: comsol_api_solver.51.31, Tables 6-38 and 6-39"
 _CLEAR_DOC = ("COMSOL 6.4 SolverSequence.clearSolutionData(): clears sequence solution data; "
@@ -651,6 +682,18 @@ def _event_ids_digest(events: Sequence[Mapping[str, Any]]) -> str:
     return hashlib.sha256(",".join(str(item) for item in ids).encode("ascii")).hexdigest()
 
 
+def _canonical_event_json_bytes(event: Mapping[str, Any]) -> int:
+    """Transiently materialize exactly one admitted event row to measure it.
+
+    Row admission is already canonical-JSON round-trip safe (strict
+    json.loads in the fold), so this measures the same bytes the whole-list
+    encoders would emit for that element.
+    """
+    raw = json.dumps(event, ensure_ascii=False, sort_keys=True,
+                     separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return len(raw)
+
+
 def _encode_log_cursor(value: Mapping[str, Any]) -> str:
     raw = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
@@ -681,19 +724,60 @@ def _decode_log_cursor(value: Any) -> dict[str, Any]:
     return result
 
 
+def _compacted_flat_job_claim(job: Mapping[str, Any], project_id: str) -> bool:
+    """Match a forgeable subset of the shape of a compacted job view.
+
+    T35 compatibility: OperationStore.compact_terminal_job_metadata rewrites
+    a genuinely terminal job's view metadata down to the helper-derived flat
+    top-level project_id plus a cleanup tombstone, dropping the nested
+    execution mapping.  This predicate only recognizes that subset of
+    observable fields (terminal status, the metadata_compacted tombstone,
+    the flat project_id and the absent execution key); a caller can write
+    the same marker shape into arbitrary job metadata, so a match is
+    neither an exact-shape match of the compactor's full output nor proof
+    that a genuine compaction happened, and never an authorization proof:
+    a caller granting any exemption off this shape must still validate
+    every present flat or nested claim on both sides and keep the exact
+    operation_id linkage itself.  A job-side execution key that is present
+    — even when empty or conflicting — never matches this shape.
+    """
+    job_meta = job.get("metadata")
+    job_cleanup = job_meta.get("cleanup") if isinstance(job_meta, Mapping) else None
+    return (
+        isinstance(job_meta, Mapping)
+        and job.get("status") in TERMINAL
+        and isinstance(job_cleanup, Mapping)
+        and job_cleanup.get("metadata_compacted") is True
+        and "execution" not in job_meta
+        and job_meta.get("project_id") == project_id
+    )
+
+
 def _job_project_binding(job: Mapping[str, Any], project_id: str) -> bool:
     job_meta, operation = job.get("metadata"), job.get("operation")
     op_meta = operation.get("metadata") if isinstance(operation, Mapping) else None
     job_execution = job_meta.get("execution") if isinstance(job_meta, Mapping) else None
     op_execution = op_meta.get("execution") if isinstance(op_meta, Mapping) else None
+    # T35 compatibility: the compacted flat job claim (_compacted_flat_job_claim,
+    # shared verbatim with _progress_log_summary) is only a forgeable
+    # subset-shape check of the real compactor's output — neither an
+    # exact-shape nor a genuine-compaction proof, and never an
+    # authorization proof: the exempted job side
+    # must still name exactly the requested project, and consistent_project_id
+    # below still validates every present flat or nested claim on both sides,
+    # rejecting missing, malformed or conflicting ones.  The operation side
+    # keeps its original nested-claim requirement, and the exact operation_id
+    # linkage is kept.
     return (
-        isinstance(job_execution, Mapping) and isinstance(op_execution, Mapping)
-        and job_execution.get("project_id") == project_id and op_execution.get("project_id") == project_id
+        ((isinstance(job_execution, Mapping) and job_execution.get("project_id") == project_id)
+         or _compacted_flat_job_claim(job, project_id))
+        and isinstance(op_execution, Mapping) and op_execution.get("project_id") == project_id
+        and consistent_project_id(job_meta, op_meta) == project_id
         and isinstance(job.get("operation_id"), str) and operation.get("operation_id") == job.get("operation_id")
     )
 
 
-def _recorded_exception_chain(job: Mapping[str, Any], events: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _stored_result_exception_chain(job: Mapping[str, Any]) -> dict[str, Any] | None:
     result = job.get("result")
     error = result.get("error") if isinstance(result, Mapping) else None
     if isinstance(error, Mapping):
@@ -701,32 +785,57 @@ def _recorded_exception_chain(job: Mapping[str, Any], events: Sequence[Mapping[s
             chain = error.get(key)
             if isinstance(chain, list):
                 return {"status": "CAPTURED", "source": f"stored result.error.{key}", "items": chain}
-    for event in events:
-        metadata = event.get("metadata")
-        if isinstance(metadata, Mapping):
-            for key in ("exception_chain", "cause_chain"):
-                chain = metadata.get(key)
-                if isinstance(chain, list):
-                    return {"status": "CAPTURED", "source": f"event {event.get('id')} metadata.{key}", "items": chain}
-        if event.get("event") == "worker_request":
-            event_metadata = event.get("metadata")
-            worker_event = event_metadata if isinstance(event_metadata, Mapping) else event
-            reply = worker_event.get("reply")
-            failure = reply.get("failure") if isinstance(reply, Mapping) else None
-            if isinstance(failure, Mapping):
-                chain = failure.get("cause_chain")
-                if isinstance(chain, list) and chain:
-                    return {"status": "CAPTURED", "source": f"worker request {event.get('request_id')} failure.cause_chain",
-                            "items": chain[:32], "code": failure.get("code")}
-                if isinstance(failure.get("code"), str):
-                    return {"status": "ERROR_SUMMARY_ONLY",
-                            "source": f"worker request {event.get('request_id')} reply.failure",
-                            "items": [{"type": "WorkerFailure", "code": failure.get("code"),
-                                       "message": failure.get("message")}],
-                            "cause_chain_status": "NOT_CAPTURED"}
+    return None
+
+
+def _exception_chain_candidate(event: Mapping[str, Any]) -> dict[str, Any] | None:
+    """First-match exception evidence for one event, exactly as the historical
+    whole-prefix scan would have returned it for this event."""
+    metadata = event.get("metadata")
+    if isinstance(metadata, Mapping):
+        for key in ("exception_chain", "cause_chain"):
+            chain = metadata.get(key)
+            if isinstance(chain, list):
+                return {"status": "CAPTURED", "source": f"event {event.get('id')} metadata.{key}", "items": chain}
+    if event.get("event") == "worker_request":
+        event_metadata = event.get("metadata")
+        worker_event = event_metadata if isinstance(event_metadata, Mapping) else event
+        reply = worker_event.get("reply")
+        failure = reply.get("failure") if isinstance(reply, Mapping) else None
+        if isinstance(failure, Mapping):
+            chain = failure.get("cause_chain")
+            if isinstance(chain, list) and chain:
+                return {"status": "CAPTURED", "source": f"worker request {event.get('request_id')} failure.cause_chain",
+                        "items": chain[:32], "code": failure.get("code")}
+            if isinstance(failure.get("code"), str):
+                return {"status": "ERROR_SUMMARY_ONLY",
+                        "source": f"worker request {event.get('request_id')} reply.failure",
+                        "items": [{"type": "WorkerFailure", "code": failure.get("code"),
+                                   "message": failure.get("message")}],
+                        "cause_chain_status": "NOT_CAPTURED"}
+    return None
+
+
+def _stored_result_error_summary(job: Mapping[str, Any]) -> dict[str, Any] | None:
+    result = job.get("result")
+    error = result.get("error") if isinstance(result, Mapping) else None
     if isinstance(error, Mapping) and error.get("code"):
         return {"status": "ERROR_SUMMARY_ONLY", "source": "stored result.error",
                 "items": [{"code": error.get("code"), "message": error.get("message")}]}
+    return None
+
+
+def _recorded_exception_chain(job: Mapping[str, Any], events: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    chain = _stored_result_exception_chain(job)
+    if chain is not None:
+        return chain
+    for event in events:
+        candidate = _exception_chain_candidate(event)
+        if candidate is not None:
+            return candidate
+    summary = _stored_result_error_summary(job)
+    if summary is not None:
+        return summary
     return {"status": "NOT_CAPTURED", "source": None, "items": []}
 
 
@@ -737,19 +846,77 @@ _PROGRESS_BINDING_FIELDS = (
 )
 
 
+def _typed_value_equal(left: Any, right: Any) -> bool:
+    """Compare JSON-like identity values without conflating scalar types.
+
+    Decoded JSON mappings and arrays are traversed without a width-sized
+    comparison stack. Active-path tracking rejects cyclic in-process values;
+    it does not validate identity shape or authenticate either value.
+    """
+    def mapping_pairs(first: Mapping, second: Mapping) -> Iterator[tuple[Any, Any]]:
+        for key in first:
+            yield first[key], second[key]
+
+    stack: list[tuple[Iterator[tuple[Any, Any]], tuple[int, int] | None]] = [
+        (iter(((left, right),)), None)
+    ]
+    active: set[tuple[int, int]] = set()
+    while stack:
+        pairs, owner = stack[-1]
+        try:
+            first, second = next(pairs)
+        except StopIteration:
+            stack.pop()
+            if owner is not None:
+                active.remove(owner)
+            continue
+        if isinstance(first, Mapping) or isinstance(second, Mapping):
+            if (not isinstance(first, Mapping) or not isinstance(second, Mapping)
+                    or len(first) != len(second)
+                    or any(key not in second for key in first)):
+                return False
+            children = mapping_pairs(first, second)
+        elif isinstance(first, (list, tuple)) or isinstance(second, (list, tuple)):
+            if (not isinstance(first, (list, tuple)) or not isinstance(second, (list, tuple))
+                    or isinstance(first, list) != isinstance(second, list)
+                    or len(first) != len(second)):
+                return False
+            children = zip(first, second)
+        else:
+            if type(first) is not type(second) or first != second:
+                return False
+            continue
+        pair = (id(first), id(second))
+        if pair in active:
+            return False
+        active.add(pair)
+        stack.append((iter(children), pair))
+    return True
+
+
 def _same_progress_binding(metadata: Mapping[str, Any], expected: Mapping[str, Any]) -> bool:
-    return all(metadata.get(key) == expected.get(key) for key in _PROGRESS_BINDING_FIELDS)
+    """True only when every binding field is itself present in the event
+    metadata and has the same JSON-like types and values as the durable
+    expected value. Missing fields fail instead of matching a missing or None
+    expected value; type-aware equality is not a validity or authority check.
+    """
+    return all(key in metadata and _typed_value_equal(metadata[key], expected[key])
+               for key in _PROGRESS_BINDING_FIELDS)
 
 
 def _progress_log_summary(job: Mapping[str, Any], events: Sequence[Mapping[str, Any]],
                           project_id: str) -> dict[str, Any]:
-    """Verify the exact job-bound capture and its bounded chunks in a frozen snapshot."""
-    capture_events = [event for event in events
-                      if event.get("event") in {
-                          "COMSOLProgressCaptureRequested", "COMSOLProgressCaptureActivated",
-                          "COMSOLProgressCaptureActivationUnknown", "COMSOLProgressCaptureCompleted",
-                          "COMSOLProgressCaptureFailed", "COMSOLProgressChunk",
-                      }]
+    """Verify the exact job-bound capture and its bounded chunks in a frozen snapshot.
+
+    Durable-vs-event identity equality is necessary but not sufficient:
+    before any CAPTURED can be emitted, the durable job/operation records
+    must also meet the identity lower bounds the real producer enforces in
+    ``_comsol_progress_capture._binding_for_job`` — non-empty
+    job_id/operation_id/request_id/idempotency_key, a 64-lowercase-hex
+    request_hash and a recognized supported solver operation — so durable
+    and event records corrupted identically still fail closed to UNKNOWN.
+    """
+    capture_events = [event for event in events if event.get("event") in _PROGRESS_EVENT_NAMES]
     if not capture_events:
         return {"status": "NOT_CAPTURED", "text": None,
                 "reason": "no job-bound COMSOL progress producer event is present"}
@@ -769,8 +936,47 @@ def _progress_log_summary(job: Mapping[str, Any], events: Sequence[Mapping[str, 
         bound_operation = stored_arguments["operation_id"]
     else:
         bound_operation = None
+    # T35 compatibility: the real compact_terminal_job_metadata deliberately
+    # drops the job-side nested execution, so the two execution mappings can
+    # no longer be equal afterwards.  Exempt exactly that inequality, and only
+    # when the job view independently matches the compactor's compacted flat
+    # shape — a forgeable subset-shape check (_compacted_flat_job_claim),
+    # neither an exact-shape nor a genuine-compaction proof.  Only on that
+    # exemption candidate path does this summary call _job_project_binding
+    # (the and-chain short-circuits whenever the flat shape does not match);
+    # a non-compacted job keeps the direct execution-inequality requirement
+    # and never runs two-sided project/operation binding consistency through
+    # _job_project_binding here. That check is not authorization. When the
+    # exemption is in play the complete
+    # _job_project_binding must still hold, so a direct call into this
+    # summary can never skip the two-sided project/operation claim and
+    # operation_id linkage.  A job-side execution key that is present —
+    # empty or conflicting — never matches the shape and keeps the original
+    # inequality check in force.  The exemption authenticates nothing: every
+    # other condition here and every downstream 12-field event-binding,
+    # lifecycle, chunk, base64, digest and receipt check runs unchanged
+    # against the durable operation-side execution.
+    compacted_capture_continuity = (
+        _compacted_flat_job_claim(job, project_id)
+        and _job_project_binding(job, project_id)
+    )
+    # Preserve producer-compatible ordinary equality for the rest of the
+    # execution mapping, but compare the model and revision identity subset
+    # by type and value. Compaction deliberately removes job execution and
+    # continues to rely on the same flat-shape and binding checks above.
+    execution_identity_conflict = (
+        not compacted_capture_continuity
+        and isinstance(execution, Mapping)
+        and (not isinstance(job_execution, Mapping)
+             or not _typed_value_equal(execution.get("expected_revision"),
+                                       job_execution.get("expected_revision"))
+             or not _typed_value_equal(execution.get("model_ref"),
+                                       job_execution.get("model_ref")))
+    )
     if (not isinstance(operation, Mapping) or not isinstance(op_metadata, Mapping)
-            or not isinstance(execution, Mapping) or execution != job_execution
+            or not isinstance(execution, Mapping)
+            or (execution != job_execution and not compacted_capture_continuity)
+            or execution_identity_conflict
             or operation.get("operation_id") != job.get("operation_id")
             or execution.get("project_id") != project_id
             or not isinstance(execution.get("session_id"), str) or not execution.get("session_id")
@@ -779,6 +985,31 @@ def _progress_log_summary(job: Mapping[str, Any], events: Sequence[Mapping[str, 
             or execution.get("expected_revision") < 0):
         return {"status": "UNKNOWN", "text": None,
                 "reason": "durable job and operation do not share a complete project/model/revision binding"}
+    # The 12-field comparison below is a pure durable-vs-event equality
+    # check: a fault model that corrupts the durable operation row and every
+    # progress event identically stays internally consistent and would still
+    # certify.  Before any CAPTURED can be emitted, re-check the absolute
+    # identity lower bounds the real producer enforces in
+    # _comsol_progress_capture._binding_for_job against the durable records:
+    # non-empty job_id, non-empty operation_id (operation-side equality is
+    # already required above), non-empty request_id and idempotency_key, a
+    # 64-lowercase-hex request_hash, and a recognized supported solver
+    # operation (bound_operation is study.run, mesh.convergence_study or
+    # None).  These are absence/format bounds on the durable records, not
+    # authentication, and they change no captured field value.
+    if (not isinstance(job.get("job_id"), str) or not job.get("job_id")
+            or not isinstance(job.get("operation_id"), str) or not job.get("operation_id")
+            or not isinstance(operation.get("request_id"), str) or not operation.get("request_id")
+            or not isinstance(operation.get("request_hash"), str)
+            or len(operation["request_hash"]) != 64
+            or any(char not in "0123456789abcdef" for char in operation["request_hash"])
+            or not isinstance(operation.get("idempotency_key"), str)
+            or not operation.get("idempotency_key")
+            or bound_operation is None):
+        return {"status": "UNKNOWN", "text": None,
+                "reason": "durable job/operation identity is missing or malformed against the "
+                          "progress producer contract (empty ids, non-64-lowercase-hex "
+                          "request_hash, or unsupported persisted operation)"}
     expected = {
         "schema": "comsol-job-progress-capture/1",
         "producer": "ModelUtil.showProgress(String)+showProgress(false)",
@@ -896,8 +1127,112 @@ def _progress_log_summary(job: Mapping[str, Any], events: Sequence[Mapping[str, 
     }
 
 
+class _LogPageFoldAccumulator:
+    """Bounded provisional state for one ``fold_job_event_prefix`` pass.
+
+    Retains only the selected page rows (under ``_MAX_LOG_PAGE_JSON_BYTES``
+    of canonical event JSON), progress-producer events (under
+    ``_MAX_LOG_PROGRESS_JSON_BYTES``; the buffer is discarded the moment that
+    budget would be exceeded) and the first exception-chain candidate.  All
+    state is provisional: the fold can still fail after visiting early rows,
+    so ``solver_log_read`` must discard this accumulator on any incomplete
+    fold result or exception.
+    """
+
+    def __init__(self, *, offset: int, limit: int) -> None:
+        self._offset = offset
+        self._limit = limit
+        self._seen = 0
+        self.page: list[dict[str, Any]] = []
+        self._page_bytes = 0
+        self._page_closed = False
+        self.single_row_over_response_limit = False
+        self._progress: list[dict[str, Any]] | None = []
+        self._progress_bytes = 0
+        self.progress_budget_exceeded = False
+        self.exception_candidate: dict[str, Any] | None = None
+
+    @property
+    def progress_events(self) -> list[dict[str, Any]] | None:
+        return self._progress
+
+    def visit(self, event: dict[str, Any]) -> None:
+        index = self._seen
+        self._seen += 1
+        row_bytes = _canonical_event_json_bytes(event)
+        if self._offset <= index < self._offset + self._limit:
+            if row_bytes > _MAX_LOG_PAGE_JSON_BYTES:
+                # Never silently skip an over-ceiling row and certify a full
+                # prefix: the read must fail closed at this offset.
+                self.single_row_over_response_limit = True
+            elif not self._page_closed and (
+                    not self.page or self._page_bytes + row_bytes <= _MAX_LOG_PAGE_JSON_BYTES):
+                self.page.append(event)
+                self._page_bytes += row_bytes
+            else:
+                # Valid rows beyond the response ceiling end this page early;
+                # the next cursor resumes at exactly the next offset.
+                self._page_closed = True
+        if event.get("event") in _PROGRESS_EVENT_NAMES and self._progress is not None:
+            if self._progress_bytes + row_bytes > _MAX_LOG_PROGRESS_JSON_BYTES:
+                self.progress_budget_exceeded = True
+                self._progress = None
+            else:
+                self._progress.append(event)
+                self._progress_bytes += row_bytes
+        if self.exception_candidate is None:
+            self.exception_candidate = _exception_chain_candidate(event)
+
+
 def solver_log_read(store: Any, project_id: Any, arguments: Mapping[str, Any]) -> dict[str, Any]:
-    """Read a project-owned snapshot page of durable job events.
+    """Read a project-owned page of durable job events through one streaming fold.
+
+    Each read opens one reader-owned ``store.solver_log_snapshot(job_id)``
+    read transaction (transaction plus store lock held until exit) and issues
+    exactly one ``store.fold_job_event_prefix`` call joined to that snapshot
+    via ``_join_read_snapshot=True``; the joined fold never commits or rolls
+    back the caller-owned transaction, and default self-owned fold semantics
+    are unchanged.  The fold runs over a fresh whole-job prefix
+    ``(None, None)`` or the frozen cursor prefix
+    (``snapshot_count``/``snapshot_last_id``).  The fold recomputes the full
+    original v1 id/events digests for that prefix before any data is
+    returned; both digests and the last event id are compared to the cursor,
+    so an existing cursor is never trusted without re-verifying its entire
+    prefix and later appends never join it.  Prefix removal or content change
+    fails closed as CURSOR_STALE; malformed or over-admission rows fail
+    closed as EXECUTION_STATE_UNKNOWN, and provisional page/summary state is
+    discarded whenever the fold is incomplete or raises.
+
+    The job metadata view is read first inside the snapshot (a missing job
+    is still NODE_NOT_FOUND) and the existing ``_job_project_binding`` check
+    runs before any stored-result bytes are fetched.  That check is
+    snapshot-consistent project/operation identity evidence only; it is
+    never principal authentication and grants no authority.  The stored
+    operation result is then admitted solely through the bounded
+    ``store.project_operation_result_error`` projection executed in the same
+    transaction — never by re-fetching through ``store.job()``, and never by
+    falling back to it when the snapshot context or projection is missing.
+    The projection's ``None``/``{}``/``{'error': ...}`` envelope is assigned
+    to the job view's ``result`` slot so the unchanged stored-chain,
+    event-first, stored-summary and NOT_CAPTURED precedence below sees
+    exactly the error visible in this snapshot.  A selected error over
+    ``_MAX_LOG_STORED_ERROR_JSON_BYTES``, syntax damage in any part of the
+    unbounded stored document, invalid UTF-8 or a BOM, nesting deeper than
+    the projection helper admits, an envelope outside the frozen contract,
+    or any snapshot/projection store failure fails closed as an explicit
+    EXECUTION_STATE_UNKNOWN without echoing the stored payload and without
+    defaulting to "no error" or falling back to the event chain.  The page,
+    progress and exception views are all computed inside the same snapshot
+    before returning; any escaping exception is rolled back by the context.
+
+    Only the selected page rows plus bounded progress/exception evidence are
+    retained; a valid row set larger than ``_MAX_LOG_PAGE_JSON_BYTES`` yields
+    a non-empty shorter page with a cursor at the exact next offset (the
+    caller's limit is retained).  Progress evidence beyond
+    ``_MAX_LOG_PROGRESS_JSON_BYTES`` degrades to an honest UNKNOWN diagnostic
+    instead of retaining unbounded history.  These ceilings and
+    ``_MAX_LOG_STORED_ERROR_JSON_BYTES`` are proposed operational admission
+    limits for this slice, not a global RSS or full-memory bound.
 
     COMSOL progress output is available only when the exact job has a verified
     private ModelUtil progress-sink lifecycle. Worker stderr and other jobs'
@@ -914,58 +1249,140 @@ def solver_log_read(store: Any, project_id: Any, arguments: Mapping[str, Any]) -
         _invalid("limit must be an integer from 1 through 1000")
     if cursor is not None and limit != cursor["limit"]:
         _invalid("continuation limit must match the cursor", code="CURSOR_BINDING_MISMATCH")
+    accumulator = _LogPageFoldAccumulator(offset=cursor["offset"] if cursor else 0, limit=limit)
     try:
-        job = store.job(job_id)
+        # One reader-owned snapshot pins the job view, the bounded stored-error
+        # projection and the event fold to a single consistent store state.
+        # A missing snapshot context, a failed snapshot begin, or a failed
+        # snapshot close fails closed as EXECUTION_STATE_UNKNOWN below; it is
+        # never answered by the old unbounded store.job() path.
+        with store.solver_log_snapshot(job_id) as job:
+            if not isinstance(job, Mapping):
+                _invalid("job does not exist", code="NODE_NOT_FOUND")
+            if not isinstance(job, MutableMapping):
+                # The frozen contract yields an updatable metadata view (the
+                # result slot receives the bounded projection below); an
+                # immutable view cannot carry it and fails closed here.
+                _invalid("job snapshot view is not an updatable job metadata view",
+                         code="EXECUTION_STATE_UNKNOWN")
+            # Strict project/operation binding first; ordering this check
+            # before the projection does not grant authority.  It remains
+            # pure metadata consistency evidence, never principal proof.
+            if not _job_project_binding(job, project):
+                _invalid("job and operation project identities do not both match", code="PROJECT_IDENTITY_MISMATCH")
+            fold_count = fold_last = None
+            if cursor is not None:
+                fold_count, fold_last = cursor["snapshot_count"], cursor["snapshot_last_id"]
+                if (fold_count == 0) != (fold_last == 0):
+                    # A v1 cursor never pairs a zero count with a nonzero last id; the
+                    # historical reader reached the same CURSOR_STALE for this pair.
+                    _invalid("captured event prefix changed after cursor issuance", code="CURSOR_STALE")
+            projection: Any = None
+            try:
+                projection = store.project_operation_result_error(
+                    job["operation_id"], max_error_bytes=_MAX_LOG_STORED_ERROR_JSON_BYTES)
+            except ExecutionContractError:
+                raise
+            except Exception as exc:
+                # Covers the frozen helper's SelectedErrorBudgetExceededError,
+                # JsonStreamError (syntax damage anywhere in the unbounded
+                # document, invalid UTF-8, BOM, unsupported depth) and any
+                # sqlite/API failure.  Only the exception class name is
+                # echoed; the stored payload is never part of the response.
+                _invalid(f"stored result error projection failed closed ({type(exc).__name__}); "
+                         "the bounded stored error is not admissible, and no empty-error or "
+                         "event-chain fallback is used",
+                         code="EXECUTION_STATE_UNKNOWN",
+                         details={"max_stored_error_json_bytes": _MAX_LOG_STORED_ERROR_JSON_BYTES,
+                                  "failure_type": type(exc).__name__})
+            if projection is not None and (not isinstance(projection, Mapping)
+                                           or set(projection) not in (set(), {"error"})):
+                _invalid("stored result error projection returned an envelope outside the "
+                         "frozen None/empty/{'error': value} contract",
+                         code="EXECUTION_STATE_UNKNOWN")
+            job["result"] = projection
+            folded: Any = None
+            try:
+                folded = store.fold_job_event_prefix(
+                    job_id, snapshot_count=fold_count, snapshot_last_id=fold_last,
+                    max_row_bytes=_MAX_LOG_EVENT_ROW_BYTES, visitor=accumulator.visit,
+                    _join_read_snapshot=True)
+            except ExecutionContractError:
+                raise
+            except Exception as exc:
+                _invalid(f"durable job event fold failed: {exc}", code="EXECUTION_STATE_UNKNOWN")
+            if not isinstance(folded, Mapping) or folded.get("complete") is not True:
+                issues = folded.get("issues") if isinstance(folded, Mapping) else None
+                if (cursor is not None and isinstance(issues, list) and len(issues) == 1
+                        and issues[0] == _FOLD_ISSUE_FROZEN_PREFIX_MISMATCH):
+                    # Only the exact frozen-bounds issue string may look stale; every
+                    # other or additional issue fails closed as unknown state.
+                    _invalid("captured event prefix changed after cursor issuance", code="CURSOR_STALE",
+                             details={"status": folded.get("status"), "issues": issues})
+                _invalid("durable job event fold is incomplete", code="EXECUTION_STATE_UNKNOWN",
+                         details={"status": folded.get("status") if isinstance(folded, Mapping) else None,
+                                  "issues": issues})
+            count, last_id = folded.get("expected_event_count"), folded.get("snapshot_last_id")
+            id_hash, events_hash = folded.get("id_sha256"), folded.get("events_sha256")
+            if (type(count) is not int or type(last_id) is not int or count < 0 or last_id < 0
+                    or not isinstance(id_hash, str) or not id_hash
+                    or not isinstance(events_hash, str) or not events_hash):
+                _invalid("durable job event fold published malformed bounds", code="EXECUTION_STATE_UNKNOWN")
+            offset = 0
+            if cursor is not None:
+                if (count != cursor["snapshot_count"] or last_id != cursor["snapshot_last_id"]
+                        or id_hash != cursor["id_sha256"] or events_hash != cursor["events_sha256"]):
+                    _invalid("captured event prefix changed after cursor issuance", code="CURSOR_STALE")
+                offset = cursor["offset"]
+            if accumulator.single_row_over_response_limit:
+                _invalid("a selected page event exceeds the response byte limit; the read fails "
+                         "closed instead of skipping that event",
+                         code="EXECUTION_STATE_UNKNOWN",
+                         details={"max_page_event_json_bytes": _MAX_LOG_PAGE_JSON_BYTES})
+            page = accumulator.page
+            next_offset = offset + len(page)
+            next_cursor = None
+            if next_offset < count:
+                next_cursor = _encode_log_cursor({
+                    "v": 1, "project_id": project, "job_id": job_id, "snapshot_count": count,
+                    "snapshot_last_id": last_id, "id_sha256": id_hash, "events_sha256": events_hash,
+                    "offset": next_offset, "limit": limit,
+                })
+            if accumulator.progress_budget_exceeded:
+                solver_output_log = {"status": "UNKNOWN", "text": None,
+                                     "reason": f"the bounded progress accumulator exceeded its "
+                                               f"{_MAX_LOG_PROGRESS_JSON_BYTES}-byte budget; the capture is "
+                                               "not certified and no complete progress output is claimed"}
+            else:
+                solver_output_log = _progress_log_summary(job, accumulator.progress_events or [], project)
+            exception_chain = (_stored_result_exception_chain(job) or accumulator.exception_candidate
+                               or _stored_result_error_summary(job)
+                               or {"status": "NOT_CAPTURED", "source": None, "items": []})
+            return {
+                "job_id": job_id, "project_id": project, "job_status": job.get("status"),
+                "events": page, "event_count": len(page), "next_cursor": next_cursor,
+                "snapshot": {"status": folded.get("status"), "event_count": count, "last_event_id": last_id,
+                             "id_sha256": id_hash, "events_sha256": events_hash},
+                "solver_output_log": solver_output_log,
+                "exception_chain": exception_chain,
+            }
+    except ExecutionContractError:
+        # NODE_NOT_FOUND, PROJECT_IDENTITY_MISMATCH, CURSOR_STALE and every
+        # other PreWriteRefusal raised by _invalid inside the snapshot are
+        # contract refusals; they pass through the context rollback with
+        # their exact codes and are never re-wrapped as EXECUTION_STATE_UNKNOWN.
+        raise
     except Exception as exc:
-        _invalid(f"job store read failed: {exc}", code="EXECUTION_STATE_UNKNOWN")
-    if not isinstance(job, Mapping):
-        _invalid("job does not exist", code="NODE_NOT_FOUND")
-    if not _job_project_binding(job, project):
-        _invalid("job and operation project identities do not both match", code="PROJECT_IDENTITY_MISMATCH")
-    try:
-        snapshot = store.collect_job_event_snapshot(job_id)
-    except Exception as exc:
-        _invalid(f"durable job event snapshot failed: {exc}", code="EXECUTION_STATE_UNKNOWN")
-    if not isinstance(snapshot, Mapping) or snapshot.get("complete") is not True:
-        _invalid("durable job event snapshot is incomplete", code="EXECUTION_STATE_UNKNOWN",
-                 details={"status": snapshot.get("status") if isinstance(snapshot, Mapping) else None,
-                          "issues": snapshot.get("issues") if isinstance(snapshot, Mapping) else None})
-    events = snapshot.get("events")
-    if not isinstance(events, list):
-        _invalid("durable snapshot omitted event rows", code="EXECUTION_STATE_UNKNOWN")
-    if cursor is None:
-        count, last_id = snapshot.get("expected_event_count"), snapshot.get("snapshot_last_id")
-        frozen, offset = events, 0
-        id_hash, events_hash = snapshot.get("id_sha256"), snapshot.get("events_sha256")
-        if type(count) is not int or type(last_id) is not int:
-            _invalid("durable snapshot has malformed bounds", code="EXECUTION_STATE_UNKNOWN")
-    else:
-        count, last_id = cursor["snapshot_count"], cursor["snapshot_last_id"]
-        if count > len(events):
-            _invalid("events were removed after this cursor was issued", code="CURSOR_STALE")
-        frozen = events[:count]
-        actual_last_id = frozen[-1].get("id") if frozen else 0
-        if (actual_last_id != last_id or _event_ids_digest(frozen) != cursor["id_sha256"]
-                or _event_digest(frozen) != cursor["events_sha256"]):
-            _invalid("captured event prefix changed after cursor issuance", code="CURSOR_STALE")
-        offset, id_hash, events_hash = cursor["offset"], cursor["id_sha256"], cursor["events_sha256"]
-    page = frozen[offset:offset + limit]
-    next_offset = offset + len(page)
-    next_cursor = None
-    if next_offset < count:
-        next_cursor = _encode_log_cursor({
-            "v": 1, "project_id": project, "job_id": job_id, "snapshot_count": count,
-            "snapshot_last_id": last_id, "id_sha256": id_hash, "events_sha256": events_hash,
-            "offset": next_offset, "limit": limit,
-        })
-    return {
-        "job_id": job_id, "project_id": project, "job_status": job.get("status"),
-        "events": page, "event_count": len(page), "next_cursor": next_cursor,
-        "snapshot": {"status": snapshot.get("status"), "event_count": count, "last_event_id": last_id,
-                     "id_sha256": id_hash, "events_sha256": events_hash},
-        "solver_output_log": _progress_log_summary(job, frozen, project),
-        "exception_chain": _recorded_exception_chain(job, frozen),
-    }
+        # Snapshot begin/close failures (including a store lacking the
+        # solver_log_snapshot context) land here; projection and fold call
+        # failures were already mapped to their own explicit failures above.
+        _invalid(f"durable job snapshot transaction failed: {exc}", code="EXECUTION_STATE_UNKNOWN")
+    # Unreachable while the snapshot context honours the contract (every
+    # body path returns or raises, and the context rolls back and re-raises);
+    # kept as an explicit fail-closed guard so a non-conforming context that
+    # swallows an exception can never let this reader fall through to an
+    # implicit empty result.
+    _invalid("durable job snapshot read produced no page", code="EXECUTION_STATE_UNKNOWN")
 
 
 OPERATIONS = {

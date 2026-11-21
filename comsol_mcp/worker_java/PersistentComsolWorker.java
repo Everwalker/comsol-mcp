@@ -13,6 +13,8 @@ import com.comsol.model.MaterialList;
 import com.comsol.model.MaterialModel;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.ModelParam;
+import com.comsol.model.Pair;
+import com.comsol.model.Selection;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.ResultParam;
@@ -120,6 +122,33 @@ public final class PersistentComsolWorker {
       // (javap of apiplugins/com.comsol.api_1.0.0.jar).
       "func", "multiphysics", "pair", "cpl", "coordSystem", "propertyGroup", "extraDim",
       "probe", "view", "getUsedProducts",
+      // T21 pair binding (2026-11-08): Pair.source()/Pair.destination() ->
+      // LocalSelection.  javap of the installed apiplugins/com.comsol.api_1.0.0.jar
+      // on this machine shows com.comsol.model.Pair declaring
+      //   public abstract com.comsol.model.LocalSelection source();
+      //   public abstract com.comsol.model.LocalSelection destination();
+      // and the Programming Reference model.pair() page documents them as the
+      // pair's source/destination selections.  Allow-listing a name alone is
+      // not an arity/receiver constraint, so the dispatcher enforces the
+      // contract in code (validatePairSideGetterArguments below): only a
+      // com.comsol.model.Pair receiver with zero arguments dispatches; every
+      // other receiver or arity is METHOD_REJECTED before reflection.  The
+      // binding itself reuses the already allow-listed Selection surface
+      // (named/geom/set/entities), so no new payload shape or setter reaches
+      // the generic transport here.
+      "source", "destination",
+      // T21 review fix (2026-11-08): Selection.inputDimension() -> int is the
+      // documented input dimension of a finalized-geometry selection (offline
+      // KB Selection.html doc 7700/chunk 23053, SHA-256
+      // 451cce8061404cde87fb8fe72d85ae1a1a4c3a7887f4e779a73916f8a24184d6;
+      // javap of the installed api jar: declared on com.comsol.model.Selection,
+      // zero arguments).  The Python adapter reads it back after
+      // geom(<gtag>,<dim>)+set(...) because AbstractSelection.dim() is only
+      // the maximum entity dimension (doc 7494/chunk 22758), never a proof of
+      // the requested input dimension.  validateInputDimensionArguments below
+      // keeps this to a zero-argument call on a Selection receiver; the name
+      // reaches no unrelated receiver through the generic dispatcher.
+      "inputDimension",
       // G3 W13: parameter/variable group handling, function evaluation and
       // import, measure selections, and geometry adjacency accessors (javap of
       // com.comsol.model_1.0.0.jar + the local COMSOL 6.4 knowledge base).
@@ -1057,6 +1086,12 @@ public final class PersistentComsolWorker {
           throw new IllegalArgumentException("MaterialList.insert tags must be nonempty strings");
       }
     }
+    // T21 review fix (F4): Pair.source()/Pair.destination() are the only
+    // reason those two names are allow-listed.  The gate is real dispatcher
+    // code, not a comment: a Pair receiver with zero arguments dispatches,
+    // everything else is METHOD_REJECTED before any reflection.
+    if ("source".equals(method) || "destination".equals(method)) validatePairSideGetterArguments(target, method, args);
+    if ("inputDimension".equals(method)) validateInputDimensionArguments(target, args);
     if ("getCoordinatesShape".equals(method)) {
       if (!args.isEmpty()) throw new IllegalArgumentException("getCoordinatesShape takes no arguments");
       return getCoordinatesShape(target);
@@ -1140,6 +1175,31 @@ public final class PersistentComsolWorker {
       throw new IllegalArgumentException("mesh block " + label + " must be an integer");
     }
     return asLong;
+  }
+
+  // Package-visible only for the no-engine Java contract harness. The native
+  // dispatch invokes these same validators before reflection (T21 review fix,
+  // F4).  Pair.source()/destination() are javap-verified zero-argument
+  // getters on com.comsol.model.Pair (apiplugins/com.comsol.api_1.0.0.jar);
+  // anything else that happens to carry a method with that name, or any
+  // arity other than zero, is rejected before the reflective lookup, so the
+  // allow-list entry cannot widen to another receiver the way a name-only
+  // check would.
+  static void validatePairSideGetterArguments(Object target, String method, List<?> args) {
+    if (!"source".equals(method) && !"destination".equals(method))
+      throw new IllegalArgumentException("validatePairSideGetterArguments only guards source/destination");
+    if (!(target instanceof Pair)) throw new SecurityException("METHOD_REJECTED");
+    if (args == null || !args.isEmpty()) throw new SecurityException("METHOD_REJECTED");
+  }
+
+  // Selection.inputDimension() is the documented zero-argument input-dimension
+  // readback (Selection.html doc 7700/chunk 23053).  The gate keeps the new
+  // allow-list entry confined to that exact signature on a Selection
+  // receiver; it does not expose an inputDimension-named method on any other
+  // receiver, and it dispatches nothing with arguments.
+  static void validateInputDimensionArguments(Object target, List<?> args) {
+    if (!(target instanceof Selection)) throw new SecurityException("METHOD_REJECTED");
+    if (args == null || !args.isEmpty()) throw new SecurityException("METHOD_REJECTED");
   }
 
   private Object evaluateModelParameterComplex(ModelParam target, String expression,
@@ -1701,6 +1761,12 @@ public final class PersistentComsolWorker {
     List<Object> errors = new ArrayList<>();
     String truncated = null;
     boolean complete = false;
+    // A completed metadata-getter fault must stop the reply claiming the walk
+    // was complete even when the queue later drains; the Python consumer gate
+    // (complete = data["complete"] and not data["errors"]) also treats a
+    // non-empty errors list as incomplete.  This is an ordinary field-level
+    // probe failure, never a transport EXECUTION_STATE_UNKNOWN.
+    boolean[] getterFaulted = {false};
     while (true) {
       if (queue.isEmpty()) { complete = true; break; }
       if (visited - skipVisited >= maxNodes) { truncated = "node_budget"; break; }
@@ -1711,7 +1777,7 @@ public final class PersistentComsolWorker {
       List<Object> segments = (List<Object>) item[1];
       visited++;
       if (visited > skipVisited) {
-        String tag = safeInvokeString(node, "tag");
+        String tag = safeInvokeString(node, "tag", errors, getterFaulted);
         if ((tag == null || tag.isEmpty()) && !segments.isEmpty()) {
           Object lastSeg = segments.get(segments.size() - 1);
           if (lastSeg instanceof Map) {
@@ -1719,8 +1785,8 @@ public final class PersistentComsolWorker {
             if (segTag != null) tag = String.valueOf(segTag);
           }
         }
-        String typeId = safeInvokeString(node, "getType");
-        String label = safeInvokeString(node, "label");
+        String typeId = safeInvokeString(node, "getType", errors, getterFaulted);
+        String label = safeInvokeString(node, "label", errors, getterFaulted);
         boolean matchesQuery = (!hasTag || wantedTag.equals(tag)) && (!hasType || wantedType.equals(typeId)) && (!hasLabel || wantedLabel.equals(label));
         if (matchesQuery) {
           matchedInCall++;
@@ -1737,6 +1803,7 @@ public final class PersistentComsolWorker {
         queue.add(new Object[]{row.get("_node"), childSegments});
       }
     }
+    if (getterFaulted[0]) complete = false;
     return map("matches", matches, "visited", visited, "matched_in_call", matchedInCall,
         "complete", complete, "truncated_reason", truncated, "errors", errors, "generation", generation.get());
   }
@@ -2006,12 +2073,48 @@ public final class PersistentComsolWorker {
         "semantic_operation", "NodeGroupList.ungroup(String)", "runtime_version", version);
   }
 
-  private String safeInvokeString(Object node, String method) {
+  // Metadata getters during a walk.  A receiver that simply does not declare
+  // the zero-arg getter (a normal not-applicable absence, e.g. Model has no
+  // getType()) yields null with NO error, exactly as before.  invoke() only
+  // raises NoSuchMethodException from its selection phase when the name or
+  // arity is undeclared, so once the public zero-arg getter IS declared a
+  // NoSuchMethodException can only be one the getter's own completed
+  // execution threw (unwrapped from the reflective call); the exception's
+  // simple type alone must never classify a faulted getter as absent.  Any
+  // completed fault is recorded in the bounded errors list and flags the
+  // walk incomplete, so a dropped or fallback-recovered would-be match can
+  // never masquerade as a complete error-free search.  This stays an
+  // ordinary field-level probe error, not a transport EXECUTION_STATE_UNKNOWN.
+  private String safeInvokeString(Object node, String method, List<Object> errors, boolean[] getterFaulted) {
     try {
       Object value = invoke(node, node.getClass(), method, Collections.emptyList());
       return value == null ? null : String.valueOf(value);
-    } catch (Exception ignored) {
+    } catch (NoSuchMethodException refusalOrFault) {
+      if (!declaresPublicZeroArgMethod(node.getClass(), method)) return null; // normal API absence
+      recordWalkGetterFault(errors, method, refusalOrFault, getterFaulted);
       return null;
+    } catch (Exception fault) {
+      recordWalkGetterFault(errors, method, fault, getterFaulted);
+      return null;
+    }
+  }
+  private static boolean declaresPublicZeroArgMethod(Class<?> type, String name) {
+    for (Method method : publicMethods(type)) {
+      if (!method.getName().equals(name) || method.getParameterCount() != 0) continue;
+      if (!Modifier.isPublic(method.getModifiers()) || method.getDeclaringClass().equals(Object.class)) continue;
+      if (Modifier.isStatic(method.getModifiers())) continue;
+      return true;
+    }
+    return false;
+  }
+  private static void recordWalkGetterFault(List<Object> errors, String getter, Exception fault, boolean[] getterFaulted) {
+    getterFaulted[0] = true;
+    // Bounded exactly like the collection-probe errors above; the message
+    // carries only the getter name and the fault class so engine-internal
+    // exception text never reaches the wire.
+    if (errors.size() < 50) {
+      errors.add(map("collection", "", "code", "METADATA_GETTER_FAILED",
+          "message", getter + " failed: " + fault.getClass().getSimpleName()));
     }
   }
   private Object invoke(Object target, Class<?> type, String name, List<Object> args) throws Exception {

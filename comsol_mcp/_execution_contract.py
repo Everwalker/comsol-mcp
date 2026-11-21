@@ -89,7 +89,7 @@ class ModelRef:
     schema_version: int = MODEL_REF_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
-        if self.schema_version != MODEL_REF_SCHEMA_VERSION:
+        if isinstance(self.schema_version, bool) or self.schema_version != MODEL_REF_SCHEMA_VERSION:
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "unsupported model_ref schema")
         if not all(isinstance(value, str) and value for value in (self.session_id, self.server_instance_id, self.model_tag)):
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref identity fields must be non-empty strings")

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError, PreWriteRefusal
 
@@ -141,6 +141,15 @@ def _normalise_shape(shape: Any) -> tuple[int, ...]:
     return tuple(out)
 
 
+def _is_finite_number(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
 def _validate_scalar(kind: str, value: Any) -> None:
     if kind == "boolean":
         if type(value) is not bool:
@@ -155,7 +164,7 @@ def _validate_scalar(kind: str, value: Any) -> None:
             raise _error("PROPERTY_TYPE_MISMATCH", "int64 typed value is outside its signed range")
         return
     if kind == "float64":
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        if not _is_finite_number(value):
             raise _error("PROPERTY_TYPE_MISMATCH", "float64 typed value requires a finite number")
         return
     if kind in {"string", "expression"}:
@@ -167,10 +176,12 @@ def _validate_scalar(kind: str, value: Any) -> None:
             if set(value) != {"real", "imag"}:
                 raise _error("PROPERTY_TYPE_MISMATCH", "complex128 values require real and imag fields")
             for item in (value["real"], value["imag"]):
-                if isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(float(item)):
+                if not _is_finite_number(item):
                     raise _error("PROPERTY_TYPE_MISMATCH", "complex128 components must be finite numbers")
             return
         if _is_sequence(value) and len(value) == 2 and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in value):
+            if not all(_is_finite_number(item) for item in value):
+                raise _error("PROPERTY_TYPE_MISMATCH", "complex128 components must be finite numbers")
             return
         raise _error("PROPERTY_TYPE_MISMATCH", "complex128 value requires {real,imag} or a two-number pair")
 
@@ -446,11 +457,14 @@ def _reject_nonfinite_engine_value(value: Any) -> None:
 
 
 def property_schema_from_engine(node: Any, name: str | None = None, *,
-                               probe_has_property: bool = False) -> dict[str, Any]:
+                               probe_has_property: bool = False,
+                               on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, Any]:
     """Read COMSOL PropFeature metadata without guessing unsupported types."""
     try:
         names = [str(item) for item in (node.properties() if name is None else [name])]
     except Exception as exc:
+        if on_probe_error is not None:
+            on_probe_error(exc, "properties")
         raise _error("API_UNSUPPORTED", "the selected node does not expose properties()") from exc
     rows: list[dict[str, Any]] = []
     for prop in names:
@@ -463,7 +477,9 @@ def property_schema_from_engine(node: Any, name: str | None = None, *,
             try:
                 observed = getattr(node, "hasProperty")(prop)
                 presence = observed if type(observed) is bool else None
-            except Exception:
+            except Exception as exc:
+                if on_probe_error is not None:
+                    on_probe_error(exc, "hasProperty")
                 presence = None
             row["has_property"] = presence
             if presence is False:
@@ -477,7 +493,9 @@ def property_schema_from_engine(node: Any, name: str | None = None, *,
             if presence is not True:
                 try:
                     row["type_id"] = str(node.getType())
-                except Exception:
+                except Exception as exc:
+                    if on_probe_error is not None:
+                        on_probe_error(exc, "getType")
                     row["type_id"] = None
                 rows.append(row)
                 continue
@@ -486,7 +504,9 @@ def property_schema_from_engine(node: Any, name: str | None = None, *,
                 raw = getattr(node, method)(prop)
                 if raw is not None:
                     row[field] = list(raw) if isinstance(raw, (list, tuple)) else raw
-            except Exception:
+            except Exception as exc:
+                if on_probe_error is not None:
+                    on_probe_error(exc, method)
                 # COMSOL returns null or raises for properties where this
                 # metadata is not available; report unknown instead of lying.
                 row[field] = None
@@ -506,7 +526,9 @@ def property_schema_from_engine(node: Any, name: str | None = None, *,
                         "java_signature": None, "metadata_status": "UNKNOWN"})
         try:
             row["type_id"] = str(node.getType())
-        except Exception:
+        except Exception as exc:
+            if on_probe_error is not None:
+                on_probe_error(exc, "getType")
             row["type_id"] = None
         rows.append(row)
     return {"properties": rows} if name is None else (rows[0] if rows else {"name": name})

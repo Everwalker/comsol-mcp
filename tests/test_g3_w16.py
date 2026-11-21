@@ -242,14 +242,32 @@ class FSelection:
         if name in self.unavailable:
             raise _method_refusal()
 
-    def geom(self, *args: Any) -> int:
+    def geom(self, *args: Any) -> Any:
         self._guard("geom")
         if len(args) == 2:
             self.geometry_tag, dimension = str(args[0]), int(args[1])
             self.dim_value = dimension
         elif len(args) == 1:
             self.dim_value = int(args[0])
+        if not args:
+            # T21 review-fix readbacks probe the zero-argument accessor; javap
+            # declares AbstractSelection.geom() as ``String geom()`` (the tag,
+            # null for a global selection), not an int.
+            return self.geometry_tag
         return self.dim_value or 0
+
+    def dim(self) -> int:
+        # AbstractSelection.dim() exists on every real selection: the maximum
+        # selected entity dimension, or -1 when nothing is selected on a
+        # geometry.  The T21 review fix reads it back after geom()+set().
+        self._guard("dim")
+        return self.dim_value if self.dim_value is not None else -1
+
+    def inputDimension(self) -> int:  # noqa: N802 - javap: Selection.inputDimension()
+        # javap of com.comsol.api_1.0.0.jar (2026-11-08): every Selection
+        # carries this getter; it reports the input dimension the endpoint
+        # itself recorded in geom(...), -1 when nothing was applied.
+        return self.dim_value if self.dim_value is not None else -1
 
     def dimension(self) -> list[int]:
         return [self.dim_value or 0]

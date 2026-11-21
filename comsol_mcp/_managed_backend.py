@@ -139,12 +139,22 @@ def _refusal_envelope(operation: str, exc: ExecutionContractError, witness: Any,
     proves no mutation-class engine method was issued during the callback.  Both
     facts are published so a later reader never has to trust the exception class
     name: the evidence is in the envelope.
+
+    A raise carrying the explicit ``EXECUTION_STATE_UNKNOWN`` code is not a
+    definite refusal: the validation stage plus a no-mutation witness proves no
+    mutation-class dispatch happened, not that no read was dispatched or that
+    the Worker has stopped.  For exactly that code the envelope publishes the
+    classifier's existing top-level UNKNOWN signal key and pins the retry
+    declaration to False at the outer error and data-refusal positions; the
+    code, message, stage, witness and the caller's exception/details stay
+    exactly as declared, and definite refusals keep their own retry facts.
     """
     from ._domain_outcome import STAGE_VALIDATION, domain_envelope
+    unknown_state = exc.code == "EXECUTION_STATE_UNKNOWN"
     refusal = {
         "code": exc.code,
         "message": str(exc),
-        "safe_retry": exc.safe_retry,
+        "safe_retry": False if unknown_state else exc.safe_retry,
         "stage": exc.stage or STAGE_VALIDATION,
     }
     if exc.details:
@@ -157,6 +167,8 @@ def _refusal_envelope(operation: str, exc: ExecutionContractError, witness: Any,
         "dispatch_stage": exc.stage or STAGE_VALIDATION,
         "witness": witness.as_dict(),
     }
+    if unknown_state:
+        data["execution_state_unknown"] = True
     envelope = domain_envelope(operation, data, dispatch_stage=STAGE_VALIDATION, witness=witness)
     envelope["error"] = refusal
     envelope["effect"] = effect
@@ -391,13 +403,15 @@ class ManagedBackend:
     @contextmanager
     def project_root_scope(self, root):
         """Carry one open project-root identity through a serialized dispatch."""
-        from ._project_root import ProjectRootBinding, open_project_root_binding
+        from ._project_root import (ProjectRootBinding, close_binding_releasing,
+                                    open_project_root_binding)
         binding = open_project_root_binding(root) if not isinstance(root, ProjectRootBinding) else root
         candidate = binding.path
         token = self._project_root_context.set(candidate)
         binding_token = self._project_root_binding_context.set(binding)
         service = self.service
         service_scope = getattr(service, "project_root_scope", None)
+        primary_error: BaseException | None = None
         try:
             from ._state import project_workflow_state_scope
 
@@ -407,10 +421,17 @@ class ManagedBackend:
                         yield candidate
                 else:
                     yield candidate
+        except BaseException as exc:
+            # Local capture (never sys.exc_info); the release below belongs to
+            # this scope by the documented delegation contract (the daemon
+            # opens the workspace binding and never releases it itself), so a
+            # failed release annotates the primary instead of replacing it.
+            primary_error = exc
+            raise
         finally:
             self._project_root_binding_context.reset(binding_token)
             self._project_root_context.reset(token)
-            binding.close()
+            close_binding_releasing(binding, primary_error)
 
     @staticmethod
     def _model_project_key(model_ref):
@@ -425,6 +446,116 @@ class ManagedBackend:
         if not isinstance(metadata, Mapping) or not isinstance(metadata.get("project_id"), str):
             return {"attribution": "UNATTRIBUTED", "project_id": None}
         return {"attribution": "PROJECT_BOUND", "project_id": metadata["project_id"]}
+
+    def _model_digest_adjudication(self, project_id, filename):
+        """Decide whether this process may digest a model-referenced file.
+
+        Returns ``(None, canonical_path)`` when a bounded project-local read
+        is admissible, otherwise ``(withheld_status, None)``.  The decision
+        uses path semantics only; no file is opened here.  The approved root
+        is the durable project record's workspace, re-verified by the project
+        authority on every call — the daemon container default is never
+        treated as a project root, and a relative model name (which the
+        control process would resolve against its own CWD, while the engine
+        resolves against the engine host) is undecidable and never hashed.
+        Any adjudication failure closes to an explicit ``not_reported_*``
+        status instead of falling through to the adapter-side digest.
+        """
+        def withheld(status, note):
+            return {"status": status, "value": None, "size": None, "note": note}, None
+
+        try:
+            if not isinstance(project_id, str) or not project_id or not callable(self.project_authorizer):
+                return withheld(
+                    "not_reported_project_scope_unavailable",
+                    "no approved project identity is bound to this operation, so no control-side digest is computed (T20)")
+            try:
+                record = self.project_authorizer(project_id, "project_write")
+            except Exception:
+                return withheld(
+                    "not_reported_project_scope_unavailable",
+                    "the approved project record could not be re-verified for this digest (T20)")
+            workspace = record.get("workspace") if isinstance(record, Mapping) else None
+            if not isinstance(workspace, str) or not workspace or not os.path.isabs(workspace):
+                return withheld(
+                    "not_reported_project_scope_unavailable",
+                    "the project record does not carry an absolute approved workspace root (T20)")
+            root = Path(workspace)
+            scoped = self._project_root_context.get(None)
+            if scoped is not None and Path(scoped) != root:
+                return withheld(
+                    "not_reported_project_scope_unavailable",
+                    "the dispatch project scope does not match the durable project record (T20)")
+            if not isinstance(filename, str) or not filename or "\x00" in filename:
+                return withheld(
+                    "not_reported_path_unresolvable",
+                    "the model's filename property is not a usable path name; no control-side digest is computed (T20)")
+            if not os.path.isabs(filename):
+                return withheld(
+                    "not_reported_relative_path_identity",
+                    "a relative model filename is resolved by the engine host against its own working directory, "
+                    "not the managed project; the control process cannot identify the file it would hash, so no "
+                    "digest is computed or published (T20)")
+            lexical = Path(os.path.abspath(filename))
+            if os.path.commonpath([str(lexical), str(root)]) != str(root):
+                return withheld(
+                    "not_reported_outside_project_boundary",
+                    "the model's filename property points outside the managed project root; the control-side "
+                    "digest of that path is withheld without reading it (T20)")
+            return None, lexical
+        except Exception:
+            # Fail closed: an undecidable adjudication must never publish a
+            # digest of an unproven path (the T20 reload fail-open).
+            return withheld(
+                "not_reported_path_unresolvable",
+                "the model file path could not be adjudicated against the project boundary; no control-side "
+                "digest is computed or published (T20)")
+
+    def _project_model_file_digest_provider(self, project_id):
+        """Request-private digest capability for ``function.data_reload``.
+
+        The adapter must not open or hash the model's filename directly.  It
+        calls this gate instead: paths adjudicated inside the approved
+        project record are read relative to the pinned dispatch project root,
+        with no-follow component opens and same-file stability checks;
+        everything else yields an explicit ``not_reported_*`` status with no
+        value and no read.  The engine
+        refresh itself is untouched — model content remains a separate
+        authorization boundary (recorded residual, T36).
+        """
+        def digest_model_file(filename):
+            withheld, canonical = self._model_digest_adjudication(project_id, filename)
+            if withheld is not None:
+                return withheld
+            from ._project_root import ProjectRootBinding
+            binding = self.project_root_binding
+            if not isinstance(binding, ProjectRootBinding):
+                return {"status": "not_reported_project_scope_unavailable", "value": None, "size": None,
+                        "note": "the pinned project root is unavailable; no control-side digest is computed (T20)"}
+            try:
+                relative = canonical.relative_to(binding.path)
+                digest, size = binding.hash_file(relative.parts)
+            except ValueError:
+                return {"status": "not_reported_project_scope_unavailable", "value": None, "size": None,
+                        "note": "the digest target does not belong to the pinned project root (T20)"}
+            except ExecutionContractError as exc:
+                if exc.code == "ACCESS_VIOLATION":
+                    status = "not_reported_path_component_refused"
+                    note = ("the model filename path contains a symlink or otherwise unsafe component; "
+                            "the control-side digest is withheld and no content was read (T20)")
+                elif exc.code == "ARTIFACT_CHANGED":
+                    status = "not_reported_path_changed_during_read"
+                    note = "the project file changed during the bounded control-side read; no digest is published (T20)"
+                else:
+                    status = "not_reported_path_unreadable"
+                    note = "the project-referenced file could not be opened as a pinned regular file (T20)"
+                return {"status": status, "value": None, "size": None, "note": note}
+            except OSError:
+                return {"status": "not_reported_path_unreadable", "value": None, "size": None,
+                        "note": "the project-referenced file could not be read safely by the control process (T20)"}
+            return {"status": "verified", "value": digest, "size": size}
+
+        return digest_model_file
 
     def _host_provider_verify_scope(self, project_id, action, scope, authorization_ref):
         provider = self.scoped_host_provider
@@ -2519,6 +2650,25 @@ class ManagedBackend:
             return self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
                 request_id=execution.get("request_id"), session_id=session, effect="evaluate")
+        unit_a_path_screen: Any | None = None
+        if (unit_a and operation == "node.create" and prepared_a is not None
+                and prepared_a["body"].get("properties")):
+            # T20 independent-review B1 (2026-11-09): node.create dispatches its
+            # initial properties through execute_node_action's internal
+            # property_set call, which carries no screen of its own, so unsafe
+            # path-shaped initial values used to reach the engine unscreened.
+            # Screen the exact validated values that WILL be dispatched here —
+            # before ExecutionService takes the write ticket and before the
+            # create mutation — so an unsafe initial property is refused
+            # all-or-nothing with zero ticket and zero node created.  The
+            # screen is backend-injected from the durable project record and
+            # the loopback endpoint proof; no request-body field can supply or
+            # replace it, and permission/revision/dirty/isolation ordering is
+            # untouched (this runs after all of those gates).
+            unit_a_path_screen = self._g2_property_path_screen(execution.get("project_id"))
+            self._screen_property_values(
+                unit_a_path_screen, prepared_a["body"]["properties"], "initial properties",
+                stage="before the node is created, before the write ticket is taken and before any engine setter")
         if unit_a:
             from ._g2_public_api import execute_prepared, describe_api
             from ._g2_engine import execute_node_action
@@ -2528,10 +2678,17 @@ class ManagedBackend:
                 elif operation == "api.describe":
                     call = lambda: describe_api(self.worker, ref.model_tag, body)
                 else:
-                    call = lambda: execute_node_action(self.worker, ref.model_tag, operation, prepared_a, model_ref=ref.as_dict())
+                    # The path_guard threaded here is the dispatch-boundary
+                    # re-check of the SAME validated initial values already
+                    # screened above; inside execute_node_action it can only
+                    # refuse before the create call, keeping the dispatch
+                    # witness mutation-free.
+                    call = lambda: execute_node_action(self.worker, ref.model_tag, operation, prepared_a,
+                                                       model_ref=ref.as_dict(), path_guard=unit_a_path_screen)
                 return self._dispatch_with_witness(operation, call, effect=resolved_a_effect)
         else:
-            callback = self._g2_callback(operation, ref, body, operation_id, bound_revision)
+            callback = self._g2_callback(operation, ref, body, operation_id, bound_revision,
+                                         execution.get("project_id"))
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
                 request_id=execution.get("request_id"), session_id=session, effect=resolved_a_effect if unit_a else {
@@ -2576,7 +2733,7 @@ class ManagedBackend:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result
 
-    def _g2_callback(self, operation: str, ref, body: dict[str, Any], operation_id: str, bound_revision: int):
+    def _g2_callback(self, operation: str, ref, body: dict[str, Any], operation_id: str, bound_revision: int, project_id: Any = None):
         """Wrap one G2 action so a *proven* pre-write refusal keeps its own code.
 
         The property/index/entry setters raise ``PreWriteRefusal`` only before
@@ -2596,7 +2753,7 @@ class ManagedBackend:
             return self._dispatch_with_witness(
                 operation,
                 lambda: self._run_g2_action(operation, ref.model_tag, body, operation_id,
-                                            model_revision=bound_revision),
+                                            model_revision=bound_revision, project_id=project_id),
                 effect=LEGACY_TOOL_EFFECTS.get(operation, "project_write"),
             )
 
@@ -3249,6 +3406,19 @@ class ManagedBackend:
                                 "with a registered artifact_id",
                                 stage="validation",
                             )
+                # ``function.data_reload`` consumes model state: the control process
+                # must never open or hash the model's filename unadjudicated (the old
+                # adapter hashed whatever the model said, relative to the daemon CWD
+                # for relative names).  Inject a request-private digest capability
+                # that only reads paths proven inside the approved project record's
+                # workspace; a caller-supplied value for this key is always stripped.
+                # Both public routes (registry_call and direct canonical action)
+                # share this single dispatch point.
+                if operation == "function.data_reload":
+                    from ._g3_w13 import _RELOAD_DIGEST_PROVIDER_KEY
+                    domain_body.pop(_RELOAD_DIGEST_PROVIDER_KEY, None)
+                    domain_body[_RELOAD_DIGEST_PROVIDER_KEY] = self._project_model_file_digest_provider(
+                        execution.get("project_id"))
                 managed_context_action = delivery_action or operation in {
                     "model.tree", "model.save", "model.clone", "model.close",
                     "code.recipe_register", "code.recipe_run",
@@ -3536,32 +3706,23 @@ class ManagedBackend:
                             if binding:
                                 row["path_binding_to_registered_artifact"] = binding
                 if operation == "function.data_reload" and isinstance(data, dict):
-                    # function.data_reload consumes model state: the filename is a
-                    # property of the loaded model, not a caller-named path (the public
-                    # domain writers of that property are closed above).  The control
-                    # process still digests the model-referenced file, so its digest is
-                    # only published while the file sits inside the managed project
-                    # boundary; an out-of-project filename keeps the refresh result and
-                    # the raw model property (already inspectable) but the control-side
-                    # digest is withheld with an explicit status instead of pretending
-                    # the read did not happen.
-                    reload_filename = data.get("filename")
-                    if isinstance(reload_filename, str) and reload_filename:
-                        candidate = Path(reload_filename)
-                        if candidate.is_absolute():
-                            try:
-                                root_resolved = str(Path(self.project_root).resolve())
-                                outside = os.path.commonpath([str(candidate.resolve()), root_resolved]) != root_resolved
-                            except (OSError, ValueError):
-                                outside = False
-                            if outside:
-                                data["sha256"] = {
-                                    "status": "not_reported_outside_project_boundary",
-                                    "value": None,
-                                    "size": None,
-                                    "note": "the model's filename property points outside the managed project "
-                                            "root; the control-side digest of that path is withheld (T20)",
-                                }
+                    # Defense in depth for the model-state digest.  function.data_reload
+                    # consumes model state: the filename is a property of the loaded
+                    # model, not a caller-named path (the public domain writers of that
+                    # property are closed above), and the engine refresh itself still
+                    # follows model state (recorded residual: the engine host reads the
+                    # referenced file; the pre-existing-model cleanup belongs to T36).
+                    # The adapter digests through the injected project-bound capability,
+                    # which never opens an unadjudicated path; if any adapter path still
+                    # carries a digest value for a filename this process cannot prove
+                    # inside the approved project record, withhold it here too instead
+                    # of publishing it.  Undecidable adjudication fails closed.
+                    sha256_row = data.get("sha256")
+                    if isinstance(sha256_row, dict) and sha256_row.get("value") is not None:
+                        withheld, _ = self._model_digest_adjudication(
+                            execution.get("project_id"), data.get("filename"))
+                        if withheld is not None:
+                            data["sha256"] = withheld
                 if checkpoint_info is not None and isinstance(data, dict):
                     data["resume_checkpoint"] = {
                         "checkpoint_id": checkpoint_info["checkpoint_id"],
@@ -3641,7 +3802,128 @@ class ManagedBackend:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result
 
-    def _run_g2_action(self, operation: str, model_tag: str, body: dict[str, Any], operation_id: str, *, model_revision: int | None = None) -> dict[str, Any]:
+    def _g2_property_path_screen(self, project_id: Any):
+        """Build the request-private T20 path-shape screen for one write route.
+
+        This is an explicitly disclosed PARTIAL mitigation, not a project
+        file sandbox: it only refuses typed-value string leaves whose
+        lexical path shape cannot be proven project-local on a proven
+        loopback engine host (external absolutes, Windows drive/UNC shapes,
+        relative ``..`` traversal, NUL bytes, in-project absolute values with
+        a symlink component or a multiple-link existing target).  Plain
+        text, expressions, line-format payloads and proven in-project
+        absolute values are untouched; bare relative names stay undecided
+        (the open file/non-file classification problem, see
+        T20-generic-property-parent-adjudication-20261108.md).  The approved
+        root is re-read from the durable project record via the project
+        authority on every use — never the daemon container, never the
+        caller — and the engine host must be a literal loopback endpoint
+        (the ``function.data_import`` ARTIFACT_HOST_UNVERIFIED precedent);
+        when that relationship cannot be established the screen refuses
+        path-shaped values.  The screen is installed only through
+        backend-side keyword arguments; no request-body field can supply a
+        root, provider or screen.  Since the 2026-11-09 B1 fix it is also
+        installed for the ``node.create`` route: the exact validated initial
+        property values are screened **before** ExecutionService takes the
+        write ticket and before the create mutation, and the same screen
+        instance is re-checked at the ``execute_node_action`` dispatch
+        boundary (a refusal there is still mutation-free for the witness).
+        The screen never establishes a physical project boundary: its probe
+        strings stay lexically inside the root, but a same-UID concurrent
+        swap of an already probed component can move kernel resolution
+        outside the root during the scan itself (recorded open item, see the
+        guard module docstring).
+        """
+        from ._g2_property_path_guard import (adjudicate_path_leaf, classify_string_leaf,
+                                              typed_value_string_leaves)
+        resolved: dict[str, Any] = {}
+
+        def resolve_root() -> str | None:
+            if "root" not in resolved:
+                root: str | None = None
+                if isinstance(project_id, str) and project_id and callable(self.project_authorizer):
+                    try:
+                        record = self.project_authorizer(project_id, "project_write")
+                    except Exception:
+                        record = None
+                    workspace = record.get("workspace") if isinstance(record, Mapping) else None
+                    if isinstance(workspace, str) and workspace and os.path.isabs(workspace):
+                        root_path = Path(workspace)
+                        scoped = self._project_root_context.get(None)
+                        if scoped is None or Path(scoped) == root_path:
+                            root = str(root_path)
+                resolved["root"] = root
+            return resolved["root"]
+
+        def resolve_host() -> bool:
+            if "host" not in resolved:
+                from ._artifact_store import local_engine_host_identity
+                try:
+                    resolved["host"] = local_engine_host_identity(self.endpoint_key) is not None
+                except ExecutionContractError:
+                    resolved["host"] = False
+            return resolved["host"]
+
+        def screen(typed_value: Any, *, where: str,
+                   stage: str = "before any engine setter") -> None:
+            findings: list[dict[str, Any]] = []
+            for leaf_where, leaf in typed_value_string_leaves(typed_value):
+                shape = classify_string_leaf(leaf)
+                if shape is None:
+                    continue
+                allowed, reason = adjudicate_path_leaf(
+                    leaf, shape, project_root=resolve_root(), engine_host_proven=resolve_host())
+                if not allowed:
+                    findings.append({"where": f"{where}.{leaf_where}", "shape": shape, "reason": reason,
+                                     "leaf_sha256": hashlib.sha256(
+                                         leaf.encode("utf-8", "surrogatepass")).hexdigest()[:16]})
+            if findings:
+                raise PreWriteRefusal(
+                    "ACCESS_VIOLATION",
+                    "a typed property value carries a path shape that cannot be proven inside the "
+                    f"approved project root on the proven engine host, so the write is refused {stage} "
+                    "(T20 partial path-shape mitigation; plain strings and "
+                    "project-proven values are unaffected)",
+                    details={"mitigation": "t20-property-path-shape-partial",
+                             "findings": findings,
+                             "scope_limits": "lexical path-shape screen only; file/non-file semantics "
+                                             "and bare relative names remain undecided; the probe "
+                                             "strings stay lexically inside the root but a same-user "
+                                             "swap during the scan can move kernel resolution "
+                                             "outside it (recorded open)"})
+
+        return screen
+
+    def _screen_property_values(self, screen, properties: list[Any], label: str, *, stage: str) -> None:
+        """Screen already-validated initial property values with a backend-built screen."""
+        for item in properties:
+            if isinstance(item, Mapping):
+                screen(item.get("value"), where=f"{label}[{item.get('name')!r}]", stage=stage)
+
+    def _screen_nested_property_actions(self, actions: list[dict[str, Any]], project_id: Any) -> None:
+        """Refuse path-crossing nested property actions before any checkpoint/copy.
+
+        Every supported nested action is screened before the transaction
+        runner dispatches the first one, so a later crossing action can never
+        be discovered only after an earlier action already mutated the
+        engine (all-or-nothing at the preflight boundary).
+        """
+        screen = None
+        for index, action in enumerate(actions):
+            operation = action.get("operation_id", action.get("operation"))
+            arguments = action.get("arguments", {})
+            if operation not in {"node.property_set", "node.property_index_set", "node.property_entry_set"}:
+                continue
+            if screen is None:
+                screen = self._g2_property_path_screen(project_id)
+            if operation == "node.property_set":
+                for item in arguments.get("properties", []):
+                    if isinstance(item, Mapping):
+                        screen(item.get("value"), where=f"action {index}.properties[{item.get('name')!r}]")
+            else:
+                screen(arguments.get("value"), where=f"action {index}.value")
+
+    def _run_g2_action(self, operation: str, model_tag: str, body: dict[str, Any], operation_id: str, *, model_revision: int | None = None, project_id: Any = None) -> dict[str, Any]:
         if operation == "node.inspect": data = inspect_node(
             self.worker, model_tag, body.get("path", {}),
             include_values=body.get("include_values", False),
@@ -3650,9 +3932,9 @@ class ManagedBackend:
         elif operation == "node.find": data = find_nodes(self.worker, model_tag, body.get("query", {}), root=body.get("root"), limit=body.get("limit", 100), cursor=body.get("cursor"), model_revision=model_revision, budget=body.get("budget"))
         elif operation == "node.property_schema": data = property_schema(self.worker, model_tag, body.get("path", {}), body.get("name"))
         elif operation == "node.property_get": data = property_get(self.worker, model_tag, body.get("path", {}), body.get("names", []))
-        elif operation == "node.property_set": data = property_set(self.worker, model_tag, body.get("path", {}), body.get("properties", []))
-        elif operation == "node.property_index_set": data = property_index_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("indices", []), body.get("value", {}))
-        elif operation == "node.property_entry_set": data = property_entry_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("key", ""), body.get("value", {}))
+        elif operation == "node.property_set": data = property_set(self.worker, model_tag, body.get("path", {}), body.get("properties", []), path_guard=self._g2_property_path_screen(project_id))
+        elif operation == "node.property_index_set": data = property_index_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("indices", []), body.get("value", {}), path_guard=self._g2_property_path_screen(project_id))
+        elif operation == "node.property_entry_set": data = property_entry_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("key", ""), body.get("value", {}), path_guard=self._g2_property_path_screen(project_id))
         elif operation == "code.execute_java":
             from ._g2_code import describe_snapshot, read_source_snapshot
             snapshot = read_source_snapshot(self.project_root_binding or self.project_root,
@@ -3959,6 +4241,11 @@ class ManagedBackend:
         # create its before-checkpoint.  The callback repeats the permission
         # check as defense in depth for any future runner change.
         self._preflight_nested_actions(actions)
+        # T20 partial path-shape mitigation: refuse nested property writes
+        # whose typed values carry an unprovable path shape before this
+        # ticket callback can create its before-checkpoint and before the
+        # runner dispatches any action.
+        self._screen_nested_property_actions(actions, execution.get("project_id"))
         # R04: reject an unsupported/malformed required invariant here, before
         # the checkpoint file and before any action is dispatched.
         invariants = body.get("invariants")
@@ -3976,7 +4263,8 @@ class ManagedBackend:
             # make PersistentJavaWorker treat the second body as an
             # idempotency conflict (or replay the first body).
             step_operation_id = f"{operation_id}:step:{_index}"
-            return self._run_g2_action(operation, ref.model_tag, args, step_operation_id)
+            return self._run_g2_action(operation, ref.model_tag, args, step_operation_id,
+                                       project_id=execution.get("project_id"))
         def callback(_args):
             # The checkpoint is part of the ticketed callback.  Permission,
             # current revision, and external-change checks therefore happen
@@ -4033,6 +4321,10 @@ class ManagedBackend:
             raise ExecutionContractError("REVISION_CONFLICT", "external model change requires reconciliation before trial")
         actions = body.get("actions", [])
         self._preflight_nested_actions(actions)
+        # T20 partial path-shape mitigation: refuse crossing nested property
+        # values before the trial checkpoint copy and the trial model load,
+        # not merely in the post-check scoped readback.
+        self._screen_nested_property_actions(actions, execution.get("project_id"))
         checkpoint_metadata, checkpoint_path = self._trial_checkpoint(ref, body.get("checkpoint_id"), state, expected_revision)
         scope_requests, scope_limitations = self._trial_scope_plan(actions)
         before_main = self.worker.backend_snapshot(ref.model_tag)
@@ -4061,7 +4353,8 @@ class ManagedBackend:
                 if permission not in self.service.ledger.permissions:
                     return {"success": False, "error": {"code": "PERMISSION_DENIED", "message": f"permission required: {permission or entry.effect}", "safe_retry": False}}
                 step_operation_id = f"{operation_id}:step:{_index}"
-                return self._run_g2_action(operation, trial_tag, args, step_operation_id)
+                return self._run_g2_action(operation, trial_tag, args, step_operation_id,
+                                           project_id=execution.get("project_id"))
             result = execute_transaction(self.worker, trial_tag, actions, runner=runner, invariants=body.get("invariants"))
         except Exception as exc:
             result = {"success": False, "data": {"status": "UNKNOWN"},

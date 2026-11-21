@@ -30,6 +30,9 @@ class Selection:
         return self.name
     def entities(self):return list(self.ids)
     def dim(self):return self.dimension
+    # The explicit-selection fake records the level applied by geom(...).
+    # LocalSelection extends Selection, whose inputDimension() is a real getter.
+    def inputDimension(self):return self.dimension
     def geom(self,*args):
         if args:self.calls.append(('geom',args));self.geometry=args[0] if isinstance(args[0],str) else self.geometry;self.dimension=args[-1];return self
         return self.geometry
@@ -118,7 +121,7 @@ class Worker:
             rows=[method(owners[0],'copy',('java.lang.String','java.lang.String')),method(owners[0],'remove',('java.lang.String',)),method(owners[1],'create',('java.lang.String','java.lang.String')),method(owners[2],'move',('java.lang.String','int'))]
         elif isinstance(node,Selection):
             owners=['com.comsol.model.Selection','com.comsol.model.LocalSelection','com.comsol.model.AbstractSelection']
-            rows=[method(owners[0],'geom',('int',)),method(owners[0],'geom',('java.lang.String','int')),method(owners[0],'set',('[I',)),method(owners[0],'all'),method(owners[0],'inherit',('boolean',)),method(owners[0],'isInheriting'),method(owners[1],'named',('java.lang.String',))]
+            rows=[method(owners[0],'geom',('int',)),method(owners[0],'geom',('java.lang.String','int')),method(owners[0],'set',('[I',)),method(owners[0],'all'),method(owners[0],'inherit',('boolean',)),method(owners[0],'isInheriting'),method(owners[0],'inputDimension',returns='int'),method(owners[1],'named',('java.lang.String',))]
         else:
             owners=[api.MODEL_ENTITY,'com.comsol.model.PropFeature']
             if node is self.model_node and self.include_model_root_interface:

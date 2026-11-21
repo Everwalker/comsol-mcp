@@ -130,17 +130,34 @@ class DescriptorWorker:
         return copy.deepcopy(self.descriptor)
 
 
-@pytest.mark.parametrize("wrong_raw", [
+@pytest.mark.parametrize("raw", [
     "COMSOL Multiphysics 6.4 (开发版本: 294)",
     "COMSOL Multiphysics 6.3 (开发版本: 293)",
 ])
-def test_actual_copied_native_root_label_descriptor_gates_public_label_action(wrong_raw):
+def test_actual_copied_native_root_label_descriptor_accepts_supported_release(raw):
     native = actual_native_descriptor()
     assert native["runtime_version"] == "COMSOL Multiphysics 6.4 (开发版本: 293)"
     assert "com.comsol.model.ModelEntity" in native["interfaces"]
     exact_label_setter = {"interface": "com.comsol.model.ModelEntity", "method": "label",
                           "parameters": ["java.lang.String"], "returns": "com.comsol.model.ModelEntity"}
     assert exact_label_setter in native["labels"]
+    descriptor = worker_descriptor_from_native_capture(native)
+    descriptor["runtime_version"] = raw
+    worker = DescriptorWorker(descriptor)
+    prepared = prepare_node_action(worker, "m", "node.label_set", {"path": ROOT_PATH, "label": "new"})
+    assert prepared["descriptor"]["runtime_version"] == api.normalize_public_runtime_version(raw)[0]
+    assert prepared["descriptor"]["runtime_version_raw"] == raw
+    result = execute_node_action(worker, "m", "node.label_set", prepared, model_ref={"model_tag": "m"})
+    assert result["success"] is True
+    assert worker.root.display_label == "new"
+
+
+@pytest.mark.parametrize("wrong_raw", [
+    "COMSOL Multiphysics 6.2 (开发版本: 293)",
+    "COMSOL Multiphysics 6.5 (开发版本: 293)",
+])
+def test_actual_copied_native_root_label_descriptor_rejects_unsupported_release(wrong_raw):
+    native = actual_native_descriptor()
     descriptor = worker_descriptor_from_native_capture(native)
     descriptor["runtime_version"] = wrong_raw
     worker = DescriptorWorker(descriptor)
@@ -191,8 +208,14 @@ def test_generic_api_describe_prepare_invoke_keep_effect_and_raw_version_evidenc
     with pytest.raises(ExecutionContractError) as error:
         api.prepare_invoke(worker, "m", {**write_request, "declared_effect": "READ"})
     assert error.value.code == "PERMISSION_DENIED"
+    alternate_raw = "COMSOL Multiphysics 6.4 (开发版本: 294)"
+    alternate_worker = DescriptorWorker({**descriptor, "runtime_version": alternate_raw})
+    alternate = api.prepare_invoke(alternate_worker, "m", read_request)
+    assert alternate["descriptor"]["runtime_version"] == "6.4.0.294"
+    assert alternate["descriptor"]["runtime_version_raw"] == alternate_raw
+    assert api.describe_api(alternate_worker, "m", {"path": request_path})["runtime_version_raw"] == alternate_raw
     wrong_version_worker = DescriptorWorker({**descriptor,
-        "runtime_version": "COMSOL Multiphysics 6.4 (开发版本: 294)"})
+        "runtime_version": "COMSOL Multiphysics 6.5 (开发版本: 293)"})
     with pytest.raises(ExecutionContractError) as error:
         api.prepare_invoke(wrong_version_worker, "m", read_request)
     assert error.value.code == "API_UNSUPPORTED"

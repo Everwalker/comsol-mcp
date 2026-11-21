@@ -119,6 +119,9 @@ def _approved_public_python_tls_fixture(rel,data):
 MAX_FILE_BYTES = 2 * 1024**3
 MAX_TOTAL_BYTES = 12 * 1024**3
 MAX_ARCHIVE_DEPTH = 3
+# Fixed bundle member for a caller-supplied file that matches a provenance-declared
+# build_evidence SHA256. The provenance's own path string is never opened or reused.
+DERIVED_BUILD_EVIDENCE_MEMBER = "evidence/derived-wheel-build-evidence.json"
 
 
 class ReleaseError(RuntimeError):
@@ -135,6 +138,42 @@ def sha256_file(path: pathlib.Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             h.update(block)
     return h.hexdigest()
+
+
+def _validated_derived_build_evidence(provenance: dict[str, Any],
+                                      derived_build_evidence: pathlib.Path | None) -> tuple[dict[str, Any], pathlib.Path | None]:
+    """Bind a provenance-declared build_evidence claim to an explicit caller file.
+
+    A provenance claiming ``build_evidence`` forces the caller to name a readable
+    regular (non-symlink) file whose SHA256 equals the claim exactly; the
+    provenance's own ``path`` string is data only and is never opened. Legacy
+    schema-v1 provenance without the block keeps working but is recorded as
+    NOT_RECORDED/UNVERIFIED instead of pretending verification happened.
+    """
+    claimed = provenance.get("build_evidence")
+    if "build_evidence" in provenance and not isinstance(claimed, dict):
+        raise ReleaseError("derived wheel provenance build_evidence claim must be an object")
+    if derived_build_evidence is not None and claimed is None:
+        raise ReleaseError("derived build evidence input supplied but the provenance declares no build_evidence block")
+    if claimed is None:
+        return ({"status": "NOT_RECORDED", "verification": "UNVERIFIED", "sha256": None,
+                 "declared_sha256": None, "bytes": None}, None)
+    if derived_build_evidence is None:
+        raise ReleaseError("provenance declares build_evidence; an explicit caller-provided derived build evidence file is required")
+    path = pathlib.Path(derived_build_evidence)
+    if path.is_symlink() or not path.is_file():
+        raise ReleaseError("derived build evidence must be an explicit readable regular file, not a symlink or non-file")
+    declared_sha = str(claimed.get("sha256", ""))
+    if not re.fullmatch(r"[0-9a-f]{64}", declared_sha):
+        raise ReleaseError("provenance build_evidence claim has no valid SHA256")
+    try:
+        measured = sha256_file(path)
+    except OSError as exc:
+        raise ReleaseError(f"derived build evidence file is unreadable: {exc}") from exc
+    if measured != declared_sha:
+        raise ReleaseError("derived build evidence SHA256 does not match the provenance build_evidence claim")
+    return ({"status": "VERIFIED", "verification": "VERIFIED", "sha256": measured,
+             "declared_sha256": declared_sha, "bytes": path.stat().st_size}, path)
 
 
 def normalized_name(value: str) -> str:
@@ -563,12 +602,15 @@ def _locked_package(source_lock: pathlib.Path, name: str, version: str) -> dict[
 
 def verify_derived_wheel(provenance_path: pathlib.Path, wheel_path: pathlib.Path,
                          source_lock: pathlib.Path, openssl_license_path: pathlib.Path,
-                         target: str) -> dict[str, Any]:
+                         target: str,
+                         derived_build_evidence: pathlib.Path | None = None) -> dict[str, Any]:
     """Validate the separately attested cryptography source-build wheel.
 
     The repository lock remains immutable. The provenance binds the local wheel
     to its locked sdist and records the non-Python OpenSSL component and native
-    audit needed to distinguish a build candidate from an upstream wheel.
+    audit needed to distinguish a build candidate from an upstream wheel. When the
+    provenance declares ``build_evidence``, the caller must explicitly provide
+    that evidence file and its SHA256 must match the claim exactly.
     """
     provenance_path = provenance_path.resolve(strict=True)
     wheel_path = wheel_path.resolve(strict=True)
@@ -639,10 +681,12 @@ def verify_derived_wheel(provenance_path: pathlib.Path, wheel_path: pathlib.Path
         raise ReleaseError("derived wheel native audit is missing or reports an unapproved dynamic dependency")
     if provenance.get("uv_lock_modified") is not False or provenance.get("upstream_source_patched") is not False:
         raise ReleaseError("derived wheel provenance must confirm the upstream source and uv.lock were unchanged")
+    evidence_block, evidence_source = _validated_derived_build_evidence(provenance, derived_build_evidence)
     return {"provenance": provenance, "provenance_sha256": sha256_file(provenance_path),
             "provenance_filename": provenance_path.name, "wheel": wheel_row,
             "native_component": openssl, "license_path": openssl_license_path,
-            "source_lock_sha256": lock_sha}
+            "source_lock_sha256": lock_sha, "build_evidence": evidence_block,
+            "build_evidence_source": evidence_source}
 
 
 def verify_historical_prebuilt_wheel(profile: dict[str, Any], provenance_path: pathlib.Path,
@@ -761,11 +805,13 @@ def verify_historical_prebuilt_wheel(profile: dict[str, Any], provenance_path: p
 def compose_derived_wheel_lock(requirements: pathlib.Path, wheel: pathlib.Path,
                               source_lock: pathlib.Path, provenance: pathlib.Path,
                               openssl_license: pathlib.Path, target: str,
-                              output: pathlib.Path) -> dict[str, Any]:
+                              output: pathlib.Path,
+                              derived_build_evidence: pathlib.Path | None = None) -> dict[str, Any]:
     """Create a target requirements overlay without editing the source uv.lock."""
     if output.exists():
         raise ReleaseError(f"refusing to overwrite derived requirements lock: {output}")
-    derived = verify_derived_wheel(provenance, wheel, source_lock, openssl_license, target)
+    derived = verify_derived_wheel(provenance, wheel, source_lock, openssl_license, target,
+                                   derived_build_evidence)
     pins = parse_hash_requirements(requirements, target)
     pin = pins.get("cryptography")
     if pin is None or pin["version"] != "50.0.1":
@@ -782,7 +828,8 @@ def compose_derived_wheel_lock(requirements: pathlib.Path, wheel: pathlib.Path,
             "sha256": sha256_file(output), "target": target,
             "cryptography_wheel_sha256": derived["wheel"]["sha256"],
             "source_lock_sha256": derived["source_lock_sha256"],
-            "derived_provenance_sha256": derived["provenance_sha256"]}
+            "derived_provenance_sha256": derived["provenance_sha256"],
+            "derived_build_evidence": derived["build_evidence"]}
 
 
 def write_target_download_lock(requirements: pathlib.Path, target: str, output: pathlib.Path) -> dict[str, Any]:
@@ -868,7 +915,9 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
                            primary_notice_manifest: pathlib.Path | None = None,
                            historical_prebuilt_profile: dict[str, Any] | None = None,
                            historical_provenance: pathlib.Path | None = None,
-                           historical_openssl_license: pathlib.Path | None = None) -> dict[str, Any]:
+                           historical_openssl_license: pathlib.Path | None = None,
+                           derived_build_evidence: pathlib.Path | None = None,
+                           primary_notice_receipt: pathlib.Path | None = None) -> dict[str, Any]:
     bundle = bundle.resolve(strict=True)
     requirements = requirements.resolve(strict=True)
     output_dir = output_dir.resolve()
@@ -883,6 +932,9 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         raise ReleaseError("historical prebuilt wheel manifests require profile, provenance, and OpenSSL license")
     if derived_provenance is not None and any(item is not None for item in historical_args):
         raise ReleaseError("derived and historical prebuilt wheel profiles are mutually exclusive")
+    if derived_build_evidence is not None and (derived_provenance is None
+                                               or any(item is not None for item in historical_args)):
+        raise ReleaseError("derived build evidence input requires the derived wheel provenance, not the historical profile")
     if derived_provenance is not None and source_lock is None:
         raise ReleaseError("derived wheel provenance requires the source uv.lock")
     if any(item is not None for item in historical_args) and source_lock is None:
@@ -911,7 +963,7 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
             raise ReleaseError(f"derived wheel provenance is missing or invalid: {exc}") from exc
         derived = verify_derived_wheel(derived_provenance, bundle / derived_wheel_name,
-                                       source_lock, openssl_license, target)
+                                       source_lock, openssl_license, target, derived_build_evidence)
     if historical_prebuilt_profile is not None:
         historical = verify_historical_prebuilt_wheel(
             historical_prebuilt_profile, historical_provenance,
@@ -991,7 +1043,7 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         component_source = derived if derived is not None else historical
         native = component_source["native_component"]
         license_source_path = openssl_license if derived is not None else historical_openssl_license
-        license_record = {"path": "licenses/openssl-4.0.2-LICENSE.txt",
+        license_record = {"path": f"licenses/openssl-{native['version']}-LICENSE.txt",
                           "bytes": license_source_path.stat().st_size,
                           "sha256": sha256_file(license_source_path)}
         component = {"type": "library", "name": native["name"], "version": native["version"],
@@ -1010,10 +1062,14 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
                                        "license": native["license"], "license_classifiers": [],
                                        "license_files": [license_record]})
         if derived is not None:
+            evidence_block = dict(derived["build_evidence"])
+            evidence_block["bundle_member"] = (DERIVED_BUILD_EVIDENCE_MEMBER
+                                               if evidence_block["verification"] == "VERIFIED" else None)
             manifest["derived_wheel"] = {
                 "package": "cryptography==50.0.1", "wheel": derived["wheel"],
                 "provenance": {"filename": derived["provenance_filename"], "sha256": derived["provenance_sha256"]},
                 "source_lock_sha256": derived["source_lock_sha256"],
+                "build_evidence": evidence_block,
                 "native_component": {"name": native["name"], "version": native["version"],
                                       "source_sha256": native["source_sha256"], "linkage": native["linkage"],
                                       "license": native["license"], "license_file": license_record},
@@ -1035,38 +1091,72 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
                 "native_static_audit": historical["native_static_audit"],
                 "execution_or_installation_verified": False,
             }
-    notice_inputs = {}
+    notice_inputs: dict[str, list[dict[str, Any]]] = {}
+    notice_route: dict[str, Any] | None = None
+    if primary_notice_manifest is not None and primary_notice_receipt is not None:
+        raise ReleaseError("primary notices must select exactly one input route: W26 exact manifest or source-lock receipt")
     if primary_notice_manifest is not None:
         from tools.w26_primary_notices import notice_payloads
-        notice_inputs = notice_payloads(primary_notice_manifest)
+        notice_inputs = {name: [payload] for name, payload in notice_payloads(primary_notice_manifest).items()}
+    if primary_notice_receipt is not None:
+        from tools.source_lock_notices import SourceLockNoticeError, lock_bound_notice_payloads
+        if source_lock is None:
+            raise ReleaseError("the source-lock primary notice input requires the source uv.lock")
+        try:
+            notice_inputs, notice_route = lock_bound_notice_payloads(
+                primary_notice_receipt, source_lock=source_lock, target=target)
+        except SourceLockNoticeError as exc:
+            raise ReleaseError(f"source-lock primary notice verification failed: {exc}") from exc
+    if primary_notice_manifest is not None or primary_notice_receipt is not None:
         present = {normalized_name(row["name"]): row for row in manifest["wheels"]}
         if not set(notice_inputs).issubset(present):
             raise ReleaseError("primary notice package absent from target wheelhouse")
+        if notice_route is not None:
+            contradictory = sorted(set(notice_route["not_applicable_to_target"]) & set(present))
+            if contradictory:
+                raise ReleaseError("receipt target applicability disagrees with the actual wheelhouse: "
+                                   + ", ".join(contradictory))
+            unmatched = sorted(set(notice_route["declared_without_notices"]) - set(present))
+            if unmatched:
+                raise ReleaseError("receipt target claim has no wheel in the actual wheelhouse: "
+                                   + ", ".join(unmatched))
+            uncovered = sorted(name for name, row in present.items()
+                               if not row.get("license_files") and name not in notice_inputs)
+            if uncovered:
+                raise ReleaseError("uncovered target wheels without a license file or verified primary notice: "
+                                   + ", ".join(uncovered))
         manifest["primary_notices"] = []
-        for name, notice in sorted(notice_inputs.items()):
+        if notice_route is not None:
+            manifest["primary_notice_route"] = notice_route
+        for name, payloads in sorted(notice_inputs.items()):
             row = present[name]
-            if row["version"] != "12.2.2" or row["sha256"] != notice["wheel_sha256"]:
-                raise ReleaseError("primary notice does not bind the actual same-version wheel")
-            record = {"path": notice["relative_path"], "bytes": len(notice["license_bytes"]),
-                      "sha256": hashlib.sha256(notice["license_bytes"]).hexdigest(),
-                      "provenance": notice["provenance"]}
-            manifest["primary_notices"].append(record)
-            component = next(item for item in licenses["components"] if normalized_name(item["name"]) == name)
-            component["primary_source_notices"] = [record]
-            sbom_component = next(item for item in components if normalized_name(item["name"]) == name)
-            sbom_component["properties"].append({"name": "release.primary-notice.sha256", "value": record["sha256"]})
+            for notice in payloads:
+                if row["version"] != notice["provenance"]["version"] or row["sha256"] != notice["wheel_sha256"]:
+                    raise ReleaseError("primary notice does not bind the actual same-version wheel")
+                record = {"path": notice["relative_path"], "bytes": len(notice["license_bytes"]),
+                          "sha256": hashlib.sha256(notice["license_bytes"]).hexdigest(),
+                          "provenance": notice["provenance"]}
+                manifest["primary_notices"].append(record)
+                component = next(item for item in licenses["components"] if normalized_name(item["name"]) == name)
+                component.setdefault("primary_source_notices", []).append(record)
+                sbom_component = next(item for item in components if normalized_name(item["name"]) == name)
+                sbom_component["properties"].append({"name": "release.primary-notice.sha256", "value": record["sha256"]})
     sbom = {"bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
             "metadata": {"timestamp": utc_now(), "component": {"type": "application", "name": "comsol-mcp-offline-bundle", "version": "candidate"}},
             "components": components}
     output_dir.mkdir(parents=True, exist_ok=True)
-    if notice_inputs:
+    notice_payload_rows = [item for payloads in notice_inputs.values() for item in payloads]
+    if notice_payload_rows:
         notice_root = output_dir / "notices"
         if notice_root.exists() or notice_root.is_symlink():
             raise ReleaseError("primary notice output requires fresh no-clobber directory")
         notice_root.mkdir(mode=0o700)
-    for notice in notice_inputs.values():
+    created_notice_dirs = set()
+    for notice in notice_payload_rows:
         destination = output_dir / notice["relative_path"]
-        destination.parent.mkdir(mode=0o700, exist_ok=False)
+        if destination.parent not in created_notice_dirs:
+            destination.parent.mkdir(mode=0o700, exist_ok=False)
+            created_notice_dirs.add(destination.parent)
         with destination.open("xb") as stream:
             stream.write(notice["license_bytes"])
     _json_write(output_dir / "SBOM.cdx.json", sbom)
@@ -1171,7 +1261,9 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
                               primary_notice_manifest: pathlib.Path | None = None,
                               historical_prebuilt_profile: dict[str, Any] | None = None,
                               historical_provenance: pathlib.Path | None = None,
-                              historical_openssl_license: pathlib.Path | None = None) -> dict[str, Any]:
+                              historical_openssl_license: pathlib.Path | None = None,
+                              derived_build_evidence: pathlib.Path | None = None,
+                              primary_notice_receipt: pathlib.Path | None = None) -> dict[str, Any]:
     """Package a target wheelhouse and its complete install/audit metadata."""
     wheelhouse = wheelhouse.resolve(strict=True)
     requirements = requirements.resolve(strict=True)
@@ -1187,6 +1279,9 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         raise ReleaseError("historical prebuilt wheel bundles require profile, provenance, and OpenSSL license")
     if derived_provenance is not None and any(item is not None for item in historical_args):
         raise ReleaseError("derived and historical prebuilt wheel profiles are mutually exclusive")
+    if derived_build_evidence is not None and (derived_provenance is None
+                                               or any(item is not None for item in historical_args)):
+        raise ReleaseError("derived build evidence input requires the derived wheel provenance, not the historical profile")
     if derived_provenance is not None:
         derived_provenance = derived_provenance.resolve(strict=True)
         openssl_license = openssl_license.resolve(strict=True)
@@ -1202,14 +1297,20 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
     evidence_path = evidence_dir / f"offline-bundle-{target}.json"
     if evidence_path.exists():
         raise ReleaseError(f"offline bundle evidence already exists: {evidence_path}")
-    package_manifest = json.loads((metadata_dir / "PACKAGE_MANIFEST.json").read_text(encoding="utf-8"))
+    # Snapshot the supplied manifest/receipt bytes once; every later read of the
+    # same path must match these audited bytes or packaging fails before any
+    # archive or success receipt exists.
+    package_manifest_bytes = (metadata_dir / "PACKAGE_MANIFEST.json").read_bytes()
+    package_manifest = json.loads(package_manifest_bytes.decode("utf-8"))
     sbom_path = metadata_dir / "SBOM.cdx.json"
     licenses_path = metadata_dir / "LICENSES.json"
     build_receipt_path = build_evidence / "wheel-build-receipt.json"
     source_manifest_path = build_evidence / "source-snapshot-manifest.json"
     try:
-        build_receipt = json.loads(build_receipt_path.read_text(encoding="utf-8"))
-        source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+        build_receipt_bytes = build_receipt_path.read_bytes()
+        source_manifest_bytes = source_manifest_path.read_bytes()
+        build_receipt = json.loads(build_receipt_bytes.decode("utf-8"))
+        source_manifest = json.loads(source_manifest_bytes.decode("utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ReleaseError(f"build receipt or source snapshot manifest is missing/invalid: {exc}") from exc
     source_rows = source_manifest.get("files")
@@ -1245,7 +1346,8 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         verified = create_bundle_manifest(wheelhouse, target, requirements, source_lock,
                                           pathlib.Path(temp) / "metadata", derived_provenance, openssl_license,
                                           primary_notice_manifest, historical_prebuilt_profile,
-                                          historical_provenance, historical_openssl_license)
+                                          historical_provenance, historical_openssl_license,
+                                          derived_build_evidence, primary_notice_receipt)
         rechecked_metadata = pathlib.Path(temp) / "metadata"
         rechecked_sbom = json.loads((rechecked_metadata / "SBOM.cdx.json").read_text(encoding="utf-8"))
         rechecked_licenses = json.loads((rechecked_metadata / "LICENSES.json").read_text(encoding="utf-8"))
@@ -1257,6 +1359,8 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         raise ReleaseError("historical prebuilt wheel/component metadata changed since the supplied package manifest")
     if verified.get("primary_notices") != package_manifest.get("primary_notices"):
         raise ReleaseError("primary notice provenance changed since the supplied manifest")
+    if verified.get("primary_notice_route") != package_manifest.get("primary_notice_route"):
+        raise ReleaseError("primary notice input route changed since the supplied manifest")
     for filename, expected in (("SBOM.cdx.json", rechecked_sbom), ("LICENSES.json", rechecked_licenses)):
         try:
             supplied = json.loads((metadata_dir / filename).read_text(encoding="utf-8"))
@@ -1282,7 +1386,8 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         ("docs/RELEASE_OPERATIONS.md", operations_doc),
     ]
     lifecycle_helper = tool_path.with_name("release_transition_lifecycle.py")
-    if "--with-data-lifecycle" in tool_path.read_text(encoding="utf-8"):
+    tool_bytes = tool_path.read_bytes()
+    if "--with-data-lifecycle" in tool_bytes.decode("utf-8"):
         if not lifecycle_helper.is_file() or lifecycle_helper.is_symlink():
             raise ReleaseError("release data lifecycle helper is missing or symlinked")
         files.append(("tools/release_transition_lifecycle.py", lifecycle_helper))
@@ -1292,8 +1397,14 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
     if derived_provenance is not None and openssl_license is not None:
         files.extend([
             ("evidence/cryptography-x86-derived-provenance.json", derived_provenance),
-            ("licenses/openssl-4.0.2-LICENSE.txt", openssl_license),
+            (verified["derived_wheel"]["native_component"]["license_file"]["path"], openssl_license),
         ])
+        if verified["derived_wheel"]["build_evidence"]["verification"] == "VERIFIED":
+            # Embed the caller-supplied file the manifest hash was re-verified against
+            # under a fixed safe member name; never the caller's or provenance's path.
+            if derived_build_evidence is None:
+                raise ReleaseError("verified derived build evidence is missing its explicit input path")
+            files.append((DERIVED_BUILD_EVIDENCE_MEMBER, derived_build_evidence))
     if historical_provenance is not None and historical_openssl_license is not None:
         files.extend([
             ("evidence/cryptography-x86-historical-prebuilt-provenance.json", historical_provenance),
@@ -1318,29 +1429,132 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         "Python package install/import checks do not certify COMSOL engine or scientific capabilities.\n"
     )
     install_notes_bytes = install_notes.encode("utf-8")
+    # Bind every bundle member that the supplied manifest claims or the
+    # pre-packaging re-audit just attested to its exact audited SHA256/size, so
+    # a byte swap landing after that re-audit can never ride into the records
+    # list — and, through the post-write member scan, into the actual ZIP
+    # bytes — as a self-consistent but claim-contradicting archive. Inputs with
+    # no prior audit claim (the caller operations doc and optional lifecycle
+    # files) are instead authority-bound: their single
+    # record-time read is the packaged content, and the post-write scan keeps
+    # the ZIP member equal to that record. All failures happen before the
+    # archive file or a success receipt exists.
+    audited_claims: dict[str, tuple[int | None, str, str]] = {}
+
+    def bind_audited_member(arcname: str, claimed_sha256: Any, claimed_bytes: Any, label: str) -> None:
+        if not isinstance(claimed_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", claimed_sha256):
+            raise ReleaseError(f"pre-packaging re-audit provided no usable SHA256 claim for {label}")
+        audited_claims[arcname] = (claimed_bytes if isinstance(claimed_bytes, int) else None,
+                                   claimed_sha256, label)
+
+    for row in verified["wheels"]:
+        bind_audited_member(f"wheelhouse/{row['file']}", row.get("sha256"), row.get("bytes"),
+                            f"wheelhouse wheel {row['file']}")
+    audited_wheel_members = set(audited_claims)
+    for lock_arcname, lock_key, lock_label in (("locks/requirements.lock", "requirements", "requirements lock"),
+                                               ("locks/uv.lock", "source_lock", "source lock")):
+        audited_lock_sha = (verified.get(lock_key) or {}).get("sha256")
+        if audited_lock_sha != (package_manifest.get(lock_key) or {}).get("sha256"):
+            raise ReleaseError(f"{lock_label} SHA256 differs between the supplied package manifest "
+                               "and the pre-packaging re-audit")
+        bind_audited_member(lock_arcname, audited_lock_sha, None, lock_label)
+    bind_audited_member("PACKAGE_MANIFEST.json", hashlib.sha256(package_manifest_bytes).hexdigest(),
+                        len(package_manifest_bytes), "package manifest")
+    # The tool bytes determined whether the lifecycle helper was included.
+    # Bind the packaged tool to the same bytes, not a later path reread.
+    bind_audited_member("tools/full_project_release.py", hashlib.sha256(tool_bytes).hexdigest(),
+                        len(tool_bytes), "release tool")
+    bind_audited_member("evidence/wheel-build-receipt.json", hashlib.sha256(build_receipt_bytes).hexdigest(),
+                        len(build_receipt_bytes), "application wheel build receipt")
+    bind_audited_member("evidence/source-snapshot-manifest.json", hashlib.sha256(source_manifest_bytes).hexdigest(),
+                        len(source_manifest_bytes), "application source snapshot manifest")
+    bind_audited_member("SBOM.cdx.json", package_manifest.get("evidence_files", {}).get("sbom", {}).get("sha256"),
+                        None, "SBOM")
+    bind_audited_member("LICENSES.json", package_manifest.get("evidence_files", {}).get("licenses", {}).get("sha256"),
+                        None, "license inventory")
+    if verified.get("derived_wheel") is not None:
+        audited_derived = verified["derived_wheel"]
+        bind_audited_member("evidence/cryptography-x86-derived-provenance.json",
+                            audited_derived.get("provenance", {}).get("sha256"), None, "derived wheel provenance")
+        audited_license = audited_derived.get("native_component", {}).get("license_file", {})
+        bind_audited_member(audited_license.get("path", ""), audited_license.get("sha256"),
+                            audited_license.get("bytes"), "OpenSSL license file")
+        audited_evidence = audited_derived.get("build_evidence") or {}
+        if audited_evidence.get("verification") == "VERIFIED":
+            # The re-audit attested this SHA256; the records row and the fixed
+            # member must equal it (legacy NOT_RECORDED provenance stays
+            # NOT_RECORDED — no member, no claim, no false verification).
+            bind_audited_member(DERIVED_BUILD_EVIDENCE_MEMBER, audited_evidence.get("sha256"),
+                                audited_evidence.get("bytes"), "derived build evidence")
+    if verified.get("historical_prebuilt_wheel") is not None:
+        audited_historical = verified["historical_prebuilt_wheel"]
+        bind_audited_member("evidence/cryptography-x86-historical-prebuilt-provenance.json",
+                            audited_historical.get("provenance", {}).get("sha256"), None,
+                            "historical prebuilt wheel provenance")
+        audited_historical_license = audited_historical.get("native_component", {}).get("license_file", {})
+        bind_audited_member("licenses/openssl-4.0.2-LICENSE.txt", audited_historical_license.get("sha256"),
+                            audited_historical_license.get("bytes"), "historical OpenSSL license file")
+    for notice in package_manifest.get("primary_notices", []):
+        bind_audited_member(notice["path"], notice.get("sha256"), notice.get("bytes"),
+                            f"primary notice {notice['path']}")
     records = []
+    bundle_wheel_members: set[str] = set()
     for arcname, path in files:
         kind = scan_member_name(arcname)
         if kind:
             raise ReleaseError(f"bundle member rejected {arcname}: {kind}")
         if not path.is_file() or path.is_symlink():
             raise ReleaseError(f"bundle input is missing or not a regular file: {arcname}")
-        records.append({"path": arcname, "bytes": path.stat().st_size, "sha256": sha256_file(path)})
+        member_size = path.stat().st_size
+        member_sha256 = sha256_file(path)
+        claim = audited_claims.get(arcname)
+        if claim is not None and (member_sha256 != claim[1] or (claim[0] is not None and member_size != claim[0])):
+            raise ReleaseError(f"{claim[2]} changed after the pre-packaging re-audit; "
+                               "bundle records no longer bind the re-audited SHA256")
+        if arcname.startswith("wheelhouse/"):
+            bundle_wheel_members.add(arcname)
+        records.append({"path": arcname, "bytes": member_size, "sha256": member_sha256})
+    if bundle_wheel_members != audited_wheel_members:
+        raise ReleaseError("wheelhouse members changed after the pre-packaging re-audit; "
+                           "bundle members no longer match the re-audited wheel set")
     records.append({"path": "README_OFFLINE_INSTALL.txt", "bytes": len(install_notes_bytes),
                     "sha256": hashlib.sha256(install_notes_bytes).hexdigest()})
     total_bytes = sum(row["bytes"] for row in records)
     if total_bytes > MAX_TOTAL_BYTES:
         raise ReleaseError(f"offline bundle exceeds the {MAX_TOTAL_BYTES}-byte expanded-size limit")
+    # T42-R1: the summary lock hashes must describe the audited records rows,
+    # never a fresh reread of the lock paths after the records loop. A
+    # concurrent writer that swaps a lock after its record-time (audited) hash
+    # and restores it before the ZIP member write would otherwise publish a
+    # success receipt whose embedded summary contradicts both the audited
+    # claim and the embedded member. The records rows were just bound to
+    # audited_claims above, and the post-write scan binds every ZIP member to
+    # those same rows, so deriving the summary here keeps claim, records,
+    # member and summary tied to one audited value.
+    records_by_path = {row["path"]: row for row in records}
+    audited_summary_hashes: dict[str, str] = {}
+    for lock_key, lock_arcname in (("source_lock", "locks/uv.lock"),
+                                   ("requirements", "locks/requirements.lock")):
+        lock_row = records_by_path.get(lock_arcname)
+        claim = audited_claims.get(lock_arcname)
+        if lock_row is None:
+            raise ReleaseError(f"bundle records are missing the {lock_arcname} member")
+        if claim is None or lock_row["sha256"] != claim[1]:
+            raise ReleaseError(f"{claim[2] if claim else lock_arcname} summary hash is no longer "
+                               "bound to the pre-packaging re-audit")
+        audited_summary_hashes[lock_key] = lock_row["sha256"]
     bundle_manifest = {"schema": SCHEMA, "kind": "OFFLINE_INSTALL_BUNDLE",
                        "status": "PACKAGED_NATIVE_UNVERIFIED", "created_utc": utc_now(),
                        "target": target, "python": TARGETS[target]["python"],
                        "native_execution_verified": False,
-                       "source_lock": {"filename": source_lock.name, "sha256": sha256_file(source_lock)},
+                       "source_lock": {"filename": source_lock.name,
+                                       "sha256": audited_summary_hashes["source_lock"]},
                        "source_lock_included": "locks/uv.lock",
-                       "requirements": {"filename": requirements.name, "sha256": sha256_file(requirements)},
+                       "requirements": {"filename": requirements.name,
+                                        "sha256": audited_summary_hashes["requirements"]},
                        "requirements_included": "locks/requirements.lock",
-                       "source_lock_sha256": sha256_file(source_lock),
-                       "requirements_sha256": sha256_file(requirements),
+                       "source_lock_sha256": audited_summary_hashes["source_lock"],
+                       "requirements_sha256": audited_summary_hashes["requirements"],
                        "files_excluding_this_manifest": records,
                        "wheelhouse_metadata_sidecars_at_packaging": bundle_metadata_sidecars}
     archive_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3541,6 +3755,8 @@ def command_parser() -> argparse.ArgumentParser:
                           help="provenance for a locally built cryptography x86_64 wheel")
     manifest.add_argument("--openssl-license", type=pathlib.Path,
                           help="exact license file for the statically linked OpenSSL component")
+    manifest.add_argument("--derived-build-evidence", type=pathlib.Path,
+                          help="explicit historical build-evidence file when the derived provenance declares build_evidence")
     manifest.add_argument("--out", type=pathlib.Path, required=True)
     derived_lock = sub.add_parser("compose-derived-lock", help="hash-pin an attested target derived wheel without changing uv.lock")
     derived_lock.add_argument("--requirements", type=pathlib.Path, required=True)
@@ -3548,6 +3764,8 @@ def command_parser() -> argparse.ArgumentParser:
     derived_lock.add_argument("--source-lock", type=pathlib.Path, required=True)
     derived_lock.add_argument("--derived-provenance", type=pathlib.Path, required=True)
     derived_lock.add_argument("--openssl-license", type=pathlib.Path, required=True)
+    derived_lock.add_argument("--derived-build-evidence", type=pathlib.Path,
+                              help="explicit historical build-evidence file when the derived provenance declares build_evidence")
     derived_lock.add_argument("--target", choices=sorted(TARGETS), required=True)
     derived_lock.add_argument("--out", type=pathlib.Path, required=True)
     compose = sub.add_parser("compose-lock", help="append the exact application wheel SHA256 to a uv export")
@@ -3579,6 +3797,8 @@ def command_parser() -> argparse.ArgumentParser:
                         help="provenance for a locally built cryptography x86_64 wheel")
     bundle.add_argument("--openssl-license", type=pathlib.Path,
                         help="exact license file for the statically linked OpenSSL component")
+    bundle.add_argument("--derived-build-evidence", type=pathlib.Path,
+                        help="explicit historical build-evidence file when the derived provenance declares build_evidence")
     doc = sub.add_parser("doctor", help="inspect an installed venv without starting COMSOL")
     doc.add_argument("--python", type=pathlib.Path, required=True)
     inst = sub.add_parser("install", help="fresh offline install from a hash-locked wheelhouse")
@@ -3646,11 +3866,16 @@ def main(argv: list[str] | None = None) -> int:
             result = build_wheel(args.source, args.out, args.python, args.evidence)
         elif args.command == "manifest":
             result = create_bundle_manifest(args.bundle, args.target, args.requirements, args.source_lock, args.out,
-                                            args.derived_provenance, args.openssl_license)
+                                            args.derived_provenance, args.openssl_license,
+                                            derived_build_evidence=args.derived_build_evidence)
         elif args.command == "compose-derived-lock":
-            result = compose_derived_wheel_lock(args.requirements, args.wheel, args.source_lock,
-                                                args.derived_provenance, args.openssl_license,
-                                                args.target, args.out)
+            # The optional evidence argument is only passed when given, so existing
+            # 7-positional callers and test doubles keep working unchanged.
+            compose_args = [args.requirements, args.wheel, args.source_lock,
+                            args.derived_provenance, args.openssl_license, args.target, args.out]
+            if args.derived_build_evidence is not None:
+                compose_args.append(args.derived_build_evidence)
+            result = compose_derived_wheel_lock(*compose_args)
         elif args.command == "compose-lock":
             result = compose_install_lock(args.dependencies, args.application_wheel, args.target, args.out)
         elif args.command == "download-wheelhouse":
@@ -3660,7 +3885,8 @@ def main(argv: list[str] | None = None) -> int:
             result = package_wheelhouse_bundle(args.wheelhouse, args.requirements, args.source_lock,
                                                args.metadata, args.operations_doc, args.target,
                                                args.out, args.evidence, args.build_evidence, args.tool,
-                                               args.derived_provenance, args.openssl_license)
+                                               args.derived_provenance, args.openssl_license,
+                                               derived_build_evidence=args.derived_build_evidence)
         elif args.command == "doctor":
             result = doctor(args.python)
         elif args.command == "install":
@@ -3693,6 +3919,7 @@ def main(argv: list[str] | None = None) -> int:
             "ARTIFACTS_HASHED_NATIVE_UNVERIFIED", "WHEELHOUSE_HASHED_NATIVE_UNVERIFIED",
             "OFFLINE_BUNDLE_PACKAGED_NATIVE_UNVERIFIED", "SOURCE_ARCHIVE_HASHED_NATIVE_UNVERIFIED",
             "WHEEL_BUILT_NATIVE_UNVERIFIED", "LOCK_COMPOSED",
+            "DERIVED_TARGET_LOCK_HASHED",
         }
         return 0 if (result.get("status", "").startswith("PASS") or
                      result.get("status") in successful_artifact_states | {"UNINSTALL_PLAN_READY"}) else 1

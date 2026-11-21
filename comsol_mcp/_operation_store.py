@@ -7,9 +7,14 @@ import re
 import sqlite3
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 from uuid import UUID, uuid4
+
+from ._job_event_digest import CanonicalJobEventDigests
+from ._job_project_scope import consistent_project_id
+from ._json_error_stream import project_error_chunks
 
 
 # ``resume_claims`` is an additive SQLite table.  Keep the on-disk version at
@@ -1933,6 +1938,56 @@ class OperationStore:
                 self.db.execute("ROLLBACK")
                 raise
 
+    def record_stage_claim_failure(
+        self, job_id: str, operation_id: str, claim_id: str, result: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Record a failed stage claim without replacing another owner's result.
+
+        A still-queued job may be fenced before another callback claims it. A
+        running job may be fenced only by the invocation whose claim ID was
+        stored in the same transaction as its QUEUED-to-RUNNING transition.
+        Existing results and other states remain authoritative.
+        """
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.status AS job_status,j.metadata AS job_metadata,"
+                    "o.status AS operation_status,o.result,o.operation "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                    "WHERE j.job_id=? AND o.operation_id=?",
+                    (job_id, operation_id),
+                ).fetchone()
+                if row is None or row["operation"] not in {"experiment.stage_define", "experiment.stage_run"}:
+                    self.db.execute("COMMIT")
+                    return None
+                if row["result"] is not None:
+                    authoritative = json.loads(row["result"])
+                    self.db.execute("COMMIT")
+                    return authoritative
+                job_status = row["job_status"]
+                metadata = json.loads(row["job_metadata"] or "{}")
+                owns_running = (job_status == "RUNNING"
+                                and metadata.get("stage_callback_claim_id") == claim_id)
+                if row["operation_status"] != job_status or not (job_status == "QUEUED" or owns_running):
+                    self.db.execute("COMMIT")
+                    return None
+                self.db.execute("UPDATE jobs SET status='UNKNOWN' WHERE job_id=?", (job_id,))
+                self.db.execute(
+                    "UPDATE operations SET status='UNKNOWN',result=? WHERE operation_id=?",
+                    (_dumps_canonical(result), operation_id),
+                )
+                self.db.execute(
+                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?, 'UNKNOWN', ?)",
+                    (job_id, _dumps_canonical({"operation_id": operation_id, "at": time.time()})),
+                )
+                self.db.execute("COMMIT")
+                return result
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def get_operation(self, operation_id: str) -> dict[str, Any] | None:
         with self.lock:
             row = self.db.execute("SELECT * FROM operations WHERE operation_id=?", (operation_id,)).fetchone()
@@ -2086,7 +2141,191 @@ class OperationStore:
                 updated = self.job(job_id)
                 return True, new_status, updated
             except Exception:
-                self.db.execute("ROLLBACK")
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    @contextmanager
+    def project_job_read_snapshot(
+        self, job_id: str, project_id: str,
+    ) -> Iterator[bool]:
+        """Hold one SQLite read snapshot while checking a project binding (T35).
+
+        Additive store-consistency primitive: not authentication, not a public
+        MCP operation, and nothing here is wired into the daemon. The daemon
+        must authorize separately before entering this context.
+
+        Under the store RLock this starts a SQLite read transaction (unless
+        the caller already owns one, which is never silently cleared) and
+        issues exactly one metadata-only query joining the exact job to its
+        associated operation by their stored operation_id. Both durable
+        metadata values must parse and yield the same unambiguous project ID
+        through the pure ``consistent_project_id`` helper, and that value must
+        equal the exact, non-normalized ``project_id`` argument. Any other
+        outcome — job not found, missing operation binding, missing or
+        malformed JSON, absent or ambiguous project claims, or a different
+        project — yields ``False`` with no result, content, or job-event
+        query performed.
+
+        While ``True`` is yielded, the caller may perform its immediate
+        synchronous protected ``store.job``/``store.events`` reads; they
+        reacquire the RLock on the same thread and observe this same
+        snapshot. The read transaction is concluded when the context exits,
+        including when the caller raises. Transaction setup or cleanup
+        failures propagate instead of masquerading as a successful protected
+        read. Only a metadata decode error on the selected row — a JSON
+        syntax error, a non-string payload type, or a payload that is not
+        valid UTF-8 — classifies that row as unbound; operational SQLite
+        errors are not swallowed. This supports
+        coherent same-snapshot visibility only: it does not prove metadata
+        immutability, future revocation behaviour, or any principal identity.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("project_job_read_snapshot requires a non-empty job_id")
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("project_job_read_snapshot requires a non-empty project_id")
+        with self.lock:
+            started_transaction = not self.db.in_transaction
+            if started_transaction:
+                self.db.execute("BEGIN")
+            try:
+                row = self.db.execute(
+                    "SELECT j.job_id,j.metadata AS job_metadata,o.metadata AS operation_metadata "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                    "WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    bound = False
+                else:
+                    try:
+                        job_metadata = json.loads(row["job_metadata"] or "{}")
+                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                    except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                        # Only this invalid row is unbound; operational DB
+                        # errors must propagate, not hide as a denial.
+                        bound = False
+                    else:
+                        bound = (
+                            consistent_project_id(job_metadata, operation_metadata) == project_id
+                        )
+                yield bound
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("COMMIT")
+            except BaseException:
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    @contextmanager
+    def job_log_read_snapshot(
+        self, job_id: str, project_id: str | None, *,
+        max_binding_bytes: int,
+    ) -> Iterator[bool]:
+        """Hold one SQLite read snapshot for the bounded ``job.log`` path (T35).
+
+        Additive store-consistency primitive backing the daemon's bounded
+        ``job.log`` reads: it is not authentication, not a public MCP
+        operation, and nothing here establishes a principal — ``project_root``
+        or untrusted argument fields never create a binding, only the pure
+        ``consistent_project_id`` helper over the durable job and operation
+        metadata can certify one. The ``operations.result`` column is never
+        selected or touched.
+
+        Transaction ownership mirrors ``project_job_read_snapshot``: the store
+        RLock plus exactly one SQLite read transaction is held. If the caller
+        already owns a transaction it is never taken over, committed or
+        rolled back here; only a transaction this context started is closed,
+        and that ownership holds even when the caller raises ``BaseException``.
+        Transaction setup or cleanup failures propagate instead of
+        masquerading as a denial, and SQLite ``OperationalError`` from these
+        queries is never swallowed into an authorization ``False``.
+
+        With ``project_id=None`` this is existence-only: it selects just the
+        ``jobs`` row for the ``job_id`` and yields a bool without reading or
+        decoding any metadata. An empty-string ``job_id`` yields ``False`` in
+        this branch; a non-string ``job_id`` is rejected by the caller (and
+        refused here with ``ValueError`` as a defensive guard).
+
+        With a non-``None`` ``project_id``, the project ID must be a non-empty
+        string and the ``job_id`` a non-empty string, and the exact job is
+        joined to its associated operation by stored ``operation_id`` in the
+        same transaction with the same consistency semantics as
+        ``project_job_read_snapshot``. First only
+        ``length(CAST(metadata AS BLOB))`` scalars are read for both sides: a
+        missing job or operation row, a NULL length, or a combined size above
+        the caller-supplied positive-integer ``max_binding_bytes`` certifies
+        nothing, and the context yields ``False`` without fetching payloads.
+        Only within budget are the two exact metadata values re-read in this
+        same snapshot and decoded; malformed JSON, a non-string payload, or
+        invalid UTF-8 likewise yields ``False``; otherwise the binding holds
+        exactly when ``consistent_project_id(...) == project_id`` for the
+        exact, non-normalized argument. This byte limit applies only to this
+        new path; ``project_job_read_snapshot`` itself is unchanged.
+        """
+        if not isinstance(job_id, str):
+            raise ValueError("job_log_read_snapshot requires a string job_id")
+        if project_id is not None and (not isinstance(project_id, str) or not project_id):
+            raise ValueError(
+                "job_log_read_snapshot requires a non-empty project_id or None"
+            )
+        if type(max_binding_bytes) is not int or max_binding_bytes <= 0:
+            raise ValueError("max_binding_bytes must be a positive integer")
+        if project_id is not None and not job_id:
+            raise ValueError(
+                "job_log_read_snapshot requires a non-empty job_id when a project binding is checked"
+            )
+        with self.lock:
+            started_transaction = not self.db.in_transaction
+            if started_transaction:
+                self.db.execute("BEGIN")
+            try:
+                if project_id is None:
+                    bound = bool(job_id) and self.db.execute(
+                        "SELECT 1 FROM jobs WHERE job_id=? LIMIT 1", (job_id,),
+                    ).fetchone() is not None
+                else:
+                    probe = self.db.execute(
+                        "SELECT length(CAST(j.metadata AS BLOB)) AS job_metadata_bytes,"
+                        "length(CAST(o.metadata AS BLOB)) AS operation_metadata_bytes "
+                        "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                        "WHERE j.job_id=?",
+                        (job_id,),
+                    ).fetchone()
+                    if (probe is None
+                            or probe["job_metadata_bytes"] is None
+                            or probe["operation_metadata_bytes"] is None
+                            or int(probe["job_metadata_bytes"])
+                            + int(probe["operation_metadata_bytes"]) > max_binding_bytes):
+                        bound = False
+                    else:
+                        row = self.db.execute(
+                            "SELECT j.metadata AS job_metadata,o.metadata AS operation_metadata "
+                            "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                            "WHERE j.job_id=?",
+                            (job_id,),
+                        ).fetchone()
+                        if row is None:
+                            bound = False
+                        else:
+                            try:
+                                job_metadata = json.loads(row["job_metadata"] or "{}")
+                                operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                            except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                                # Only this invalid row is unbound; operational
+                                # DB errors propagate, never as a denial.
+                                bound = False
+                            else:
+                                bound = (
+                                    consistent_project_id(job_metadata, operation_metadata)
+                                    == project_id
+                                )
+                yield bound
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("COMMIT")
+            except BaseException:
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
                 raise
 
     def list_jobs(
@@ -2095,9 +2334,15 @@ class OperationStore:
         limit: int = 100,
         status: str | None = None,
         project_id: str | None = None,
+        *,
+        enforce_project_binding: bool = False,
     ) -> JobList:
         bound_offset = max(0, int(offset))
         bound_limit = max(1, min(int(limit), 1000))
+        if enforce_project_binding is True:
+            return self._list_jobs_project_bound(bound_offset, bound_limit, status, project_id)
+        if enforce_project_binding is not False:
+            raise TypeError("enforce_project_binding must be a boolean")
         with self.lock:
             conditions = ["1=1"]
             params: list[Any] = []
@@ -2122,7 +2367,142 @@ class OperationStore:
             items = [self._job(row) for row in rows]
             return JobList(items, total=total, offset=bound_offset, limit=bound_limit)
 
-    def cancel_queued(self, job_id: str, reason: str = "cancelled by user") -> tuple[bool, str, dict[str, Any] | None]:
+    def _list_jobs_project_bound(
+        self, bound_offset: int, bound_limit: int,
+        status: str | None, project_id: str | None,
+    ) -> JobList:
+        """Strict project-binding job page (T35): one same-snapshot filtered set.
+
+        Additive strict mode reached only through
+        ``list_jobs(..., enforce_project_binding=True)``; the legacy unscoped
+        SQL branch above is untouched.  Requires a non-empty exact
+        ``project_id`` string (never normalized).  Inside one ``BEGIN`` read
+        transaction under the store RLock, only the metadata columns of each
+        job joined to its associated operation are scanned, in the existing
+        ``rowid`` DESC order with the optional status filter applied in SQL
+        first.  A job is included only when the pure ``consistent_project_id``
+        helper returns exactly ``project_id`` for the independently parsed
+        durable job and operation metadata; rows with a missing operation
+        binding or missing, malformed, divergent or ambiguous metadata are
+        excluded, and ``project_root`` or untrusted argument fields never
+        create a match.  ``total``, the page, and ``has_more`` all derive
+        from this one filtered set before offset/limit, so no page is
+        partially filled by filtering afterwards and no protected result JSON
+        of an excluded entry is ever materialized.  Page jobs are materialized
+        inside the same snapshot through the existing ``self.job``/``_job``
+        semantics.  The scan consumes SQLite rows in fixed ``fetchmany``
+        batches, counts every matching row toward ``total``, and retains
+        only the matching job IDs inside the requested ``offset``/``limit``
+        page window — never the skipped matching prefix — so Python-side ID
+        retention is O(limit); the scan itself is O(total job rows) because
+        ``total`` must come from the same snapshot before paging.
+        Row-by-row metadata payload decoding, the materialized page result
+        content, and SQLite-internal buffers are separate concerns that this
+        does not bound, and this is a consistency/visibility guarantee, not
+        an authentication claim or a bound on whole-process memory.
+        """
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("enforce_project_binding requires a non-empty string project_id")
+        scan_batch = 256
+        with self.lock:
+            started_transaction = not self.db.in_transaction
+            if started_transaction:
+                self.db.execute("BEGIN")
+            try:
+                if status is not None:
+                    cursor = self.db.execute(
+                        "SELECT j.job_id,j.metadata AS job_metadata,o.metadata AS operation_metadata "
+                        "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                        "WHERE j.status=? ORDER BY j.rowid DESC",
+                        (str(status),),
+                    )
+                else:
+                    cursor = self.db.execute(
+                        "SELECT j.job_id,j.metadata AS job_metadata,o.metadata AS operation_metadata "
+                        "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                        "ORDER BY j.rowid DESC",
+                    )
+                page_window = bound_offset + bound_limit
+                matched_job_ids: list[str] = []
+                total = 0
+                while True:
+                    batch = cursor.fetchmany(scan_batch)
+                    if not batch:
+                        break
+                    for row in batch:
+                        try:
+                            job_metadata = json.loads(row["job_metadata"] or "{}")
+                            operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                        except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                            continue
+                        if consistent_project_id(job_metadata, operation_metadata) != project_id:
+                            continue
+                        # ``total`` is the zero-based index of this match,
+                        # so only matches inside the requested page window
+                        # are retained and the skipped prefix accumulates
+                        # nothing.
+                        if bound_offset <= total < page_window:
+                            matched_job_ids.append(row["job_id"])
+                        total += 1
+                items: list[dict[str, Any]] = []
+                for job_id in matched_job_ids:
+                    job = self.job(job_id)
+                    if job is None:
+                        raise RuntimeError(
+                            "project-bound job row vanished inside its own read snapshot"
+                        )
+                    items.append(job)
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("COMMIT")
+                return JobList(items, total=total, offset=bound_offset, limit=bound_limit)
+            except BaseException:
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def cancel_queued(
+        self,
+        job_id: str,
+        reason: str = "cancelled by user",
+        *,
+        project_id: str | None = None,
+        enforce_project_binding: bool = False,
+    ) -> tuple[bool, str, dict[str, Any] | None]:
+        """Cancel a QUEUED job; optional strict project binding (T35, proposal).
+
+        The legacy two-positional form (``job_id``, ``reason``) is unchanged:
+        with ``enforce_project_binding`` left at its ``False`` default the
+        method behaves exactly as before and ``project_id`` is ignored.
+        ``enforce_project_binding=True`` is the only strict mode; any other
+        non-False value raises ``TypeError`` (the adjacent ``list_jobs``
+        convention) and a strict call without a non-empty string
+        ``project_id`` raises ``ValueError``, both before any transaction is
+        opened.  In strict mode, inside the same ``BEGIN IMMEDIATE`` write
+        transaction and before any status early return, job-record
+        materialization, UPDATE or event insert, the durable job row and its
+        uniquely associated operation row must independently name the SAME
+        unambiguous project ID through the pure ``consistent_project_id``
+        helper, and that ID must equal the exact non-normalized
+        ``project_id`` argument.  A missing operation association, missing or
+        malformed JSON metadata, or a helper verdict of ``None`` rolls back
+        and returns ``(False, "PROJECT_BINDING_UNKNOWN", None)``; a binding
+        naming a different project rolls back and returns
+        ``(False, "PROJECT_SCOPE_MISMATCH", None)``.  ``arguments.project_id``
+        and ``project_root`` are never consulted.  A passing binding changes
+        nothing else: the CANCELLED / non-QUEUED early returns, the QUEUED
+        double-rowcount guard, the event write and the post-commit exception
+        guard keep their original behavior and returns.  These codes are an
+        internal proposed-level store consistency primitive only: not an
+        authentication result, no daemon/scoped routing is wired here, and
+        no project authority is granted.
+        """
+        enforce_strict = enforce_project_binding is True
+        if not enforce_strict and enforce_project_binding is not False:
+            raise TypeError("enforce_project_binding must be a boolean")
+        if enforce_strict and (not isinstance(project_id, str) or not project_id):
+            raise ValueError(
+                "enforce_project_binding requires a non-empty string project_id"
+            )
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
             try:
@@ -2132,6 +2512,29 @@ class OperationStore:
                     return False, "NOT_FOUND", None
                 current_status = row["status"]
                 operation_id = row["operation_id"]
+                if enforce_strict:
+                    # Scoped verdict precedes every status early return,
+                    # self._job(), the UPDATEs and the event insert.
+                    operation_row = self.db.execute(
+                        "SELECT metadata FROM operations WHERE operation_id=?",
+                        (operation_id,),
+                    ).fetchone()
+                    if operation_row is None:
+                        self.db.execute("ROLLBACK")
+                        return False, "PROJECT_BINDING_UNKNOWN", None
+                    try:
+                        job_metadata = json.loads(row["metadata"] or "{}")
+                        operation_metadata = json.loads(operation_row["metadata"] or "{}")
+                    except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                        self.db.execute("ROLLBACK")
+                        return False, "PROJECT_BINDING_UNKNOWN", None
+                    binding = consistent_project_id(job_metadata, operation_metadata)
+                    if binding is None:
+                        self.db.execute("ROLLBACK")
+                        return False, "PROJECT_BINDING_UNKNOWN", None
+                    if binding != project_id:
+                        self.db.execute("ROLLBACK")
+                        return False, "PROJECT_SCOPE_MISMATCH", None
                 if current_status == "CANCELLED":
                     job_record = self._job(row)
                     self.db.execute("COMMIT")
@@ -2159,14 +2562,23 @@ class OperationStore:
                     "execution": {"job_id": job_id, "operation_id": operation_id},
                 }
                 serialized_result = _dumps_canonical(cancel_result)
-                self.db.execute(
+                job_updated = self.db.execute(
                     "UPDATE jobs SET status='CANCELLED', finished_at=CURRENT_TIMESTAMP WHERE job_id=? AND status='QUEUED'",
                     (job_id,),
                 )
-                self.db.execute(
+                operation_updated = self.db.execute(
                     "UPDATE operations SET status='CANCELLED', result=?, finished_at=CURRENT_TIMESTAMP WHERE operation_id=? AND status='QUEUED'",
                     (serialized_result, operation_id),
                 )
+                if job_updated.rowcount != 1 or operation_updated.rowcount != 1:
+                    # Row-level status drift (for example a QUEUED job whose
+                    # operation row already moved to RUNNING): one guarded
+                    # UPDATE matched and the other matched zero rows.  Undo
+                    # both updates inside this same transaction before any
+                    # CANCELLED event is written, so no split job/operation
+                    # state or partial write can commit.
+                    self.db.execute("ROLLBACK")
+                    return False, "STATE_MISMATCH", None
                 event_meta = json.dumps({
                     "reason": reason,
                     "engine_dispatched": False,
@@ -2181,7 +2593,150 @@ class OperationStore:
                 updated = self.job(job_id)
                 return True, "CANCELLED", updated
             except Exception:
-                self.db.execute("ROLLBACK")
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def record_cancel_intent(
+        self,
+        job_id: str,
+        *,
+        project_id: str,
+        expected_status: str,
+        reason: str,
+    ) -> tuple[bool, str]:
+        """Record a cancel intent on one bound non-QUEUED job in one write txn (T35).
+
+        Additive durable-consistency store primitive for the daemon's RUNNING
+        intent path; it is not authentication, not a public MCP operation,
+        grants no project authority, and wires nothing by itself.  Exactly one
+        ``BEGIN IMMEDIATE`` transaction reads the job row and its uniquely
+        associated operation row, decodes both durable metadata columns, and
+        requires the pure ``consistent_project_id`` helper to report the SAME
+        unambiguous project ID on both sides, equal to the exact
+        non-normalized ``project_id`` argument; ``arguments.project_id`` and
+        ``project_root`` are never consulted.  That binding verdict precedes
+        every status early return, UPDATE and event insert.  A missing job
+        returns ``(False, "NOT_FOUND")``; a missing operation association,
+        missing/malformed JSON metadata, or a helper verdict of ``None``
+        returns ``(False, "PROJECT_BINDING_UNKNOWN")``; a binding naming a
+        different project returns ``(False, "PROJECT_SCOPE_MISMATCH")``.
+        Durable job/operation status disagreement returns
+        ``(False, "STATE_MISMATCH")``; a current status that differs from the
+        pre-read ``expected_status``, or that is QUEUED (owned by
+        ``cancel_queued``) or terminal (immutable per D03), returns
+        ``(False, "STATUS_CHANGED")``.  Every failure rolls back, so no event
+        or metadata change survives, and no job record is ever returned.
+        A successful call keeps the status unchanged, merges
+        ``cancel_requested=True`` and ``cancel_reason=reason`` into the job
+        metadata, reuses ``update_job``'s status/started/finished semantics
+        and its no-result branch (the durable ``operations.result`` is never
+        overwritten), inserts one ``CancelRequested`` event whose metadata
+        fields match the existing ``_cancel_job`` intent, and commits only
+        after both guarded UPDATEs affected exactly one row each; an
+        unexpected rowcount rolls the whole transaction back as
+        ``STATE_MISMATCH``.  No read follows the COMMIT.
+        """
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("record_cancel_intent requires a non-empty string project_id")
+        if not isinstance(expected_status, str) or not expected_status:
+            raise ValueError("record_cancel_intent requires a non-empty string expected_status")
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT * FROM jobs WHERE job_id=?", (job_id,)
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return False, "NOT_FOUND"
+                job_status = row["status"]
+                operation_id = row["operation_id"]
+                operation_row = self.db.execute(
+                    "SELECT status, metadata FROM operations WHERE operation_id=?",
+                    (operation_id,),
+                ).fetchone()
+                if operation_row is None:
+                    self.db.execute("ROLLBACK")
+                    return False, "PROJECT_BINDING_UNKNOWN"
+                try:
+                    job_metadata = json.loads(row["metadata"] or "{}")
+                    operation_metadata = json.loads(operation_row["metadata"] or "{}")
+                except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                    self.db.execute("ROLLBACK")
+                    return False, "PROJECT_BINDING_UNKNOWN"
+                binding = consistent_project_id(job_metadata, operation_metadata)
+                if binding is None:
+                    self.db.execute("ROLLBACK")
+                    return False, "PROJECT_BINDING_UNKNOWN"
+                if binding != project_id:
+                    self.db.execute("ROLLBACK")
+                    return False, "PROJECT_SCOPE_MISMATCH"
+                if operation_row["status"] != job_status:
+                    self.db.execute("ROLLBACK")
+                    return False, "STATE_MISMATCH"
+                if (
+                    job_status != expected_status
+                    or job_status == "QUEUED"
+                    or job_status in TERMINAL
+                ):
+                    self.db.execute("ROLLBACK")
+                    return False, "STATUS_CHANGED"
+
+                merged_metadata = {
+                    **job_metadata,
+                    "cancel_requested": True,
+                    "cancel_reason": reason,
+                }
+                # Same status/started/finished semantics as update_job, with
+                # the pre-read status as an atomic guard so in-transaction
+                # drift cannot slip through between the two UPDATEs.
+                job_updated = self.db.execute(
+                    "UPDATE jobs SET status=?,metadata=?,"
+                    "started_at=CASE WHEN ? IN ('STARTING','RUNNING') THEN COALESCE(started_at,CURRENT_TIMESTAMP) ELSE started_at END,"
+                    "finished_at=CASE WHEN ? IN ('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST') "
+                    "THEN COALESCE(finished_at,CURRENT_TIMESTAMP) ELSE finished_at END "
+                    "WHERE job_id=? AND status=?",
+                    (
+                        job_status,
+                        _dumps_canonical(merged_metadata),
+                        job_status,
+                        job_status,
+                        job_id,
+                        expected_status,
+                    ),
+                )
+                # update_job's no-result branch verbatim: operations.result
+                # is never written by an intent record.
+                operation_updated = self.db.execute(
+                    "UPDATE operations SET status=?,"
+                    "started_at=(SELECT started_at FROM jobs WHERE job_id=?),"
+                    "finished_at=(SELECT finished_at FROM jobs WHERE job_id=?) "
+                    "WHERE operation_id=? AND status=?",
+                    (job_status, job_id, job_id, operation_id, expected_status),
+                )
+                if job_updated.rowcount != 1 or operation_updated.rowcount != 1:
+                    # Guarded-row drift: one UPDATE matched and the other did
+                    # not.  Undo both inside this transaction so no partial
+                    # metadata/timestamp commit and no CancelRequested event
+                    # can be observed.
+                    self.db.execute("ROLLBACK")
+                    return False, "STATE_MISMATCH"
+                self.db.execute(
+                    "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'CancelRequested', ?)",
+                    (job_id, _dumps_canonical({
+                        "reason": reason,
+                        "mode": "UNSUPPORTED_NATIVE_CANCEL",
+                        "cancel_accepted": True,
+                        "engine_stopped": False,
+                        "at": time.time(),
+                    })),
+                )
+                self.db.execute("COMMIT")
+                return True, "INTENT_RECORDED"
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
                 raise
 
     def add_event(self, job_id: str, event: str, metadata: dict[str, Any] | None = None) -> None:
@@ -3299,6 +3854,154 @@ class OperationStore:
                 )
             ]
 
+    def job_log_page_bounded(
+        self, job_id: str, offset: int, limit: int, *,
+        max_response_bytes: int,
+    ) -> list[dict[str, Any]]:
+        """Return one byte-budgeted page of one exact job's events (T35).
+
+        Additive internal read primitive for the daemon's bounded ``job.log``
+        response; it changes no old method and never writes, reorders,
+        repairs or skips events. It joins a snapshot owned elsewhere: an
+        active caller-owned transaction is required under the store RLock
+        (``ValueError`` otherwise) and no BEGIN, COMMIT or ROLLBACK is issued
+        here. ``offset`` is a non-negative integer and ``limit`` an integer
+        from 1 through 1000 ids per call; every bound is caller-supplied and
+        validated, never hardcoded from examples.
+
+        Rows are read only for exactly this ``job_id`` in ``ORDER BY id``
+        order over the selected ``offset``/``limit`` window. Each candidate
+        is first probed with scalar ``length(CAST(field AS BLOB))`` values
+        for every returnable text column (``job_id``, ``event``,
+        ``metadata``, ``created_at``) so an oversized row is never
+        materialized into Python first. A NULL length for one of those
+        columns is counted as 0 bytes in the pre-check, matching the legacy
+        ``events`` leniency (``metadata`` NULL or empty parses to ``{}`` via
+        ``json.loads(value or "{}")``; ``event``/``created_at`` NULL pass
+        through unchanged as JSON null) — the pre-check never refuses merely
+        because such a length is NULL. Only structural problems refuse the
+        call outright: a NULL or non-integer event id in the probe, or a
+        fetched row that no longer matches the requested ``job_id`` and
+        exact id. If the next row's raw text total already exceeds
+        ``max_response_bytes``, return the preceding nonempty page without
+        fetching that row; when it is the first row, raise ``ValueError``.
+        Continuation thus reaches the oversized row without silently skipping it.
+
+        Only rows passing that probe are then fetched by their exact id, and
+        ``metadata`` is decoded leniently exactly as ``events`` does, via
+        ``json.loads(value or "{}")``, preserving column and id order.
+        Budget accounting matches the actual JSON response: each row's
+        ``json.dumps(..., allow_nan=False)`` encoding (with the default
+        ``ensure_ascii=True`` escapes) is accumulated row by row, including
+        the ``", "`` separators, the dynamic ``next_offset`` digits, and a
+        reservation for the canonical response envelope ``{"success": true,
+        "data": {"job_id", "events", "next_offset", "next_cursor"}}`` (the
+        canonical envelope appends ``next_cursor`` as the decimal form of
+        ``next_offset`` and the legacy envelope never carries more). Even an
+        empty page must fit its complete reserved envelope. The full page is
+        never materialized before budgeting. If the next row's encoding no
+        longer fits: with rows already accumulated the page is returned short
+        and the next offset
+        stays continuous at ``offset + len(page)``; as the very first row it
+        raises ``ValueError`` — never an empty success and never a skip.
+        Malformed metadata JSON, non-finite numbers (refused by
+        ``allow_nan=False``), and SQLite errors propagate as plain
+        exceptions for the daemon to map into concise refusals; no row
+        content is echoed and nothing is printed.
+
+        The byte bound caps only this method's Python-side allocation and is
+        an engineering bound: SQLite's internal C allocations, process RSS,
+        and metadata retention policy are outside it and unknown here.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        if type(offset) is not int or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError("limit must be an integer from 1 through 1000")
+        if type(max_response_bytes) is not int or max_response_bytes <= 0:
+            raise ValueError("max_response_bytes must be a positive integer")
+
+        def _wire_bytes(value: Any) -> int:
+            # ensure_ascii defaults to True, so the encoding is pure ASCII
+            # wire bytes; allow_nan=False makes non-finite numbers fail.
+            return len(json.dumps(value, allow_nan=False).encode("ascii"))
+
+        def _empty_envelope_bytes(next_offset: int) -> int:
+            return _wire_bytes({
+                "success": True,
+                "data": {
+                    "job_id": job_id,
+                    "events": [],
+                    "next_offset": next_offset,
+                    "next_cursor": str(next_offset),
+                },
+            })
+
+        with self.lock:
+            if not self.db.in_transaction:
+                raise ValueError(
+                    "job_log_page_bounded requires an active caller-owned transaction"
+                )
+            if len(job_id) > max_response_bytes or _empty_envelope_bytes(offset) > max_response_bytes:
+                raise ValueError("empty job event page exceeds the response byte budget")
+            probes = self.db.execute(
+                "SELECT id,length(CAST(job_id AS BLOB)) AS job_id_bytes,"
+                "length(CAST(event AS BLOB)) AS event_bytes,"
+                "length(CAST(metadata AS BLOB)) AS metadata_bytes,"
+                "length(CAST(created_at AS BLOB)) AS created_at_bytes "
+                "FROM job_events WHERE job_id=? ORDER BY id LIMIT ? OFFSET ?",
+                (job_id, limit, offset),
+            ).fetchall()
+            page: list[dict[str, Any]] = []
+            row_bytes = 0
+            for probe in probes:
+                if probe["id"] is None or type(probe["id"]) is not int:
+                    raise ValueError(
+                        "job event page refused: malformed event id"
+                    )
+                raw_bytes = 0
+                for column in ("job_id_bytes", "event_bytes",
+                               "metadata_bytes", "created_at_bytes"):
+                    # A NULL length means a SQL NULL value; the legacy
+                    # events() path still returns such a row, so count 0.
+                    if probe[column] is not None:
+                        raw_bytes += int(probe[column])
+                if raw_bytes > max_response_bytes:
+                    if page:
+                        break
+                    raise ValueError(
+                        "job event row exceeds the response byte budget"
+                    )
+                event_id = int(probe["id"])
+                row = self.db.execute(
+                    "SELECT id,job_id,event,metadata,created_at FROM job_events "
+                    "WHERE job_id=? AND id=?",
+                    (job_id, event_id),
+                ).fetchone()
+                if (row is None or row["job_id"] != job_id
+                        or row["id"] is None or int(row["id"]) != event_id):
+                    raise ValueError(
+                        "job event page refused: row identity does not match "
+                        "the requested job and exact id"
+                    )
+                item = dict(row)
+                item["metadata"] = json.loads(item["metadata"] or "{}")
+                encoded = _wire_bytes(item)
+                count = len(page) + 1
+                envelope = _empty_envelope_bytes(offset + count)
+                projected = envelope + row_bytes + encoded + (2 * (count - 1))
+                if projected > max_response_bytes:
+                    if not page:
+                        raise ValueError(
+                            "first job event row alone does not fit the "
+                            "response byte budget"
+                        )
+                    break
+                page.append(item)
+                row_bytes += encoded
+            return page
+
     def _job_event_snapshot_page(self, job_id: str, snapshot_last_id: int,
                                  *, limit: int, offset: int) -> list[dict[str, Any]]:
         """Read one page constrained to the caller's immutable event-id bound."""
@@ -3463,17 +4166,476 @@ class OperationStore:
             "events": events,
         }
 
+    def fold_job_event_prefix(self, job_id: str, *,
+                              snapshot_count: int | None, snapshot_last_id: int | None,
+                              max_row_bytes: int,
+                              visitor: Callable[[dict[str, Any]], None],
+                              _join_read_snapshot: bool = False) -> dict[str, Any]:
+        """Fold one exact job's frozen event prefix through a visitor in one read snapshot.
+
+        Additive internal streaming slice (T35): not a public MCP operation;
+        the daemon's bounded ``solver_log_read`` path now calls it as its fold
+        backend, and it changes no old method signature, stage receipt field,
+        schema, retention rule, project authority, or public route. Both
+        snapshot inputs are required keyword arguments:
+        ``(None, None)`` freezes a fresh whole-job prefix, while a validated
+        integer pair re-folds exactly that previously issued prefix (a zero
+        count must carry a zero last event id). ``max_row_bytes`` is a
+        caller-supplied positive bound in UTF-8 bytes for application row
+        admission only; it does not bound SQLite's internal C allocation,
+        caller-retained page/progress/result data, or any process-wide memory.
+
+        Semantics: one ``BEGIN`` read transaction under the store RLock reads
+        the exact job row plus a count/max aggregate first, freezing the SQLite
+        snapshot before iteration. Fresh mode captures count/max; continuation
+        mode counts and maxes only rows ``id <= snapshot_last_id`` and must
+        match the supplied pair before any row is visited, failing incomplete
+        on mismatch. Rows then stream through fixed-size keyset batches
+        (``id > previous_id AND id <= captured_last_id ORDER BY id``); no
+        OFFSET pagination over growing data and no accumulation of rows, and
+        the count is never used to pre-allocate. Each row's four text-field
+        byte lengths are probed via ``length(CAST(field AS BLOB))`` before its
+        full fields are fetched; any SQL NULL length or combined length above
+        ``max_row_bytes`` stops the fold incomplete without fetching the full
+        row, decoding JSON, or invoking the visitor for that row. Row shape and
+        strict ``json.loads(..., parse_constant=_reject_nonstandard_json_constant)``
+        metadata decoding match ``_job_event_snapshot_page``; a malformed,
+        foreign, unordered, nonpositive-id, empty-event, or non-dict-metadata
+        row fails incomplete and no partial digest is published (both digests
+        are ``None`` on incomplete results). Valid rows are fed to
+        ``CanonicalJobEventDigests`` and then to ``visitor`` in id order,
+        preserving the exact v1 whole-list id and canonical JSON list digests
+        the collector produces for the same prefix.
+
+        Callers must treat visitor state as provisional: earlier callbacks can
+        already have happened before a later row fails, so that state must be
+        discarded on any incomplete result or exception. Callbacks must not
+        write back into the store or manage this transaction. If ``visitor``
+        raises, the still-open read transaction is rolled back, the original
+        exception is re-raised, and the connection stays usable. A later
+        append can never move an already frozen prefix.
+
+        ``_join_read_snapshot`` is a private opt-in (default ``False``) that
+        lets this fold run inside an explicit caller-owned read snapshot such
+        as ``solver_log_snapshot``. The default keeps the self-owned
+        BEGIN/COMMIT/ROLLBACK exactly as before, including behaviour when an
+        unrelated outer transaction already exists. Only a literal bool
+        ``True`` joins: an already-active transaction on this connection is
+        then required (checked under the same RLock), no BEGIN, COMMIT or
+        ROLLBACK is issued here, and any failure propagates so the owning
+        context closes the transaction. A non-bool value, or a join without
+        an active transaction, is refused before any read. All validation,
+        output and visitor constraints above are unchanged in both modes.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        if (snapshot_count is None) != (snapshot_last_id is None):
+            raise ValueError(
+                "snapshot_count and snapshot_last_id must be supplied together or both be None"
+            )
+        if snapshot_count is not None:
+            if type(snapshot_count) is not int:
+                raise ValueError("snapshot_count must be a plain integer")
+            if snapshot_last_id is None or type(snapshot_last_id) is not int:
+                raise ValueError("snapshot_last_id must be a plain integer")
+            if snapshot_count < 0 or snapshot_last_id < 0:
+                raise ValueError("snapshot bounds must be non-negative integers")
+            if (snapshot_count == 0) != (snapshot_last_id == 0):
+                raise ValueError("a zero-count frozen prefix must carry a zero last event id")
+        if type(max_row_bytes) is not int or max_row_bytes <= 0:
+            raise ValueError("max_row_bytes must be a positive integer")
+        if not callable(visitor):
+            raise ValueError("visitor must be a callable")
+        if type(_join_read_snapshot) is not bool:
+            raise ValueError("_join_read_snapshot must be a bool")
+
+        fold_batch_rows = 64
+        issues: list[str] = []
+        job_row_count = 0
+        expected_event_count = 0
+        captured_last_id = 0
+        fetched_event_count = 0
+        digests = CanonicalJobEventDigests()
+
+        with self.lock:
+            if _join_read_snapshot:
+                # Caller-owned snapshot join: no BEGIN here, and no COMMIT
+                # or ROLLBACK either (see docstring).  A join without an
+                # active transaction is refused before any read.
+                if not self.db.in_transaction:
+                    raise ValueError(
+                        "_join_read_snapshot=True requires an active caller-owned transaction"
+                    )
+            else:
+                self.db.execute("BEGIN")
+            try:
+                # The exact job row, the aggregate, and every streamed read run
+                # inside this one SQLite snapshot, so a concurrent append can
+                # never move the frozen prefix.
+                job_rows = self.db.execute(
+                    "SELECT job_id FROM jobs WHERE job_id=?", (job_id,),
+                ).fetchmany(2)
+                job_row_count = len(job_rows)
+                if job_row_count != 1:
+                    issues.append("exact job row cardinality is not one")
+                if snapshot_count is None:
+                    aggregate = self.db.execute(
+                        "SELECT COUNT(*) AS event_count,COALESCE(MAX(id),0) AS last_id "
+                        "FROM job_events WHERE job_id=?", (job_id,),
+                    ).fetchone()
+                    expected_event_count = int(aggregate["event_count"])
+                    captured_last_id = int(aggregate["last_id"])
+                else:
+                    expected_event_count = int(snapshot_count)
+                    captured_last_id = int(snapshot_last_id)
+                    aggregate = self.db.execute(
+                        "SELECT COUNT(*) AS event_count,COALESCE(MAX(id),0) AS last_id "
+                        "FROM job_events WHERE job_id=? AND id<=?",
+                        (job_id, captured_last_id),
+                    ).fetchone()
+                    if (int(aggregate["event_count"]) != expected_event_count
+                            or int(aggregate["last_id"]) != captured_last_id):
+                        issues.append(
+                            "frozen continuation prefix count/last-id does not match "
+                            "rows at or below its bound"
+                        )
+
+                if not issues:
+                    previous_id = 0
+                    row_failure: str | None = None
+                    while row_failure is None:
+                        probes = self.db.execute(
+                            "SELECT id,length(CAST(job_id AS BLOB)) AS job_id_bytes,"
+                            "length(CAST(event AS BLOB)) AS event_bytes,"
+                            "length(CAST(metadata AS BLOB)) AS metadata_bytes,"
+                            "length(CAST(created_at AS BLOB)) AS created_at_bytes "
+                            "FROM job_events WHERE job_id=? AND id>? AND id<=? "
+                            "ORDER BY id LIMIT ?",
+                            (job_id, previous_id, captured_last_id, fold_batch_rows),
+                        ).fetchmany(fold_batch_rows)
+                        if not probes:
+                            break
+                        for probe in probes:
+                            field_lengths = (
+                                probe["job_id_bytes"], probe["event_bytes"],
+                                probe["metadata_bytes"], probe["created_at_bytes"],
+                            )
+                            if any(length is None for length in field_lengths):
+                                row_failure = (
+                                    "row field length is SQL NULL; the row byte bound "
+                                    "cannot be certified"
+                                )
+                                break
+                            if sum(field_lengths) > max_row_bytes:
+                                row_failure = (
+                                    "row byte lengths exceed the caller's max_row_bytes "
+                                    "admission limit"
+                                )
+                                break
+                            row = self.db.execute(
+                                "SELECT id,job_id,event,metadata,created_at "
+                                "FROM job_events WHERE id=?", (probe["id"],),
+                            ).fetchone()
+                            item = dict(row)
+                            if (item.get("job_id") != job_id
+                                    or list(item) != ["id", "job_id", "event", "metadata", "created_at"]
+                                    or type(item.get("id")) is not int
+                                    or item["id"] <= previous_id or item["id"] > captured_last_id
+                                    or not isinstance(item.get("event"), str) or not item.get("event")):
+                                row_failure = (
+                                    "job event stream contains a foreign, malformed, "
+                                    "duplicate, or unordered row"
+                                )
+                                break
+                            try:
+                                item["metadata"] = json.loads(
+                                    item["metadata"],
+                                    parse_constant=_reject_nonstandard_json_constant,
+                                )
+                            except (TypeError, UnicodeDecodeError, ValueError):
+                                item["metadata"] = None
+                            if not isinstance(item["metadata"], dict):
+                                row_failure = "job event metadata is malformed or not a JSON object"
+                                break
+                            digests.add(item)
+                            previous_id = item["id"]
+                            visitor(item)
+                            fetched_event_count += 1
+                    if row_failure is not None:
+                        issues.append(row_failure)
+                    elif fetched_event_count != expected_event_count:
+                        issues.append(
+                            "folded job event count differs from the frozen count snapshot"
+                        )
+                    elif ((fetched_event_count and previous_id != captured_last_id)
+                          or (not fetched_event_count and captured_last_id != 0)):
+                        issues.append(
+                            "last folded event id differs from the captured snapshot maximum"
+                        )
+                if not _join_read_snapshot:
+                    self.db.execute("COMMIT")
+            except BaseException:
+                if not _join_read_snapshot and self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+        complete = not issues
+        if complete:
+            id_sha256, events_sha256 = digests.snapshot()
+        else:
+            # Partial evidence must never look like an authenticated prefix.
+            id_sha256 = events_sha256 = None
+        return {
+            "job_id": job_id,
+            "complete": complete,
+            "status": "COMPLETE" if complete else "INCOMPLETE",
+            "expected_event_count": expected_event_count,
+            "fetched_event_count": fetched_event_count,
+            "snapshot_last_id": captured_last_id,
+            "id_sha256": id_sha256,
+            "events_sha256": events_sha256,
+            "issues": issues,
+        }
+
+    @contextmanager
+    def solver_log_snapshot(self, job_id: str) -> Iterator[dict[str, Any] | None]:
+        """One owned SQLite read snapshot plus a result-free job view (T35).
+
+        Additive internal primitive for the ``solver_log_read`` integration
+        path: not a public MCP operation, and it authenticates or authorizes
+        nothing — a consistent metadata view is not proof of a principal.
+
+        Under the store RLock this context refuses a pre-existing connection
+        transaction instead of adopting somebody else's writes, then starts
+        its own ``BEGIN`` and reads the exact ``jobs`` row (that table has no
+        result column).  When the job exists, its linked operation row is
+        read with every existing column except ``result`` explicitly
+        enumerated.  Metadata and effective_timeouts decode exactly as
+        ``_job``/``_op`` do — malformed JSON fails closed before the yield —
+        and a missing operation yields ``job['operation'] = None``.  The
+        yielded value mirrors the ``_job`` shape, but the stored result is
+        never fetched: ``job['result']`` and the operation view's ``result``
+        are both ``None``.  A missing job yields ``None``.
+
+        The lock and the open snapshot are held across the yield so a
+        same-thread caller can run
+        ``fold_job_event_prefix(..., _join_read_snapshot=True)`` and
+        ``project_operation_result_error`` against this one consistent view.
+        Normal exit COMMITs the owned transaction; any exception (caller
+        raise, GeneratorExit, failed COMMIT) ROLLBACKs — only ever this
+        context's own transaction, because a foreign active transaction was
+        refused above — and re-raises unchanged.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        with self.lock:
+            if self.db.in_transaction:
+                raise ValueError(
+                    "solver_log_snapshot cannot begin inside a pre-existing transaction"
+                )
+            self.db.execute("BEGIN")
+            try:
+                job_rows = self.db.execute(
+                    "SELECT * FROM jobs WHERE job_id=?", (job_id,),
+                ).fetchmany(2)
+                if not job_rows:
+                    # The owned snapshot stays open across the yield even
+                    # for a missing job so the caller sees one consistent
+                    # view of the whole read.
+                    snapshot: dict[str, Any] | None = None
+                elif len(job_rows) != 1:
+                    raise RuntimeError("exact job row cardinality is not one")
+                else:
+                    job_row = job_rows[0]
+                    job = dict(job_row)
+                    job["metadata"] = json.loads(job["metadata"] or "{}")
+                    job["effective_timeouts"] = json.loads(
+                        job.get("effective_timeouts") or "{}"
+                    )
+                    op_rows = self.db.execute(
+                        "SELECT operation_id,request_id,idempotency_key,request_hash,"
+                        "operation,status,metadata,created_at,started_at,finished_at,"
+                        "effective_timeouts FROM operations WHERE operation_id=?",
+                        (job_row["operation_id"],),
+                    ).fetchmany(2)
+                    if not op_rows:
+                        operation: dict[str, Any] | None = None
+                    elif len(op_rows) != 1:
+                        raise RuntimeError("exact operation row cardinality is not one")
+                    else:
+                        operation = dict(op_rows[0])
+                        operation["metadata"] = json.loads(operation["metadata"] or "{}")
+                        operation["effective_timeouts"] = json.loads(
+                            operation.get("effective_timeouts") or "{}"
+                        )
+                        # The stored result is deliberately not fetched;
+                        # project_operation_result_error reads it in bounded
+                        # slices inside this same snapshot when required.
+                        operation["result"] = None
+                    job["operation"] = operation
+                    job["result"] = None
+                    snapshot = job
+                yield snapshot
+                self.db.execute("COMMIT")
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def project_operation_result_error(self, operation_id: str, *,
+                                       max_error_bytes: int) -> dict[str, Any] | None:
+        """Budgeted streaming projection of one stored result's ``error`` field.
+
+        T35 companion to ``solver_log_snapshot``: it runs only while an
+        active transaction exists on this connection and on the same thread
+        holding the RLock — in practice inside that owned read snapshot —
+        and it never starts, commits or rolls back SQL itself.  The stored
+        result is never fetched whole into Python: SQL returns only scalars
+        (``typeof``/``length``, plus an ``instr(result,char(0))`` NUL probe
+        for TEXT) and bounded ``substr`` slices, which are fed once, in
+        order, as UTF-8 byte chunks to ``project_error_chunks``.  The
+        implementation deliberately avoids ``sqlite3.blobopen`` (a newer
+        API) so it works on the project's ``requires-python >= 3.10``
+        baseline, and never uses ``json_extract`` — SQLite duplicate-key
+        handling is not equivalent to ``json.loads``.
+
+        Contract:
+        * A missing exact ``operation_id`` raises ``KeyError``.  ``NULL`` or
+          an empty TEXT/BLOB result maps to ``None`` exactly like the
+          falsy-result branch of ``_op``; an integer/real stored value is an
+          unsupported type and fails closed.
+        * SQLite ``length(TEXT)`` and ``substr`` stop at a raw NUL, so TEXT
+          is first probed with ``instr(result,char(0))`` and any raw NUL
+          raises ``ValueError`` instead of silently truncating.
+        * TEXT is sliced from position 1 in SQLite character units (16384
+          characters per slice, returned as ``str`` and re-encoded with
+          strict UTF-8, so unencodable text raises); BLOB is sliced in byte
+          units (65536 bytes per slice).  The scan advances by the actually
+          returned unit count; an empty or wrong-typed slice, a malformed
+          probe or any incomplete scan raises rather than pretending there
+          is no error.
+        * The return is exactly the projection's: ``{'error': value}`` under
+          last-wins duplicate-key semantics, or ``{}`` only for a fully
+          valid document with no top-level ``error``.  Document damage,
+          refused encoding/depth/integer boundaries and an over-budget
+          selected error all propagate; nothing is truncated or disguised
+          as "no error".
+
+        The bounded slices bound only this method's Python-side residency
+        for the tested boundary.  Repeated SQLite rescans from the value
+        start, SQLite C allocations, time, RSS and metadata size are not
+        guaranteed, and ``length()``/``substr()`` character-unit
+        equivalence with Python ``str`` lengths is scoped to what probes
+        have observed on the selected CPython/SQLite build; a mismatch is
+        expected to end in an empty/short-slice refusal or a stream error,
+        but exotic unit-counting builds remain unprobed.
+        """
+        if not isinstance(operation_id, str) or not operation_id:
+            raise ValueError("operation_id must be a non-empty string")
+        if (isinstance(max_error_bytes, bool) or not isinstance(max_error_bytes, int)
+                or max_error_bytes < 0):
+            raise ValueError("max_error_bytes must be a non-negative int")
+        with self.lock:
+            if not self.db.in_transaction:
+                raise ValueError(
+                    "project_operation_result_error requires the active read transaction "
+                    "owned by solver_log_snapshot"
+                )
+            probe_rows = self.db.execute(
+                "SELECT typeof(result) AS result_type,length(result) AS result_length "
+                "FROM operations WHERE operation_id=?",
+                (operation_id,),
+            ).fetchmany(2)
+            if not probe_rows:
+                raise KeyError(f"operation {operation_id!r} does not exist")
+            if len(probe_rows) != 1:
+                raise RuntimeError("exact operation row cardinality is not one")
+            result_type = probe_rows[0]["result_type"]
+            stored_length = probe_rows[0]["result_length"]
+            if result_type == "null":
+                return None
+            if result_type not in ("text", "blob"):
+                raise ValueError(f"unsupported stored result type {result_type!r}")
+            if type(stored_length) is not int or stored_length < 0:
+                raise RuntimeError("stored result length probe is malformed")
+            if result_type == "text":
+                nul_probe = self.db.execute(
+                    "SELECT instr(result,char(0)) AS nul_position "
+                    "FROM operations WHERE operation_id=?",
+                    (operation_id,),
+                ).fetchone()
+                if nul_probe is None or type(nul_probe["nul_position"]) is not int:
+                    raise RuntimeError("stored result NUL probe is malformed")
+                if nul_probe["nul_position"] != 0:
+                    raise ValueError(
+                        "stored TEXT result contains a raw NUL; SQLite length/substr "
+                        "stop at it and a raw NUL is not valid JSON"
+                    )
+            if stored_length == 0:
+                # Check TEXT for a leading NUL before treating its SQLite
+                # length of zero as a genuinely empty stored result.
+                return None
+            text_chunk_characters = 16384
+            blob_chunk_bytes = 65536
+
+            def text_chunks() -> Iterator[bytes]:
+                position = 1
+                remaining = stored_length
+                while remaining > 0:
+                    row = self.db.execute(
+                        "SELECT substr(result,?,?) AS chunk FROM operations WHERE operation_id=?",
+                        (position, text_chunk_characters, operation_id),
+                    ).fetchone()
+                    chunk = row["chunk"] if row is not None else None
+                    if not isinstance(chunk, str) or not chunk:
+                        raise RuntimeError(
+                            f"stored TEXT scan returned an empty or non-text slice at "
+                            f"character {position}; the scan is incomplete"
+                        )
+                    # Strict UTF-8 re-encoding; unencodable text raises here.
+                    yield chunk.encode("utf-8")
+                    consumed = len(chunk)
+                    position += consumed
+                    remaining -= consumed
+
+            def blob_chunks() -> Iterator[bytes]:
+                position = 1
+                remaining = stored_length
+                while remaining > 0:
+                    row = self.db.execute(
+                        "SELECT substr(result,?,?) AS chunk FROM operations WHERE operation_id=?",
+                        (position, blob_chunk_bytes, operation_id),
+                    ).fetchone()
+                    chunk = row["chunk"] if row is not None else None
+                    if not isinstance(chunk, (bytes, bytearray)) or not chunk:
+                        raise RuntimeError(
+                            f"stored BLOB scan returned an empty or non-byte slice at "
+                            f"byte {position}; the scan is incomplete"
+                        )
+                    yield bytes(chunk)
+                    consumed = len(chunk)
+                    position += consumed
+                    remaining -= consumed
+
+            chunks = text_chunks() if result_type == "text" else blob_chunks()
+            return project_error_chunks(chunks, max_error_bytes=max_error_bytes)
+
     def compact_terminal_job_metadata(self, job_ids: list[str], *, project_id: str | None = None) -> list[str]:
         """Compact selected terminal job-view metadata without deleting audit data.
 
         Operations, idempotency hashes/keys, results, job events, artifact rows,
-        and checkpoint rows remain untouched. The job row retains project
-        selectors and a cleanup tombstone; a durable event records the action.
+        and checkpoint rows remain untouched. The compacted job row keeps a
+        top-level project_id derived solely from the consistent job/operation
+        metadata binding (never promoted from arguments), project_root only as
+        legacy descriptive metadata, and a cleanup tombstone; a single durable
+        event records the action.
         """
         if not job_ids or any(not isinstance(job_id, str) or not job_id for job_id in job_ids):
             raise JobCleanupError("INVALID_REQUEST", "job_ids must contain non-empty strings")
         if len(set(job_ids)) != len(job_ids):
             raise JobCleanupError("INVALID_REQUEST", "job_ids must not contain duplicates")
+        if project_id is not None and (not isinstance(project_id, str) or not project_id):
+            raise JobCleanupError("INVALID_REQUEST", "project_id must be a non-empty string when provided")
 
         dependency_fields = {"depends_on_job_ids", "dependency_job_ids", "parent_job_id", "continuation_of_job_id", "resume_of_job_id"}
 
@@ -3507,18 +4669,26 @@ class OperationStore:
                         raise JobCleanupError("NODE_NOT_FOUND", f"job not found: {job_id}")
                     if row["status"] not in TERMINAL:
                         raise JobCleanupError("JOB_NOT_TERMINAL", f"job {job_id} is not terminal")
-                    job_metadata = json.loads(row["job_metadata"] or "{}")
-                    operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                    decode_failed = False
+                    try:
+                        job_metadata = json.loads(row["job_metadata"] or "{}")
+                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                    except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                        # A selected job/operation metadata decode failure can
+                        # establish no project binding; classify it as no
+                        # binding so the scoped/unscoped branch below refuses
+                        # the whole batch before any update or event. The data
+                        # is neither repaired nor silently skipped, and the
+                        # placeholders never reach the selected entries.
+                        decode_failed = True
+                        job_metadata = {}
+                        operation_metadata = {}
+                    binding = None if decode_failed else consistent_project_id(job_metadata, operation_metadata)
                     if project_id is not None:
-                        observed_projects: set[str] = set()
-                        for metadata in (job_metadata, operation_metadata):
-                            if not isinstance(metadata, dict):
-                                continue
-                            for source in (metadata, metadata.get("arguments", {}), metadata.get("execution", {})):
-                                if isinstance(source, dict) and isinstance(source.get("project_id"), str):
-                                    observed_projects.add(source["project_id"])
-                        if project_id not in observed_projects:
+                        if binding != project_id:
                             raise JobCleanupError("PROJECT_SCOPE_MISMATCH", f"job {job_id} is not recorded in project {project_id}")
+                    elif binding is None:
+                        raise JobCleanupError("PROJECT_BINDING_UNKNOWN", f"job {job_id} has no unambiguous project binding")
                     if dependency_values([job_metadata, operation_metadata]):
                         raise JobCleanupError("JOB_HAS_DEPENDENCIES", f"job {job_id} carries linked job dependencies")
                     selected.append({
@@ -3526,6 +4696,7 @@ class OperationStore:
                         "operation_id": row["operation_id"],
                         "status": row["status"],
                         "job_metadata": job_metadata,
+                        "binding": binding,
                     })
 
                 selected_ids = set(job_ids)
@@ -3545,12 +4716,13 @@ class OperationStore:
                     old_metadata = row["job_metadata"]
                     if old_metadata.get("cleanup", {}).get("metadata_compacted") is True:
                         continue
-                    compacted: dict[str, Any] = {}
+                    # The compacted top-level project_id comes only from the
+                    # helper-derived job/operation binding established above;
+                    # arguments.project_id can neither create nor override it.
+                    compacted: dict[str, Any] = {"project_id": row["binding"]}
                     for source in (old_metadata, old_metadata.get("arguments", {}), old_metadata.get("execution", {})):
-                        if isinstance(source, dict):
-                            for field in ("project_id", "project_root"):
-                                if field in source and source[field] is not None:
-                                    compacted.setdefault(field, source[field])
+                        if isinstance(source, dict) and "project_root" in source and source["project_root"] is not None:
+                            compacted.setdefault("project_root", source["project_root"])
                     cleaned_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                     compacted["cleanup"] = {
                         "metadata_compacted": True,

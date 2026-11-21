@@ -292,11 +292,28 @@ def test_partial_effects_are_durable_non_ready_never_replayed(harness, monkeypat
             return original()
         monkeypatch.setattr(harness.backend, "persist", persist)
     if failure == "silent_persist": monkeypatch.setattr(harness.backend, "persist", lambda: None)
+    verify_calls = []
     if failure == "source_preservation":
-        harness.adapter.preserve_source = False
+        # _migrate verifies source preservation twice: #1 pre-publish (the
+        # service suite's write-before-refuse contract, no attempt admitted)
+        # and #2 after the queued load admitted the effect. This NON_READY
+        # case requires the loss at verify #2; a pre-admission refusal has no
+        # copy-load effect to fence (see test_t45_migration_verify_order_fix).
+        original_verify = harness.adapter.verify_source_preserved
+        def verify(identity, source):
+            verify_calls.append(None)
+            if len(verify_calls) >= 2:
+                harness.adapter.preserve_source = False
+            return original_verify(identity, source)
+        monkeypatch.setattr(harness.adapter, "verify_source_preserved", verify)
     request = harness.request()
     result = harness.migrate(request)
     assert not result["success"], result
+    if failure == "source_preservation":
+        # Verify #1 ran and passed exactly once before the post-load verify #2
+        # observed the lost source; the refusal is not a claim of success.
+        assert len(verify_calls) == 2
+        assert result["data"].get("source_window_preserved") is not True
     job, attempt = harness.attempt()
     assert attempt["state"] == "NON_READY"
     assert attempt["durable_guard"] == "ATTEMPT_NON_READY_RECORDED"
@@ -596,24 +613,36 @@ def test_independent_persisted_identity_and_post_inspect_failures(harness, monke
 
 def test_foreign_parent_read_cannot_inspect_provisional_ref(harness, monkeypatch):
     from comsol_mcp._desktop_service import DesktopDispatchContext
-    entered, release = threading.Event(), threading.Event()
+    entered, release, first_verify_done = threading.Event(), threading.Event(), threading.Event()
     original = harness.adapter.verify_source_preserved
+    verify_calls = []
     def preservation(*a, **kw):
+        verify_calls.append(None)
+        if len(verify_calls) < 2:
+            # Real _migrate ordering: verify #1 runs pre-publish/pre-load and
+            # must complete normally before the queued load can admit anything.
+            value = original(*a, **kw)
+            first_verify_done.set()
+            return value
         entered.set()
         assert release.wait(5)
         return original(*a, **kw)
     monkeypatch.setattr(harness.adapter, "verify_source_preserved", preservation)
     with ThreadPoolExecutor(max_workers=1) as executor:
         migration = executor.submit(harness.migrate)
-        assert entered.wait(5)
-        job, attempt = harness.attempt()
-        record, reused = harness.daemon.store.begin(request_id="foreign-read", idempotency_key="foreign-read", request_hash="foreign-hash",
-                                                   operation="desktop.bind", metadata={"project_id": "p"})
-        harness.daemon.store.update_job(record["job_id"], "RUNNING")
-        context = DesktopDispatchContext(operation_id=record["operation_id"], job_id=record["job_id"], operation=record["operation"],
-                                         request_id=record["request_id"], idempotency_key=record["idempotency_key"], request_hash=record["request_hash"], project_id="p")
-        before = list(harness.worker.trace)
         try:
+            # The block sits at post-load verify #2, so the PROVISIONAL
+            # attempt row already exists and verify #1 already completed.
+            assert entered.wait(5)
+            assert first_verify_done.wait(5)
+            job, attempt = harness.attempt()
+            assert attempt["state"] == "PROVISIONAL"
+            record, reused = harness.daemon.store.begin(request_id="foreign-read", idempotency_key="foreign-read", request_hash="foreign-hash",
+                                                       operation="desktop.bind", metadata={"project_id": "p"})
+            harness.daemon.store.update_job(record["job_id"], "RUNNING")
+            context = DesktopDispatchContext(operation_id=record["operation_id"], job_id=record["job_id"], operation=record["operation"],
+                                             request_id=record["request_id"], idempotency_key=record["idempotency_key"], request_hash=record["request_hash"], project_id="p")
+            before = list(harness.worker.trace)
             with pytest.raises(DesktopOperationError, match="active operation"):
                 harness.daemon._desktop_engine_queue("desktop.binding.inspect", {"project_id": "p"}, model_ref_from_mapping(attempt["model_ref"]), context)
             assert harness.worker.trace == before

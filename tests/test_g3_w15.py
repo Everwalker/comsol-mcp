@@ -330,6 +330,14 @@ class FSelection:
             return None
         return self.owner.dim_
 
+    def inputDimension(self) -> int:  # noqa: N802 - javap: Selection.inputDimension()
+        # javap of com.comsol.api_1.0.0.jar (2026-11-08): the Selection this
+        # fake mirrors always carries this getter.  It reports the input
+        # dimension the endpoint itself recorded (owner state written by
+        # geom/dim), never an echo of the current request.
+        value = self.owner.dim_
+        return int(value) if value is not None else -1
+
     def dimension(self) -> list[int]:
         return [self.owner.dim_ if self.owner.dim_ is not None else 0]
 

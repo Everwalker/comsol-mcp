@@ -430,6 +430,13 @@ class FNode:
     def dim(self) -> int:
         return self.dim_ if self.dim_ is not None else 0
 
+    def inputDimension(self) -> int:  # noqa: N802 - javap: Selection.inputDimension()
+        # The real Selection (this node doubles as its own selection) always
+        # carries the getter (javap of com.comsol.api_1.0.0.jar, 2026-11-08);
+        # it reports the dimension recorded by the endpoint's own geom(...)
+        # call, -1 when none has ever been applied.
+        return self.dim_ if self.dim_ is not None else -1
+
     def dimension(self) -> list[int]:
         return self.dimension_ or [self.dim()]
 

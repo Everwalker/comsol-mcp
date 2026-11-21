@@ -14,7 +14,7 @@ from ._g2_contract import NodePath
 from ._g2_engine import _parse_search_budget
 from ._g2_public_api import IDENTITY_FIELDS, VERSION
 from ._g2_checkpoint_diff import (
-    Budget, BudgetStop, Reader, UnknownObservationStop, _MISSING, canonical,
+    Budget, BudgetStop, Reader, UnknownObservationStop, _MISSING, _coverage_errors, canonical,
     compare as compare_projections, path_key,
 )
 
@@ -393,7 +393,9 @@ def _add_metrics(reader: Reader, projection: dict[str, Any], model: Any, scope: 
     projection["coverage"] = reader.coverage
     projection["errors"] = reader.errors
     projection["unknown"] = reader.unknown
-    projection["complete"] = all(row["status"] in {"VERIFIED", "NOT_APPLICABLE"} for row in reader.coverage)
+    projection["runtime_version"] = reader.runtime_version
+    projection["receiver_receipts"] = reader.receiver_receipts
+    projection["complete"] = not _coverage_errors(projection)
 
 
 def _projection_payload(reader: Reader, model: Any, ref: ModelRef, normalized_scope: Mapping[str, Any],
