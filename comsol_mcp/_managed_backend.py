@@ -51,6 +51,289 @@ from ._session_context import (
 )
 
 
+_T18_WORKER_FAILURE_CODES = frozenset({
+    "COMPILE_ERROR", "COMPILE_UNAVAILABLE", "TRUSTED_CODE_REJECTED",
+    "SOURCE_HASH_REQUIRED", "SOURCE_HASH_MISMATCH", "SOURCE_SNAPSHOT_REQUIRED",
+    "SOURCE_SNAPSHOT_INVALID", "WORKER_SOURCE_BINDING_MISMATCH",
+    "WORKER_SOURCE_BINDING_UNAVAILABLE", "WORKER_RESPONSE_UNCORRELATED",
+    "WORKER_RESPONSE_ID_MISMATCH", "WORKER_RESPONSE_ID_MISSING",
+    "ENGINE_CALL_FAILED", "ENGINE_UNRESPONSIVE", "ENTRYPOINT_REJECTED",
+    "PROTOCOL_ERROR", "UNKNOWN",
+})
+_T18_SOURCE_BINDING_FAILURE_CODES = frozenset({
+    "SOURCE_HASH_REQUIRED", "SOURCE_HASH_MISMATCH", "SOURCE_SNAPSHOT_REQUIRED",
+    "SOURCE_SNAPSHOT_INVALID", "WORKER_SOURCE_BINDING_MISMATCH",
+})
+_T18_TRUSTED_CODE_POLICY = "javac_ast_resolved_ModelUtil_owner_and_static_initializer"
+_T18_WORKER_STATUSES = frozenset({"QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "UNKNOWN"})
+_T18_TRANSPORT_STAGES = frozenset({
+    "connect", "authentication", "source_binding_probe_write",
+    "source_binding_probe_reply", "request_write", "reply_read",
+})
+_T18_DIAGNOSTIC_KINDS = frozenset({"ERROR", "WARNING", "MANDATORY_WARNING", "NOTE", "OTHER"})
+
+
+def _t18_safe_request_id(value: Any) -> str | None:
+    if type(value) is str and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,159}", value):
+        return value
+    return None
+
+
+def _t18_safe_failure_code(value: Any) -> str | None:
+    if type(value) is str and value in _T18_WORKER_FAILURE_CODES:
+        return value
+    return "WORKER_FAILURE" if value is not None else None
+
+
+def _t18_safe_diagnostics(value: Any) -> list[dict[str, Any]]:
+    """Keep only bounded coordinates and kinds supplied by sourceDiagnostics."""
+    if not isinstance(value, list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for row in value[:32]:
+        if not isinstance(row, Mapping):
+            continue
+        safe: dict[str, Any] = {}
+        for key in ("line", "column", "start", "end"):
+            number = row.get(key)
+            if type(number) is int and 0 <= number <= 1_000_000:
+                safe[key] = number
+        kind = row.get("kind")
+        if type(kind) is str and kind.upper() in _T18_DIAGNOSTIC_KINDS:
+            safe["kind"] = kind.upper()
+        rows.append(safe)
+    return rows
+
+
+def _t18_safe_snapshot(value: Any, model_tag: str) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        return {}
+    safe: dict[str, Any] = {}
+    if value.get("model_tag") == model_tag:
+        safe["model_tag"] = model_tag
+    fingerprint = value.get("fingerprint")
+    if type(fingerprint) is str and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", fingerprint):
+        safe["fingerprint"] = fingerprint
+    counter = value.get("external_event_counter")
+    if type(counter) is int and counter >= 0:
+        safe["external_event_counter"] = counter
+    return safe
+
+
+def _t18_optional_identity_matches(record: Mapping[str, Any], nested: Mapping[str, Any],
+                                   description: Mapping[str, Any], model_tag: str) -> bool:
+    """Validate identity fields wherever an otherwise valid receipt includes them."""
+    expected = {
+        "source_sha256": description.get("source_sha256"),
+        "entrypoint": description.get("entrypoint"),
+        "model_tag": model_tag,
+    }
+    for name, value in expected.items():
+        for identity in (record, nested):
+            if name in identity and (type(identity.get(name)) is not str
+                                     or identity.get(name) != value):
+                return False
+    return True
+
+
+def _t18_bound_not_executed_rejection(reply: Any, description: Mapping[str, Any],
+                                     worker_request_id: str, model_tag: str) -> str | None:
+    """Classify only normal, correlated Worker failures with protocol evidence.
+
+    JavaWorker's source-binding handshake and request-id validator run before a
+    normal reply reaches this caller. Compiler and policy failures carry the
+    source hash, entrypoint and diagnostics produced by the Worker. Its normal
+    sourceBindingFailure response instead proves that the source operation was
+    not dispatched and that execution state is known. Exceptions and malformed
+    or contradictory mappings do not carry equivalent evidence.
+    """
+    if not isinstance(reply, Mapping):
+        return None
+    failure = reply.get("failure")
+    if not isinstance(failure, Mapping):
+        return None
+    code = failure.get("code")
+    if not (
+        reply.get("ok") is False and reply.get("status") == "FAILED"
+        and type(worker_request_id) is str
+        and type(reply.get("request_id")) is str
+        and reply.get("request_id") == worker_request_id
+        and type(reply.get("type")) is str
+        and reply.get("type") == "code_execute"
+        and type(code) is str
+        and ("code" not in reply or reply.get("code") == code)
+        and "success" not in reply
+        and "_source_binding_verified" not in reply
+        and reply.get("result") is None
+    ):
+        return None
+    if not _t18_optional_identity_matches(reply, failure, description, model_tag):
+        return None
+    for record in (reply, failure):
+        for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched"):
+            value = record.get(name)
+            if name in record and type(value) is not bool:
+                return None
+            if value is True:
+                return None
+
+    if code in {"COMPILE_ERROR", "COMPILE_UNAVAILABLE", "TRUSTED_CODE_REJECTED"}:
+        if (type(failure.get("source_sha256")) is str
+                and failure.get("source_sha256") == description.get("source_sha256")
+                and type(failure.get("entrypoint")) is str
+                and failure.get("entrypoint") == description.get("entrypoint")
+                and isinstance(failure.get("diagnostics"), list)):
+            if (code == "TRUSTED_CODE_REJECTED"
+                    and failure.get("policy") != _T18_TRUSTED_CODE_POLICY):
+                return None
+            return "compiler"
+        return None
+
+    if code in _T18_SOURCE_BINDING_FAILURE_CODES:
+        if (reply.get("code") != code
+                or reply.get("source_operation_dispatched") is not False
+                or failure.get("source_operation_dispatched") is not False
+                or reply.get("execution_state_unknown") is not False
+                or failure.get("execution_state_unknown") is not False
+                or reply.get("safe_retry") is not False
+                or failure.get("safe_retry") is not False):
+            return None
+        return "source_binding"
+    return None
+
+def _t18_safe_worker_reply(reply: Any, description: Mapping[str, Any],
+                           worker_request_id: str, *, force_unknown: bool = False,
+                           exception: BaseException | None = None,
+                           transport_stage: str | None = None) -> dict[str, Any]:
+    raw = reply if isinstance(reply, Mapping) else {}
+    status = raw.get("status")
+    safe: dict[str, Any] = {
+        "request_id": _t18_safe_request_id(worker_request_id) or "<redacted>",
+        "type": "code_execute",
+        "status": "UNKNOWN" if force_unknown else (
+            status if type(status) is str and status in _T18_WORKER_STATUSES else "UNKNOWN"
+        ),
+    }
+    if force_unknown and type(status) is str and status in _T18_WORKER_STATUSES:
+        safe["observed_status"] = status
+    observed_id = raw.get("request_id")
+    if observed_id != worker_request_id:
+        safe_id = _t18_safe_request_id(observed_id)
+        if safe_id is not None:
+            safe["observed_request_id"] = safe_id
+    if not force_unknown and type(raw.get("ok")) is bool:
+        safe["ok"] = raw["ok"]
+    code = _t18_safe_failure_code(raw.get("code"))
+    if code:
+        safe["code"] = code
+    if force_unknown:
+        safe["execution_state_unknown"] = True
+        safe["partial_change"] = True
+    else:
+        for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched"):
+            if type(raw.get(name)) is bool:
+                safe[name] = raw[name]
+    stage = transport_stage or raw.get("transport_stage")
+    if type(stage) is str and stage in _T18_TRANSPORT_STAGES | {"post_snapshot", "receipt_validation"}:
+        safe["transport_stage"] = stage
+    reason = raw.get("reason")
+    if type(reason) is str and reason in {
+        "rpc_timeout", "transport_error", "protocol_error", "authentication_rejected",
+        "worker_response_request_id_mismatch", "worker_response_request_id_missing",
+    }:
+        safe["reason"] = reason
+    errno = raw.get("errno")
+    if type(errno) is int:
+        safe["errno"] = errno
+    raw_result = raw.get("result")
+    if isinstance(raw_result, Mapping):
+        result_summary = {
+            name: raw_result[name]
+            for name in ("executed", "execution_state_unknown", "partial_change")
+            if type(raw_result.get(name)) is bool
+        }
+        if result_summary:
+            safe["observed_result"] = result_summary
+    if exception is not None:
+        name = type(exception).__name__
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", name):
+            safe["exception_type"] = name
+
+    raw_failure = raw.get("failure")
+    if isinstance(raw_failure, Mapping):
+        failure: dict[str, Any] = {}
+        failure_code = _t18_safe_failure_code(raw_failure.get("code"))
+        if failure_code:
+            failure["code"] = failure_code
+        if raw_failure.get("source_sha256") == description.get("source_sha256"):
+            failure["source_sha256"] = description["source_sha256"]
+        if raw_failure.get("entrypoint") == description.get("entrypoint"):
+            failure["entrypoint"] = description["entrypoint"]
+        if raw_failure.get("policy") == _T18_TRUSTED_CODE_POLICY:
+            failure["policy"] = raw_failure["policy"]
+        diagnostics = raw_failure.get("diagnostics", raw.get("diagnostics"))
+        if isinstance(diagnostics, list):
+            failure["diagnostics"] = _t18_safe_diagnostics(diagnostics)
+        if force_unknown:
+            failure["execution_state_unknown"] = True
+            failure["partial_change"] = True
+        else:
+            for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched"):
+                if type(raw_failure.get(name)) is bool:
+                    failure[name] = raw_failure[name]
+        chain = raw_failure.get("cause_chain")
+        if isinstance(chain, list):
+            cause_types = []
+            for item in chain[:16]:
+                name = item.get("type") if isinstance(item, Mapping) else None
+                if type(name) is str and re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$.]{0,159}", name):
+                    cause_types.append(name)
+            if cause_types:
+                failure["cause_types"] = cause_types
+        if failure:
+            safe["failure"] = failure
+    return safe
+
+
+def _t18_unknown_java_result(description: Mapping[str, Any], before: Mapping[str, Any],
+                             model_tag: str, worker_request_id: str, reply: Any, *,
+                             exception: BaseException | None = None,
+                             transport_stage: str | None = None,
+                             source_binding_verified: bool = False) -> dict[str, Any]:
+    safe_reply = _t18_safe_worker_reply(
+        reply, description, worker_request_id, force_unknown=True,
+        exception=exception, transport_stage=transport_stage,
+    )
+    partial_change = True  # Dispatched execution may have changed model state.
+    return {
+        "success": False,
+        "data": {
+            "source_sha256": description["source_sha256"],
+            "entrypoint": description["entrypoint"],
+            "worker": safe_reply,
+            "before": _t18_safe_snapshot(before, model_tag),
+            "after": {},
+            "worker_source_sha256": description["source_sha256"] if source_binding_verified else None,
+            "worker_entrypoint": description["entrypoint"] if source_binding_verified else None,
+            "source_binding_verified": source_binding_verified,
+            "readback": {},
+            "partial_change": partial_change,
+            "execution_state_unknown": True,
+        },
+        "error": {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "phase": "execute",
+            "message": "Java execution state is unknown; inspect the original request",
+            "partial_changes": partial_change,
+            "safe_retry": False,
+            "engine_state": "UNKNOWN",
+        },
+        "execution_success": False,
+        "execution_state_unknown": True,
+        "partial_change": partial_change,
+    }
+
+
 class SessionConnectFailure(RuntimeError):
     """A scoped attach attempt with an explicit retry/uncertainty boundary."""
 
@@ -4274,33 +4557,120 @@ class ManagedBackend:
                     request_id=operation_id,
                 )
             except Exception as exc:
-                # Worker compilation is completed before ModelUtil.model(tag)
-                # and therefore proves no model write on a syntax failure.
-                preserved = getattr(exc, "reply", None)
-                failure = preserved.get("failure") if isinstance(preserved, Mapping) else None
-                code = failure.get("code") if isinstance(failure, Mapping) else None
-                pre_dispatch_refusal = (isinstance(preserved, Mapping)
-                                        and preserved.get("source_operation_dispatched") is False)
-                if code != "COMPILE_ERROR" and not pre_dispatch_refusal:
-                    raise
-                reply = dict(preserved) if isinstance(preserved, Mapping) else {}
-                reply.update({"ok": False, "code": code or reply.get("code") or "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                         "message": str(exc),
-                         "diagnostics": failure.get("diagnostics", []) if isinstance(failure, Mapping) else [],
-                         "execution_state_unknown": False})
-            # Validate the Worker receipt entirely in memory before asking the
-            # Worker/SDK for any post-execution state. An incomplete or
-            # mismatched success receipt is already UNKNOWN: a later snapshot
-            # cannot establish which source or entrypoint actually ran.
-            data = execution_result(description=description, worker_reply=reply, before=before,
-                                    expected_model_tag=model_tag)
-            if data.get("success") is not True:
-                if data.get("error", {}).get("code") == "COMPILE_ERROR":
+                # An exception is not a Worker receipt. Its attached mapping may
+                # be stale, contradictory, uncorrelated, or caller supplied, so
+                # never let it establish success or a retryable compile refusal.
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id,
+                    getattr(exc, "reply", None), exception=exc,
+                )
+
+            rejection = _t18_bound_not_executed_rejection(
+                reply, description, operation_id, model_tag,
+            )
+            if rejection is not None:
+                safe_reply = _t18_safe_worker_reply(reply, description, operation_id)
+                data = execution_result(
+                    description=description, worker_reply=safe_reply,
+                    before=_t18_safe_snapshot(before, model_tag), expected_model_tag=model_tag,
+                )
+                failure_code = reply["failure"]["code"]
+                if rejection == "source_binding":
+                    data["error"]["code"] = failure_code
+                    data["error"]["message"] = "Java source binding was refused before model dispatch"
+                    data["error"]["safe_retry"] = False
+                elif failure_code == "TRUSTED_CODE_REJECTED":
+                    data["error"]["message"] = "Java trusted-code policy rejected source before model dispatch"
+                    data["error"]["safe_retry"] = False
+                else:
+                    data["error"]["message"] = "Java compilation failed before model dispatch"
                     data["error"]["safe_retry"] = True
                 return data
-            after = self.worker.backend_snapshot(model_tag)
-            data = execution_result(description=description, worker_reply=reply, before=before, after=after,
-                                    expected_model_tag=model_tag)
+
+            # A success receipt is accepted only when the real Worker protocol
+            # has bound it to this exact request, source, entrypoint and model,
+            # with no contradictory UNKNOWN or failure signal.
+            result = reply.get("result") if isinstance(reply, Mapping) else None
+            failure = reply.get("failure") if isinstance(reply, Mapping) else None
+            valid_success = (
+                isinstance(reply, Mapping)
+                and reply.get("ok") is True and reply.get("status") == "SUCCEEDED"
+                and reply.get("type") == "code_execute"
+                and reply.get("request_id") == operation_id
+                and reply.get("_source_binding_verified") is True
+                and isinstance(result, Mapping) and result.get("executed") is True
+                and result.get("source_sha256") == description.get("source_sha256")
+                and result.get("entrypoint") == description.get("entrypoint")
+                and result.get("model_tag") == model_tag
+                and _t18_optional_identity_matches(reply, result, description, model_tag)
+                and result.get("execution_state_unknown") is not True
+                and result.get("partial_change") is not True
+                and not (isinstance(result.get("failure"), Mapping) and result["failure"])
+                and reply.get("execution_state_unknown") is not True
+                and reply.get("partial_change") is not True
+                and not (isinstance(failure, Mapping) and failure)
+                and ("success" not in reply or reply.get("success") is True)
+            )
+            if not valid_success:
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id, reply,
+                )
+            try:
+                data = execution_result(
+                    description=description, worker_reply=reply,
+                    before=_t18_safe_snapshot(before, model_tag), expected_model_tag=model_tag,
+                )
+            except Exception as exc:
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id, reply,
+                    exception=exc, transport_stage="receipt_validation",
+                    source_binding_verified=True,
+                )
+            if data.get("success") is not True:
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id, reply,
+                    source_binding_verified=True,
+                )
+            try:
+                after = self.worker.backend_snapshot(model_tag)
+            except Exception as exc:
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id, reply,
+                    exception=exc, transport_stage="post_snapshot",
+                    source_binding_verified=True,
+                )
+            try:
+                data = execution_result(
+                    description=description, worker_reply=reply,
+                    before=_t18_safe_snapshot(before, model_tag),
+                    after=_t18_safe_snapshot(after, model_tag), expected_model_tag=model_tag,
+                )
+            except Exception as exc:
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id, reply,
+                    exception=exc, transport_stage="receipt_validation",
+                    source_binding_verified=True,
+                )
+            if data.get("success") is not True:
+                return _t18_unknown_java_result(
+                    description, before, model_tag, operation_id, reply,
+                    source_binding_verified=True,
+                )
+            # The model's own readback remains in data.readback. Keep the
+            # duplicate worker envelope limited to the identity proof.
+            data["data"]["worker"] = {
+                "ok": True, "request_id": operation_id,
+                "type": "code_execute", "status": "SUCCEEDED",
+                "result": {
+                    "executed": True,
+                    "source_sha256": description["source_sha256"],
+                    "entrypoint": description["entrypoint"],
+                    "model_tag": model_tag,
+                    "worker_build_id": result.get("worker_build_id"),
+                    "worker_instance_id": result.get("worker_instance_id"),
+                    "readback": result.get("readback"),
+                },
+            }
         elif operation == "transaction.verify":
             # A nested/legacy verify has no bound model identity, so it cannot
             # confirm that the durable record belongs to this model.  Refuse
