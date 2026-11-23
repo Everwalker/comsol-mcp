@@ -922,7 +922,9 @@ def op_solver_solution_transfer(worker, model_tag, arguments):
         if not isinstance(by_pair, dict):
             return None
         pair_data = by_pair.get(f"{row.get('outer')}:{row.get('inner')}")
-        if not isinstance(pair_data, dict):
+        if (not isinstance(pair_data, dict)
+                or type(pair_data.get("solnum")) is not int
+                or pair_data.get("solnum") != row.get("solnum")):
             return None
         names, values, units = pair_data.get('names'), pair_data.get('values'), pair_data.get('units')
         if not (isinstance(names, list) and isinstance(values, list) and isinstance(units, list)
@@ -930,7 +932,7 @@ def op_solver_solution_transfer(worker, model_tag, arguments):
             return None
         matches = []
         for name, value, unit in zip(names, values, units):
-            if isinstance(name, str) and name.lower() in {'t', 'time'}:
+            if isinstance(name, str) and (name == 't' or name.lower() == 'time'):
                 if (isinstance(value, (int, float)) and not isinstance(value, bool)
                         and math.isfinite(value) and isinstance(unit, str) and unit):
                     matches.append({'name': name, 'value': float(value), 'unit': unit})
@@ -939,9 +941,11 @@ def op_solver_solution_transfer(worker, model_tag, arguments):
         return matches[0] if len(matches) == 1 else None
 
     if requested_time is not None:
-        candidates = [row for row in candidates
-                      if (bound_time := pair_time(row)) is not None
-                      and bound_time['unit'] == requested_time['unit']
+        candidate_times = [(row, pair_time(row)) for row in candidates]
+        require(all(bound_time is not None for _row, bound_time in candidate_times),
+                'source.time cannot be uniquely proven because every candidate tuple needs complete, unit-bearing time metadata')
+        candidates = [row for row, bound_time in candidate_times
+                      if bound_time['unit'] == requested_time['unit']
                       and math.isclose(float(requested_time['value']), bound_time['value'], rel_tol=1e-12, abs_tol=1e-15)]
     pairs = candidates
     require(len(pairs) == 1 and type(pairs[0].get('solnum')) is int and pairs[0]['solnum'] >= 1,
@@ -1117,24 +1121,40 @@ def _resolve_state_map_source_pair(indices, source):
             pairs = []
         else:
             time_matches = []
+            metadata_complete = True
             for row in pairs:
                 pair_data = by_pair.get(f"{row.get('outer')}:{row.get('inner')}")
-                if not isinstance(pair_data, Mapping):
+                if (not isinstance(pair_data, Mapping)
+                        or type(pair_data.get("solnum")) is not int
+                        or pair_data.get("solnum") != row.get("solnum")):
+                    metadata_complete = False
                     continue
                 names, values, units = pair_data.get("names"), pair_data.get("values"), pair_data.get("units")
                 if not (isinstance(names, list) and isinstance(values, list) and isinstance(units, list)
                         and len(names) == len(values) == len(units)):
+                    metadata_complete = False
                     continue
                 matches = []
                 for name, value, unit in zip(names, values, units):
-                    if isinstance(name, str) and name.lower() in {"t", "time"}:
+                    if isinstance(name, str) and (name == "t" or name.lower() == "time"):
+                        # Match the lower-level selector contract: one valid
+                        # alias cannot mask another malformed time column.
                         if (isinstance(value, (int, float)) and not isinstance(value, bool)
-                                and math.isfinite(float(value)) and isinstance(unit, str)):
+                                and math.isfinite(float(value)) and isinstance(unit, str) and unit):
                             matches.append(unit == quantity["unit"] and math.isclose(
                                 float(value), float(quantity["value"]), rel_tol=1e-12, abs_tol=1e-15
                             ))
-                if len(matches) == 1 and matches[0]:
+                        else:
+                            metadata_complete = False
+                if len(matches) != 1:
+                    metadata_complete = False
+                elif matches[0]:
                     time_matches.append(row)
+            if not metadata_complete:
+                raise PreWriteRefusal(
+                    "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                    "time selection requires complete, exact time metadata for every candidate tuple",
+                )
             pairs = time_matches
     if len(pairs) != 1:
         raise PreWriteRefusal(
