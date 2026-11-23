@@ -40,10 +40,13 @@ that pass the component checks. A URI-shaped value is refused
 even if a particular property would treat it as literal text; authorized
 Model Manager URI inputs also require a separate project-binding route.
 This lexical screen does not classify file semantics. T19.a adds a separate,
-finite rule for the documented ``Import.filename`` and
-``Interpolation.filename`` fields: the node type and property identifier
-must match exactly, and relative values require a bound route. Bare relative
-values remain undecided for every other property. No
+finite rule for documented ``filename`` fields of ``Import``,
+``Interpolation``, ``Elevation``, ``Image``, ``CGNS``, ``LeastSquares``,
+``GaussianProcess`` and ``PolynomialChaosExpansion``: the node type and
+property identifier must match exactly, and relative values require a bound
+route. For the last three function types this conservatively applies even when
+their selected source is not a file. Bare relative values remain undecided for
+every other property. No
 "complete UNKNOWN fail-closed" or general file-boundary claim is made or
 implied. Equally, no claim is made that *every* project-internal value is
 allowed — the screen is deliberately asymmetric and its conservatism has a
@@ -141,7 +144,14 @@ def known_file_value_refusal(type_id: Any, property_name: Any, typed: Any) -> st
     ``filename`` property as a CAD file name. COMSOL 6.4 Programming Reference
     Manual, page 1252, chunk 12007 (SHA-256
     ``5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105``)
-    identifies ``Interpolation.filename`` as a file. This function recognizes
+    identifies ``Interpolation.filename`` as a file. COMSOL 6.4 model.func()
+    reference chunks 16753, 16759--16763 (source SHA-256
+    ``c0b0ddce365ed8da5a8d8e45818ab0b056e552aaa01c99ca22e1f8be7c1e0edf``)
+    describes file-backed Elevation, Image, CGNS, LeastSquares,
+    GaussianProcess and PolynomialChaosExpansion filename fields. The Image
+    property description calls the file a DEM despite the Image section
+    describing image files; the last three types can also use a non-file
+    source, for which this rule remains conservative. This function recognizes
     only these exact type/property pairs. The caller supplies the
     type used by ``node.create`` or read from the resolved engine node; there
     is no request-body semantic flag.
@@ -150,7 +160,10 @@ def known_file_value_refusal(type_id: Any, property_name: Any, typed: Any) -> st
     host path screen. This function does not authorize it, bind an open
     descriptor to COMSOL, or close the engine's later re-resolution window.
     """
-    if property_name != "filename" or type_id not in ("Import", "Interpolation"):
+    if property_name != "filename" or type_id not in (
+        "Import", "Interpolation", "Elevation", "Image", "CGNS", "LeastSquares",
+        "GaussianProcess", "PolynomialChaosExpansion",
+    ):
         return None
     if not isinstance(typed, Mapping) or typed.get("kind") != "string":
         return f"COMSOL {type_id}.filename requires a literal scalar string path"
@@ -179,7 +192,7 @@ def require_known_file_path(type_id: Any, property_name: Any, typed: Any) -> Non
         "ACCESS_VIOLATION", reason,
         details={"mitigation": "t19a-known-file-semantics",
                  "type_id": type_id, "property": property_name,
-                 "scope_limit": "exact Import.filename and Interpolation.filename pairs only"},
+                 "scope_limit": "exact Import, Interpolation, Elevation, Image, CGNS, LeastSquares, GaussianProcess and PolynomialChaosExpansion filename pairs only"},
     )
 
 
