@@ -16,16 +16,13 @@ expected path.  Pre-dispatch refusals carry the validation stage plus the
 dispatch witness proof.  Two adjacent boundaries are pinned as they really are
 and remain OPEN (recorded residual risks, not claims of safety): the generic
 typed setter mirror (node.property_set) has no artifact concept once its
-ordinary project_write isolation gate is satisfied by an owned server, and
-function.data_reload follows model state — a loaded model whose filename
-points outside the project still refreshes in the engine host (model content
-is a separate authorization boundary).  The T20-reload tests close the
-control-process side: the model filename is adjudicated against the approved
-project record's workspace BEFORE any open/hash (never the daemon container,
-never the daemon CWD for relative names), untrusted or undecidable paths are
-never opened and their digests never published, and adjudication failures
-close to explicit not_reported_* statuses instead of falling through to a
-digest.
+ordinary project_write isolation gate is satisfied by an owned server.
+Managed function.data_reload now requires a verified project-local digest
+before refresh; relative, sibling-project, symlink, and undecidable paths are
+refused without refresh. This check does not bind the bytes read later by the
+COMSOL engine to the control-side digest: a file may change between hashing
+and the engine's path-based reread. These tests use a fake Worker and do not
+establish native COMSOL behavior.
 """
 from __future__ import annotations
 
@@ -280,6 +277,16 @@ def _register(daemon, project: Mapping, rel_path: str, *, role: str, key: str):
 
 def _error_code(result: Mapping) -> Any:
     return (result.get("error") or {}).get("code")
+
+
+def _assert_reload_refused_before_refresh(result: Mapping, interp: FNode,
+                                          *, hidden: tuple[str, ...] = ()) -> None:
+    assert result.get("success") is False, result
+    assert _error_code(result) == "ACCESS_VIOLATION", result
+    assert interp.refreshes == 0
+    encoded = json.dumps(result)
+    for value in hidden:
+        assert value not in encoded
 
 
 # --------------------------------------------------------------------------
@@ -663,13 +670,10 @@ def test_data_reload_digest_published_inside_project_boundary(tmp_path, monkeypa
 
 
 # --------------------------------------------------------------------------
-# T20-reload: the control-side digest of a model-state filename must be
-# adjudicated BEFORE any control-process open/hash, against the approved
-# project root from the durable project record — never the daemon container
-# and never the daemon CWD.  The engine refresh itself still follows model
-# state (unchanged model-content contract, recorded residual); what closes
-# here is the control process opening/hashing/leaking digests of paths it can
-# not prove to be inside the project.
+# T36 reload boundary: the control-side digest must be adjudicated against
+# the approved project root before refresh. Unverified paths are refused
+# before the engine call. A valid digest is only a point-in-time check; it does
+# not pin the bytes later reread by the engine through the model filename.
 # --------------------------------------------------------------------------
 
 
@@ -700,20 +704,16 @@ def test_data_reload_relative_filename_never_opens_or_publishes_digest(tmp_path,
         opened = _open_spy(monkeypatch)
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
                        _envelope(project, exe, "rel-digest"))
-        assert result["success"], result
-        assert interp.refreshes == 1  # engine refresh follows model state (contract unchanged)
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_relative_path_identity"
-        assert sha["value"] is None
-        assert expected not in json.dumps(result)
+        _assert_reload_refused_before_refresh(
+            result, interp, hidden=(expected, str(private), "SENTINEL-RELATIVE"))
         assert str(private) not in opened
     finally:
         daemon.close()
 
 
-def test_data_reload_outside_absolute_is_withheld_without_any_control_read(tmp_path, monkeypatch):
-    """Withholding must be enforced before hashing, not after: the control
-    process must not open the out-of-project model-referenced file at all."""
+def test_data_reload_outside_absolute_is_refused_before_refresh_without_control_read(tmp_path, monkeypatch):
+    """An out-of-project path is refused before refresh and is never opened
+    by the control process."""
     daemon, project, root, _model, interp, exe = _make_project(tmp_path, "absred", monkeypatch)
     try:
         private = tmp_path / "abspriv" / "private.dat"
@@ -724,12 +724,8 @@ def test_data_reload_outside_absolute_is_withheld_without_any_control_read(tmp_p
         opened = _open_spy(monkeypatch)
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
                        _envelope(project, exe, "abs-digest"))
-        assert result["success"], result
-        assert interp.refreshes == 1
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_outside_project_boundary"
-        assert sha["value"] is None
-        assert expected not in json.dumps(result)
+        _assert_reload_refused_before_refresh(
+            result, interp, hidden=(expected, str(private), "SENTINEL-ABSOLUTE"))
         assert str(private) not in opened
     finally:
         daemon.close()
@@ -748,12 +744,12 @@ def test_data_reload_project_scope_is_the_record_not_the_container(tmp_path, mon
         sibling.write_text("SENTINEL-SIBLING\n")
         expected = hashlib.sha256(sibling.read_bytes()).hexdigest()
         interp.values["filename"] = str(sibling)
+        opened = _open_spy(monkeypatch)
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
                        _envelope(project, exe, "ctr-scope"))
-        assert result["success"], result
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_outside_project_boundary"
-        assert expected not in json.dumps(result)
+        _assert_reload_refused_before_refresh(
+            result, interp, hidden=(expected, str(sibling), "SENTINEL-SIBLING"))
+        assert str(sibling) not in opened
 
         status, _ = daemon.backend._model_digest_adjudication(project["project_id"], str(sibling))
         assert isinstance(status, dict)
@@ -790,37 +786,30 @@ def test_data_reload_symlink_and_unresolvable_names_never_open(tmp_path, monkeyp
         opened = _open_spy(monkeypatch)
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
                        _envelope(project, exe, "sym-link"))
-        assert result["success"], result
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_path_component_refused"
-        assert sha["value"] is None
-        assert expected not in json.dumps(result)
+        _assert_reload_refused_before_refresh(
+            result, interp, hidden=(expected, str(private), str(link), "SENTINEL-SYMLINK"))
         assert str(private) not in opened and str(link) not in opened
 
         loop = root / "loop.dat"
         loop.symlink_to("loop.dat")
         interp.values["filename"] = str(loop)
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
-                       _envelope(project, result["execution"], "sym-loop"))
-        assert result["success"], result
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_path_component_refused"
-        assert sha["value"] is None
+                       _envelope(project, exe, "sym-loop"))
+        _assert_reload_refused_before_refresh(result, interp, hidden=(str(loop),))
+        assert str(loop) not in opened
 
         interp.values["filename"] = "/proj/evil\x00.dat"
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
-                       _envelope(project, result["execution"], "sym-nul"))
-        assert result["success"], result
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_path_unresolvable"
-        assert sha["value"] is None
+                       _envelope(project, exe, "sym-nul"))
+        _assert_reload_refused_before_refresh(result, interp, hidden=("evil",))
+        assert "/proj/evil\x00.dat" not in opened
     finally:
         daemon.close()
 
 
-def test_data_reload_adjudication_exception_is_fail_closed(tmp_path, monkeypatch):
-    """A failure inside the path adjudication must NOT fall through to
-    publishing the adapter digest (the old fail-open); it stays unreported."""
+def test_data_reload_adjudication_exception_refuses_refresh(tmp_path, monkeypatch):
+    """A path-adjudication exception refuses refresh and never falls through
+    to the adapter's local digest."""
     daemon, project, root, _model, interp, exe = _make_project(tmp_path, "excprb", monkeypatch)
     try:
         private = tmp_path / "excpriv" / "private.dat"
@@ -828,6 +817,7 @@ def test_data_reload_adjudication_exception_is_fail_closed(tmp_path, monkeypatch
         private.write_text("SENTINEL-EXC\n")
         expected = hashlib.sha256(private.read_bytes()).hexdigest()
         interp.values["filename"] = str(private)
+        opened = _open_spy(monkeypatch)
 
         def raiser(_paths):
             raise ValueError("forced adjudication exception")
@@ -835,11 +825,9 @@ def test_data_reload_adjudication_exception_is_fail_closed(tmp_path, monkeypatch
         monkeypatch.setattr(os.path, "commonpath", raiser)
         result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
                        _envelope(project, exe, "exc-probe"))
-        assert result["success"], result
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_path_unresolvable"
-        assert sha["value"] is None
-        assert expected not in json.dumps(result)
+        _assert_reload_refused_before_refresh(
+            result, interp, hidden=(expected, str(private), "SENTINEL-EXC"))
+        assert str(private) not in opened
     finally:
         daemon.close()
 
@@ -873,9 +861,9 @@ def test_data_reload_after_registered_import_publishes_verified_digest(tmp_path,
         daemon.close()
 
 
-def test_data_reload_direct_canonical_action_digest_is_adjudicated(tmp_path, monkeypatch):
-    """The direct canonical action route (no registry_call wrapper) shares one
-    schema and one adjudication point with the wrapped route."""
+def test_data_reload_direct_canonical_action_refuses_unverified_path_before_refresh(tmp_path, monkeypatch):
+    """The direct canonical action route refuses an unverified path before
+    refresh, just like the registry_call route."""
     daemon, project, root, _model, interp, exe = _make_project(tmp_path, "canonrel", monkeypatch)
     try:
         private = tmp_path / "canpriv" / "private.dat"
@@ -893,12 +881,8 @@ def test_data_reload_direct_canonical_action_digest_is_adjudicated(tmp_path, mon
         opened = _open_spy(monkeypatch)
         result = daemon.dispatch({"operation": "function.data_reload",
                                   "arguments": arguments, "execution": envelope})
-        assert result["success"], result
-        assert interp.refreshes == 1
-        sha = result["data"]["sha256"]
-        assert sha["status"] == "not_reported_outside_project_boundary"
-        assert sha["value"] is None
-        assert expected not in json.dumps(result)
+        _assert_reload_refused_before_refresh(
+            result, interp, hidden=(expected, str(private), "SENTINEL-CANON"))
         assert str(private) not in opened
     finally:
         daemon.close()

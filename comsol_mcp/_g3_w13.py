@@ -1452,12 +1452,11 @@ def function_data_reload(worker: Any, model_tag: str, arguments: Mapping[str, An
     """Refresh one file-backed function from model state.
 
     The managed route injects a request-private, project-bound digest
-    capability: the control process opens and hashes the model's filename
-    only after that gate proves the path sits inside the approved project
-    record, and reports an explicit ``not_reported_*`` status otherwise — an
-    unadjudicated path is never opened here.  Direct adapter-level calls
-    without the capability keep the legacy local digest as an internal-only
-    API behaviour; every public daemon route injects the gate.
+    capability. Its result must prove the model's filename is readable inside
+    the approved project before the Worker refresh is dispatched. Direct
+    adapter-level calls without the capability keep the legacy local digest
+    as an internal-only API behaviour; every public daemon route injects the
+    gate.
     """
     digest_provider = (arguments.get(_RELOAD_DIGEST_PROVIDER_KEY)
                        if isinstance(arguments, Mapping) else None)
@@ -1481,6 +1480,18 @@ def function_data_reload(worker: Any, model_tag: str, arguments: Mapping[str, An
             "INVALID_REQUEST",
             "the function has no filename property value, so there is nothing to reload; use function.data_import",
         )
+    digest = digest_provider(filename) if digest_provider is not None else None
+    if digest_provider is not None and (
+        not isinstance(digest, Mapping)
+        or digest.get("status") != "verified"
+        or not isinstance(digest.get("value"), str)
+    ):
+        status = digest.get("status") if isinstance(digest, Mapping) else None
+        raise PreWriteRefusal(
+            "ACCESS_VIOLATION",
+            "the model filename is not proven readable inside the authorized project; data reload was refused",
+            details={"digest_status": status},
+        )
     try:
         _call(node, "refresh")
         refresh_result = {"ok": True}
@@ -1492,8 +1503,7 @@ def function_data_reload(worker: Any, model_tag: str, arguments: Mapping[str, An
         "path": path,
         "type_id": type_id,
         "filename": filename,
-        "sha256": (digest_provider(filename) if digest_provider is not None
-                   else _local_sha256(filename)),
+        "sha256": digest if digest_provider is not None else _local_sha256(filename),
         "refresh": refresh_result,
         "readback_before": before,
         "readback_after": after,

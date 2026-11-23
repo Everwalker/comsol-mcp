@@ -40,7 +40,11 @@ def _relative_source_path(root: Path, requested: str | Path) -> tuple[Path, tupl
     if not candidate.is_absolute():
         candidate = root / candidate
     try:
-        resolved = candidate.resolve(strict=False)
+        # Keep source reads aligned with the shared artifact boundary: it
+        # rejects private project paths and symlink components before the
+        # descriptor-relative read below.
+        from ._artifact_store import ArtifactStore
+        resolved = ArtifactStore(root).resolve_safe_path(candidate, allow_overwrite=True)
     except (OSError, RuntimeError, ValueError) as exc:
         raise ExecutionContractError("ACCESS_VIOLATION", "source path could not be resolved safely") from exc
     if resolved.suffix.lower() != ".java":
