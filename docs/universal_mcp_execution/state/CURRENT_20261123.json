@@ -420,7 +420,8 @@
     "T35 native result retrieval and SQLite memory behavior",
     "Windows 6.3/6.4 and macOS 6.4 target acceptance",
     "historical UNKNOWN resources remain fenced",
-    "T38 package inventory and classification behavior"
+    "T38 package inventory and classification behavior",
+    "External shared-library authority and native execution boundary"
   ],
   "local_only_evidence": "The supplied updated G3 overlay is not published in this synchronization; the base retains its previous public G3 evidence.",
   "recent_scoped_changes": {
@@ -462,7 +463,7 @@
     "T13": "Independent review of the third isolated request-frame candidate found NEEDS_FIX: ValueError or RuntimeError after the operation-frame write starts could escape without UNKNOWN. The reviewer's isolated addendum made 13 frame fakes pass and is under separate independent review. Three baseline failures and two missing continuation sources remain not passed; the earlier 343-test claim is not independently reproducible. Static explanations for two fixture signatures and one UNKNOWN case remain hypotheses, not passes. Native Java and concurrent generation behavior remain unverified.",
     "T40": "The independently reviewed checkpoint cleanup hunk and two focused fake tests were integrated; current-source targeted tests passed. Native new Worker recovery and external/GUI effects remain unverified.",
     "T42": "All three R13 offline bundles were statically checked; the separately installed Mac ARM wheel passed offline checks. R13 became historical after T29 source integration. Current candidate bundles, target installation, native execution and final release remain open. A new current-source Mac ARM offline build is in progress.",
-    "T19": "COMSOL 6.4 documents additional file-backed function types Elevation, Image, CGNS and LeastSquares. An isolated finite-rule candidate passed 33 fake tests after one baseline fake create case failed with UNKNOWN instead of pre-write refusal; independent review is pending. LeastSquares non-file sources are conservatively affected, the Image reference has inconsistent wording, and 6.3/native/engine path races remain unverified."
+    "T19": "COMSOL 6.4 documents additional file-backed function types Elevation, Image, CGNS and LeastSquares. An isolated finite-rule candidate passed 33 fake tests after one baseline fake create case failed with UNKNOWN instead of pre-write refusal; independent review is pending. LeastSquares non-file sources are conservatively affected, the Image reference has inconsistent wording, and 6.3/native/engine path races remain unverified. COMSOL also documents External.path as a shared library; a fresh fake project lacking trusted_code accepted a relative library path through node.property_set. No real library or native execution was attempted; the full permission and execution boundary requires review."
   },
   "latest_local_build_only_candidate": {
     "wheel_sha256": "8bdaf87512f3b2d8ecbad1128a83a2108c5e18dad665a37f05114877ba37a940",
