@@ -4,11 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import jsonschema
 from mcp.server.fastmcp import FastMCP
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._mcp_gateway import GatewayRegistry
+from comsol_mcp._mcp_public_validation import create_public_server
 from comsol_mcp._tools_w18 import register as register_w18
 
 
@@ -73,7 +75,9 @@ class FastMCPCombinedAdmission(unittest.IsolatedAsyncioTestCase):
             self.dispatches.append((operation, dict(arguments), dict(execution)))
             return self.daemon.dispatch({"operation": operation, "arguments": arguments, "execution": execution})
         self.server = FastMCP("t29-combined")
-        register_w18(GatewayRegistry(self.server, dispatcher=dispatcher))
+        gateway = GatewayRegistry(self.server, dispatcher=dispatcher)
+        register_w18(gateway)
+        self.protocol = create_public_server(self.server, gateway.dispatcher)
 
     async def asyncTearDown(self):
         self.daemon.close()
@@ -84,7 +88,7 @@ class FastMCPCombinedAdmission(unittest.IsolatedAsyncioTestCase):
                 "request_id": request_id, "idempotency_key": request_id}}
 
     async def test_invalid_requests_reach_auth_then_fail_before_begin(self):
-        async with create_connected_server_and_client_session(self.server) as client:
+        async with create_connected_server_and_client_session(self.protocol) as client:
             names = {tool.name for tool in (await client.list_tools()).tools}
             self.assertTrue({"plot.render", "plot_render"} <= names)
             before_jobs = self.daemon.store.list_jobs().total
@@ -102,7 +106,7 @@ class FastMCPCombinedAdmission(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(all(row[0] == "plot.render" for row in self.dispatches))
 
     async def test_valid_omitted_and_legacy_forms_keep_outer_identity(self):
-        async with create_connected_server_and_client_session(self.server) as client:
+        async with create_connected_server_and_client_session(self.protocol) as client:
             for public_name in ("plot.render", "plot_render"):
                 for label, fields in VALID:
                     request_id = f"good-{public_name}-{label}"
@@ -116,13 +120,32 @@ class FastMCPCombinedAdmission(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(execution["request_id"], execution["idempotency_key"])
                 self.assertFalse({"project_id", "request_id", "idempotency_key"} & set(arguments))
 
-    async def test_fastmcp_drops_unknown_root_fields(self):
-        async with create_connected_server_and_client_session(self.server) as client:
-            result = await client.call_tool("plot.render", arguments=self.request(
-                "root-extra", {"path": "pg", "unknown_root_field": "observed"}))
-            self.assertIs(result.structuredContent["success"], True)
-            self.assertNotIn("unknown_root_field", self.dispatches[-1][1])
-            self.assertEqual(self.dispatches[-1][1], {"path": "pg"})
+    async def test_public_mcp_rejects_unknown_root_fields_before_fastmcp(self):
+        async with create_connected_server_and_client_session(self.protocol) as client:
+            tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+            before_jobs = self.daemon.store.list_jobs().total
+            for public_name in ("plot.render", "plot_render"):
+                self.assertIn(public_name, tools)
+                schema = tools[public_name].inputSchema
+                self.assertIs(schema["additionalProperties"], False)
+                request = self.request(
+                    f"root-extra-{public_name}",
+                    {"path": "pg", "unknown_root_field": "observed"},
+                )
+                with self.assertRaises(jsonschema.ValidationError):
+                    jsonschema.validate(request, schema)
+                result = await client.call_tool(public_name, arguments=request)
+                self.assertEqual(result.structuredContent["error"]["code"], "INVALID_REQUEST")
+
+            self.assertEqual(len(self.dispatches), 2)
+            self.assertEqual(len(self.authorizations), 2)
+            self.assertEqual(self.begins, [])
+            self.assertEqual(self.executions, [])
+            self.assertEqual(self.daemon.store.list_jobs().total, before_jobs)
+            for dispatched in self.dispatches:
+                self.assertEqual(dispatched[0], "plot.render")
+                self.assertEqual(dispatched[1], {"path": "pg", "unknown_root_field": "observed"})
+                self.assertEqual(dispatched[2]["project_id"], self.project_id)
 
     async def test_unauthorized_invalid_input_returns_permission_denied_without_begin(self):
         root = Path(self.temp.name) / "inspect-only"
@@ -145,11 +168,14 @@ class FastMCPCombinedAdmission(unittest.IsolatedAsyncioTestCase):
         server = FastMCP("t29-readonly")
         def dispatcher(operation, arguments, execution):
             return daemon.dispatch({"operation": operation, "arguments": arguments, "execution": execution})
-        register_w18(GatewayRegistry(server, dispatcher=dispatcher))
+        gateway = GatewayRegistry(server, dispatcher=dispatcher)
+        register_w18(gateway)
+        protocol = create_public_server(server, gateway.dispatcher)
         try:
-            async with create_connected_server_and_client_session(server) as client:
+            async with create_connected_server_and_client_session(protocol) as client:
                 before_jobs = daemon.store.list_jobs().total
                 result = await client.call_tool("plot.render", arguments={"path": "pg", "solution": None,
+                    "unknown_root_field": "observed",
                     "execution": {"project_id": project_id, "request_id": "denied-invalid",
                                   "idempotency_key": "denied-invalid"}})
                 self.assertEqual(result.structuredContent["error"]["code"], "PERMISSION_DENIED")

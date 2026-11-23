@@ -6,6 +6,8 @@ Multiphysics Server process (or connects to an existing one), then drives the
 same server-side model that a COMSOL Desktop client can visualize.
 """
 
+import anyio
+
 from comsol_mcp._server import mcp, _setup_logging
 from comsol_mcp._state import _write_status
 from comsol_mcp._tools_connection import register as _reg_connection
@@ -24,6 +26,7 @@ from comsol_mcp._tools_w20 import register as _reg_w20
 from comsol_mcp._tools_w21 import register as _reg_w21
 from comsol_mcp._tools_desktop import register as _reg_desktop
 from comsol_mcp._mcp_gateway import GatewayRegistry
+from comsol_mcp._mcp_public_validation import create_public_server, run_stdio
 
 # Register all tools on the shared FastMCP instance at import time.
 _gateway = GatewayRegistry(mcp)
@@ -48,7 +51,11 @@ _reg_desktop(_gateway)
 def main() -> None:
     _setup_logging()
     _write_status({"status": "ready"})
-    mcp.run()
+    anyio.run(run_stdio, build_mcp_protocol_server())
+
+
+def build_mcp_protocol_server():
+    return create_public_server(mcp, _gateway.dispatcher)
 
 
 if __name__ == "__main__":

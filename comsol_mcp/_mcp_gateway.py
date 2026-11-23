@@ -152,6 +152,26 @@ def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
     )
 
 
+async def dispatch_mcp_call(
+    dispatcher: Callable[[str, dict[str, Any], dict[str, Any]], dict[str, Any]],
+    operation: str,
+    arguments: dict[str, Any],
+    execution: dict[str, Any],
+) -> CallToolResult:
+    """Run the synchronous control dispatcher off-loop and adapt its result."""
+    try:
+        result = await asyncio.to_thread(dispatcher, operation, arguments, execution)
+    except Exception as exc:
+        # Do not echo connection secrets, backend configuration or raw
+        # transport exceptions. Details belong in protected service logs.
+        result = {"success": False, "error": {
+            "code": "CONTROL_SERVICE_UNAVAILABLE", "type": type(exc).__name__,
+            "message": "Control service unavailable; reconcile before retrying writes.",
+            "safe_retry": False,
+        }, "data": {}}
+    return mcp_result(result)
+
+
 def dispatch(operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
     # A lazy import keeps discovery independent of engine installation/startup.
     from comsol_mcp._control_client import dispatch as control_dispatch
@@ -301,17 +321,7 @@ class GatewayRegistry:
                         call_args[k] = v
             elif is_w20_compat and "arguments" in call_args and call_args["arguments"] is None:
                 call_args.pop("arguments", None)
-            try:
-                result = await asyncio.to_thread(self.dispatcher, operation, call_args, execution)
-            except Exception as exc:
-                # Do not echo connection secrets, backend configuration or raw
-                # transport exceptions. Details belong in protected service logs.
-                result = {"success": False, "error": {
-                    "code": "CONTROL_SERVICE_UNAVAILABLE", "type": type(exc).__name__,
-                    "message": "Control service unavailable; reconcile before retrying writes.",
-                    "safe_retry": False,
-                }, "data": {}}
-            return mcp_result(result)
+            return await dispatch_mcp_call(self.dispatcher, operation, call_args, execution)
 
         routed.__name__ = public_name
         if operation.startswith("desktop."):
