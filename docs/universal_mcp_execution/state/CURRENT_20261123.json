@@ -126,7 +126,7 @@
       "execution_complete": false
     },
     "T23": {
-      "status": "TODO",
+      "status": "RUNNING",
       "implementation_done": false,
       "execution_complete": false
     },
@@ -181,7 +181,7 @@
       "execution_complete": false
     },
     "T34": {
-      "status": "TODO",
+      "status": "RUNNING",
       "implementation_done": false,
       "execution_complete": false
     },
@@ -416,7 +416,7 @@
     "T19/T20/T36/T37 project path and publication boundaries",
     "T26/T27 real engine solution/result axes",
     "T32/T33/T34 native scheduler and lifecycle",
-    "T35 bounded full-result retrieval",
+    "T35 native result retrieval and SQLite memory behavior",
     "Windows 6.3/6.4 and macOS 6.4 target acceptance",
     "historical UNKNOWN resources remain fenced"
   ],
@@ -428,6 +428,9 @@
     "T27": "Time/frequency coordinates preserve per-solution-pair alignment, and fully absent axes do not add coordinate/unit/metadata keys; independent scoped review and 12 combined T26/T27 synthetic tests passed. Native multi-solution behavior remains unverified.",
     "Windows_preflight": "A user-provided Windows AMD64 target was reached over host-key-checked SSH; 64-bit Python 3.12 and COMSOL 6.3/6.4 executable file-version metadata were observed. License, engine launch, installed candidate and native acceptance remain unverified.",
     "W18_solution_state": "Unreadable solver initialization or solver container now reports unknown solution state instead of claiming current; structured Worker UNKNOWN remains propagated. Independent scoped review and 13 combined synthetic tests passed; native solution behavior remains unverified.",
-    "T35_result_read": "Small job.result responses retain their object form; oversized results report RESULT_TOO_LARGE and use project-authorized, SHA-bound pages of up to 65536 bytes. Independent scoped review and 31 combined-source synthetic tests, including a 4 MiB result, passed. Windows, real Worker, SQLite internal memory/RSS and native acceptance remain unverified."
+    "T35_result_read": "Small job.result responses retain their object form; oversized results report RESULT_TOO_LARGE and use project-authorized, SHA-bound pages of up to 65536 bytes. Independent scoped review and 31 combined-source synthetic tests, including a 4 MiB result, passed. Windows, real Worker, SQLite internal memory/RSS and native acceptance remain unverified.",
+    "T34": "File-backed synthetic cancellation checks preserve unrelated task records: queued cancellation is scoped, running cancellation records intent, and UNKNOWN remains UNKNOWN. Real Worker stop and cross-daemon isolation remain unverified.",
+    "T23_W16": "The isolated solver-state candidate needs further correction after independent review and has not been integrated; native behavior remains unverified.",
+    "T37": "Export publication safety work remains under isolated review and is not integrated; native platform behavior remains unverified."
   }
 }
