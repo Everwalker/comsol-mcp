@@ -27,7 +27,7 @@ against one of two local sources:
   and of the implementation jar
   ``/Applications/COMSOL64/Multiphysics/plugins/com.comsol.model_1.0.0.jar``.
 * The local COMSOL 6.4 documentation corpus
-  ``/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB`` - the per-type
+  offline documentation - the per-type
   property tables and the documented call sequences.  The ``comsol_api_mesh.49.*``
   and ``comsol_api_solver.51.*`` help pages carry the exact ``create`` strings.
 
@@ -147,33 +147,110 @@ import time
 from typing import Any, Callable, Mapping, Sequence
 
 from ._g2_contract import ExecutionContractError, NodePath, engine_value_spec
-from ._g2_engine import _call, property_set
+from ._g2_engine import _call, _worker_failure_unknown, property_set
 from ._g3_common import (
     ENVELOPE_FIELDS,
     apply_local_selection,
     bound_model,
-    call_probe,
+    call_probe as _common_call_probe,
     child_node,
     definition_properties,
     describe_engine_failure,
     node_not_found,
-    node_type,
     operation_arguments,
     property_definition,
-    property_rows,
+    property_rows as _common_property_rows,
+    probe_state_unknown,
     quantity,
     require_bool,
     require_int,
     require_mapping,
     require_string,
     resolve_path,
-    selection_state,
+    selection_state as _common_selection_state,
     split_parent_path,
     tag_conflict,
     tag_list,
     validate_selection_spec,
     validate_tag,
 )
+
+
+def _unknown_record(value: Any, seen: set[int] | None = None) -> bool:
+    """Recognize only structured UNKNOWN markers in a probe record."""
+    if not isinstance(value, Mapping):
+        return False
+    seen = set() if seen is None else seen
+    if id(value) in seen:
+        return False
+    seen.add(id(value))
+    if (value.get("code") == "EXECUTION_STATE_UNKNOWN"
+            or value.get("execution_state_unknown") is True
+            or value.get("engine_state_unknown") is True):
+        return True
+    return any(_unknown_record(value.get(key), seen) for key in ("failure", "reply", "details", "error"))
+
+
+def _raise_if_structured_unknown(exc: BaseException, method: str) -> None:
+    """Rethrow worker UNKNOWN before a catch handler can dispatch another call."""
+    if not (_worker_failure_unknown(exc)
+            or getattr(exc, "code", None) == "EXECUTION_STATE_UNKNOWN"):
+        return
+    if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN":
+        raise exc
+    failure = describe_engine_failure(exc, method)
+    raise ExecutionContractError(
+        "EXECUTION_STATE_UNKNOWN",
+        f"COMSOL {method} outcome is unknown; the operation stops without further Worker calls",
+        safe_retry=False,
+        details={"execution_state_unknown": True, "worker_error": failure},
+        stage="post_dispatch",
+    ) from exc
+
+
+def call_probe(node: Any, method: str, *args: Any,
+               include_engine_failure_details: bool = False) -> dict[str, Any]:
+    """Keep deterministic optional misses as data and raise structured UNKNOWN."""
+    probe = _common_call_probe(node, method, *args,
+                               include_engine_failure_details=include_engine_failure_details)
+    if probe_state_unknown(probe) or _unknown_record(probe):
+        error = probe.get("error")
+        worker_error = ({key: error.get(key) for key in ("code", "message", "execution_state_unknown")
+                         if key in error} if isinstance(error, Mapping) else
+                        {"code": "EXECUTION_STATE_UNKNOWN", "execution_state_unknown": True})
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"COMSOL {method} probe returned a structured unknown execution state; no later Worker call is issued",
+            safe_retry=False,
+            details={"execution_state_unknown": True, "probe": method, "worker_error": worker_error},
+            stage="post_dispatch",
+        )
+    return probe
+
+
+def node_type(node: Any) -> str | None:
+    """Best-effort type read that preserves deterministic optional misses."""
+    probe = call_probe(node, "getType")
+    return str(probe["value"]) if probe["ok"] and probe["value"] is not None else None
+
+
+def property_rows(node: Any, names: Sequence[str], *,
+                  on_probe_error: Callable[[Exception, str], None] | None = None
+                  ) -> dict[str, dict[str, Any]]:
+    """Use the shared metadata reader while making its internal catches UNKNOWN-safe."""
+    def on_error(exc: Exception, method: str) -> None:
+        _raise_if_structured_unknown(exc, method)
+        if on_probe_error is not None:
+            on_probe_error(exc, method)
+
+    return _common_property_rows(node, names, on_probe_error=on_error)
+
+
+def selection_state(node: Any, *, strict_unknown: bool = False,
+                    stop_at_first_unknown: bool = False) -> dict[str, Any]:
+    """Preserve the shared selection shape but always stop on structured UNKNOWN."""
+    return _common_selection_state(node, strict_unknown=True,
+                                   stop_at_first_unknown=stop_at_first_unknown)
 
 # ---------------------------------------------------------------------------
 # Verified type vocabularies
@@ -830,12 +907,16 @@ def _definition_payload(node: Any, definition: Mapping[str, Any], documented: fr
     try:
         allowed: frozenset[str] | None = frozenset(_live_property_names(node, label=label))
         source = "engine_properties"
-    except ExecutionContractError:
+    except ExecutionContractError as exc:
+        _raise_if_structured_unknown(exc, "properties")
         if documented is None:
             raise
         allowed = documented
         source = "documented_table"
-    return definition_properties(node, definition, allowed, label=label), source
+    return definition_properties(
+        node, definition, allowed, label=label,
+        on_probe_error=lambda exc, method: _raise_if_structured_unknown(exc, method),
+    ), source
 
 
 def _mesh_selection(node: Any, worker: Any, model_tag: str, spec: Any) -> dict[str, Any]:
@@ -859,7 +940,8 @@ def _mesh_selection(node: Any, worker: Any, model_tag: str, spec: Any) -> dict[s
             "API_UNSUPPORTED", f"this mesh feature does not expose selection(): {reason}"
         )
     local = probe["value"]
-    applied = apply_local_selection(local, worker, model_tag, None, resolved)
+    applied = apply_local_selection(local, worker, model_tag, None, resolved,
+                                    strict_state_readback=True)
     return {**applied, "selection_node_state": selection_state(local)}
 
 
@@ -1019,6 +1101,7 @@ def mesh_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
             try:
                 _call(seq, "automatic", requested)
             except ExecutionContractError as exc:
+                _raise_if_structured_unknown(exc, 'mesh create')  # structured UNKNOWN is a hard stop
                 error = describe_engine_failure(exc, "automatic")
             verify = call_probe(seq, "isAutomatic")
             if error is not None:
@@ -1083,6 +1166,7 @@ def _mesh_tree(seq: Any, depth: int, *, prefix: Mapping[str, Any]) -> list[dict[
                 try:
                     row["children"] = _mesh_tree(node, depth - 1, prefix={"segments": path["segments"]})
                 except ExecutionContractError as exc:
+                    _raise_if_structured_unknown(exc, 'feature')  # structured UNKNOWN is a hard stop
                     row["children_error"] = describe_engine_failure(exc, "feature")
                     row["children"] = []
         rows.append(row)
@@ -1097,6 +1181,7 @@ def mesh_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
         # The schema gate runs before model resolution or any Worker request.
         # Declare that boundary so rejected caller arguments, including an
         # attempted private-mode spoof, remain a clean validation refusal.
+        _raise_if_structured_unknown(exc, 'mesh inspect')  # structured UNKNOWN is a hard stop
         if exc.stage is None:
             exc.stage = "validation"
         raise
@@ -1337,6 +1422,7 @@ def mesh_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, Any
             payload, property_source = _definition_payload(node, definition, MESH_DOCUMENTED_PROPERTIES.get(type_id),
                                                            label=f"properties for {type_id}")
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'feature_create')  # structured UNKNOWN is a hard stop
             failed.append({"step": "properties", "error": {"code": exc.code, "message": str(exc)},
                            "partial_change": True, "execution_state_unknown": False})
             property_source = None
@@ -1359,6 +1445,7 @@ def mesh_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, Any
             applied.append({"step": "selection", **result})
             selection_result = result
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'feature_create')  # structured UNKNOWN is a hard stop
             failed.append({"step": "selection",
                            "error": {"code": exc.code, "message": str(exc)},
                            "partial_change": True,
@@ -1561,6 +1648,7 @@ def mesh_build(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     try:
         _call(node, "run", *call_args)
     except ExecutionContractError as exc:
+        _raise_if_structured_unknown(exc, 'run')  # structured UNKNOWN is a hard stop
         error = describe_engine_failure(exc, "run")
     duration_s = round(time.monotonic() - started, 3)
     after = _readback_block(node, _MESH_SEQUENCE_READBACK)
@@ -1615,6 +1703,7 @@ def mesh_clear(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     try:
         _call(node, "clearMesh")
     except ExecutionContractError as exc:
+        _raise_if_structured_unknown(exc, 'clearMesh')  # structured UNKNOWN is a hard stop
         error = describe_engine_failure(exc, "clearMesh")
         if error.get("allowlist_entry_required"):
             raise ExecutionContractError(
@@ -1756,6 +1845,7 @@ def mesh_quality(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
         try:
             _call(stat, "setQualityMeasure", metric)
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'setQualityMeasure')  # structured UNKNOWN is a hard stop
             error = describe_engine_failure(exc, "setQualityMeasure")
             if error.get("allowlist_entry_required"):
                 raise ExecutionContractError(
@@ -2053,6 +2143,7 @@ def study_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
         try:
             _call(node, "label", label)
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'label')  # structured UNKNOWN is a hard stop
             failed.append({"step": "label", "error": describe_engine_failure(exc, "label")})
         else:
             readback = call_probe(node, "label")
@@ -2192,6 +2283,7 @@ def study_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
         try:
             _call(sol_container, "remove", solver_tag)
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'remove')  # structured UNKNOWN is a hard stop
             execution_state_unknown = execution_state_unknown or exc.code == "EXECUTION_STATE_UNKNOWN"
             failed.append({"step": "solver_remove", "solver": solver_tag,
                            "error": describe_engine_failure(exc, "remove")})
@@ -2214,6 +2306,7 @@ def study_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
         try:
             _call(container, "remove", tag)
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'remove')  # structured UNKNOWN is a hard stop
             execution_state_unknown = execution_state_unknown or exc.code == "EXECUTION_STATE_UNKNOWN"
             failed.append({"step": "study_remove", "study": tag,
                            "error": describe_engine_failure(exc, "remove")})
@@ -2282,6 +2375,7 @@ def study_step_create(worker: Any, model_tag: str, arguments: Mapping[str, Any])
             payload, property_source = _definition_payload(node, definition, STUDY_STEP_PROPERTIES.get(type_id),
                                                            label=f"properties for {type_id}")
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'properties')  # structured UNKNOWN is a hard stop
             failed.append({"step": "properties", "error": {"code": exc.code, "message": str(exc)},
                            "partial_change": True, "execution_state_unknown": False})
             property_source = "refused"
@@ -2464,6 +2558,7 @@ def study_physics_activation(worker: Any, model_tag: str, arguments: Mapping[str
                     continue
                 _call(node, "setSolveFor", entity, solve)
             except ExecutionContractError as exc:
+                _raise_if_structured_unknown(exc, 'setSolveFor')  # structured UNKNOWN is a hard stop
                 error = describe_engine_failure(exc, "setSolveFor")
                 execution_state_unknown = execution_state_unknown or exc.code == "EXECUTION_STATE_UNKNOWN"
                 failed.append({"group": group, "entity": entity, "requested": solve, "error": error})
@@ -2548,6 +2643,7 @@ def study_solver_generate(worker: Any, model_tag: str, arguments: Mapping[str, A
     try:
         _call(study, "createAutoSequences", "sol")
     except ExecutionContractError as exc:
+        _raise_if_structured_unknown(exc, 'createAutoSequences')  # structured UNKNOWN is a hard stop
         error = describe_engine_failure(exc, "createAutoSequences")
     duration_s = round(time.monotonic() - started, 3)
     after = _solver_associations(worker, model_tag).get(study_tag, [])
@@ -2626,6 +2722,7 @@ def study_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict
     try:
         _call(study, "run")
     except ExecutionContractError as exc:
+        _raise_if_structured_unknown(exc, 'run')  # structured UNKNOWN is a hard stop
         error = describe_engine_failure(exc, "run")
     duration_s = round(time.monotonic() - started, 3)
     after = _probe_snapshot(study, ("getLastComputationTime", "getLastComputationDate",
@@ -2784,6 +2881,7 @@ def _solver_tree(node: Any, depth: int, *, prefix: Mapping[str, Any],
                     include_active=include_active,
                 )
             except ExecutionContractError as exc:
+                _raise_if_structured_unknown(exc, 'feature')  # structured UNKNOWN is a hard stop
                 row["children_error"] = describe_engine_failure(exc, "feature")
         rows.append(row)
     return rows
@@ -2840,6 +2938,7 @@ def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
         # A caller that reached for a study-relative solver path (or a guessed
         # sol1) gets this model's real solver paths appended instead of only
         # "not found"; the code of the refusal is unchanged.
+        _raise_if_structured_unknown(exc, 'resolve_path')  # structured UNKNOWN is a hard stop
         if exc.code != "NODE_NOT_FOUND" or not _path_mentions_study_or_solver(args["path"]):
             raise
         remediation = _solver_path_remediation(worker, model_tag)
@@ -3092,6 +3191,7 @@ def solver_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, A
                                                            SOLVER_DOCUMENTED_PROPERTIES.get(type_id),
                                                            label=f"properties for {type_id}")
         except ExecutionContractError as exc:
+            _raise_if_structured_unknown(exc, 'properties')  # structured UNKNOWN is a hard stop
             failed.append({"step": "properties", "error": {"code": exc.code, "message": str(exc)},
                            "partial_change": True, "execution_state_unknown": False})
             property_source = "refused"
@@ -3252,6 +3352,7 @@ def solver_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
     try:
         _call(node, method, *call_args)
     except ExecutionContractError as exc:
+        _raise_if_structured_unknown(exc, 'run')  # structured UNKNOWN is a hard stop
         error = describe_engine_failure(exc, method)
     duration_s = round(time.monotonic() - started, 3)
     after = _readback_block(node, _SOLVER_READBACK)

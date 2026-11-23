@@ -224,6 +224,11 @@ def _method_refusal() -> FakeEngineError:
     return FakeEngineError("SecurityException: METHOD_REJECTED", code="METHOD_REJECTED")
 
 
+def _structured_unknown() -> FakeEngineError:
+    return FakeEngineError("worker outcome is unresolved", code="EXECUTION_STATE_UNKNOWN",
+                           execution_state_unknown=True)
+
+
 class FSelection:
     """Fake of a local ``Selection`` node (``named/geom/set/all/inherit``)."""
 
@@ -380,11 +385,18 @@ class FNode:
         self.entries: dict[str, dict[str, Any]] = {name: dict(values) for name, values in (entries or {}).items()}
         self.collections: dict[str, FList] = {}
         self.calls: list[tuple[str, tuple[Any, ...]]] = []
-        self.raises: dict[str, str] = {}
+        self.raises: dict[str, Any] = {}
         self._selection: FSelection | None = None
         self.removed = False
         self.solve_for: dict[str, bool] = {}
         self.last_range: tuple[str, str] | None = None
+
+    def _raise_configured(self, method: str) -> None:
+        failure = self.raises.get(method)
+        if isinstance(failure, BaseException):
+            raise failure
+        if failure is not None:
+            raise FakeEngineError(str(failure))
 
     # -- identity -----------------------------------------------------------
     def tag(self) -> str:
@@ -395,12 +407,14 @@ class FNode:
 
     def label(self, *args: Any) -> Any:
         self.calls.append(("label", args))
+        self._raise_configured("label")
         if args:
             self.label_ = str(args[0])
             return None
         return self.label_
 
     def getType(self) -> str:
+        self._raise_configured("getType")
         return self.type_id
 
     def type(self) -> str:
@@ -410,24 +424,30 @@ class FNode:
         return True
 
     def isActive(self) -> bool:
+        self.calls.append(("isActive", ()))
+        self._raise_configured("isActive")
         return True
 
     # -- property metadata --------------------------------------------------
     def properties(self) -> list[str]:
         if "properties" in self.unavailable:
             raise _method_refusal()
+        self._raise_configured("properties")
         return sorted(set(self.props) | set(self.entries))
 
     def hasProperty(self, name: str) -> bool:
         return name in self.properties()
 
     def getValueType(self, name: str) -> str | None:
+        self.calls.append(("getValueType", (name,)))
         if "getValueType" in self.unavailable:
             raise _method_refusal()
+        self._raise_configured("getValueType")
         spec = self.props.get(name)
         return spec.get("type") if spec else None
 
     def getAllowedPropertyValues(self, name: str) -> list[str] | None:
+        self.calls.append(("getAllowedPropertyValues", (name,)))
         spec = self.props.get(name)
         return list(spec["allowed"]) if spec and spec.get("allowed") else None
 
@@ -579,6 +599,8 @@ class FNode:
             def accessor(*args: Any, **kwargs: Any) -> Any:
                 if kwargs:
                     raise AttributeError(name)
+                self.calls.append((name, args))
+                self._raise_configured(name)
                 if args:
                     return container.get(str(args[0]))
                 return container
@@ -592,7 +614,7 @@ class FNode:
                 raise _method_refusal()
             self.calls.append((name, args))
             if name in self.raises:
-                raise FakeEngineError(self.raises[name])
+                self._raise_configured(name)
             if name in self.state:
                 value = self.state[name]
                 return value(*args) if callable(value) and not isinstance(value, FList) else value
@@ -646,6 +668,7 @@ class FNode:
         self.calls.append(("runAll", args))
         if "runAll" in self.unavailable:
             raise _method_refusal()
+        self._raise_configured("runAll")
         self.state.update({"isEmpty": False, "isInitialized": True, "getDefaultSolnum": 1,
                            "getPVals": [1.0], "getPNames": ["p1"]})
 
@@ -1530,6 +1553,7 @@ def test_study_solver_generate_creates_the_attached_sequence() -> None:
 
 def test_study_run_records_duration_and_reads_the_computation_stamp() -> None:
     model = build_model()
+    study = model.collections["study"].items["std1"]
     result = call("study.run", model, {"study": STUDY_PATH, "timeout_s": 30})
     assert result["status"] == "APPLIED"
     assert result["steps"] == ["stat"]
@@ -1538,10 +1562,38 @@ def test_study_run_records_duration_and_reads_the_computation_stamp() -> None:
     assert result["requested_timeout_s"] == 30
     assert result["long_task_semantics"]["owner"] == "control_plane"
     assert result["requested_resources"] is None
+    assert ("run", ()) in study.calls
+
+
+def test_study_run_stops_after_unknown_step_label() -> None:
+    model = build_model()
+    study = model.collections["study"].items["std1"]
+    step = study.collections["feature"].items["stat"]
+    step.raises["label"] = _structured_unknown()
+    later_reads: list[str] = []
+    for method in ("getLastComputationTime", "getLastComputationDate", "getLastComputationVersion"):
+        study.state[method] = lambda method=method: later_reads.append(method)
+
+    expect_error("EXECUTION_STATE_UNKNOWN", call, "study.run", model, {"study": STUDY_PATH})
+
+    assert not any(name == "run" for name, _args in study.calls)
+    assert later_reads == []
+
+
+def test_study_run_deterministic_method_rejection_stays_reported_data() -> None:
+    model = build_model()
+    study = model.collections["study"].items["std1"]
+    study.unavailable.add("run")
+
+    result = call("study.run", model, {"study": STUDY_PATH})
+
+    assert result["engine_error"]["code"] == "ENGINE_CALL_FAILED"
+    assert result["engine_error"]["allowlist_entry_required"] == "run"
+    assert result["execution_state_unknown"] is False
 
 
 def test_study_run_preserves_structured_worker_unknown_with_readable_timestamp() -> None:
-    """A readable timestamp cannot clear the worker's explicit unknown bit."""
+    """An UNKNOWN run stops before the post-run timestamp probe."""
     model = build_model()
     study = model.collections["study"].items["std1"]
     study.raises["run"] = FakeEngineError(
@@ -1549,15 +1601,15 @@ def test_study_run_preserves_structured_worker_unknown_with_readable_timestamp()
         code="ENGINE_CALL_FAILED",
         execution_state_unknown=True,
     )
+    reads: list[str] = []
+    methods = ("getLastComputationTime", "getLastComputationDate", "getLastComputationVersion")
+    for method in methods:
+        study.state[method] = lambda method=method: reads.append(method)
 
-    result = call("study.run", model, {"study": STUDY_PATH})
+    expect_error("EXECUTION_STATE_UNKNOWN", call, "study.run", model, {"study": STUDY_PATH})
 
-    assert result["status"] == "PARTIAL_FAILURE"
-    assert result["ok"] is False
-    assert result["execution_state_unknown"] is True
-    assert result["engine_error"]["execution_state_unknown"] is True
-    assert result["readback"]["readable"] is True
-    assert result["computation_timestamp_changed"] is False
+    assert reads == list(methods)
+    assert ("run", ()) in study.calls
 
 
 def test_study_run_rejects_a_study_without_steps() -> None:
@@ -1597,6 +1649,75 @@ def test_solver_inspect_walks_the_nested_feature_tree() -> None:
     assert [child["type_id"] for child in sub["children"]] == ["Direct", "FullyCoupled"]
     assert sub["type_source"].startswith("comsol_api_solver.51.")
     assert result["type_vocabulary"]["verified_count"] > 50
+
+
+def test_solver_inspect_stops_after_unknown_sequence_label() -> None:
+    model = build_model()
+    solver = model.collections["sol"].items["sol1"]
+    solver.raises["label"] = _structured_unknown()
+    features = solver.collections["feature"]
+
+    expect_error("EXECUTION_STATE_UNKNOWN", call, "solver.inspect", model,
+                 {"path": SOLVER_PATH, "depth": 3})
+
+    assert features.calls == []
+
+
+@pytest.mark.parametrize("method", ("problem", "feature", "label", "isActive"))
+def test_solver_tree_structured_unknown_stops_recursion(method: str) -> None:
+    model = build_model()
+    solver = model.collections["sol"].items["sol1"]
+    step = solver.collections["feature"].items["st1"]
+
+    if method == "isActive":
+        step.raises[method] = _structured_unknown()
+        expect_error("EXECUTION_STATE_UNKNOWN", w16._solver_tree, solver, 3,
+                     prefix=SOLVER_PATH, include_active=True)
+        assert step.collections["feature"].calls == []
+        return
+
+    if method == "label":
+        node = step.collections["feature"].items["s1"].collections["feature"].items["d1"]
+        node.raises[method] = _structured_unknown()
+        expect_error("EXECUTION_STATE_UNKNOWN", call, "solver.inspect", model,
+                     {"path": SOLVER_PATH, "depth": 3})
+        sibling = step.collections["feature"].items["s1"].collections["feature"].items["fc1"]
+        assert not any(name == "label" for name, _args in sibling.calls)
+        return
+
+    if method == "problem":
+        step.raises[method] = _structured_unknown()
+        expect_error("EXECUTION_STATE_UNKNOWN", call, "solver.inspect", model,
+                     {"path": solver_step(model, "st1")})
+        assert not any(name == "label" for name, _args in step.calls)
+        return
+
+    step.raises[method] = _structured_unknown()
+    expect_error("EXECUTION_STATE_UNKNOWN", call, "solver.inspect", model,
+                 {"path": SOLVER_PATH, "depth": 3})
+    assert step.collections["feature"].calls == []
+
+
+def test_solver_problem_method_rejection_keeps_optional_empty_list_shape() -> None:
+    model = build_model()
+    step = model.collections["sol"].items["sol1"].collections["feature"].items["st1"]
+    step.unavailable.add("problem")
+
+    result = call("solver.inspect", model, {"path": solver_step(model, "st1")})
+
+    assert "problem_nodes" in result
+    assert result["problem_nodes"] == []
+
+
+def test_solver_property_metadata_unknown_stops_shared_helper_catches() -> None:
+    model = build_model()
+    step = model.collections["sol"].items["sol1"].collections["feature"].items["st1"]
+    step.raises["getValueType"] = _structured_unknown()
+
+    expect_error("EXECUTION_STATE_UNKNOWN", call, "solver.inspect", model,
+                 {"path": solver_step(model, "st1")})
+
+    assert not any(name == "label" for name, _args in step.calls)
 
 
 def test_solver_inspect_reads_a_single_feature_with_its_problems() -> None:
@@ -1711,6 +1832,31 @@ def test_solver_run_reports_the_readback_only_when_readable() -> None:
     assert result["status"] == "DISPATCHED_UNVERIFIED"
     assert result["execution_state_unknown"] is True
     assert "isEmpty" in result["readback_allowlist_entry_required"]
+
+
+def test_solver_run_unknown_stops_before_post_run_readback() -> None:
+    model = build_model()
+    solver = model.collections["sol"].items["sol1"]
+    solver.raises["runAll"] = _structured_unknown()
+    reads: list[str] = []
+    for method in w16._SOLVER_READBACK:
+        solver.state[method] = lambda method=method: reads.append(method)
+
+    expect_error("EXECUTION_STATE_UNKNOWN", call, "solver.run", model, {"path": SOLVER_PATH})
+
+    assert reads == list(w16._SOLVER_READBACK)
+
+
+def test_solver_run_deterministic_method_rejection_stays_reported_data() -> None:
+    model = build_model()
+    solver = model.collections["sol"].items["sol1"]
+    solver.unavailable.add("runAll")
+
+    result = call("solver.run", model, {"path": SOLVER_PATH})
+
+    assert result["engine_error"]["code"] == "ENGINE_CALL_FAILED"
+    assert result["engine_error"]["allowlist_entry_required"] == "runAll"
+    assert result["execution_state_unknown"] is False
 
 
 # ---------------------------------------------------------------------------
