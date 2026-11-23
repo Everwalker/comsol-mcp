@@ -611,9 +611,13 @@ def test_public_model_inspect_refresh_reconciles_exact_managed_model(route, tmp_
         snapshot = data.get("model_snapshot")
         assert isinstance(snapshot, dict), response
         assert snapshot["model_tag"] == model_ref["model_tag"]
-        assert snapshot["coverage"] == "parameters+shallow_tree_identity"
+        expected_coverage = ("tag+label+file_path+time_modified+parameters"
+                             if snapshot["fingerprint_components_status"] == "AVAILABLE_V1" else "UNKNOWN")
+        assert snapshot["coverage"] == expected_coverage
         assert snapshot["cas_guarantee"] == "NONE"
         assert snapshot["fingerprint_components_status"] in {"AVAILABLE_V1", "UNAVAILABLE_LEGACY"}
+        if "scope" in data:
+            assert data["scope"] == f"{expected_coverage}; CAS_NONE; not full-model certification"
         assert worker.backend_snapshot_calls >= 2
     finally:
         daemon.close()

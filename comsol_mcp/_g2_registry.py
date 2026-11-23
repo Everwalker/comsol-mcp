@@ -945,7 +945,7 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
             }
             properties["refresh"] = {
                 "type": "boolean", "default": False,
-                "description": "Reconcile this exact project/session/ModelRef using its current Worker and expected revision; requires project_write. Reports parameters plus shallow-tree identity only, with CAS_NONE scope.",
+                "description": "Reconcile this exact project/session/ModelRef using its current Worker and expected revision; requires project_write. Reports validated V1 fingerprint coverage (tag, label, file_path, time_modified, parameters), or UNKNOWN when legacy components are unavailable; CAS_NONE.",
             }
     if operation_id == "result.mode_overlap" and isinstance(properties, dict):
         # Managed identities live in the outer execution envelope. Replace

@@ -7,12 +7,12 @@
     "supplied _g2_property_path_guard.py overlay",
     "subsequent integrated software changes"
   ],
-  "candidate": "r8 is a local source-bound interim Mac ARM candidate for the current source at the latest check; the public snapshot differs in documented local-only inputs. Public MCP and native acceptance remain unverified.",
+  "candidate": "r8 is a local source-bound interim candidate for earlier source bytes; T33 coverage integration changed the current source. Requalification is required; the public snapshot differs in documented local-only inputs. Public MCP and native acceptance remain unverified.",
   "last_qualified_interim_candidate": {
     "wheel_sha256": "b70262dfe308cf181e919eee1d1b0714c5645b39fd7f09e101c349f17c8347dd",
     "matches_snapshot": false,
-    "matches_local_source_at_check": true,
-    "scope": "Fresh Mac ARM Python 3.12 offline installation passed pip check; source/stage 211 files and wheel/install 208 application files matched. The Windows x64 r8 bundle passed static member/hash/CRC checks, but was not installed on Windows. Intel r8, public MCP, COMSOL engine, Worker, license and native acceptance remain unverified."
+    "matches_local_source_at_check": false,
+    "scope": "Before T33 integration, a fresh Mac ARM Python 3.12 offline installation passed pip check, source/stage 211 files and wheel/install 208 application files matched, and the Windows x64 r8 bundle passed static member/hash/CRC checks. Rebuild current source; Windows install, Intel r8, public MCP, COMSOL engine, Worker, license and native acceptance remain unverified."
   },
   "review": "Final independent U01-U12 acceptance NOT_RUN",
   "tasks": {
@@ -424,7 +424,7 @@
   "local_only_evidence": "The supplied updated G3 overlay is not published in this synchronization; the base retains its previous public G3 evidence.",
   "recent_scoped_changes": {
     "T22": "Physics interface property update and child-tag validation integrated; independent scoped review and three combined-source synthetic tests passed; native path remains unverified.",
-    "T33": "Ordinary UNKNOWN remains UNKNOWN on store restart; independent scoped review, 21 combined-source store tests and a fake-Worker file-SQLite daemon restart probe passed. Native Worker/cross-daemon recovery remains unverified.",
+    "T33": "Ordinary UNKNOWN remains UNKNOWN on store restart. Independently reviewed coverage output now reports only validated V1 fingerprint fields, or UNKNOWN for legacy snapshots; callers relying on the previous coverage string must accept the corrected value. Thirty-one combined-source synthetic/contract tests passed. Native Worker, external-change behavior and cross-daemon recovery remain unverified.",
     "T14": "Selection dimension readback, structured UNKNOWN propagation and inherited readback integrated; independent scoped review and 32 combined-source synthetic tests passed. Native behavior remains unverified.",
     "T27": "Time/frequency coordinates preserve per-solution-pair alignment, and fully absent axes do not add coordinate/unit/metadata keys; independent scoped review and 12 combined T26/T27 synthetic tests passed. Native multi-solution behavior remains unverified.",
     "Windows_preflight": "A user-provided Windows AMD64 target was reached over host-key-checked SSH; 64-bit Python 3.12 and COMSOL 6.3/6.4 executable file-version metadata were observed. Two fresh r7 offline environment installations later passed; public MCP, license, engine launch and native acceptance remain unverified.",

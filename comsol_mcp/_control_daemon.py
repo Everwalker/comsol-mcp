@@ -4974,7 +4974,7 @@ class ControlDaemon:
                 return {"success": True, "data": {"model_ref": ref.as_dict(), "model_tag": tag,
                         "server_endpoint": capture["endpoint"], "fingerprint": state.fingerprint,
                         "revision": state.revision, "Desktop_model_binding": "UNVERIFIED_BY_MANAGED_INSPECTION_ALONE",
-                        "fingerprint_coverage": "parameters+shallow_tree_identity", "cas_guarantee": "NONE"}}
+                        "fingerprint_coverage": "UNKNOWN", "cas_guarantee": "NONE"}}
         except Exception as exc:
             # bind_model may have inserted its exact state before inspect/_emit raises.
             tag = attempt.get("planned_tag")
@@ -5198,9 +5198,9 @@ class ControlDaemon:
             elif set(arguments) != {"project_id", "expected_revision"}:
                 raise DesktopOperationError("INVALID_REQUEST", "label-get route contains unsupported fields", safe_retry=True)
         # inspect_evidence validates epoch and freshly reads the adapter's
-        # documented parameters+shallow-tree fingerprint and external counter.
-        # It neither creates a Desktop binding nor proves complete model/dirty
-        # state preservation. Keep that bounded witness explicit in the result.
+        # validated V1 fingerprint components (or reports coverage UNKNOWN)
+        # and external counter. It neither creates a Desktop binding nor proves
+        # complete model/dirty state preservation or COMSOL atomic CAS.
         with backend.context(context.operation_id, self._session_worker_event_callback(record)):
             evidence = service.inspect_evidence(model_ref)
         if service.ledger._state_for(model_ref).dirty:

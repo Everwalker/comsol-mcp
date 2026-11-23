@@ -1,3 +1,5 @@
+import hashlib
+
 import pytest
 
 from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger
@@ -8,13 +10,17 @@ class Adapter:
     def __init__(self):
         self.counter = 0
         self.fingerprint = "one"
+        self.fingerprint_components = None
 
     def model_snapshot(self, _tag):
-        return {"model_tag": _tag, "server_instance_id": "srv", "external_event_counter": self.counter, "fingerprint": self.fingerprint}
+        result = {"model_tag": _tag, "server_instance_id": "srv", "external_event_counter": self.counter, "fingerprint": self.fingerprint}
+        if self.fingerprint_components is not None:
+            result["fingerprint_components"] = self.fingerprint_components
+        return result
 
 
-def service(tmp_path):
-    adapter = Adapter()
+def service(tmp_path, adapter=None):
+    adapter = adapter or Adapter()
     value = ExecutionService(SessionLedger("session", "srv"), adapter, project_root=tmp_path)
     ref = value.bind_model("model")
     return value, adapter, ref["execution"]["model_ref"]
@@ -23,6 +29,42 @@ def service(tmp_path):
 def _ref(mapping):
     from comsol_mcp._execution_contract import model_ref_from_mapping
     return model_ref_from_mapping(mapping)
+
+
+def _valid_v1_components():
+    components = {
+        "schema_version": 1,
+        "tag": "model",
+        "label": "Fixture model",
+        "file_path": "/tmp/fixture.mph",
+        "time_modified_epoch_ms": 123,
+        "parameters": [{"name": "alpha", "expression": "1"}],
+    }
+    source = "model\x00Fixture model\x00/tmp/fixture.mph\x00123\x00alpha=1\x00"
+    return components, hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+
+@pytest.mark.parametrize("operation", ["inspect_evidence", "reconcile"])
+@pytest.mark.parametrize("with_v1_components", [False, True])
+def test_snapshot_coverage_reflects_validated_fingerprint_components(
+        tmp_path, operation, with_v1_components):
+    adapter = Adapter()
+    if with_v1_components:
+        adapter.fingerprint_components, adapter.fingerprint = _valid_v1_components()
+    value, _adapter, mapping = service(tmp_path, adapter)
+    result = getattr(value, operation)(_ref(mapping))
+    snapshot = result["model_snapshot"]
+
+    assert snapshot["coverage"] == (
+        "tag+label+file_path+time_modified+parameters" if with_v1_components else "UNKNOWN"
+    )
+    assert snapshot["cas_guarantee"] == "NONE"
+    assert snapshot["fingerprint_components_status"] == (
+        "AVAILABLE_V1" if with_v1_components else "UNAVAILABLE_LEGACY"
+    )
+    assert ("fingerprint_components" in snapshot) is with_v1_components
+    assert result["execution"]["revision"] == 0
+    assert result["execution"]["dirty"] is False
 
 
 def test_service_conflict_prevents_callback_before_write(tmp_path):

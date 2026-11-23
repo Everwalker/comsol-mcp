@@ -20,7 +20,7 @@ def test_external_change_capability_is_explicitly_scope_limited(tmp_path):
     try:
         capability = backend.cached["external_change_detection"]
         assert capability == EXTERNAL_CHANGE_DETECTION_CAPABILITY
-        assert capability["coverage"] == "parameters+shallow_tree_identity"
+        assert capability["coverage"] == "validated V1: tag+label+file_path+time_modified+parameters; otherwise UNKNOWN"
         assert capability["status"] == "SCOPED_EVIDENCE_ONLY"
         assert capability["event_notifications"] == "UNVERIFIED"
         assert capability["full_model_property_coverage"] == "UNVERIFIED"

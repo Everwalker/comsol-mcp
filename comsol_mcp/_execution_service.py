@@ -203,6 +203,12 @@ def _validated_fingerprint_components(value: Any, *, model_tag: str, fingerprint
     }
 
 
+def _fingerprint_coverage(snapshot: Mapping[str, Any]) -> str:
+    if snapshot.get("fingerprint_components_status") != "AVAILABLE_V1":
+        return "UNKNOWN"
+    return "tag+label+file_path+time_modified+parameters"
+
+
 def _outcome_error(data: Mapping[str, Any], outcome: Any = None) -> dict[str, Any] | None:
     """The error object for a non-success envelope that carried no ``error``.
 
@@ -422,7 +428,7 @@ class ExecutionService:
                 "server_instance_id": self.ledger.server_instance_id,
                 "fingerprint": snapshot["fingerprint"],
                 "external_event_counter": snapshot["external_event_counter"],
-                "coverage": "parameters+shallow_tree_identity",
+                "coverage": _fingerprint_coverage(snapshot),
                 "cas_guarantee": "NONE",
                 "fingerprint_components_status": snapshot["fingerprint_components_status"],
                 **({"fingerprint_components": snapshot["fingerprint_components"]}
@@ -446,7 +452,7 @@ class ExecutionService:
                 "server_instance_id": self.ledger.server_instance_id,
                 "fingerprint": snapshot["fingerprint"],
                 "external_event_counter": snapshot["external_event_counter"],
-                "coverage": "parameters+shallow_tree_identity",
+                "coverage": _fingerprint_coverage(snapshot),
                 "cas_guarantee": "NONE",
                 "fingerprint_components_status": snapshot["fingerprint_components_status"],
                 **({"fingerprint_components": snapshot["fingerprint_components"]}

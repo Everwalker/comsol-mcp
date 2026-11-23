@@ -182,7 +182,7 @@ def _refusal_envelope(operation: str, exc: ExecutionContractError, witness: Any,
 # detection coverage.  Keep this scope visible to callers instead of silently
 # treating a stable fingerprint as proof that a whole model is unchanged.
 EXTERNAL_CHANGE_DETECTION_CAPABILITY = {
-    "coverage": "parameters+shallow_tree_identity",
+    "coverage": "validated V1: tag+label+file_path+time_modified+parameters; otherwise UNKNOWN",
     "status": "SCOPED_EVIDENCE_ONLY",
     "event_notifications": "UNVERIFIED",
     "full_model_property_coverage": "UNVERIFIED",
@@ -1378,9 +1378,10 @@ class ManagedBackend:
                     raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref is required")
                 if refresh:
                     reconciled = self.service.reconcile(ref)
+                    coverage = reconciled["model_snapshot"]["coverage"]
                     return {"success": True, "data": {
                         "model_snapshot": reconciled.get("model_snapshot"),
-                        "scope": "parameters+shallow_tree_identity; CAS_NONE; not full-model certification",
+                        "scope": f"{coverage}; CAS_NONE; not full-model certification",
                     }, **reconciled}
                 return {"success": True, "data": {}, **self.service.inspect(ref)}
             if operation in {"server_start", "server_disconnect", "prune_loaded_models"}:
@@ -4473,7 +4474,7 @@ class ManagedBackend:
                      "main_model_untouched": None,
                      "main_model_unchanged_within_scope": scope_equal if scope_error is None else None,
                      "main_model_change_observation": "NO_CHANGE_WITHIN_SCOPED_FINGERPRINT" if observed_unchanged else "CHANGED_WITHIN_SCOPED_FINGERPRINT",
-                     "main_model_fingerprint_scope": before_main.get("fingerprint_scope", "parameters+shallow_tree_identity; full property coverage unverified"),
+                     "main_model_fingerprint_scope": before_main.get("fingerprint_scope", "UNKNOWN; full property coverage unverified"),
                      "main_before": before_main,
                      "main_after": after_main,
                      "main_external_event_counter_before": before_main.get("external_event_counter"),

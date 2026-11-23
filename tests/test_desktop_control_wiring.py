@@ -261,7 +261,7 @@ def test_desktop_queued_identity_uses_fresh_scoped_witness_without_second_claim(
         before=_operation_count(daemon)
         result=daemon._desktop_engine_queue('desktop.binding.resolve',{'project_id':'p','model_ref_id':json.dumps(ref)},None,context)
         assert result['success'] is True and result['data']['model_ref']==ref
-        assert result['data']['fingerprint_coverage']=='parameters+shallow_tree_identity'
+        assert result['data']['fingerprint_coverage']=='UNKNOWN'
         assert result['data']['cas_guarantee']=='NONE'
         assert result['data']['Desktop_model_binding']=='UNVERIFIED_BY_MANAGED_INSPECTION_ALONE'
         assert _operation_count(daemon)==before==1
