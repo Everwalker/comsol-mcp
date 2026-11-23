@@ -7,7 +7,7 @@
     "supplied _g2_property_path_guard.py overlay",
     "subsequent integrated software changes"
   ],
-  "candidate": "The last local r9 Mac ARM offline qualification predates the integrated T24 and T37 source changes. A new current-source qualification is required; the public snapshot also differs in documented local-only inputs. Public MCP, COMSOL, Worker, license and native acceptance remain unverified.",
+  "candidate": "A fresh r10 Mac ARM source/wheel/offline-install build matches the current local source after T24/T37 integration. T10 adapter/runner/bootstrap identity is not yet bound. The public snapshot differs in documented local-only inputs. Public MCP, COMSOL, Worker, license and native acceptance remain unverified.",
   "last_qualified_interim_candidate": {
     "wheel_sha256": "443c526763fae2560fac61e7bd3b333bc459c234437d60e2ede8fb11beff94a0",
     "matches_snapshot": false,
@@ -452,5 +452,11 @@
     "T29": "Independent review found that both plot.render aliases forward omitted versus explicit null options correctly, but ten invalid nested requests created persistent jobs before catalog validation in a real dispatcher with a synthetic backend. A scoped pre-admission fix is being prepared. FastMCP still drops unknown root-level fields; native rendering remains unverified.",
     "T38": "Independent managed-route synthetic review reproduced package publication into a substituted project root despite an existing root binding. The isolated candidate is not merged; a binding fix is under investigation. Caller-registered ordinary dependencies lack a trusted general recovery route, and model or embedded content remains UNVERIFIED/INCOMPLETE. No real sensitive or commercial file was used.",
     "T20": "A new synthetic fake refresh read a substituted outside target after the control-side handle-bound hash had succeeded. Property/import/reload still pass path strings to the engine; a durable engine-bound content identity or actual file-system isolation is needed. This is not a real COMSOL execution and containment remains unverified."
+  },
+  "latest_local_build_only_candidate": {
+    "wheel_sha256": "6d9df4491c36b827d19dc526f8ee5b44137bf85781559ce7deb6b1d8a897e032",
+    "matches_snapshot": false,
+    "matches_local_source_at_check": true,
+    "scope": "Mac ARM Python 3.12 offline source/wheel/install verification only: 211 source/stage files, 208 wheel/install application files and 218 installed distribution files; pip check and entrypoint import-only passed. No adapter/runner/bootstrap qualification or native operation."
   }
 }
