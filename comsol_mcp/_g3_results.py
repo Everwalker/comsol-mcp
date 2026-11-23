@@ -4299,6 +4299,8 @@ def _field_array_context(
     pair_records: list[dict[str, Any]] = []
     time_values: list[Any] = []
     frequency_values: list[Any] = []
+    has_time_parameter = False
+    has_frequency_parameter = False
     time_unit: Any = None
     frequency_unit: Any = None
     for pair in binding.get("solnum_pairs") or []:
@@ -4310,19 +4312,28 @@ def _field_array_context(
         raw_units = list(units_by_pair.get(key) or [])
         parameter_values: dict[str, Any] = {}
         parameter_units: dict[str, Any] = {}
+        pair_time_value: Any = None
+        pair_frequency_value: Any = None
         for index, name in enumerate(names):
             parameter_values[name] = values[index] if index < len(values) else None
             unit = raw_units[index] if index < len(raw_units) else None
             parameter_units[name] = None if unit in (None, "") else str(unit)
             lower = name.lower()
             if lower in {"t", "time"}:
-                time_values.append(parameter_values[name])
+                has_time_parameter = True
+                pair_time_value = parameter_values[name]
                 if time_unit is None:
                     time_unit = parameter_units[name]
             if lower in {"f", "freq", "frequency"}:
-                frequency_values.append(parameter_values[name])
+                has_frequency_parameter = True
+                pair_frequency_value = parameter_values[name]
                 if frequency_unit is None:
                     frequency_unit = parameter_units[name]
+        # Keep these derived coordinate lists in the same order as
+        # solnum_pairs. A pair without a time/frequency parameter still
+        # occupies a solution position and must not shift later values.
+        time_values.append(pair_time_value)
+        frequency_values.append(pair_frequency_value)
         pair_records.append({
             "outer": outer,
             "inner": inner,
@@ -4342,9 +4353,9 @@ def _field_array_context(
         "parameters": [record["parameters"] for record in pair_records],
         "params": [record["parameters"] for record in pair_records],
     }
-    if time_values:
+    if has_time_parameter:
         coords["time"] = time_values
-    if frequency_values:
+    if has_frequency_parameter:
         coords["frequency"] = frequency_values
     if point_coordinates is not None:
         # FieldArray coordinates use one record per point, with the spatial
@@ -4370,9 +4381,9 @@ def _field_array_context(
             if unit is not None
         },
     }
-    if time_values:
+    if has_time_parameter:
         units["time"] = time_unit
-    if frequency_values:
+    if has_frequency_parameter:
         units["frequency"] = frequency_unit
     metadata = {
         "binding_source": binding.get("binding_source"),
@@ -4385,9 +4396,9 @@ def _field_array_context(
             "request" if point_coordinates is not None else "numerical-feature"
         ),
     }
-    if time_values:
+    if has_time_parameter:
         metadata["time_unit"] = time_unit
-    if frequency_values:
+    if has_frequency_parameter:
         metadata["frequency_unit"] = frequency_unit
     return coords, units, metadata
 
