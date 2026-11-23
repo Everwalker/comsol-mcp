@@ -58,6 +58,7 @@ EXPECTED_TOOLS = [
     "job_status",
     "job_log",
     "job_result",
+    "job_result_read",
     "job_reconcile",
     "job_list",
     "job_cancel",

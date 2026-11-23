@@ -47,7 +47,8 @@ class ThreadingHTTPServer(_StdlibThreadingHTTPServer):
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
 from ._operation_store import (
-    IdempotencyConflict, JobCleanupError, OperationStore, StagePlanStoreConflict,
+    IdempotencyConflict, JobCleanupError, JobResultReadError, OperationStore,
+    StagePlanStoreConflict, JOB_RESULT_READ_MAX_PAGE_BYTES,
     session_recovery_evidence_sha256,
 )
 from ._platform_process import process_identity, terminate_process_tree
@@ -87,7 +88,7 @@ _ABANDONED_STOP_HISTORY_OPERATIONS = frozenset({
     "session.recover", "session.inspect", "session.health",
 })
 CONTROL_READS = {
-    "session_health", "server_info", "job_status", "job_log", "job_result", "job_reconcile",
+    "session_health", "server_info", "job_status", "job_log", "job_result", "job_result_read", "job_reconcile",
     "job_list", "job_wait", "job_cancel",
     "job.status", "job.log", "job.result", "job.reconcile",
     "job.list", "job.wait", "job.cancel",
@@ -96,12 +97,12 @@ CONTROL_READS = {
     "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect",
 }
 CACHED_JOB_ACTIONS = frozenset({
-    "job.list", "job.status", "job.log", "job.result", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
+    "job.list", "job.status", "job.log", "job.result", "job.result.read", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
     "solver.log_read",
 })
-_SCOPED_CACHED_JOB_READS = frozenset({"job.list", "job.status", "job.log", "job.result", "job.wait"})
+_SCOPED_CACHED_JOB_READS = frozenset({"job.list", "job.status", "job.log", "job.result", "job.result.read", "job.wait"})
 _SCOPED_LEGACY_JOB_READS = frozenset({
-    "job_list", "job_status", "job_log", "job_result", "job_wait",
+    "job_list", "job_status", "job_log", "job_result", "job_result_read", "job_wait",
     "run_study_status", "visible_main_workflow_status",
 })
 
@@ -12171,6 +12172,7 @@ class ControlDaemon:
         operation_map = {
             "job.status": "job_status",
             "job.result": "job_result",
+            "job.result.read": "job_result_read",
             "job.reconcile": "job_reconcile",
             "job.wait": "job_wait",
             "job.cancel": "job_cancel",
@@ -13656,6 +13658,51 @@ class ControlDaemon:
 
         norm_op = operation.replace(".", "_")
         job_id = arguments.get("job_id")
+        if norm_op == "job_result_read":
+            if not isinstance(job_id, str):
+                return self._error("NODE_NOT_FOUND", "job not found")
+            transaction_open = False
+            try:
+                with job_snapshot(job_id) as authorized:
+                    transaction_open = True
+                    if not authorized:
+                        return self._error("NODE_NOT_FOUND", "job not found")
+                    offset = arguments.get("offset", 0)
+                    limit = arguments.get("limit", JOB_RESULT_READ_MAX_PAGE_BYTES)
+                    expected_sha256 = arguments.get("result_sha256")
+                    if type(offset) is not int or offset < 0:
+                        return self._error("INVALID_REQUEST", "offset must be a non-negative integer")
+                    if type(limit) is not int or not 1 <= limit <= JOB_RESULT_READ_MAX_PAGE_BYTES:
+                        return self._error(
+                            "INVALID_REQUEST",
+                            f"limit must be between 1 and {JOB_RESULT_READ_MAX_PAGE_BYTES}",
+                        )
+                    if expected_sha256 is not None and (
+                            not isinstance(expected_sha256, str)
+                            or re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None):
+                        return self._error("INVALID_REQUEST", "result_sha256 must be a lowercase SHA-256 hex digest")
+                    if offset > 0 and expected_sha256 is None:
+                        return self._error("INVALID_REQUEST", "result_sha256 is required when offset is greater than zero")
+                    page = self.store.job_result_page_bounded(
+                        job_id, offset, limit, expected_sha256=expected_sha256,
+                    )
+                    if page is None:
+                        return self._error("NODE_NOT_FOUND", "job not found")
+                    data = {key: value for key, value in page.items() if key != "chunk"}
+                    data["chunk_base64"] = base64.b64encode(page["chunk"]).decode("ascii")
+                    return {"success": True, "data": data}
+            except JobResultReadError as exc:
+                if not transaction_open:
+                    raise
+                return self._error(exc.code, str(exc), safe_retry=False)
+            except ValueError as exc:
+                if not transaction_open:
+                    raise
+                return self._error("RESULT_READ_INDETERMINATE", "job result page could not be read in one SQLite snapshot", safe_retry=False)
+            except Exception:
+                if not transaction_open:
+                    raise
+                return self._error("RESULT_READ_INDETERMINATE", "job result page could not be read in one SQLite snapshot", safe_retry=False)
         if norm_op == "job_log":
             # Dedicated bounded path placed before the generic job() load
             # so a log page never pulls the stored result. A non-string
@@ -13712,26 +13759,67 @@ class ControlDaemon:
                     "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "job log page read state is indeterminate", "safe_retry": False},
                     "data": {},
                 }
+        oversized_result_response = None
         with job_snapshot(job_id) as authorized:
             if authorized and isinstance(job_id, str) and norm_op == "job_status":
                 job = self.store.job_for_status_wait(
                     job_id,
                     max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
                 )
+            elif authorized and isinstance(job_id, str) and norm_op == "job_result":
+                result_meta = self.store.job_result_metadata(job_id)
+                if result_meta is None:
+                    job = None
+                else:
+                    result_type = result_meta["result_type"]
+                    result_bytes = result_meta["result_size_bytes"]
+                    if (result_type in {"text", "blob"} and type(result_bytes) is int
+                            and result_bytes > _JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES):
+                        if result_type == "text" and result_meta.get("database_encoding") != "UTF-8":
+                            oversized_result_response = self._error(
+                                "RESULT_ENCODING_UNSUPPORTED",
+                                "large stored result is not in a UTF-8 SQLite database and cannot be read as exact UTF-8 pages",
+                                data={"job_id": job_id, "result_size_bytes": result_bytes},
+                            )
+                        else:
+                            message = (
+                                "result exceeds the inline limit; retrieve it with job.result.read starting at offset 0"
+                            )
+                            if (result_meta["job_status"] not in TERMINAL
+                                    or result_meta["operation_status"] != result_meta["job_status"]):
+                                message = (
+                                    "result exceeds the inline limit and is not in a consistent terminal state; "
+                                    "check job.status and use job.result.read after the result is terminal"
+                                )
+                            oversized_result_response = self._error(
+                                "RESULT_TOO_LARGE",
+                                message,
+                                data={
+                                    "job_id": job_id,
+                                    "status": result_meta["job_status"],
+                                    "result_size_bytes": result_bytes,
+                                    "result_available_via": "job.result.read",
+                                },
+                            )
+                        job = None
+                    else:
+                        # Small, absent, and legacy empty results keep the
+                        # original object projection and success semantics.
+                        job = self.store.job(job_id)
             else:
-                # job.result deliberately remains on the original full-result
-                # compatibility path; this budget applies only to status/wait.
                 job = self.store.job(job_id) if authorized and isinstance(job_id, str) else None
-            if not job:
-                return self._error("NODE_NOT_FOUND", "job not found")
-            if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
-                return self._error(
-                    "WORKER_BINDING_UNKNOWN",
-                    "reconciliation requires routing through the durable job Worker binding",
-                    safe_retry=False,
-                )
-            success = not (norm_op == "job_result" and job.get("result") is not None and not job["result"].get("success"))
-            return {"success": success, "data": job}
+        if oversized_result_response is not None:
+            return oversized_result_response
+        if not job:
+            return self._error("NODE_NOT_FOUND", "job not found")
+        if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
+            return self._error(
+                "WORKER_BINDING_UNKNOWN",
+                "reconciliation requires routing through the durable job Worker binding",
+                safe_retry=False,
+            )
+        success = not (norm_op == "job_result" and job.get("result") is not None and not job["result"].get("success"))
+        return {"success": success, "data": job}
 
     def _cancel_job(self, arguments: dict[str, Any], *, scoped_project_id: str | None = None) -> dict[str, Any]:
         job_id = arguments.get("job_id")

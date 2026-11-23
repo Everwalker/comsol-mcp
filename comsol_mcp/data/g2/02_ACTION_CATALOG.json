@@ -11161,7 +11161,7 @@
             "minimum": 0
           },
           "result_available_via": {
-            "const": "job.result"
+            "const": "job.result.read"
           }
         },
         "required": [
@@ -11269,7 +11269,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "notes": "Small, absent, and legacy empty results preserve the existing object and success/failure semantics. A result above the inline budget returns RESULT_TOO_LARGE with its byte size and the job.result.read route; it is never truncated. Read the complete result after terminal state through job.result.read.",
       "output_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "job.result output",
@@ -11289,6 +11289,122 @@
           "job_id",
           "status"
         ]
+      }
+    },
+    {
+      "operation_id": "job.result.read",
+      "mcp_tool_name": "job_result_read",
+      "domain": "job",
+      "purpose": "按有界 UTF-8 字节页读取完整持久化 JSON 结果",
+      "arguments_signature": "job_id:str,offset:int?,limit:int?,result_sha256:str?",
+      "effect": "READ",
+      "scope": "project",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
+      "route": "control plane",
+      "capability_requirements": "common target with version capability probe",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.result.read input",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          },
+          "result_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "offset": {
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "offset"
+              ]
+            },
+            "then": {
+              "required": [
+                "result_sha256"
+              ]
+            }
+          }
+        ],
+        "additionalProperties": false
+      },
+      "output_contract": "ActionResult containing a bounded Base64 page of the exact stored UTF-8 JSON bytes and their SHA-256 version",
+      "required_tests": [
+        "schema_valid",
+        "normal_path",
+        "failure_is_truthful"
+      ],
+      "notes": "Only a present result from matching terminal job/operation states is readable. Every page is read inside the authorized project-binding snapshot. A continuation must supply result_sha256 from the previous page; the operation returns raw JSON bytes and never truncates them.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.result.read output",
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          },
+          "next_offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "result_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "chunk_base64": {
+            "type": "string",
+            "contentEncoding": "base64"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job_id",
+          "offset",
+          "limit",
+          "next_offset",
+          "total_bytes",
+          "result_sha256",
+          "chunk_base64",
+          "complete"
+        ],
+        "additionalProperties": false
       }
     },
     {
@@ -11545,6 +11661,16 @@
           },
           "timed_out": {
             "type": "boolean"
+          },
+          "result_omitted": {
+            "type": "boolean"
+          },
+          "result_size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "result_available_via": {
+            "const": "job.result.read"
           }
         },
         "required": [

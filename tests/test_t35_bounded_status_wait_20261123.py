@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
@@ -108,7 +110,7 @@ def test_status_and_terminal_wait_preserve_small_result_shape(daemon_projects) -
     assert waited["data"] == expected
 
 
-def test_oversized_status_and_wait_skip_result_decode_but_job_result_still_returns_it(
+def test_oversized_status_and_wait_skip_result_decode_and_result_is_chunked(
     daemon_projects, monkeypatch,
 ) -> None:
     daemon, project_a, _project_b, _database_path = daemon_projects
@@ -140,13 +142,51 @@ def test_oversized_status_and_wait_skip_result_decode_but_job_result_still_retur
         assert data["operation"] == "synthetic.t35_status_wait"
         assert data["result_omitted"] is True
         assert data["result_size_bytes"] == stored_bytes
-        assert data["result_available_via"] == "job.result"
+        assert data["result_available_via"] == "job.result.read"
         assert "result" not in data
 
-    # The explicit result route remains the supported full-result access path.
-    full_result = _call_job(daemon, "job.result", record["job_id"], project_a)
-    assert full_result["success"] is True
-    assert full_result["data"]["result"] == result
+    inline = _call_job(daemon, "job.result", record["job_id"], project_a)
+    assert inline["success"] is False
+    assert inline["error"]["code"] == "RESULT_TOO_LARGE"
+    assert inline["data"]["result_size_bytes"] == stored_bytes
+    assert inline["data"]["result_available_via"] == "job.result.read"
+
+    pieces = []
+    offset = 0
+    result_sha256 = None
+    while True:
+        arguments = {"offset": offset, "limit": 65536}
+        if result_sha256 is not None:
+            arguments["result_sha256"] = result_sha256
+        page = _call_job(
+            daemon, "job.result.read", record["job_id"], project_a, **arguments,
+        )
+        assert page["success"] is True, page
+        data = page["data"]
+        assert data["offset"] == offset
+        assert data["total_bytes"] == stored_bytes
+        if result_sha256 is None:
+            result_sha256 = data["result_sha256"]
+        else:
+            assert data["result_sha256"] == result_sha256
+        pieces.append(base64.b64decode(data["chunk_base64"], validate=True))
+        offset = data["next_offset"]
+        if data["complete"]:
+            break
+
+    raw_result = b"".join(pieces)
+    assert len(raw_result) == stored_bytes
+    assert hashlib.sha256(raw_result).hexdigest() == result_sha256
+    assert json.loads(raw_result) == result
+
+    end_page = _call_job(
+        daemon, "job.result.read", record["job_id"], project_a,
+        offset=stored_bytes, limit=1, result_sha256=result_sha256,
+    )
+    assert end_page["success"] is True
+    assert base64.b64decode(end_page["data"]["chunk_base64"], validate=True) == b""
+    assert end_page["data"]["next_offset"] == stored_bytes
+    assert end_page["data"]["complete"] is True
 
 
 def test_other_inspect_granted_project_cannot_probe_or_read_a_job(

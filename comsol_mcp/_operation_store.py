@@ -7,6 +7,7 @@ import re
 import sqlite3
 import threading
 import time
+import codecs
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -27,6 +28,8 @@ TERMINAL = ("SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST")
 JOB_EVENT_SNAPSHOT_SCHEMA = "operation-store-job-event-snapshot/v1"
 JOB_EVENT_SNAPSHOT_PAGE_SIZE = 1000
 JOB_EVENT_SNAPSHOT_MAX_PAGES = 128
+JOB_RESULT_READ_MAX_PAGE_BYTES = 64 * 1024
+_JOB_RESULT_READ_BLOCK_BYTES = 64 * 1024
 METADATA_TABLES = {
     "sessions": "session_id",
     "runtimes": "runtime_id",
@@ -113,6 +116,12 @@ class IdempotencyConflict(RuntimeError):
 
 
 class JobCleanupError(RuntimeError):
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+class JobResultReadError(RuntimeError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
@@ -2003,6 +2012,204 @@ class OperationStore:
             row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
             return self._job(row) if row else None
 
+    def job_result_metadata(self, job_id: str) -> dict[str, Any] | None:
+        """Probe one job's stored-result identity and UTF-8 byte size.
+
+        The caller must hold the same active read transaction used to check
+        the project's job binding.  This query deliberately does not select
+        ``operations.result``; it returns only the rowid, storage class, byte
+        count, and small job/operation metadata needed to choose the legacy
+        inline path or the bounded reader.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        with self.lock:
+            if not self.db.in_transaction:
+                raise ValueError("job_result_metadata requires an active project read snapshot")
+            rows = self.db.execute(
+                "SELECT j.job_id,j.operation_id,j.status AS job_status,"
+                "o.operation,o.status AS operation_status,o.rowid AS result_rowid,"
+                "typeof(o.result) AS result_type,"
+                "length(CAST(o.result AS BLOB)) AS result_size_bytes "
+                "FROM jobs j LEFT JOIN operations o ON o.operation_id=j.operation_id "
+                "WHERE j.job_id=?",
+                (job_id,),
+            ).fetchmany(2)
+            if not rows:
+                return None
+            if len(rows) != 1:
+                raise RuntimeError("exact job result metadata cardinality is not one")
+            row = rows[0]
+            result = {key: row[key] for key in row.keys()}
+            encoding_row = self.db.execute("PRAGMA encoding").fetchone()
+            result["database_encoding"] = encoding_row[0] if encoding_row else None
+            return result
+
+    def _iter_operation_result_bytes_bounded(
+        self, rowid: int, result_type: str, expected_byte_length: int,
+    ) -> Iterator[bytes]:
+        """Yield exact UTF-8 result bytes in fixed-size pieces from this snapshot."""
+        if result_type == "text":
+            encoding_row = self.db.execute("PRAGMA encoding").fetchone()
+            if not encoding_row or encoding_row[0] != "UTF-8":
+                raise JobResultReadError(
+                    "RESULT_ENCODING_UNSUPPORTED",
+                    "bounded result reads require a UTF-8 SQLite database",
+                )
+        blobopen = getattr(self.db, "blobopen", None)
+        if callable(blobopen):
+            with blobopen("operations", "result", rowid, readonly=True) as blob:
+                if len(blob) != expected_byte_length:
+                    raise RuntimeError("stored result byte length changed inside its read snapshot")
+                remaining = expected_byte_length
+                while remaining:
+                    piece = blob.read(min(_JOB_RESULT_READ_BLOCK_BYTES, remaining))
+                    if not isinstance(piece, bytes) or not piece:
+                        raise RuntimeError("incremental result read ended before the probed byte length")
+                    yield piece
+                    remaining -= len(piece)
+                if blob.read(1):
+                    raise RuntimeError("incremental result read exceeded the probed byte length")
+            return
+
+        # Python 3.10 lacks Connection.blobopen.  Keep the declared runtime
+        # floor by asking SQLite for bounded BLOB substrings; TEXT is sliced
+        # in code points and encoded to UTF-8 so byte offsets remain explicit.
+        if result_type == "blob":
+            byte_offset = 0
+            while byte_offset < expected_byte_length:
+                row = self.db.execute(
+                    "SELECT substr(result,?,?) FROM operations WHERE rowid=?",
+                    (byte_offset + 1, _JOB_RESULT_READ_BLOCK_BYTES, rowid),
+                ).fetchone()
+                piece = row[0] if row else None
+                if not isinstance(piece, (bytes, bytearray)) or not piece:
+                    raise RuntimeError("SQLite BLOB result slice ended before the probed byte length")
+                piece = bytes(piece)
+                yield piece
+                byte_offset += len(piece)
+            return
+        if result_type != "text":
+            raise JobResultReadError("RESULT_INVALID_STORAGE", "stored result is not UTF-8 text or bytes")
+        nul_row = self.db.execute(
+            "SELECT instr(result,char(0)) FROM operations WHERE rowid=?", (rowid,),
+        ).fetchone()
+        if not nul_row or nul_row[0] is None or nul_row[0] != 0:
+            raise JobResultReadError("RESULT_INVALID_JSON", "stored result contains a raw NUL byte")
+        length_row = self.db.execute(
+            "SELECT length(result) FROM operations WHERE rowid=?", (rowid,),
+        ).fetchone()
+        character_length = length_row[0] if length_row else None
+        if type(character_length) is not int or character_length < 0:
+            raise RuntimeError("SQLite TEXT result length is unavailable")
+        character_offset = 0
+        characters_per_piece = max(1, _JOB_RESULT_READ_BLOCK_BYTES // 4)
+        while character_offset < character_length:
+            row = self.db.execute(
+                "SELECT substr(result,?,?) FROM operations WHERE rowid=?",
+                (character_offset + 1, characters_per_piece, rowid),
+            ).fetchone()
+            text_piece = row[0] if row else None
+            if not isinstance(text_piece, str) or not text_piece:
+                raise RuntimeError("SQLite TEXT result slice ended before the probed character length")
+            piece = text_piece.encode("utf-8", "strict")
+            if len(piece) > _JOB_RESULT_READ_BLOCK_BYTES:
+                raise RuntimeError("SQLite TEXT result slice exceeded its byte block budget")
+            yield piece
+            character_offset += len(text_piece)
+
+    def job_result_page_bounded(
+        self, job_id: str, offset: int, limit: int, *,
+        expected_sha256: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Read one exact JSON byte page and hash the same project snapshot.
+
+        Each request streams the whole stored value through bounded reads to
+        compute its SHA-256 version, retaining only the requested page.  A
+        continuation supplies the first page's digest; a changed result is
+        refused before any page bytes are returned.  The caller owns the
+        active, project-authorized SQLite read snapshot for the entire probe
+        and stream.  This bounds Python-side result residency, not SQLite C
+        allocations, process RSS, or the repeated I/O cost of rehashing each
+        page.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        if type(offset) is not int or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        if type(limit) is not int or not 1 <= limit <= JOB_RESULT_READ_MAX_PAGE_BYTES:
+            raise ValueError("limit must be between 1 and the bounded result page maximum")
+        if expected_sha256 is not None and (
+                not isinstance(expected_sha256, str)
+                or re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None):
+            raise ValueError("result_sha256 must be a lowercase SHA-256 hex digest")
+        if offset > 0 and expected_sha256 is None:
+            raise ValueError("result_sha256 is required when offset is greater than zero")
+
+        with self.lock:
+            if not self.db.in_transaction:
+                raise ValueError("job_result_page_bounded requires an active project read snapshot")
+            metadata = self.job_result_metadata(job_id)
+            if metadata is None:
+                return None
+            result_type = metadata["result_type"]
+            total_bytes = metadata["result_size_bytes"]
+            rowid = metadata["result_rowid"]
+            if (result_type not in {"text", "blob"} or type(total_bytes) is not int
+                    or total_bytes <= 0 or type(rowid) is not int):
+                raise JobResultReadError("RESULT_NOT_AVAILABLE", "job result is empty or unavailable")
+            if metadata["job_status"] not in TERMINAL:
+                raise JobResultReadError("RESULT_NOT_READY", "job result is not in a terminal state")
+            if metadata["operation_status"] != metadata["job_status"]:
+                raise JobResultReadError("RESULT_STATE_INDETERMINATE", "job and operation result states do not match")
+            if offset > total_bytes:
+                raise JobResultReadError("INVALID_REQUEST", "offset exceeds the stored result byte length")
+
+            digest = hashlib.sha256()
+            decoder = codecs.getincrementaldecoder("utf-8")("strict")
+            page_end = offset + limit
+            page = bytearray()
+            stream_offset = 0
+            try:
+                for piece in self._iter_operation_result_bytes_bounded(rowid, result_type, total_bytes):
+                    if b"\x00" in piece:
+                        raise JobResultReadError(
+                            "RESULT_INVALID_JSON", "stored result contains a raw NUL byte",
+                        )
+                    decoder.decode(piece, final=False)
+                    digest.update(piece)
+                    overlap_start = max(offset, stream_offset)
+                    overlap_end = min(page_end, stream_offset + len(piece))
+                    if overlap_start < overlap_end:
+                        page.extend(piece[overlap_start - stream_offset:overlap_end - stream_offset])
+                    stream_offset += len(piece)
+                decoder.decode(b"", final=True)
+            except UnicodeDecodeError as exc:
+                raise JobResultReadError(
+                    "RESULT_INVALID_UTF8", "stored result is not valid UTF-8 JSON bytes",
+                ) from exc
+            if stream_offset != total_bytes:
+                raise RuntimeError("streamed result byte count differs from its snapshot size")
+            observed_sha256 = digest.hexdigest()
+            if expected_sha256 is not None and observed_sha256 != expected_sha256:
+                raise JobResultReadError(
+                    "RESULT_VERSION_CHANGED",
+                    "stored result changed between pages; restart from offset 0",
+                )
+            if len(page) != min(limit, total_bytes - offset):
+                raise RuntimeError("result page length differs from its requested byte range")
+            next_offset = offset + len(page)
+            return {
+                "job_id": metadata["job_id"],
+                "offset": offset,
+                "limit": limit,
+                "next_offset": next_offset,
+                "total_bytes": total_bytes,
+                "result_sha256": observed_sha256,
+                "chunk": bytes(page),
+                "complete": next_offset == total_bytes,
+            }
+
     def job_for_status_wait(
         self, job_id: str, *, max_inline_result_bytes: int,
     ) -> dict[str, Any] | None:
@@ -2011,7 +2218,7 @@ class OperationStore:
         The result byte count and job row are read in one SQLite snapshot. Small
         results use the existing ``_job`` projection unchanged. For a result
         above the inline budget, this returns the job row plus an explicit
-        ``job.result`` retrieval hint, without selecting or JSON-decoding
+        ``job.result.read`` retrieval hint, without selecting or JSON-decoding
         ``operations.result`` in Python. SQLite may still need to scan or
         temporarily convert the stored TEXT for ``length(CAST(... AS BLOB))``;
         this is not a whole-process memory bound.
@@ -2056,7 +2263,7 @@ class OperationStore:
                         value["operation"] = row["_status_wait_operation"]
                         value["result_omitted"] = True
                         value["result_size_bytes"] = int(result_bytes)
-                        value["result_available_via"] = "job.result"
+                        value["result_available_via"] = "job.result.read"
                 if started_transaction and self.db.in_transaction:
                     self.db.execute("COMMIT")
                 return value

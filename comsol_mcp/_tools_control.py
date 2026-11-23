@@ -41,8 +41,23 @@ def job_log(job_id: str, offset: int = 0, limit: int = 100) -> dict:
 
 
 def job_result(job_id: str) -> dict:
-    """Retrieve the original job result; never starts a replacement computation."""
+    """Retrieve an inline job result; large results direct callers to job_result_read."""
     return dispatch("job_result", {"job_id": job_id}, {})
+
+
+def job_result_read(
+    job_id: str, offset: int = 0, limit: int = 65536,
+    result_sha256: str | None = None,
+) -> dict:
+    """Read one bounded page of the original JSON result bytes."""
+    arguments = {
+        "job_id": job_id,
+        "offset": offset,
+        "limit": limit,
+    }
+    if result_sha256 is not None:
+        arguments["result_sha256"] = result_sha256
+    return dispatch("job_result_read", arguments, {})
 
 
 def job_wait(job_id: str, timeout_s: float | None = 30.0, poll_interval_s: float = 0.05) -> dict:
@@ -73,6 +88,7 @@ def job_reconcile(job_id: str) -> dict:
 def register(registry) -> None:
     for function in (
         session_health, model_inspect, model_adopt,
-        job_list, job_status, job_log, job_result, job_wait, job_cancel, job_reconcile,
+        job_list, job_status, job_log, job_result, job_result_read,
+        job_wait, job_cancel, job_reconcile,
     ):
         registry.add_tool(function)
