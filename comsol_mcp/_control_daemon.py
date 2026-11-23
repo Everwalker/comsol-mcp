@@ -1353,6 +1353,9 @@ class ControlDaemon:
                     timeouts = self.project_authority.apply_timeout_caps(execution["project_id"], timeouts)
                 if operation == "server_connect" and self.service is None and not (os.environ.get("COMSOL_ROOT") and (os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME"))):
                     raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL_ROOT and COMSOL_JAVA_HOME must be configured")
+            if operation == "plot.render":
+                from ._g2_registry import validate_call
+                validate_call(operation, arguments, allow_unbound_identity=True)
             runtime_binding = self._runtime_binding_for_request(session_context, execution)
             request_id = execution.get("request_id") or str(uuid4())
             key = execution.get("idempotency_key") or str(uuid4())

@@ -475,6 +475,7 @@ class ExecutionService:
         _owned_branch_proof: Mapping[str, Any] | None = None,
         terminal_model_close: bool = False,
         _ephemeral_binding: Any = None,
+        force_changed_on_success: bool = False,
     ) -> dict[str, Any]:
         """Call only after authorization, real selected-model check, and preflight.
 
@@ -792,6 +793,11 @@ class ExecutionService:
         changed_engine = (after["fingerprint"] != snapshot["fingerprint"]
                           or after["external_event_counter"] != snapshot["external_event_counter"])
         outcome, changed = final_state(data, engine_changed=changed_engine)
+        # plot.render persists the target plot group's dataset binding, while
+        # the Worker model snapshot does not fingerprint plot groups.  Its
+        # managed caller therefore conservatively advances revision on success.
+        if force_changed_on_success and outcome == "succeeded":
+            changed = True
         if _function_evaluate_read_ticket_proven(tool_name, effect, data, outcome, changed_engine):
             changed = False
         if (tool_name == "result_at_points" and effect == "evaluate" and ephemeral_scope is not None

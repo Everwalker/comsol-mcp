@@ -12,8 +12,12 @@ import json
 from typing import Any, Callable, get_type_hints
 
 from mcp.types import CallToolResult, ImageContent, TextContent
+from pydantic import Field
 
 from ._g2_registry import current_tool_profile, is_tool_published
+
+
+_PLOT_RENDER_UNSET = object()
 
 
 def mcp_result(value: str | dict[str, Any]) -> CallToolResult:
@@ -184,12 +188,18 @@ class GatewayRegistry:
             return
         self.functions[operation] = function
         original = inspect.signature(function)
-        hints = get_type_hints(function)
-        parameters = [
-            p.replace(annotation=hints.get(p.name, p.annotation))
-            for p in original.parameters.values()
-            if p.kind != inspect.Parameter.VAR_KEYWORD
-        ]
+        hints = get_type_hints(function, include_extras=operation == "plot.render")
+        parameters = []
+        for parameter in original.parameters.values():
+            if parameter.kind == inspect.Parameter.VAR_KEYWORD:
+                continue
+            parameter = parameter.replace(annotation=hints.get(parameter.name, parameter.annotation))
+            if (operation == "plot.render" and parameter.name in {"options", "solution"}
+                    and parameter.default is None):
+                parameter = parameter.replace(
+                    default=Field(default_factory=lambda: _PLOT_RENDER_UNSET),
+                )
+            parameters.append(parameter)
         if "execution" in original.parameters:
             raise ValueError("Legacy function conflicts with execution contract")
         exec_param = inspect.Parameter(
@@ -249,6 +259,13 @@ class GatewayRegistry:
                 for name, parameter in original.parameters.items():
                     if (name not in kwargs and parameter.default is None
                             and call_args.get(name) is None):
+                        call_args.pop(name, None)
+            elif operation == "plot.render":
+                # FastMCP dumps every argument model field, including defaults.
+                # The factory marker preserves omission separately from explicit
+                # null so the catalog remains the authority for both fields.
+                for name in ("options", "solution"):
+                    if name not in kwargs or kwargs[name] is _PLOT_RENDER_UNSET:
                         call_args.pop(name, None)
 
             # Only unpack arguments wrapper for declared W20 compatibility schemas

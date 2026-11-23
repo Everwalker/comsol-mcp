@@ -3838,7 +3838,8 @@ class ManagedBackend:
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 _ephemeral_binding=ephemeral_binding, expected_revision=expected_rev,
                 request_id=execution.get("request_id") or str(operation_id), session_id=session, effect=effect,
-                terminal_model_close=(operation == "model.close"))
+                terminal_model_close=(operation == "model.close"),
+                force_changed_on_success=(operation == "plot.render"))
         if result.get("success") and ref is not None and operation != "model.close":
             # Bind observations minted inside this serial operation to its
             # final revision, after the service has accounted for mutations.

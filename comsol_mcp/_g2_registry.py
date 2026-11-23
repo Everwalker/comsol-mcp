@@ -1940,6 +1940,10 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     those definitions.  The fallback still must reject an empty names list or
     malformed typed action before the no-model gate reports ENGINE_UNRESPONSIVE.
     """
+    if operation_id == "plot.render":
+        from ._plot_render_binding import normalize_plot_render_binding
+        normalize_plot_render_binding(arguments)
+        return
     from ._g2_contract import NodePath, validate_property_set, validate_typed_value
 
     if operation_id == "checkpoint.diff":

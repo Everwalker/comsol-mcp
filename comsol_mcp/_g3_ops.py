@@ -117,7 +117,7 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "plot.feature_create": "WRITE",
     "plot.update": "WRITE",
     "plot.remove": "WRITE",
-    "plot.render": "READ",
+    "plot.render": "WRITE",
     "plot.geometry_render": "READ",
     "plot.view_manage": "DYNAMIC",
     "export.list": "READ",

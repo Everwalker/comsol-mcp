@@ -36,6 +36,7 @@ from ._g3_common import (
     require_string,
 )
 
+from ._plot_render_binding import normalize_plot_render_binding
 
 def _resolve_tag(target: Any) -> str:
     if isinstance(target, str):
@@ -487,13 +488,14 @@ def plot_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
 
 def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """Render a plot group to an image artifact and return ImageContent and metadata."""
+    binding_request = normalize_plot_render_binding(arguments)
     path_spec = arguments.get("path")
     if not path_spec:
         raise ExecutionContractError("INVALID_REQUEST", "plot.render requires 'path'")
     path_tuple = _resolve_plot_path(path_spec)
     pg_tag = path_tuple[0]
 
-    options = arguments.get("options") or {}
+    options = binding_request["options"]
     width = int(options.get("width") or 800)
     height = int(options.get("height") or 600)
     if width <= 0 or height <= 0 or width * height > 16 * 1024 * 1024:
@@ -545,21 +547,70 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
 
     from ._dataset_binding import resolve_dataset_binding
 
-    # Apply solution / dataset options fail-closed
-    dataset_opt = options.get("dataset") or options.get("data")
-    solution_opt = options.get("solution")
+    # Apply the strict top-level binding only after its dataset/solution map is
+    # proven complete.  Options-only callers keep the legacy routing below.
+    dataset_opt = binding_request["dataset"]
+    solution_opt = binding_request["solution"]
+    explicit_binding: dict[str, Any] | None = None
 
-    if solution_opt is not None:
+    if binding_request["mode"] == "explicit":
+        explicit_binding = resolve_dataset_binding(
+            model, dataset_opt, requested_solution=solution_opt,
+        )
+        if (explicit_binding.get("binding_complete") is not True
+                or not isinstance(explicit_binding.get("solution"), str)
+                or not explicit_binding.get("solution")):
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"SolutionSpec dataset {dataset_opt!r} does not resolve to a complete solution binding",
+                stage="validation",
+                details={"dataset": dataset_opt, "binding_error": explicit_binding.get("error")},
+            )
+        if solution_opt is not None and explicit_binding.get("solution") != solution_opt:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"dataset {dataset_opt!r} resolves to {explicit_binding.get('solution')!r}, not {solution_opt!r}",
+                stage="validation",
+            )
+        try:
+            _call(pg, "set", "data", dataset_opt)
+            applied_dataset = str(_call(pg, "getString", "data") or "")
+            if applied_dataset != dataset_opt:
+                raise ExecutionContractError(
+                    "SCIENTIFIC_BINDING_FAILED",
+                    f"plot group {pg_tag!r} did not retain requested dataset {dataset_opt!r}",
+                    stage="post_dispatch",
+                    details={"requested_dataset": dataset_opt, "plot_group_dataset": applied_dataset},
+                )
+        except ExecutionContractError:
+            raise
+        except Exception as exc:
+            raise ExecutionContractError(
+                "SCIENTIFIC_BINDING_FAILED",
+                f"Failed to bind dataset {dataset_opt!r} on plot group {pg_tag!r}: {exc}",
+                stage="post_dispatch",
+            ) from exc
+    elif solution_opt is not None:
         sol_str = str(solution_opt)
         # Check if sol_str is directly a dataset tag or maps to one
         target_dataset = None
         if sol_str in available_dset_tags:
             target_dataset = sol_str
+            direct_binding = resolve_dataset_binding(model, target_dataset)
+            if (direct_binding.get("binding_complete") is not True
+                    or not isinstance(direct_binding.get("solution"), str)
+                    or not direct_binding.get("solution")):
+                raise ExecutionContractError(
+                    "SCIENTIFIC_BINDING_FAILED",
+                    f"Dataset {target_dataset!r} does not resolve to a complete solution binding",
+                    stage="validation",
+                    details={"dataset": target_dataset, "binding_error": direct_binding.get("error")},
+                )
         else:
             # Search available datasets to find one binding to this solution
             for d_tag in available_dset_tags:
                 b = resolve_dataset_binding(model, d_tag)
-                if b.get("solution") == sol_str:
+                if b.get("binding_complete") is True and b.get("solution") == sol_str:
                     target_dataset = d_tag
                     break
         if not target_dataset:
@@ -569,7 +620,8 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
             )
         if dataset_opt is not None and str(dataset_opt) != target_dataset:
             b_specified = resolve_dataset_binding(model, str(dataset_opt))
-            if b_specified.get("solution") != sol_str:
+            if (b_specified.get("binding_complete") is not True
+                    or b_specified.get("solution") != sol_str):
                 raise ExecutionContractError(
                     "SCIENTIFIC_BINDING_FAILED",
                     f"Dataset {dataset_opt!r} does not bind to requested solution {solution_opt!r}",
@@ -589,6 +641,17 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
                 "SCIENTIFIC_BINDING_FAILED",
                 f"Dataset {d_str!r} does not exist in model.result.dataset.tags()",
             )
+        if d_str != "none":
+            dataset_binding = resolve_dataset_binding(model, d_str)
+            if (dataset_binding.get("binding_complete") is not True
+                    or not isinstance(dataset_binding.get("solution"), str)
+                    or not dataset_binding.get("solution")):
+                raise ExecutionContractError(
+                    "SCIENTIFIC_BINDING_FAILED",
+                    f"Dataset {d_str!r} does not resolve to a complete solution binding",
+                    stage="validation",
+                    details={"dataset": d_str, "binding_error": dataset_binding.get("error")},
+                )
         try:
             _call(pg, "set", "data", d_str)
         except Exception as exc:
@@ -611,6 +674,23 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         _call(pg, "run")
     except Exception as exc:
         raise ExecutionContractError("RENDER_FAILED", f"plot group {pg_tag!r} could not be run: {exc}") from exc
+
+    if binding_request["mode"] == "explicit":
+        try:
+            rendered_dataset = str(_call(pg, "getString", "data") or "")
+        except Exception as exc:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "rendered plot dataset could not be read back",
+                stage="post_dispatch", details={"safe_retry": False},
+            ) from exc
+        if rendered_dataset != dataset_opt:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "plot group dataset changed during render",
+                stage="post_dispatch", details={
+                    "requested_dataset": dataset_opt, "plot_group_dataset": rendered_dataset,
+                    "safe_retry": False,
+                },
+            )
 
     export_list = _call(results, "export")
     exp_tag = f"render_{uuid.uuid4().hex[:8]}"
@@ -676,6 +756,24 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
             cleanup_failed = True
             cleanup_error = str(exc)
 
+    dataset_tag = ""
+    try:
+        dataset_tag = str(_call(pg, "getString", "data") or "")
+    except Exception as exc:
+        if binding_request["mode"] == "explicit":
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "rendered plot dataset could not be verified",
+                stage="post_dispatch", details={"safe_retry": False},
+            ) from exc
+    if binding_request["mode"] == "explicit" and dataset_tag != dataset_opt:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN", "plot group dataset changed before image publication",
+            stage="post_dispatch", details={
+                "requested_dataset": dataset_opt, "plot_group_dataset": dataset_tag,
+                "safe_retry": False,
+            },
+        )
+
     raw_bytes, sha256, actual_w, actual_h = _stage_and_publish_image(
         store,
         staging_path,
@@ -684,12 +782,6 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         expected_fmt=fmt,
     )
     b64_str = base64.b64encode(raw_bytes).decode("ascii")
-
-    dataset_tag = ""
-    try:
-        dataset_tag = str(_call(pg, "getString", "data") or "")
-    except Exception:
-        pass
 
     solnum_val = ""
     try:
@@ -789,6 +881,7 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         "plot_group": pg_tag,
         "dataset": dataset_tag,
         "solution": solution_tag or None,
+        "binding_complete": solution_binding_data.get("binding_complete") is True,
         "solution_state": solution_state,
         "solnum": solnum_val,
         "time": time_val,
@@ -811,6 +904,7 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
         "height": actual_h,
         "dataset": dataset_tag,
         "solution": solution_tag or None,
+        "binding_complete": solution_binding_data.get("binding_complete") is True,
         "solution_state": solution_state,
         "solution_binding": solution_binding_data,
         "solnum": solnum_val,

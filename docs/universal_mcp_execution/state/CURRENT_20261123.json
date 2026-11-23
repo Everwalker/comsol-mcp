@@ -7,7 +7,7 @@
     "supplied _g2_property_path_guard.py overlay",
     "subsequent integrated software changes"
   ],
-  "candidate": "A fresh r10 Mac ARM source/wheel/offline-install build matches the current local source after T24/T37 integration. T10 adapter/runner/bootstrap identity is not yet bound. The public snapshot differs in documented local-only inputs. Public MCP, COMSOL, Worker, license and native acceptance remain unverified.",
+  "candidate": "The r10 Mac ARM source/wheel/offline-install build predates the T29 integration and no longer matches current local source. A fresh current-source qualification and T10 adapter/runner/bootstrap identity are required. The public snapshot differs in documented local-only inputs; public MCP and native acceptance remain unverified.",
   "last_qualified_interim_candidate": {
     "wheel_sha256": "443c526763fae2560fac61e7bd3b333bc459c234437d60e2ede8fb11beff94a0",
     "matches_snapshot": false,
@@ -441,7 +441,8 @@
     "T25": "Exact source-time tuple binding now rejects missing, mismatched or invalid time metadata before source-field evaluation or selector writes, and distinguishes t from temperature parameter T. Independent review and 62 combined-source synthetic/canonical tests passed. Native state transfer and variable/coordinate mapping remain unverified.",
     "T42_r8": "A fresh local Mac ARM source-bound r8 wheel and hash-locked offline environment were built after T25; 211 source/stage and 208 wheel/installed application files matched, with pip check passing. A matching Windows x64 r8 bundle passed static hash/CRC and 35-wheel/47-member checks; it has not been installed on Windows. Intel r8 remains unverified.",
     "W21_fake_fixture": "The initial-stage fake Worker request wrappers now accept and forward the current source-binding arguments, while rejecting source-bound code requests the fake does not emulate. Independent review and two current-source fake tests passed; neighboring synthetic geometry failures remain unresolved.",
-    "T24": "Scoped lazy-grid, finite-extreme interpolation, per-run budget accounting, accumulated candidate IDs and UNKNOWN stop corrections were independently reviewed and integrated. Twenty-one fake T24 tests and twelve T25 stage-time regressions passed on combined source. Native multi-case execution and model state remain unverified."
+    "T24": "Scoped lazy-grid, finite-extreme interpolation, per-run budget accounting, accumulated candidate IDs and UNKNOWN stop corrections were independently reviewed and integrated. Twenty-one fake T24 tests and twelve T25 stage-time regressions passed on combined source. Native multi-case execution and model state remain unverified.",
+    "T29": "Plot.render nested binding validation now occurs after authorization and before job admission, both public aliases preserve omitted versus null options, and managed success advances revision for dataset binding. Independent technical review and seven fake/in-memory tests passed; 37 T37 and seven related regressions passed. Native rendering remains unverified."
   },
   "recent_review_findings": {
     "T10": "A new isolated loader revision passed 37 fake tests and awaits independent review. It pins loader identity, verifies and executes the same adapter bytes, and keeps configured-provider execution NOT_READY without verified daemon-loaded bytes. Current-source r10 has only source/wheel/install verification; complete identity and actual authorization remain open.",
@@ -449,14 +450,15 @@
     "T25": "The isolated time metadata fix passed scoped independent review and was integrated; native stage transfer, coordinate/variable mapping and interpolation remain unverified.",
     "T37": "The scoped reader and cleanup-error propagation were independently accepted and integrated. The synthetic Windows handle tests use POSIX-backed fakes; actual Windows handles, overwrite/rollback and large-file performance remain unverified.",
     "T43": "The normal detached control launcher does not retain its original process object. A new Windows owner has not been accepted, and its scope has not been established as distinct from a previously rejected launcher/driver. No public MCP execution was attempted.",
-    "T29": "Independent review found that both plot.render aliases forward omitted versus explicit null options correctly, but ten invalid nested requests created persistent jobs before catalog validation in a real dispatcher with a synthetic backend. A scoped pre-admission fix is being prepared. FastMCP still drops unknown root-level fields; native rendering remains unverified.",
+    "T29": "The scoped T29 patch was technically accepted and integrated. The reviewer could not independently see the serving model sublabel; delegation explicitly requested gpt-6-luna max. FastMCP still discards unknown root-level fields before the gateway; real COMSOL rendering and final acceptance remain open.",
     "T38": "Managed package publication can reach a substituted project root. An isolated POSIX handle-publication prototype remains unmerged: independent review reproduced deletion of a concurrent replacement during rollback and false ROLLED_BACK reporting. A safe-status revision is underway. Worker absolute output, Windows, dependency recovery and trusted classification remain unresolved.",
-    "T20": "A new synthetic fake refresh read a substituted outside target after the control-side handle-bound hash had succeeded. Property/import/reload still pass path strings to the engine; a durable engine-bound content identity or actual file-system isolation is needed. This is not a real COMSOL execution and containment remains unverified."
+    "T20": "A new synthetic fake refresh read a substituted outside target after the control-side handle-bound hash had succeeded. Property/import/reload still pass path strings to the engine; a durable engine-bound content identity or actual file-system isolation is needed. This is not a real COMSOL execution and containment remains unverified.",
+    "W21": "A synthetic initial-stage finalizer compared the complete Worker-event evidence against a ledger read capped at 1000 events, producing UNKNOWN once the ledger exceeded that bound. A scoped fix is underway; three related fake tests failed and a forged-ticket assertion was not reached. Real COMSOL behavior is unverified."
   },
   "latest_local_build_only_candidate": {
     "wheel_sha256": "6d9df4491c36b827d19dc526f8ee5b44137bf85781559ce7deb6b1d8a897e032",
     "matches_snapshot": false,
-    "matches_local_source_at_check": true,
-    "scope": "Mac ARM Python 3.12 offline source/wheel/install verification only: 211 source/stage files, 208 wheel/install application files and 218 installed distribution files; pip check and entrypoint import-only passed. No adapter/runner/bootstrap qualification or native operation."
+    "matches_local_source_at_check": false,
+    "scope": "Before T29 integration, a Mac ARM Python 3.12 offline build verified 211 source/stage files, 208 wheel/install application files and 218 installed distribution files; pip check and entrypoint import-only passed. It is historical for current source and does not establish T10 launcher or native readiness."
   }
 }

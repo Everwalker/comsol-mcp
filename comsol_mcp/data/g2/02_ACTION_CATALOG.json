@@ -13335,7 +13335,7 @@
       "domain": "plot",
       "purpose": "按明确solution导出真实绘图图像",
       "arguments_signature": "path:NodePath,solution:SolutionSpec?,options:object?",
-      "effect": "COMPUTE",
+      "effect": "WRITE",
       "scope": "model",
       "gate": "G4",
       "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
@@ -13369,10 +13369,31 @@
             "$ref": "common.schema.json#/$defs/NodePath"
           },
           "solution": {
-            "$ref": "common.schema.json#/$defs/SolutionSpec"
+            "title": "PlotSolutionSpec",
+            "description": "Plot binding supports an exact dataset and optional mapped solution; generic index and parameter selectors are unsupported.",
+            "type": "object",
+            "properties": {
+              "dataset": {
+                "type": "string",
+                "title": "Dataset",
+                "minLength": 1,
+                "pattern": "^\\S(?:.*\\S)?$"
+              },
+              "solution": {
+                "type": "string",
+                "title": "Solution",
+                "minLength": 1,
+                "pattern": "^\\S(?:.*\\S)?$"
+              }
+            },
+            "required": [
+              "dataset"
+            ],
+            "additionalProperties": false
           },
           "options": {
-            "type": "object"
+            "type": "object",
+            "description": "Legacy render options. If top-level solution is present, options.dataset/data/solution may only repeat matching explicit values; if it is absent, the legacy options binding path is used."
           }
         },
         "required": [
@@ -13390,7 +13411,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "Rendering can persist the selected dataset on the target plot group; requires project_write and a managed revision ticket. Only dataset and optional solution are supported in the plot-specific SolutionSpec."
     },
     {
       "operation_id": "plot.geometry_render",

@@ -340,7 +340,7 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | `plot_feature_create` | `group:NodePath,tag:str,type_id:str,properties:PropertySet` | 创建surface/slice/contour/arrow/line等 | WRITE / G4 |
 | `plot_update` | `path:NodePath,properties:PropertySet` | 修改表达式、范围、颜色/图例/数据绑定 | WRITE / G4 |
 | `plot_remove` | `path:NodePath` | 移除绘图组或feature | WRITE / G4 |
-| `plot_render` | `path:NodePath,solution:SolutionSpec?,options:object?` | 按明确solution导出真实绘图图像 | COMPUTE / G4 |
+| `plot_render` | `path:NodePath,solution:SolutionSpec?,options:object?` | 持久设置目标绘图组的数据集绑定并导出图像；显式绑定仅支持 dataset 与可选 solution | WRITE / G4 |
 | `plot_geometry_render` | `geometry:NodePath,mode:str,options:object?` | 渲染几何/网格/实体标签供检查 | COMPUTE / G4 |
 | `plot_view_manage` | `action:str,path:NodePath?,definition:object?` | 创建/读取/设置视角、相机、轴、隐藏实体 | DYNAMIC / G4 |
 
