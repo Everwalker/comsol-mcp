@@ -82,7 +82,7 @@ IMPLEMENTED_OPERATIONS = frozenset({
 # adding them here advertises that bounded control-plane route without
 # implying that any COMSOL solver capability is available.
 CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
-    "job.list", "job.status", "job.log", "job.result", "job.result.read", "job.reconcile",
+    "job.list", "job.status", "job.log", "job.log.event.read", "job.result", "job.result.read", "job.reconcile",
     "job.wait", "job.cancel", "job.cleanup",
     "artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview",
     "project.create", "project.inspect", "project.contract_set",
@@ -202,7 +202,7 @@ def _legacy_input_schemas() -> dict[str, dict[str, Any]]:
 
 CONTROL_STATUS_TOOL_NAMES = frozenset({
     "session_health", "model_inspect", "model_adopt",
-    "job_list", "job_status", "job_log", "job_result", "job_result_read", "job_wait", "job_cancel", "job_reconcile",
+    "job_list", "job_status", "job_log", "job_log_event_read", "job_result", "job_result_read", "job_wait", "job_cancel", "job_reconcile",
 })
 
 # Profile selection affects only the static MCP publication.  The backend
@@ -210,7 +210,7 @@ CONTROL_STATUS_TOOL_NAMES = frozenset({
 _PROFILE_ALWAYS_TOOLS = frozenset({
     "registry_list", "registry_describe", "registry_search", "registry_manifest", "registry_call",
     "operation_describe", "operation_call", "session_health", "model_inspect", "model_adopt",
-    "job_list", "job_status", "job_log", "job_result", "job_result_read", "job_wait", "job_cancel", "job_reconcile",
+    "job_list", "job_status", "job_log", "job_log_event_read", "job_result", "job_result_read", "job_wait", "job_cancel", "job_reconcile",
     "mcp_tool_audit", "server_info", "check_server_port", "desktop_status",
 })
 _PROFILE_DOMAIN_TOOLS = frozenset({

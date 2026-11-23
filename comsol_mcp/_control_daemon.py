@@ -47,8 +47,10 @@ class ThreadingHTTPServer(_StdlibThreadingHTTPServer):
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
 from ._operation_store import (
-    IdempotencyConflict, JobCleanupError, JobResultReadError, OperationStore,
+    IdempotencyConflict, JobCleanupError, JobResultReadError, JobEventFieldReadError, OperationStore,
     StagePlanStoreConflict, JOB_RESULT_READ_MAX_PAGE_BYTES,
+    JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES,
+    JOB_LOG_RESPONSE_MAX_BYTES,
     session_recovery_evidence_sha256,
 )
 from ._platform_process import process_identity, terminate_process_tree
@@ -88,7 +90,7 @@ _ABANDONED_STOP_HISTORY_OPERATIONS = frozenset({
     "session.recover", "session.inspect", "session.health",
 })
 CONTROL_READS = {
-    "session_health", "server_info", "job_status", "job_log", "job_result", "job_result_read", "job_reconcile",
+    "session_health", "server_info", "job_status", "job_log", "job_result", "job_result_read", "job_log_event_read", "job_reconcile",
     "job_list", "job_wait", "job_cancel",
     "job.status", "job.log", "job.result", "job.reconcile",
     "job.list", "job.wait", "job.cancel",
@@ -97,12 +99,12 @@ CONTROL_READS = {
     "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect",
 }
 CACHED_JOB_ACTIONS = frozenset({
-    "job.list", "job.status", "job.log", "job.result", "job.result.read", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
+    "job.list", "job.status", "job.log", "job.log.event.read", "job.result", "job.result.read", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
     "solver.log_read",
 })
-_SCOPED_CACHED_JOB_READS = frozenset({"job.list", "job.status", "job.log", "job.result", "job.result.read", "job.wait"})
+_SCOPED_CACHED_JOB_READS = frozenset({"job.list", "job.status", "job.log", "job.log.event.read", "job.result", "job.result.read", "job.wait"})
 _SCOPED_LEGACY_JOB_READS = frozenset({
-    "job_list", "job_status", "job_log", "job_result", "job_result_read", "job_wait",
+    "job_list", "job_status", "job_log", "job_log_event_read", "job_result", "job_result_read", "job_wait",
     "run_study_status", "visible_main_workflow_status",
 })
 
@@ -115,7 +117,7 @@ _SCOPED_LEGACY_JOB_READS = frozenset({
 # admission limits only: they are not a C/RSS usage ceiling and not a
 # real-principal security guarantee.
 _JOB_LOG_ADMISSION_MAX_BINDING_BYTES = 4 * 1024 * 1024
-_JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+_JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES = JOB_LOG_RESPONSE_MAX_BYTES
 # Status/wait historically include the same stored result twice. Relative to
 # the existing 4 MiB job.log response budget, two raw result copies at this
 # threshold use one eighth of that budget, leaving room for metadata/framing.
@@ -12174,6 +12176,7 @@ class ControlDaemon:
 
         operation_map = {
             "job.status": "job_status",
+            "job.log.event.read": "job_log_event_read",
             "job.result": "job_result",
             "job.result.read": "job_result_read",
             "job.reconcile": "job_reconcile",
@@ -13661,6 +13664,59 @@ class ControlDaemon:
 
         norm_op = operation.replace(".", "_")
         job_id = arguments.get("job_id")
+        if norm_op == "job_log_event_read":
+            if not isinstance(job_id, str):
+                return self._error("NODE_NOT_FOUND", "job not found")
+            transaction_open = False
+            try:
+                with job_snapshot(job_id) as authorized:
+                    transaction_open = True
+                    if not authorized:
+                        return self._error("NODE_NOT_FOUND", "job not found")
+                    event_id = arguments.get("event_id")
+                    field = arguments.get("field")
+                    offset = arguments.get("offset", 0)
+                    limit = arguments.get("limit", JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES)
+                    expected_sha256 = arguments.get("field_sha256")
+                    if type(event_id) is not int or event_id <= 0:
+                        return self._error("INVALID_REQUEST", "event_id must be a positive integer")
+                    if not isinstance(field, str) or field not in {"event", "metadata", "created_at"}:
+                        return self._error("INVALID_REQUEST", "field must be event, metadata, or created_at")
+                    if type(offset) is not int or offset < 0:
+                        return self._error("INVALID_REQUEST", "offset must be a non-negative integer")
+                    if type(limit) is not int or not 1 <= limit <= JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES:
+                        return self._error("INVALID_REQUEST", f"limit must be between 1 and {JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES}")
+                    if expected_sha256 is not None and (
+                            not isinstance(expected_sha256, str)
+                            or re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None):
+                        return self._error("INVALID_REQUEST", "field_sha256 must be a lowercase SHA-256 hex digest")
+                    if offset > 0 and expected_sha256 is None:
+                        return self._error("INVALID_REQUEST", "field_sha256 is required when offset is greater than zero")
+                    page = self.store.job_event_field_page_bounded(
+                        job_id, event_id, field, offset, limit,
+                        expected_sha256=expected_sha256,
+                    )
+                    if page is None:
+                        return self._error("EVENT_NOT_FOUND", "event not found for this job")
+                    data = {key: value for key, value in page.items() if key != "chunk"}
+                    data["chunk_base64"] = base64.b64encode(page["chunk"]).decode("ascii")
+                    return {"success": True, "data": data}
+            except JobEventFieldReadError as exc:
+                if not transaction_open:
+                    raise
+                return self._error(exc.code, str(exc), safe_retry=False)
+            except ValueError as exc:
+                if not transaction_open:
+                    raise
+                return self._error("INVALID_REQUEST", str(exc), safe_retry=False)
+            except Exception:
+                if not transaction_open:
+                    raise
+                return self._error(
+                    "EVENT_READ_INDETERMINATE",
+                    "raw event field page could not be read in one SQLite snapshot",
+                    safe_retry=False,
+                )
         if norm_op == "job_result_read":
             if not isinstance(job_id, str):
                 return self._error("NODE_NOT_FOUND", "job not found")

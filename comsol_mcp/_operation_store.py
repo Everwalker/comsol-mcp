@@ -28,8 +28,17 @@ TERMINAL = ("SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST")
 JOB_EVENT_SNAPSHOT_SCHEMA = "operation-store-job-event-snapshot/v1"
 JOB_EVENT_SNAPSHOT_PAGE_SIZE = 1000
 JOB_EVENT_SNAPSHOT_MAX_PAGES = 128
+# Preserve the existing raw-row bound. The complete public response has a
+# separate exact JSON-byte budget; supported writers check their actual event
+# and metadata against that response shape instead of imposing a worst-case
+# Unicode expansion ratio on every event.
+JOB_LOG_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
+_SQLITE_INT64_MAX = (1 << 63) - 1
+JOB_EVENT_MAX_ROW_BYTES = 4 * 1024 * 1024
 JOB_RESULT_READ_MAX_PAGE_BYTES = 64 * 1024
 _JOB_RESULT_READ_BLOCK_BYTES = 64 * 1024
+JOB_EVENT_FIELD_READ_MAX_BASE64_BYTES = 64 * 1024
+JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES = JOB_EVENT_FIELD_READ_MAX_BASE64_BYTES * 3 // 4
 METADATA_TABLES = {
     "sessions": "session_id",
     "runtimes": "runtime_id",
@@ -49,6 +58,64 @@ def _artifact_json_value(field: str) -> str:
     if field not in _ARTIFACT_SCOPE_JSON_FIELDS and field not in {"role", "classification"}:
         raise ValueError("unsupported artifact metadata field")
     return f"CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.{field}') END"
+
+
+def _insert_bounded_job_event(db: sqlite3.Connection, job_id: str, event: str,
+                              metadata: dict[str, Any] | str | None):
+    """Insert one event only when its complete public job.log row fits."""
+    if not isinstance(job_id, str) or not isinstance(event, str):
+        raise sqlite3.IntegrityError("job event job_id and event must be TEXT")
+    if metadata is None:
+        metadata_value, serialized_metadata = {}, "{}"
+    elif isinstance(metadata, str):
+        serialized_metadata = metadata
+        metadata_value = json.loads(serialized_metadata or "{}")
+    elif isinstance(metadata, dict):
+        serialized_metadata = json.dumps(metadata, sort_keys=True, allow_nan=False)
+        metadata_value = json.loads(serialized_metadata)
+    else:
+        raise TypeError("job event metadata must be an object")
+    if not isinstance(metadata_value, dict):
+        raise sqlite3.IntegrityError("job event metadata must be a JSON object")
+    try:
+        json.dumps(
+            metadata_value, ensure_ascii=False, sort_keys=True, allow_nan=False,
+        ).encode("utf-8")
+        raw_row_bytes = (
+            len(job_id.encode("utf-8")) + len(event.encode("utf-8"))
+            + len(serialized_metadata.encode("utf-8")) + 19
+        )
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise sqlite3.IntegrityError("job event is not readable UTF-8 JSON") from exc
+    if raw_row_bytes > JOB_EVENT_MAX_ROW_BYTES:
+        raise sqlite3.IntegrityError("job event row exceeds the bounded raw byte limit")
+
+    # Measure the same response the public dispatcher returns, including its
+    # additive next_cursor. Reserve the maximum SQLite row id and maximum
+    # reachable row offset so an admitted event fits at every valid position.
+    event_row = {
+        "id": _SQLITE_INT64_MAX,
+        "job_id": job_id,
+        "event": event,
+        "metadata": metadata_value,
+        "created_at": "9999-12-31 23:59:59",
+    }
+    response = {
+        "success": True,
+        "data": {
+            "job_id": job_id,
+            "events": [event_row],
+            "next_offset": _SQLITE_INT64_MAX,
+            "next_cursor": str(_SQLITE_INT64_MAX),
+        },
+    }
+    wire_bytes = len(json.dumps(response, allow_nan=False).encode("ascii"))
+    if wire_bytes > JOB_LOG_RESPONSE_MAX_BYTES:
+        raise sqlite3.IntegrityError("job event cannot fit one bounded job.log response")
+    return db.execute(
+        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+        (job_id, event, serialized_metadata),
+    )
 
 
 PROJECT_TABLE_COLUMNS = (
@@ -122,6 +189,12 @@ class JobCleanupError(RuntimeError):
 
 
 class JobResultReadError(RuntimeError):
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+class JobEventFieldReadError(RuntimeError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
@@ -248,6 +321,19 @@ class OperationStore:
                 "CREATE TABLE IF NOT EXISTS job_events("
                 "id INTEGER PRIMARY KEY AUTOINCREMENT,job_id TEXT,event TEXT,metadata TEXT,"
                 "created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            )
+            # Keep the historical 4 MiB raw-row rule, including its legacy
+            # NULL behavior, and use built-in SQLite expressions so old
+            # connections need no process-local UDF.
+            self.db.execute(
+                "CREATE TRIGGER IF NOT EXISTS job_events_job_log_bound_v1 "
+                "BEFORE INSERT ON job_events "
+                "WHEN COALESCE(length(CAST(NEW.job_id AS BLOB)),0) + "
+                "COALESCE(length(CAST(NEW.event AS BLOB)),0) + "
+                "COALESCE(length(CAST(NEW.metadata AS BLOB)),0) + "
+                "COALESCE(length(CAST(NEW.created_at AS BLOB)),0) > "
+                f"{JOB_EVENT_MAX_ROW_BYTES} "
+                "BEGIN SELECT RAISE(ABORT, 'job event row exceeds the bounded raw byte limit'); END"
             )
             for table, key_column in METADATA_TABLES.items():
                 revision = ",revision INTEGER NOT NULL" if table == "revisions" else ""
@@ -629,16 +715,15 @@ class OperationStore:
                          profile.sha256, plan_sha256, source_plan_sha256, source_receipt_sha256, phase,
                          authorization_ref_sha256, scope_digest, baseline_json, baseline_sha256),
                     )
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (job_id, "HostControlAdmissionCreated", json.dumps({
+                    self._insert_job_event(
+                        job_id, "HostControlAdmissionCreated", json.dumps({
                             "schema": "comsol-mcp.internal-host-control-admission-event/1",
                             "admission_id": admission_id, "phase": phase,
                             "profile_sha256": profile.sha256, "plan_sha256": plan_sha256,
                             "scope_sha256": scope_digest,
                             "authorization_ref_sha256": authorization_ref_sha256,
                             "baseline_sha256": baseline_sha256,
-                        }, sort_keys=True, separators=(",", ":"))),
+                        }, sort_keys=True, separators=(",", ":")),
                     )
                     self.db.execute("COMMIT")
                 except BaseException:
@@ -954,10 +1039,7 @@ class OperationStore:
                         "previous_sha256": previous, "event": event, "payload": payload,
                     }
                     record = {**body, "record_sha256": digest(body)}
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (row["job_id"], event_name, canonical(record)),
-                    )
+                    self._insert_job_event(row["job_id"], event_name, canonical(record))
                     updated = self.db.execute(
                         "UPDATE host_control_admissions SET state=?,updated_at=CURRENT_TIMESTAMP "
                         "WHERE admission_id=? AND state=?",
@@ -1364,10 +1446,7 @@ class OperationStore:
                         "previous_sha256": previous, "event": event, "payload": payload,
                     }
                     record = {**body, "record_sha256": digest(body)}
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (row["job_id"], event_name, canonical(record)),
-                    )
+                    self._insert_job_event(row["job_id"], event_name, canonical(record))
                     updated = self.db.execute(
                         "UPDATE host_control_admissions SET state=?,updated_at=CURRENT_TIMESTAMP "
                         "WHERE admission_id=? AND state=?",
@@ -1717,10 +1796,7 @@ class OperationStore:
                         "payload": payload,
                     }
                     record = {**body, "record_sha256": digest(body)}
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (row["job_id"], event_name, canonical(record)),
-                    )
+                    self._insert_job_event(row["job_id"], event_name, canonical(record))
                     event_row = self.db.execute(
                         "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id DESC LIMIT 1",
                         (row["job_id"], event_name),
@@ -1850,14 +1926,13 @@ class OperationStore:
                                 (_dumps_canonical(parent_job_metadata), source_job_id))
                 self.db.execute("UPDATE operations SET metadata=? WHERE operation_id=?",
                                 (_dumps_canonical(parent_operation_metadata), parent["operation_id"]))
-                self.db.execute(
-                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                    (source_job_id, "ResumeClaimed", _dumps_canonical({
+                self._insert_job_event(
+                    source_job_id, "ResumeClaimed", _dumps_canonical({
                         "child_job_id": child_job_id,
                         "child_operation_id": operation_id,
                         "request_hash": request_hash,
                         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                    })),
+                    }),
                 )
                 row = self.db.execute("SELECT * FROM operations WHERE operation_id=?", (operation_id,)).fetchone()
                 record = self._op(row)
@@ -1911,13 +1986,12 @@ class OperationStore:
                 # If already in a terminal state, DO NOT overwrite with another terminal state
                 # or nonterminal state! Record as a LateResultRecorded event instead.
                 if current_status in TERMINAL:
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'LateResultRecorded', ?)",
-                        (job_id, _dumps_canonical({
+                    self._insert_job_event(
+                        job_id, "LateResultRecorded", _dumps_canonical({
                             "prior_status": current_status,
                             "ignored_status": status,
                             "late_result": result,
-                        }))
+                        }),
                     )
                     self.db.execute("COMMIT")
                     return False, current_status
@@ -1986,9 +2060,8 @@ class OperationStore:
                     "UPDATE operations SET status='UNKNOWN',result=? WHERE operation_id=?",
                     (_dumps_canonical(result), operation_id),
                 )
-                self.db.execute(
-                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?, 'UNKNOWN', ?)",
-                    (job_id, _dumps_canonical({"operation_id": operation_id, "at": time.time()})),
+                self._insert_job_event(
+                    job_id, "UNKNOWN", _dumps_canonical({"operation_id": operation_id, "at": time.time()}),
                 )
                 self.db.execute("COMMIT")
                 return result
@@ -2011,6 +2084,153 @@ class OperationStore:
         with self.lock:
             row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
             return self._job(row) if row else None
+
+    def job_event_field_page_bounded(
+        self, job_id: str, event_id: int, field: str, offset: int, limit: int,
+        *, expected_sha256: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Read one exact raw legacy event field inside the caller's snapshot.
+
+        Only allowlisted columns are interpolated into SQL. The full field is
+        hashed through SQLite's incremental blob API when available. Without
+        it, SQLite returns bounded ``substr(CAST(column AS BLOB), ...)`` pieces
+        from this same authorized snapshot. Python-side raw staging is limited
+        to one 49,152-byte source piece and page-sized copies. SQLite may
+        materialize the full cast value in C for a substring call; this does
+        not bound SQLite allocations, process RSS, or the complete MCP frame.
+        Each page re-reads and re-hashes the full field, and each piece runs a
+        new SQL expression, so time may greatly exceed one linear pass.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        if type(event_id) is not int or event_id <= 0:
+            raise ValueError("event_id must be a positive integer")
+        if not isinstance(field, str) or field not in {"event", "metadata", "created_at"}:
+            raise ValueError("field is not an allowlisted job event column")
+        if type(offset) is not int or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        if type(limit) is not int or not 1 <= limit <= JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES:
+            raise ValueError("limit is outside the bounded event-field page size")
+        if expected_sha256 is not None and re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None:
+            raise ValueError("expected_sha256 must be a lowercase SHA-256 digest")
+        if offset > 0 and expected_sha256 is None:
+            raise ValueError("expected_sha256 is required after the first page")
+        with self.lock:
+            if not self.db.in_transaction:
+                raise ValueError("job_event_field_page_bounded requires an active project read snapshot")
+            rows = self.db.execute(
+                "SELECT e.rowid AS event_rowid,typeof(e." + field + ") AS storage_type,"
+                "length(CAST(e." + field + " AS BLOB)) AS byte_length,"
+                "j.status AS job_status,o.status AS operation_status "
+                "FROM job_events e JOIN jobs j ON j.job_id=e.job_id "
+                "JOIN operations o ON o.operation_id=j.operation_id "
+                "WHERE j.job_id=? AND e.job_id=j.job_id AND e.id=?",
+                (job_id, event_id),
+            ).fetchmany(2)
+            if not rows:
+                return None
+            if len(rows) != 1:
+                raise RuntimeError("exact job event cardinality is not one")
+            row = rows[0]
+            storage_type = row["storage_type"]
+            size = 0 if storage_type == "null" else row["byte_length"]
+            if type(size) is not int or size < 0:
+                raise RuntimeError("stored event field byte length is unavailable")
+            encoding_row = self.db.execute("PRAGMA encoding").fetchone()
+            database_encoding = encoding_row[0] if encoding_row else None
+            if storage_type not in {"null", "text", "blob"}:
+                raise JobEventFieldReadError(
+                    "EVENT_STORAGE_UNSUPPORTED",
+                    "the stored event field is neither SQL NULL, TEXT, nor BLOB",
+                )
+            if storage_type == "text" and size > 0 and database_encoding != "UTF-8":
+                raise JobEventFieldReadError(
+                    "EVENT_ENCODING_UNSUPPORTED",
+                    "raw TEXT event reads require a UTF-8 SQLite database encoding",
+                )
+
+            digest = hashlib.sha256()
+            page = bytearray()
+            if storage_type != "null" and size:
+                blobopen = getattr(self.db, "blobopen", None)
+                def consume(piece: bytes, position: int) -> None:
+                    digest.update(piece)
+                    start = max(0, offset - position)
+                    end = min(len(piece), offset + limit - position)
+                    if end > start:
+                        page.extend(piece[start:end])
+
+                if callable(blobopen):
+                    try:
+                        blob = blobopen("job_events", field, row["event_rowid"], readonly=True)
+                    except sqlite3.OperationalError as exc:
+                        raise JobEventFieldReadError(
+                            "EVENT_RAW_READ_UNSUPPORTED",
+                            "SQLite cannot expose this stored event field through read-only blobopen",
+                        ) from exc
+                    with blob:
+                        if len(blob) != size:
+                            raise RuntimeError("event field length changed inside its read snapshot")
+                        position = 0
+                        while position < size:
+                            piece = blob.read(min(JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES, size - position))
+                            if not isinstance(piece, bytes) or not piece:
+                                raise RuntimeError("incremental event-field read ended before the probed byte length")
+                            consume(piece, position)
+                            position += len(piece)
+                        if blob.read(1):
+                            raise RuntimeError("incremental event-field read exceeded the probed byte length")
+                else:
+                    # substr() is one-based for SQLite; its BLOB result keeps
+                    # NUL bytes and permits pages to split UTF-8 code points.
+                    # Bind both the byte offset and requested piece length.
+                    position = 0
+                    while position < size:
+                        piece_length = min(JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES, size - position)
+                        piece_row = self.db.execute(
+                            "SELECT substr(CAST(" + field + " AS BLOB), ?, ?) "
+                            "FROM job_events WHERE rowid=? AND job_id=?",
+                            (position + 1, piece_length, row["event_rowid"], job_id),
+                        ).fetchone()
+                        piece = piece_row[0] if piece_row is not None else None
+                        if not isinstance(piece, bytes) or len(piece) != piece_length:
+                            raise RuntimeError("SQLite substring read ended before the probed event-field byte length")
+                        consume(piece, position)
+                        position += len(piece)
+            value_sha256 = digest.hexdigest()
+            if expected_sha256 is not None and expected_sha256 != value_sha256:
+                raise JobEventFieldReadError(
+                    "EVENT_FIELD_CHANGED",
+                    "stored event field changed since the first page; no page bytes were returned",
+                )
+            if offset > size:
+                raise JobEventFieldReadError(
+                    "EVENT_OFFSET_OUT_OF_RANGE",
+                    "offset is greater than the stored event field byte length",
+                )
+            job_status = row["job_status"]
+            operation_status = row["operation_status"]
+            trusted_terminal_status = (
+                job_status if job_status == operation_status and job_status in TERMINAL else None
+            )
+            return {
+                "job_id": job_id,
+                "event_id": event_id,
+                "field": field,
+                "storage_type": storage_type,
+                "is_sql_null": storage_type == "null",
+                "database_encoding": database_encoding,
+                "byte_length": size,
+                "sha256": value_sha256,
+                "offset": offset,
+                "next_offset": offset + len(page),
+                "limit": limit,
+                "complete": offset + len(page) >= size,
+                "job_status": job_status,
+                "operation_status": operation_status,
+                "trusted_terminal_status": trusted_terminal_status,
+                "chunk": bytes(page),
+            }
 
     def job_result_metadata(self, job_id: str) -> dict[str, Any] | None:
         """Probe one job's stored-result identity and UTF-8 byte size.
@@ -2290,13 +2510,12 @@ class OperationStore:
                     # D03: Terminal state cannot be overwritten by any state (even another terminal state)
                     if current_status in TERMINAL:
                         if status != current_status:
-                            self.db.execute(
-                                "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'LateTransitionRejected', ?)",
-                                (job_id, _dumps_canonical({
+                            self._insert_job_event(
+                                job_id, "LateTransitionRejected", _dumps_canonical({
                                     "current_status": current_status,
                                     "rejected_status": status,
                                     "metadata": metadata,
-                                }))
+                                }),
                             )
                             self.db.execute("COMMIT")
                             return
@@ -2366,13 +2585,12 @@ class OperationStore:
 
                 # D03: Terminal state cannot be transitioned to another state
                 if current in TERMINAL and new_status != current:
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'LateTransitionRejected', ?)",
-                        (job_id, _dumps_canonical({
+                    self._insert_job_event(
+                        job_id, "LateTransitionRejected", _dumps_canonical({
                             "current_status": current,
                             "rejected_status": new_status,
                             "metadata": metadata,
-                        }))
+                        }),
                     )
                     self.db.execute("COMMIT")
                     return False, current, self._job(row)
@@ -2402,10 +2620,7 @@ class OperationStore:
                         (new_status, job_id, job_id, operation_id),
                     )
                 if event_name:
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (job_id, event_name, _dumps_canonical(event_meta or {})),
-                    )
+                    self._insert_job_event(job_id, event_name, _dumps_canonical(event_meta or {}))
                 self.db.execute("COMMIT")
                 updated = self.job(job_id)
                 return True, new_status, updated
@@ -2854,10 +3069,7 @@ class OperationStore:
                     "cancelled_while": "QUEUED",
                     "mode": "QUEUED_ABORT",
                 }, sort_keys=True)
-                self.db.execute(
-                    "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'CANCELLED', ?)",
-                    (job_id, event_meta),
-                )
+                self._insert_job_event(job_id, "CANCELLED", event_meta)
                 self.db.execute("COMMIT")
                 updated = self.job(job_id)
                 return True, "CANCELLED", updated
@@ -2991,15 +3203,14 @@ class OperationStore:
                     # can be observed.
                     self.db.execute("ROLLBACK")
                     return False, "STATE_MISMATCH"
-                self.db.execute(
-                    "INSERT INTO job_events(job_id, event, metadata) VALUES(?, 'CancelRequested', ?)",
-                    (job_id, _dumps_canonical({
+                self._insert_job_event(
+                    job_id, "CancelRequested", _dumps_canonical({
                         "reason": reason,
                         "mode": "UNSUPPORTED_NATIVE_CANCEL",
                         "cancel_accepted": True,
                         "engine_stopped": False,
                         "at": time.time(),
-                    })),
+                    }),
                 )
                 self.db.execute("COMMIT")
                 return True, "INTENT_RECORDED"
@@ -3008,12 +3219,13 @@ class OperationStore:
                     self.db.execute("ROLLBACK")
                 raise
 
+    def _insert_job_event(self, job_id: str, event: str,
+                          metadata: dict[str, Any] | str | None):
+        return _insert_bounded_job_event(self.db, job_id, event, metadata)
+
     def add_event(self, job_id: str, event: str, metadata: dict[str, Any] | None = None) -> None:
         with self.lock:
-            self.db.execute(
-                "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                (job_id, event, json.dumps(metadata or {}, sort_keys=True)),
-            )
+            self._insert_job_event(job_id, event, metadata)
 
     def session_recovery_resolution(self, job_id: str) -> dict[str, Any] | None:
         """Return the first immutable recovery resolution event for one job."""
@@ -3270,9 +3482,8 @@ class OperationStore:
                             self.db.execute("ROLLBACK")
                             return {"updated": False, "reason": "STARTUP_OBSERVATION_BINDING_MISMATCH", "job": None}
                         startup_observations.append({"id": int(startup_row["id"]), "metadata": startup_metadata})
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (job_id, "SessionStartInterruptedUnknown", _dumps_canonical({
+                    self._insert_job_event(
+                        job_id, "SessionStartInterruptedUnknown", _dumps_canonical({
                             "schema_version": 1,
                             "job_id": job_id,
                             "operation_id": operation_id,
@@ -3293,7 +3504,7 @@ class OperationStore:
                             "server_birth_observed": "UNKNOWN",
                             "server_exit_code_observed": "UNKNOWN",
                             "replayed": False,
-                        })),
+                        }),
                     )
                 self.db.execute("COMMIT")
                 return {"updated": changed, "reason": None,
@@ -3698,9 +3909,8 @@ class OperationStore:
                 }
                 digest = session_recovery_evidence_sha256(event_evidence)
                 event_metadata = {**event_evidence, "evidence_sha256": digest}
-                cursor = self.db.execute(
-                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                    (job_id, "SessionLifecycleRecoveryResolution", _dumps_canonical(event_metadata)),
+                cursor = self._insert_job_event(
+                    job_id, "SessionLifecycleRecoveryResolution", _dumps_canonical(event_metadata),
                 )
                 session_metadata = dict(session_metadata)
                 session_metadata["lifecycle"] = updated
@@ -3991,9 +4201,8 @@ class OperationStore:
                 }
                 digest = session_recovery_evidence_sha256(event_evidence)
                 event_metadata = {**event_evidence, "evidence_sha256": digest}
-                cursor = self.db.execute(
-                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                    (job_id, "SessionLifecycleRecoveryResolution", _dumps_canonical(event_metadata)),
+                cursor = self._insert_job_event(
+                    job_id, "SessionLifecycleRecoveryResolution", _dumps_canonical(event_metadata),
                 )
                 session_metadata["lifecycle"] = updated
                 self.db.execute(
@@ -4084,9 +4293,8 @@ class OperationStore:
                         "source_operation_status": row["operation_status"],
                         "resolution": None,
                     }
-                cursor = self.db.execute(
-                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                    (job_id, "SessionRecoveryResolution", _dumps_canonical(event_metadata)),
+                cursor = self._insert_job_event(
+                    job_id, "SessionRecoveryResolution", _dumps_canonical(event_metadata),
                 )
                 indexed = {
                     "event_id": int(cursor.lastrowid),
@@ -4141,42 +4349,31 @@ class OperationStore:
         Rows are read only for exactly this ``job_id`` in ``ORDER BY id``
         order over the selected ``offset``/``limit`` window. Each candidate
         is first probed with scalar ``length(CAST(field AS BLOB))`` values
-        for every returnable text column (``job_id``, ``event``,
-        ``metadata``, ``created_at``) so an oversized row is never
-        materialized into Python first. A NULL length for one of those
-        columns is counted as 0 bytes in the pre-check, matching the legacy
-        ``events`` leniency (``metadata`` NULL or empty parses to ``{}`` via
-        ``json.loads(value or "{}")``; ``event``/``created_at`` NULL pass
-        through unchanged as JSON null) — the pre-check never refuses merely
-        because such a length is NULL. Only structural problems refuse the
-        call outright: a NULL or non-integer event id in the probe, or a
-        fetched row that no longer matches the requested ``job_id`` and
-        exact id. If the next row's raw text total already exceeds
-        ``max_response_bytes``, return the preceding nonempty page without
-        fetching that row; when it is the first row, raise ``ValueError``.
-        Continuation thus reaches the oversized row without silently skipping it.
+        for every returnable text column, so an oversized legacy row is not
+        materialized into Python before its size is known. New writes keep the
+        existing 4 MiB raw-row limit and are admitted only when their exact
+        one-event ``job.log`` response fits. A legacy row above the raw bound,
+        with unreadable metadata, or whose exact JSON event cannot fit is
+        returned as an explicit ``event_gap`` marker. The marker has the
+        original row id, ``complete: false``, a reason and a known stored row
+        byte count. If its event name is terminal, ``terminal_event`` preserves
+        that status label while clearly marking the rest of the row incomplete.
+        SQL NULL fields retain the old ``events()`` read behavior rather than
+        becoming gaps. The caller's ``offset + len(events)`` advances by
+        exactly one source row for a gap, while the retained database row is
+        unchanged.
 
-        Only rows passing that probe are then fetched by their exact id, and
-        ``metadata`` is decoded leniently exactly as ``events`` does, via
-        ``json.loads(value or "{}")``, preserving column and id order.
-        Budget accounting matches the actual JSON response: each row's
-        ``json.dumps(..., allow_nan=False)`` encoding (with the default
-        ``ensure_ascii=True`` escapes) is accumulated row by row, including
-        the ``", "`` separators, the dynamic ``next_offset`` digits, and a
-        reservation for the canonical response envelope ``{"success": true,
-        "data": {"job_id", "events", "next_offset", "next_cursor"}}`` (the
-        canonical envelope appends ``next_cursor`` as the decimal form of
-        ``next_offset`` and the legacy envelope never carries more). Even an
-        empty page must fit its complete reserved envelope. The full page is
-        never materialized before budgeting. If the next row's encoding no
-        longer fits: with rows already accumulated the page is returned short
-        and the next offset
-        stays continuous at ``offset + len(page)``; as the very first row it
-        raises ``ValueError`` — never an empty success and never a skip.
-        Malformed metadata JSON, non-finite numbers (refused by
-        ``allow_nan=False``), and SQLite errors propagate as plain
-        exceptions for the daemon to map into concise refusals; no row
-        content is echoed and nothing is printed.
+        Only rows under the existing raw-row bound are fetched by their exact id, and
+        ``metadata`` is decoded with ``json.loads(value or "{}")``. Budget
+        accounting uses the complete public ``job.log`` response, including
+        the dispatcher's ``next_cursor``: each row's default-ASCII
+        ``json.dumps(..., allow_nan=False)`` bytes, separators, and the exact
+        dynamic ``next_offset`` are counted. Even an empty page must fit its
+        complete envelope. If a normal row would exceed the budget after
+        preceding rows, the page ends before it; on the next call it becomes
+        an explicit gap marker instead of a permanently stuck offset. SQLite
+        identity failures and SQLite errors still propagate; no row payload
+        is echoed into an error.
 
         The byte bound caps only this method's Python-side allocation and is
         an engineering bound: SQLite's internal C allocations, process RSS,
@@ -4207,6 +4404,20 @@ class OperationStore:
                 },
             })
 
+        def _gap_marker(event_id: int, row_bytes: int, reason: str,
+                        terminal_event: Any = None) -> dict[str, Any]:
+            marker = {
+                "record_type": "event_gap",
+                "id": event_id,
+                "job_id": job_id,
+                "complete": False,
+                "reason": reason,
+                "stored_row_bytes": row_bytes,
+            }
+            if terminal_event in TERMINAL:
+                marker["terminal_event"] = terminal_event
+            return marker
+
         with self.lock:
             if not self.db.in_transaction:
                 raise ValueError(
@@ -4215,7 +4426,9 @@ class OperationStore:
             if len(job_id) > max_response_bytes or _empty_envelope_bytes(offset) > max_response_bytes:
                 raise ValueError("empty job event page exceeds the response byte budget")
             probes = self.db.execute(
-                "SELECT id,length(CAST(job_id AS BLOB)) AS job_id_bytes,"
+                "SELECT id,CASE WHEN event IN ('SUCCEEDED','FAILED','EXPIRED','LOST','CANCELLED') "
+                "THEN event END AS terminal_event,"
+                "length(CAST(job_id AS BLOB)) AS job_id_bytes,"
                 "length(CAST(event AS BLOB)) AS event_bytes,"
                 "length(CAST(metadata AS BLOB)) AS metadata_bytes,"
                 "length(CAST(created_at AS BLOB)) AS created_at_bytes "
@@ -4232,17 +4445,31 @@ class OperationStore:
                 raw_bytes = 0
                 for column in ("job_id_bytes", "event_bytes",
                                "metadata_bytes", "created_at_bytes"):
-                    # A NULL length means a SQL NULL value; the legacy
-                    # events() path still returns such a row, so count 0.
                     if probe[column] is not None:
                         raw_bytes += int(probe[column])
-                if raw_bytes > max_response_bytes:
-                    if page:
-                        break
-                    raise ValueError(
-                        "job event row exceeds the response byte budget"
-                    )
                 event_id = int(probe["id"])
+                gap_reason = None
+                if raw_bytes > JOB_EVENT_MAX_ROW_BYTES:
+                    gap_reason = "legacy_row_exceeds_raw_row_bound"
+                elif raw_bytes > max_response_bytes:
+                    gap_reason = "row_exceeds_response_budget"
+                if gap_reason is not None:
+                    item = _gap_marker(
+                        event_id, raw_bytes, gap_reason, probe["terminal_event"],
+                    )
+                    encoded = _wire_bytes(item)
+                    count = len(page) + 1
+                    projected = (
+                        _empty_envelope_bytes(offset + count) + row_bytes + encoded
+                        + (2 * (count - 1))
+                    )
+                    if projected > max_response_bytes:
+                        if page:
+                            break
+                        raise ValueError("event gap marker exceeds the response byte budget")
+                    page.append(item)
+                    row_bytes += encoded
+                    continue
                 row = self.db.execute(
                     "SELECT id,job_id,event,metadata,created_at FROM job_events "
                     "WHERE job_id=? AND id=?",
@@ -4255,18 +4482,36 @@ class OperationStore:
                         "the requested job and exact id"
                     )
                 item = dict(row)
-                item["metadata"] = json.loads(item["metadata"] or "{}")
-                encoded = _wire_bytes(item)
+                try:
+                    item["metadata"] = json.loads(item["metadata"] or "{}")
+                    # solver.fold hashes the canonical UTF-8 event form. Check
+                    # that same representation here so escaped lone surrogates
+                    # are not presented as complete job.log events.
+                    json.dumps(
+                        item, ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":"), allow_nan=False,
+                    ).encode("utf-8")
+                    encoded = _wire_bytes(item)
+                except (TypeError, UnicodeError, ValueError):
+                    item = _gap_marker(
+                        event_id, raw_bytes, "legacy_metadata_not_readable",
+                        probe["terminal_event"],
+                    )
+                    encoded = _wire_bytes(item)
                 count = len(page) + 1
                 envelope = _empty_envelope_bytes(offset + count)
                 projected = envelope + row_bytes + encoded + (2 * (count - 1))
                 if projected > max_response_bytes:
-                    if not page:
-                        raise ValueError(
-                            "first job event row alone does not fit the "
-                            "response byte budget"
-                        )
-                    break
+                    if page:
+                        break
+                    item = _gap_marker(
+                        event_id, raw_bytes, "row_exceeds_response_budget",
+                        probe["terminal_event"],
+                    )
+                    encoded = _wire_bytes(item)
+                    projected = envelope + encoded
+                    if projected > max_response_bytes:
+                        raise ValueError("event gap marker exceeds the response byte budget")
                 page.append(item)
                 row_bytes += encoded
             return page
@@ -5003,14 +5248,13 @@ class OperationStore:
                         "UPDATE jobs SET metadata=? WHERE job_id=?",
                         (_dumps_canonical(compacted), row["job_id"]),
                     )
-                    self.db.execute(
-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                        (row["job_id"], "JobCacheCompacted", _dumps_canonical({
+                    self._insert_job_event(
+                        row["job_id"], "JobCacheCompacted", _dumps_canonical({
                             "operation_id": row["operation_id"],
                             "terminal_status": row["status"],
                             "preserved": compacted["cleanup"]["preserved"],
                             "at": cleaned_at,
-                        })),
+                        }),
                     )
                     cleaned.append(row["job_id"])
                 self.db.execute("COMMIT")

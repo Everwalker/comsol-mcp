@@ -906,8 +906,7 @@ def _reserve_memory_in_transaction(*, store: Any, authority: Any, job_id: str,
         "hard_cap_state": admission.hard_cap_state,
     }
     from ._w26_os_resources import _canonical_json
-    store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                     (job_id, MEMORY_RESERVATION_EVENT, _canonical_json(item)))
+    store._insert_job_event(job_id, MEMORY_RESERVATION_EVENT, _canonical_json(item))
     return {"status": "RESERVED", "reservation_id": reservation_id,
             "requested_bytes": admission.requested_bytes, "available_bytes": admission.available_bytes,
             "memory_resource_profile_id": profile.profile_id,
@@ -1082,8 +1081,7 @@ class MemoryResourceCoordinator:
                 released = dict(item)
                 released["status"] = "RELEASED"
                 from ._w26_os_resources import _canonical_json
-                self.store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                                      (job_id, MEMORY_RESERVATION_EVENT, _canonical_json(released)))
+                self.store._insert_job_event(job_id, MEMORY_RESERVATION_EVENT, _canonical_json(released))
                 self.store.db.execute("COMMIT")
             except BaseException:
                 if self.store.db.in_transaction:

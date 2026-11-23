@@ -1,6 +1,8 @@
 """Persistent execution status tools; these never need an idle COMSOL server."""
 from __future__ import annotations
 
+from typing import Literal
+
 from comsol_mcp._control_client import dispatch
 from comsol_mcp._execution_contract import ExecutionContractError
 
@@ -60,6 +62,23 @@ def job_result_read(
     return dispatch("job_result_read", arguments, {})
 
 
+def job_log_event_read(
+    job_id: str, event_id: int, field: Literal["event", "metadata", "created_at"],
+    offset: int = 0, limit: int = 49152, field_sha256: str | None = None,
+) -> dict:
+    """Read one bounded page of an original persisted job-event field."""
+    arguments = {
+        "job_id": job_id,
+        "event_id": event_id,
+        "field": field,
+        "offset": offset,
+        "limit": limit,
+    }
+    if field_sha256 is not None:
+        arguments["field_sha256"] = field_sha256
+    return dispatch("job_log_event_read", arguments, {})
+
+
 def job_wait(job_id: str, timeout_s: float | None = 30.0, poll_interval_s: float = 0.05) -> dict:
     """Wait for a job to reach a terminal state without blocking the engine queue."""
     return dispatch("job_wait", {"job_id": job_id, "timeout_s": timeout_s, "poll_interval_s": poll_interval_s}, {})
@@ -88,7 +107,7 @@ def job_reconcile(job_id: str) -> dict:
 def register(registry) -> None:
     for function in (
         session_health, model_inspect, model_adopt,
-        job_list, job_status, job_log, job_result, job_result_read,
+        job_list, job_status, job_log, job_log_event_read, job_result, job_result_read,
         job_wait, job_cancel, job_reconcile,
     ):
         registry.add_tool(function)

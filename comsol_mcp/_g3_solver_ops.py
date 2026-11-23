@@ -21,7 +21,7 @@ from ._g2_engine import _call, property_set
 from ._g3_common import bound_model, call_probe, node_type, tag_list, validate_tag
 from ._g3_results import dataset_solution_indices, result_at_points
 from ._job_project_scope import consistent_project_id
-from ._operation_store import TERMINAL
+from ._operation_store import JOB_EVENT_MAX_ROW_BYTES, TERMINAL
 
 
 SOLUTION_FIELDS = frozenset({"dataset", "solution", "inner", "outer", "time", "frequency", "parameters"})
@@ -36,7 +36,7 @@ _MAX_CURSOR_CHARS = 4096
 # full-memory bound: the fold and the bounded result projection bound
 # Python-side admission and retention, but the unbounded stored-document
 # scan, SQLite C allocations and process memory remain outside them.
-_MAX_LOG_EVENT_ROW_BYTES = 4 * 1024 * 1024      # admitted SQLite text bytes per event row
+_MAX_LOG_EVENT_ROW_BYTES = JOB_EVENT_MAX_ROW_BYTES  # shared with the SQLite insert boundary
 _MAX_LOG_PAGE_JSON_BYTES = 8 * 1024 * 1024      # selected page event canonical JSON bytes
 _MAX_LOG_PROGRESS_JSON_BYTES = 4 * 1024 * 1024  # buffered progress-evidence canonical JSON bytes
 # max_error_bytes admission ceiling handed to the bounded

@@ -66,6 +66,26 @@ class SessionConnectFailure(RuntimeError):
         self.runtime_metadata = dict(runtime_metadata) if isinstance(runtime_metadata, Mapping) else None
 
 
+_EXTERNAL_EXECUTING_LEGACY_OPERATIONS = frozenset({
+    "evaluate_expressions", "get_core_metrics", "run_feature", "run_study",
+    "run_study_async", "run_visible_main_iteration", "runtime_poc_v64",
+})
+_EXTERNAL_EXECUTING_G3_OPERATIONS = frozenset({"metric.evaluate", "model.rebuild_target"})
+_EXTERNAL_EXECUTION_FUNCTION_TYPES = frozenset({"External", "MATLAB"})
+_EXTERNAL_EVALUATOR_METHODS = frozenset({"evaluate", "evaluateComplex", "evaluateUnit"})
+_EXTERNAL_G3_READBACK_EVALUATORS = frozenset({
+    "parameter.list", "parameter.get", "parameter.set", "variable.list", "variable.get",
+})
+_EXTERNAL_SAFE_GEOMETRY_EVALUATIONS = frozenset({
+    "selection.measure", "selection.query_spatial", "selection.validate",
+})
+_EXTERNAL_G3_OPERATION_DOMAINS = frozenset({
+    "dataset", "definition", "experiment", "export", "function", "geometry", "material",
+    "mesh", "optimization", "parameter", "physics", "plot", "result", "selection",
+    "solver", "stage", "study", "validate", "variable",
+})
+
+
 @dataclass(frozen=True)
 class _RuntimeObservationBinding:
     """Original attach context; never populated from an operation argument."""
@@ -1449,6 +1469,10 @@ class ManagedBackend:
                 bound_model = self.worker.client().model(ref.model_tag)
                 _set_current_model(bound_model, origin="bound-request")
             actual = {"run_study_async": "run_study", "start_visible_main_workflow_async": "start_visible_main_workflow"}.get(operation, operation)
+            self._require_external_execution_authority(
+                actual, arguments, model_tag=ref.model_tag if ref is not None else None,
+                project_id=execution.get("project_id"),
+            )
             # Validate configured paths too, not only paths present in this request.
             # A pathless model_create does not consume either workflow path.
             if self.worker is not None and actual != "model_create":
@@ -1575,6 +1599,230 @@ class ManagedBackend:
             return permissions[str(effect).upper()]
         except KeyError as exc:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified nested G2 effect: {effect!r}") from exc
+
+    @staticmethod
+    def _external_execution_required(operation: str, arguments: Mapping[str, Any],
+                                     *, resolved_effect: str | None = None) -> bool:
+        """Whether this route can ask COMSOL to evaluate an expression or solve.
+
+        Model loading, function path setters, and ordinary function/node
+        creation are outside this route-level gate. Their native initialization
+        behavior is not established by the available evidence.
+        """
+        if operation in _EXTERNAL_EXECUTING_LEGACY_OPERATIONS:
+            return True
+        if operation in _EXTERNAL_EXECUTING_G3_OPERATIONS:
+            return True
+        if operation == "api.invoke":
+            method = arguments.get("method")
+            return (isinstance(method, str) and method in _EXTERNAL_EVALUATOR_METHODS) or (
+                str(resolved_effect or "").casefold() == "compute"
+            )
+        if operation in {"plot.render", "result.field_export"}:
+            return True
+        if operation in _EXTERNAL_G3_READBACK_EVALUATORS:
+            return True
+        if operation == "result.numerical_manage":
+            return arguments.get("action") in {"run", "evaluate"}
+        if operation.split(".", 1)[0] not in _EXTERNAL_G3_OPERATION_DOMAINS:
+            return False
+        from ._g3_ops import EFFECTS
+        effect = str(EFFECTS.get(operation, "")).upper()
+        return effect in {"EVALUATE", "COMPUTE"} and operation not in _EXTERNAL_SAFE_GEOMETRY_EVALUATIONS
+
+    def _external_function_present(self, model_tag: str) -> bool:
+        """Inventory model functions that can execute code in an external process."""
+        from ._g2_engine import _call
+        from ._g3_common import bound_model, collection_spec, tag_list
+
+        model = bound_model(self.worker, model_tag)
+        function_spec = collection_spec("func")
+        scopes = [(model, _call(model, "func"))]
+        component_list = _call(model, "component")
+        component_tags = _call(component_list, "tags")
+        if (not isinstance(component_tags, (list, tuple))
+                or any(not isinstance(tag, str) or not tag for tag in component_tags)):
+            raise ExecutionContractError("EXTERNAL_INVENTORY_UNKNOWN",
+                                         "component tags are unavailable or malformed")
+        for component_tag in component_tags:
+            component = _call(model, "component", component_tag)
+            scopes.append((component, _call(component, "func")))
+
+        for parent, functions in scopes:
+            for function_tag in tag_list(functions, function_spec):
+                function_node = _call(parent, "func", function_tag)
+                type_id = _call(function_node, "getType")
+                if type_id is None or not str(type_id):
+                    raise ExecutionContractError("EXTERNAL_INVENTORY_UNKNOWN",
+                                                 "a function type could not be read")
+                if str(type_id) in _EXTERNAL_EXECUTION_FUNCTION_TYPES:
+                    return True
+        return False
+
+    @staticmethod
+    def _external_inventory_unknown_error(operation: str,
+                                          exc: BaseException) -> ExecutionContractError | None:
+        """Normalize only a structured UNKNOWN from this explicit cause chain."""
+        from ._g2_engine import _worker_failure_unknown
+
+        if not _worker_failure_unknown(exc):
+            return None
+
+        chain: list[BaseException] = []
+        seen: set[int] = set()
+        cause: BaseException | None = exc
+        while cause is not None and id(cause) not in seen:
+            seen.add(id(cause))
+            chain.append(cause)
+            cause = cause.__cause__
+
+        def structured_sources(candidate: BaseException) -> list[Mapping[str, Any]]:
+            sources: list[Mapping[str, Any]] = []
+            for name in ("reply", "failure", "details"):
+                value = getattr(candidate, name, None)
+                if isinstance(value, Mapping):
+                    sources.append(value)
+                    nested_failure = value.get("failure")
+                    if isinstance(nested_failure, Mapping):
+                        sources.append(nested_failure)
+            return sources
+
+        def signals_unknown(candidate: BaseException) -> bool:
+            if (getattr(candidate, "code", None) == "EXECUTION_STATE_UNKNOWN"
+                    or getattr(candidate, "execution_state_unknown", None) is True):
+                return True
+            return any(
+                source.get("execution_state_unknown") is True
+                or source.get("engine_state_unknown") is True
+                or source.get("code") == "EXECUTION_STATE_UNKNOWN"
+                for source in structured_sources(candidate)
+            )
+
+        # Prefer the deepest explicit structured signal. Outer wrappers may
+        # carry unrelated request-like details; only the signal owner can
+        # supply Worker identity and transport metadata.
+        owner = next((candidate for candidate in reversed(chain)
+                      if signals_unknown(candidate)), exc)
+        sources = structured_sources(owner)
+        details: dict[str, Any] = {
+            "operation_id": operation,
+            "external_inventory": "UNKNOWN",
+            "cause_type": type(exc).__name__,
+        }
+        cause_code = getattr(exc, "code", None)
+        if isinstance(cause_code, str):
+            details["cause_code"] = cause_code
+        for source in sources:
+            for key in ("request_id", "transport_stage", "errno"):
+                if key in details or key not in source:
+                    continue
+                value = source[key]
+                if key in {"request_id", "transport_stage"}:
+                    if isinstance(value, str) and value:
+                        details[key] = value
+                elif type(value) in (int, str):
+                    details[key] = value
+        owner_errno = getattr(owner, "errno", None)
+        if "errno" not in details and type(owner_errno) in (int, str):
+            details["errno"] = owner_errno
+
+        stage = getattr(owner, "stage", None)
+        if not isinstance(stage, str) or not stage:
+            stage = next((value for source in sources
+                          for key in ("stage", "execution_stage", "dispatch_stage")
+                          if isinstance((value := source.get(key)), str) and value), None)
+        if not isinstance(stage, str) or not stage:
+            stage = "post_dispatch"
+        return ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            "External function inventory Worker request is UNKNOWN; target operation was not dispatched",
+            safe_retry=False, details=details, stage=stage,
+        )
+
+    def _require_external_execution_authority(self, operation: str,
+                                              arguments: Mapping[str, Any], *,
+                                              model_tag: str | None,
+                                              project_id: Any,
+                                              resolved_effect: str | None = None) -> None:
+        """Require project trusted_code when the bound model has external-code functions."""
+        if not self._external_execution_required(
+                operation, arguments, resolved_effect=resolved_effect):
+            return
+
+        ledger = getattr(getattr(self, "service", None), "ledger", None)
+        permissions = getattr(ledger, "permissions", ())
+        authorizer = getattr(self, "project_authorizer", None)
+        if (isinstance(permissions, (set, frozenset)) and "trusted_code" in permissions
+                and isinstance(project_id, str) and project_id
+                and callable(authorizer)):
+            try:
+                authorizer(project_id, "trusted_code")
+                return
+            except ExecutionContractError as exc:
+                if exc.code != "PERMISSION_DENIED":
+                    raise
+            except Exception as exc:
+                raise ExecutionContractError(
+                    "PERMISSION_STATE_UNKNOWN",
+                    "project trusted_code authority could not be checked",
+                    stage="validation",
+                    details={"operation_id": operation, "cause_type": type(exc).__name__},
+                ) from exc
+
+        if not isinstance(model_tag, str) or not model_tag:
+            try:
+                from ._server import session_server as srv
+                current = getattr(srv, "_current_model", None)
+                for receiver in (current, getattr(current, "java", None)):
+                    if receiver is None:
+                        continue
+                    tag_value = getattr(receiver, "tag", None)
+                    if callable(tag_value):
+                        tag_value = tag_value()
+                    if isinstance(tag_value, str) and tag_value:
+                        model_tag = tag_value
+                        break
+            except Exception as exc:
+                unknown = self._external_inventory_unknown_error(operation, exc)
+                if unknown is not None:
+                    raise unknown from None
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED",
+                    "External function inventory is unavailable; trusted_code is required before dispatch",
+                    stage="validation",
+                    details={"operation_id": operation, "external_inventory": "UNKNOWN",
+                             "cause_type": type(exc).__name__},
+                ) from exc
+        if not isinstance(model_tag, str) or not model_tag:
+            raise ExecutionContractError(
+                "PERMISSION_DENIED",
+                "External function inventory is unavailable; trusted_code is required before dispatch",
+                stage="validation",
+                details={"operation_id": operation, "external_inventory": "UNKNOWN"},
+            )
+        try:
+            external_present = self._external_function_present(model_tag)
+        except Exception as exc:
+            unknown = self._external_inventory_unknown_error(operation, exc)
+            if unknown is not None:
+                raise unknown from None
+            cause_code = getattr(exc, "code", None)
+            raise ExecutionContractError(
+                "PERMISSION_DENIED",
+                "External function inventory is incomplete; trusted_code is required before expression or solve dispatch",
+                stage="validation",
+                details={"operation_id": operation, "external_inventory": "UNKNOWN",
+                         "cause_type": type(exc).__name__,
+                         **({"cause_code": cause_code} if isinstance(cause_code, str) else {})},
+            ) from exc
+        if external_present:
+            raise ExecutionContractError(
+                "PERMISSION_DENIED",
+                "the model contains an External or MATLAB function; this operation requires current project trusted_code authority",
+                stage="validation",
+                details={"operation_id": operation, "external_inventory": "EXTERNAL_PRESENT",
+                         "required_permission": "trusted_code"},
+            )
 
     def _bind_runtime_observation_context(self, *, installation_root, runtime_id,
                                           worker_instance_id, connection_epoch,
@@ -2484,6 +2732,13 @@ class ManagedBackend:
             elif operation in NODE_ACTIONS:
                 prepared_a = prepare_node_action(self.worker, ref.model_tag, operation, body, model_revision=bound_revision)
 
+        if operation == "api.invoke":
+            self._require_external_execution_authority(
+                operation, body, model_tag=ref.model_tag if ref is not None else None,
+                project_id=execution.get("project_id"),
+                resolved_effect=prepared_a.get("effect") if isinstance(prepared_a, Mapping) else None,
+            )
+
         if operation == "model.inspect":
             required_permission = "project_write" if refresh_model_inspection else "inspect"
             if required_permission not in self.service.ledger.permissions:
@@ -3233,6 +3488,10 @@ class ManagedBackend:
         effect = _G3_EFFECT_MAP.get(catalog_effect)
         if effect is None:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
+        self._require_external_execution_authority(
+            operation, body, model_tag=ref.model_tag if ref is not None else None,
+            project_id=execution.get("project_id"),
+        )
         isolation = (
             self._require_g2_isolation()
             if ((operation in REQUIRES_ISOLATION

@@ -3,7 +3,7 @@
   "status": "DESIGN_NOT_IMPLEMENTED",
   "baseline_commit": "ccca65aa8277d1205c5de5fb6221e460aca5997a",
   "date": "2026-09-18",
-  "operation_count": 273,
+  "operation_count": 274,
   "scope_note": "This is a logical action catalog. An operation with action/type_id is not a claim that every COMSOL feature is already supported. Product/version/OS capability and integration tests remain mandatory. Generated input schemas provide top-level contract; each feature/subaction must add discriminated semantic validation before release.",
   "operations": [
     {
@@ -11234,6 +11234,68 @@
           "job_id",
           "events"
         ]
+      }
+    },
+    {
+      "operation_id": "job.log.event.read",
+      "mcp_tool_name": "job_log_event_read",
+      "domain": "job",
+      "purpose": "按有界字节页读取持久化历史事件的原始字段",
+      "arguments_signature": "job_id:str,event_id:int,field:event|metadata|created_at,offset:int?,limit:int?,field_sha256:str?",
+      "effect": "READ",
+      "scope": "project",
+      "gate": "G3",
+      "implementation_status": "IMPLEMENTED",
+      "route": "control plane",
+      "capability_requirements": "project-authorized SQLite store",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.log.event.read input",
+        "type": "object",
+        "properties": {
+          "job_id": {"type": "string", "minLength": 1},
+          "event_id": {"type": "integer", "minimum": 1},
+          "field": {"type": "string", "enum": ["event", "metadata", "created_at"]},
+          "offset": {"type": "integer", "minimum": 0},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 49152},
+          "field_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "required": ["job_id", "event_id", "field"],
+        "allOf": [
+          {
+            "if": {"properties": {"offset": {"minimum": 1}}, "required": ["offset"]},
+            "then": {"required": ["field_sha256"]}
+          }
+        ],
+        "additionalProperties": false
+      },
+      "output_contract": "ActionResult containing at most 65536 base64 bytes, raw field length, storage class, and complete SHA-256",
+      "required_tests": ["schema_valid", "normal_path", "failure_is_truthful"],
+      "notes": "The daemon authorizes project inspect and binds the exact job/project snapshot before event lookup. SQL NULL is returned as storage_type=null and is_sql_null=true; a missing event is EVENT_NOT_FOUND. Continuation pages require field_sha256 from the first page and changed content returns no bytes. Terminal status is reported only when durable job and operation statuses agree; event labels and job.log gaps never certify it. Raw access requires SQLite blobopen; runtimes without exact incremental access return EVENT_RAW_READ_UNSUPPORTED, and non-empty TEXT in non-UTF-8 databases returns EVENT_ENCODING_UNSUPPORTED.",
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "job.log.event.read output",
+        "type": "object",
+        "properties": {
+          "job_id": {"type": "string"},
+          "event_id": {"type": "integer"},
+          "field": {"type": "string", "enum": ["event", "metadata", "created_at"]},
+          "storage_type": {"type": "string", "enum": ["null", "text", "blob"]},
+          "is_sql_null": {"type": "boolean"},
+          "database_encoding": {"type": ["string", "null"]},
+          "byte_length": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "offset": {"type": "integer", "minimum": 0},
+          "next_offset": {"type": "integer", "minimum": 0},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 49152},
+          "complete": {"type": "boolean"},
+          "job_status": {"type": "string"},
+          "operation_status": {"type": "string"},
+          "trusted_terminal_status": {"type": ["string", "null"]},
+          "chunk_base64": {"type": "string", "contentEncoding": "base64"}
+        },
+        "required": ["job_id", "event_id", "field", "storage_type", "is_sql_null", "database_encoding", "byte_length", "sha256", "offset", "next_offset", "limit", "complete", "job_status", "operation_status", "trusted_terminal_status", "chunk_base64"],
+        "additionalProperties": false
       }
     },
     {

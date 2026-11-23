@@ -2429,8 +2429,7 @@ def append_host_control_journal(store: Any, authority: Any, profile: HostResourc
                 record = {**body, "sequence": len(existing),
                           "previous_sha256": existing[-1]["record_sha256"] if existing else "0" * 64}
                 record["record_sha256"] = _sha256(record)
-                store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                                 (job_id, HOST_CONTROL_JOURNAL_EVENT, _canonical_json(record)))
+                store._insert_job_event(job_id, HOST_CONTROL_JOURNAL_EVENT, _canonical_json(record))
                 cursor = store.db.execute("SELECT last_insert_rowid()")
                 row_id = int(cursor.fetchone()[0])
                 store.db.execute("COMMIT")
@@ -3009,8 +3008,7 @@ def _reserve_disk_for_job_in_transaction(*, store: Any, authority: Any,
             "quota_id": observation.quota_id, "requested_bytes": requested_bytes,
             "observation_sha256": admission.observation_sha256,
             "enforcement": admission.enforcement, "at_monotonic_ns": now_monotonic_ns}
-    store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                     (job_id, "W26DiskReservation", _canonical_json(item)))
+    store._insert_job_event(job_id, "W26DiskReservation", _canonical_json(item))
     return {"status": "RESERVED", "reservation_id": reservation_id,
             "requested_bytes": requested_bytes, "scope_id": admission.scope_id,
             "enforcement": admission.enforcement, "idempotent": False,
@@ -3102,8 +3100,7 @@ def release_disk_for_job(*, store: Any, authority: Any,
                             "release_basis": "INDEPENDENT_QUIESCENCE",
                             "quiescence_witness": witness,
                             "quiescence_witness_sha256": witness_sha256}
-                store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                                 (job_id, "W26DiskReservation", _canonical_json(released)))
+                store._insert_job_event(job_id, "W26DiskReservation", _canonical_json(released))
                 store.db.execute("COMMIT")
                 return {"status": "RELEASED_AFTER_QUIESCENCE", "reservation_id": reservation_id,
                         "idempotent": False, "domain_status_at_release": "UNKNOWN",
@@ -3116,8 +3113,7 @@ def release_disk_for_job(*, store: Any, authority: Any,
                       "reservation remains held until terminal status or independently verified UNKNOWN quiescence",
                       job_status=job["job_status"])
             released = {**item, "status": "RELEASED"}
-            store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-                             (job_id, "W26DiskReservation", _canonical_json(released)))
+            store._insert_job_event(job_id, "W26DiskReservation", _canonical_json(released))
             store.db.execute("COMMIT")
             return {"status": "RELEASED", "reservation_id": reservation_id, "idempotent": False,
                     "evidence_classification": "SOFTWARE_ONLY"}
@@ -3212,8 +3208,8 @@ def _bind_disk_root_metadata(db: sqlite3.Connection, context: Mapping[str, Any],
             _fail("RESOURCE_RESERVATION_PROFILE_BINDING_MISMATCH",
                   "existing durable root binding differs from the selected trusted profile")
         return
-    db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
-               (context["job_id"], DISK_ROOT_BINDING_EVENT, _canonical_json(event)))
+    from ._operation_store import _insert_bounded_job_event
+    _insert_bounded_job_event(db, context["job_id"], DISK_ROOT_BINDING_EVENT, _canonical_json(event))
 
 
 class DiskResourceCoordinator:
