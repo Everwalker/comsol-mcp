@@ -23,12 +23,12 @@ from comsol_mcp._managed_backend import ManagedBackend
 
 try:  # pragma: no cover - import shim for direct execution
     from tests.test_g3_w13 import (
-        FList, FNode, component_with, selection_node, variable_model, worker_for, expect_error,
+        FList, FNode, FMeasureSelection, component_with, selection_node, variable_model, worker_for, expect_error,
     )
     from tests.test_g3_common import FObjectScopedSelection
 except ImportError:  # pragma: no cover
     from test_g3_w13 import (  # type: ignore[no-redef]
-        FList, FNode, component_with, selection_node, variable_model, worker_for, expect_error,
+        FList, FNode, FMeasureSelection, component_with, selection_node, variable_model, worker_for, expect_error,
     )
     from test_g3_common import FObjectScopedSelection  # type: ignore[no-redef]
 
@@ -83,7 +83,23 @@ class TestMultiComponentNamedReadback:
         assert rows["count"] == 1
         assert rows["selections"][0]["tag"] == "faces" and rows["selections"][0]["entity_dimension"] == 0
 
-    def test_all_kind_enumerates_per_component_and_dimension(self):
+    def test_all_kind_enumerates_per_component_and_dimension(self, monkeypatch):
+        # MeshSelection inherits Selection's geom(String, int), geom() and
+        # inputDimension() methods (COMSOL 6.4 Selection API, chunk 23053).
+        # The shared measurement fake only models geom(int), so extend it for
+        # this geometry-scoped route without changing other fixtures.
+        def geom(selection, *args):
+            if len(args) == 2:
+                selection.geometry_tag, selection.dim_value = args[0], int(args[1])
+                return selection
+            if len(args) == 1:
+                selection.dim_value = int(args[0])
+                selection.geometry_tag = selection.owner.geometry_tag
+                return selection
+            return getattr(selection, "geometry_tag", selection.owner.geometry_tag)
+
+        monkeypatch.setattr(FMeasureSelection, "geom", geom)
+        monkeypatch.setattr(FMeasureSelection, "inputDimension", lambda selection: selection.dim_value, raising=False)
         model, comp1, comp2 = two_component_model()
         worker = worker_for(model)
         deep = common.resolve_selection_entities(worker, "Model",
@@ -101,6 +117,29 @@ class TestMultiComponentNamedReadback:
 
 
 class TestDimensionAndGeometryProvenance:
+    def test_structured_dim_unknown_is_not_demoted_to_requested_fallback(self):
+        class SelectionWithUnknownDimension:
+            def dim(self):
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "dim outcome is unknown")
+
+        with pytest.raises(ExecutionContractError) as info:
+            common.selection_dimension(SelectionWithUnknownDimension(), fallback=0)
+        assert info.value.code == "EXECUTION_STATE_UNKNOWN"
+        assert info.value.details["probe_state_unknown"] is True
+        assert info.value.details["probe"] == "dim"
+
+    def test_unavailable_or_rejected_dim_uses_requested_fallback(self):
+        class SelectionWithoutDimensionGetter:
+            def dim(self):
+                raise AttributeError("dim is unavailable")
+
+        class SelectionWithRejectedDimensionGetter:
+            def dim(self):
+                raise ExecutionContractError("METHOD_REJECTED", "dim is not allowed")
+
+        assert common.selection_dimension(SelectionWithoutDimensionGetter(), fallback=0) == 0
+        assert common.selection_dimension(SelectionWithRejectedDimensionGetter(), fallback=0) == 0
+
     def test_named_dimension_and_geometry_are_the_engine_values(self):
         node = selection_node(tag="tips", entities_=[5], dim_=0, geometry_tag="outerGeom")
         model, _ = component_with(selections={"tips": node})
@@ -111,6 +150,20 @@ class TestDimensionAndGeometryProvenance:
         assert resolved["entity_dimension"] == 0
         assert resolved["geometry"] == "outerGeom"
         assert "objects" not in resolved
+
+    def test_geometry_named_selection_uses_engine_dimension_over_request(self):
+        selection = FObjectScopedSelection(tag="csel1", dim=2, objects={"blk1": [7, 8]})
+        container = FList(arity=2)
+        container.items["csel1"] = selection
+        geom = FNode(tag="geom1", collections={"selection": container})
+        model, _ = component_with(geometry=geom)
+        resolved = common.resolve_selection_entities(worker_for(model), "Model", {
+            "kind": "named", "component": "comp1", "geometry": "geom1", "tag": "csel1",
+            "entity_dimension": 0,
+        })
+        assert resolved["entity_dimension"] == 2
+        assert resolved["objects"] == ["blk1"]
+        assert resolved["entities"] == [7, 8]
 
     def test_explicit_entities_are_echoed_not_treated_as_geometry_facts(self):
         model, comp1 = component_with(selections={})
@@ -123,6 +176,22 @@ class TestDimensionAndGeometryProvenance:
         assert any("selection.validate" in note for note in resolved["notes"])
         # Reading an explicit spec does not fabricate a geometry enumeration.
         assert not any(method == "measure" for method, _ in comp1.calls)
+
+
+class TestInheritedSelectionReadback:
+    def test_inherited_binding_requires_confirmed_true_readback(self):
+        class SelectionWithoutInheritanceGetter(FNode):
+            def isInheriting(self):
+                raise AttributeError("isInheriting is unavailable")
+
+        model, _ = component_with()
+        node = SelectionWithoutInheritanceGetter(tag="v1")
+        with pytest.raises(ExecutionContractError) as info:
+            common.apply_local_selection(
+                node, worker_for(model), "Model", None,
+                {"kind": "inherited", "component": "comp1"},
+            )
+        assert info.value.code == "EXECUTION_STATE_UNKNOWN"
 
 
 class TestRenamedSelectionReadback:

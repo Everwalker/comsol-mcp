@@ -17,7 +17,7 @@ in this module is verified offline against one of two local sources:
   Programming Reference documents is *not* declared on the public interface
   (``AbstractModelImpl.func()/variable()/selection()/func(String)/...``).
 * The local COMSOL 6.4 documentation corpus
-  ``/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py`` - the
+  ``COMSOL-6.4-KB/kb.py`` - the
   per-type property tables and the documented call sequences.
 
 Specifically:
@@ -1285,11 +1285,7 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _compo
             for object_tag in objects:
                 rows = _call(node, "entities", object_tag)
                 object_entities.update(require_entity_id_array(rows, "entities(object)", allow_empty=True))
-            dimension = resolved.get("entity_dimension")
-            if dimension is None:
-                probe = call_probe(node, "dim")
-                if probe["ok"] and isinstance(probe["value"], int) and not isinstance(probe["value"], bool):
-                    dimension = int(probe["value"])
+            dimension = selection_dimension(node, resolved.get("entity_dimension"))
             return {
                 "kind": kind,
                 "component": component,
@@ -1362,6 +1358,16 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _compo
 
 def selection_dimension(node: Any, fallback: int | None = None) -> int | None:
     probe = call_probe(node, "dim")
+    if probe_state_unknown(probe):
+        error = probe.get("error")
+        error_code = error.get("code") if isinstance(error, Mapping) else None
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            "selection dim() probe returned a structured unknown execution state; "
+            "the requested dimension fallback cannot establish the readback",
+            details={"probe_state_unknown": True, "probe": "dim",
+                     "probe_error_code": error_code, "execution_state_unknown": True},
+        )
     value = probe["value"]
     if probe["ok"] and isinstance(value, int) and not isinstance(value, bool):
         return int(value)
@@ -1648,9 +1654,10 @@ def apply_local_selection(node: Any, worker: Any, model_tag: str, component: str
                          "execution_state_unknown": True},
             )
         value = readback["value"] if readback["ok"] else None
-        if value is False:
+        if not (readback["ok"] and value is True):
             raise mark_selection_readback_completed(ExecutionContractError(
-                "EXECUTION_STATE_UNKNOWN", "selection().inherit(true) readback reports isInheriting() == false"
+                "EXECUTION_STATE_UNKNOWN",
+                "selection().inherit(true) readback did not confirm isInheriting() == true",
             ))
         applied.append({"method": "inherit", "requested": True, "readback": value})
     return {
