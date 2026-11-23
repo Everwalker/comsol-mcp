@@ -5572,6 +5572,78 @@ def verify_artifact_chunks(
 # W17 Result Evaluation (result.evaluate & result.at_points)
 # ---------------------------------------------------------------------------
 
+def _confirmed_component_free_global_dataset(model: Any, dataset_node: Any) -> bool:
+    """Prove the narrow component-free Solution-dataset case from live reads.
+
+    Empty optional values are accepted only after the published property
+    inventory, both targeted getters, the model component list, and the model
+    geometry-sequence list have all been read successfully. Any unavailable,
+    malformed, nonempty, or ambiguous inventory keeps the normal refusal.
+    """
+    def read(node: Any, method: str, *args: Any) -> tuple[bool, Any]:
+        attempt = _active_unknown_dispatch_attempt()
+        if attempt is not None and attempt.first_unknown is not None:
+            raise attempt.block(node, method, args)
+        probe = _common_call_probe(node, method, *args, include_engine_failure_details=True)
+        error = probe.get("error")
+        unknown = (
+            probe.get("execution_state_unknown") is True
+            or (isinstance(error, Mapping) and (
+                error.get("execution_state_unknown") is True
+                or error.get("engine_state_unknown") is True
+                or error.get("code") == "EXECUTION_STATE_UNKNOWN"
+            ))
+        )
+        if unknown:
+            cause_code = error.get("code") if isinstance(error, Mapping) else None
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"component-free global proof read {method} has unresolved Worker state",
+                stage="post_dispatch", details={"cause_code": cause_code},
+            )
+        return probe.get("ok") is True, probe.get("value")
+
+    ok, property_names = read(dataset_node, "properties")
+    if not ok:
+        return False
+    if (not isinstance(property_names, (list, tuple))
+            or not all(isinstance(name, str) for name in property_names)
+            or len(set(property_names)) != len(property_names)
+            or not {"comp", "geom"}.issubset(property_names)):
+        return False
+
+    for name in ("comp", "geom"):
+        ok, value = read(dataset_node, "getString", name)
+        if not ok:
+            return False
+        if value is not None and (not isinstance(value, str) or value.strip()):
+            return False
+
+    ok, model_nodes = read(model, "modelNode")
+    if not ok:
+        return False
+    ok, component_tags = read(model_nodes, "tags")
+    if not ok:
+        return False
+    if (not isinstance(component_tags, (list, tuple))
+            or not all(isinstance(tag, str) for tag in component_tags)
+            or len(set(component_tags)) != len(component_tags)
+            or component_tags):
+        return False
+
+    ok, model_geometries = read(model, "geom")
+    if not ok:
+        return False
+    ok, geometry_tags = read(model_geometries, "tags")
+    if not ok:
+        return False
+    if (not isinstance(geometry_tags, (list, tuple))
+            or not all(isinstance(tag, str) for tag in geometry_tags)
+            or len(set(geometry_tags)) != len(geometry_tags)
+            or geometry_tags):
+        return False
+    return True
+
 def _result_evaluate_body(
     worker: Any,
     model_tag: str,
@@ -5704,6 +5776,24 @@ def _result_evaluate_body(
         str(dataset_tag),
         requested_solution=requested_solution,
     )
+    component_free_global = (
+        aggregate == "global"
+        and weight_expression is None
+        and spec.get("selection") is None
+        and spec.get("entity_dim") is None
+        and isinstance(dataset_binding, Mapping)
+        and dataset_binding.get("dataset") == dataset_tag
+        and dataset_binding.get("dataset_type") == "Solution"
+        and dataset_binding.get("binding_complete") is False
+        and isinstance(dataset_binding.get("solution"), str)
+        and bool(dataset_binding.get("solution"))
+        and dataset_binding.get("component") is None
+        and dataset_binding.get("geometry") is None
+        and dataset_binding.get("read_errors") == []
+        and isinstance(dataset_binding.get("error"), Mapping)
+        and dataset_binding["error"].get("code") == "DATASET_BINDING_INCOMPLETE"
+        and _confirmed_component_free_global_dataset(model, dset_node)
+    )
     initial_dataset_evidence: dict[str, Any] | None = None
     if (isinstance(_w21_initial_output_context, Mapping)
             and _w21_initial_output_context.get("purpose") == "initial_stage_output"):
@@ -5753,7 +5843,7 @@ def _result_evaluate_body(
             details={"dataset_binding": dict(dataset_binding)},
         )
     if (not isinstance(dataset_binding, Mapping)
-            or dataset_binding.get("binding_complete") is not True):
+            or (dataset_binding.get("binding_complete") is not True and not component_free_global)):
         raise PreWriteRefusal(
             "DATASET_BINDING_INCOMPLETE",
             "result.evaluate requires a complete native dataset-to-solution binding",
@@ -5901,7 +5991,12 @@ def _result_evaluate_body(
         )
 
     # Check spatial dimension & axisymmetry
-    context = _coordinate_context(model, dset_node, [], dataset_binding=dataset_binding)
+    context = (
+        {"component": None, "geometry": None, "length_unit": None,
+         "space_dimension": 0, "axisymmetric": False}
+        if component_free_global
+        else _coordinate_context(model, dset_node, [], dataset_binding=dataset_binding)
+    )
     if strict_selection_enabled:
         requested_selection = spec["selection"]
         if (context.get("component") != requested_selection.get("component")
