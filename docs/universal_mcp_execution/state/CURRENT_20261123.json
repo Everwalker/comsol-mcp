@@ -7,11 +7,12 @@
     "supplied _g2_property_path_guard.py overlay",
     "subsequent integrated software changes"
   ],
-  "candidate": "Development snapshot; current source changed after r3 qualification and has no native acceptance.",
+  "candidate": "Development snapshot; local r4 candidate matched local source at its final check. The public snapshot differs in documented local-only inputs; no native acceptance.",
   "last_qualified_interim_candidate": {
-    "wheel_sha256": "1305463ebfe7c3e02f7a5fd221c4cc18e99eded8625b540d0e716b990eaf7b9e",
+    "wheel_sha256": "2a70650d933569d5503ecccea255ae41f87ffe13f9c8baa5546ff50562f48541",
     "matches_snapshot": false,
-    "scope": "macOS ARM64 Python 3.12 offline install and metadata-only runtime discovery; no native COMSOL or Worker"
+    "matches_local_source_at_check": true,
+    "scope": "Three target bundles checked statically; macOS ARM64 Python 3.12 hash-locked offline install and package byte comparison passed. Windows/Intel target execution and COMSOL/Worker/license remain unverified. Both Mac bundles need supplemental notices."
   },
   "review": "Final independent U01-U12 acceptance NOT_RUN",
   "tasks": {
@@ -191,7 +192,7 @@
       "execution_complete": false
     },
     "T36": {
-      "status": "TODO",
+      "status": "RUNNING",
       "implementation_done": false,
       "execution_complete": false
     },
@@ -431,6 +432,8 @@
     "T35_result_read": "Small job.result responses retain their object form; oversized results report RESULT_TOO_LARGE and use project-authorized, SHA-bound pages of up to 65536 bytes. Independent scoped review and 31 combined-source synthetic tests, including a 4 MiB result, passed. Windows, real Worker, SQLite internal memory/RSS and native acceptance remain unverified.",
     "T34": "File-backed synthetic cancellation checks preserve unrelated task records: queued cancellation is scoped, running cancellation records intent, and UNKNOWN remains UNKNOWN. Real Worker stop and cross-daemon isolation remain unverified.",
     "T23_W16": "The isolated solver-state candidate needs further correction after independent review and has not been integrated; native behavior remains unverified.",
-    "T37": "Export publication safety work remains under isolated review and is not integrated; native platform behavior remains unverified."
+    "T37": "Export publication safety work remains under isolated review and is not integrated; native platform behavior remains unverified.",
+    "T42_r4": "A local source-bound r4 wheel and three target bundles were produced; a fresh Mac ARM64 offline install and 208-file wheel/install comparison passed. Mac notice materials need repair, and native target execution is not established.",
+    "T36": "Project-boundary work is in progress in an isolated candidate; review and native validation remain open."
   }
 }
