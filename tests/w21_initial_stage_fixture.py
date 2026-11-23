@@ -67,8 +67,11 @@ def build_initial_stage_fixture(
     def handle(name: str, java_type: str = "Object") -> dict[str, Any]:
         return {"$worker_handle": name, "generation": worker_generation, "java_type": java_type}
 
-    def request(body: dict[str, Any], *, timeout_s: float | None = None) -> dict[str, Any]:
+    def request(body: dict[str, Any], *, timeout_s: float | None = None,
+                require_source_binding: bool = False, before_dispatch=None) -> dict[str, Any]:
         del timeout_s
+        if require_source_binding or before_dispatch is not None:
+            raise AssertionError("the initial-stage fixture does not emulate source-bound code requests")
         transport_requests.append(dict(body))
         kind = body["type"]
         if (fault == "unknown_after_eval" and kind == "call"
@@ -371,8 +374,10 @@ def build_initial_stage_fixture(
     # production request-id guard used by PersistentJavaWorker._request.
     transport = worker._request
 
-    def correlated_transport(body: dict[str, Any], *, timeout_s: float | None = None) -> dict[str, Any]:
-        reply = transport(body, timeout_s=timeout_s)
+    def correlated_transport(body: dict[str, Any], *, timeout_s: float | None = None,
+                            require_source_binding: bool = False, before_dispatch=None) -> dict[str, Any]:
+        reply = transport(body, timeout_s=timeout_s, require_source_binding=require_source_binding,
+                          before_dispatch=before_dispatch)
         correlated = worker._validate_request_reply(body, reply)
         request_id = body.get("request_id")
         if request_id is not None and correlated:
