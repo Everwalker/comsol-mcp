@@ -401,8 +401,8 @@ class ManagedBackend:
         )
 
     @contextmanager
-    def project_root_scope(self, root):
-        """Carry one open project-root identity through a serialized dispatch."""
+    def project_root_scope(self, root, *, project_id=None):
+        """Carry the authorized project identity and open root through dispatch."""
         from ._project_root import (ProjectRootBinding, close_binding_releasing,
                                     open_project_root_binding)
         binding = open_project_root_binding(root) if not isinstance(root, ProjectRootBinding) else root
@@ -413,14 +413,19 @@ class ManagedBackend:
         service_scope = getattr(service, "project_root_scope", None)
         primary_error: BaseException | None = None
         try:
+            from contextlib import nullcontext
+            from ._artifact_store import authorized_artifact_project_scope
             from ._state import project_workflow_state_scope
 
-            with project_workflow_state_scope(candidate):
-                if callable(service_scope):
-                    with service_scope(binding):
+            artifact_scope = (authorized_artifact_project_scope(project_id, binding)
+                              if project_id is not None else nullcontext())
+            with artifact_scope:
+                with project_workflow_state_scope(candidate):
+                    if callable(service_scope):
+                        with service_scope(binding):
+                            yield candidate
+                    else:
                         yield candidate
-                else:
-                    yield candidate
         except BaseException as exc:
             # Local capture (never sys.exc_info); the release below belongs to
             # this scope by the documented delegation contract (the daemon

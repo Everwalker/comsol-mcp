@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import base64
 import csv
+from contextlib import contextmanager
+from contextvars import ContextVar
 import ctypes
 import errno
 import hashlib
@@ -29,6 +31,7 @@ import socket
 import stat
 import sys
 import tempfile
+from threading import RLock
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Any, Iterator, Mapping, Sequence
@@ -43,6 +46,126 @@ CSV_COLUMNS = (
 )
 _UNKNOWN_STATUS = {"UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN", "STATE_UNKNOWN"}
 _FAILED_STATUS = {"FAILED", "FAIL", "ERROR", "REFUSED", "REJECTED"}
+_ARTIFACT_PROJECT_SCOPE: ContextVar[tuple[str, Any] | None] = ContextVar(
+    "comsol_artifact_project_scope", default=None
+)
+_ARTIFACT_REGISTRY_LOCK = RLock()
+_PROJECT_REGISTERED_ARTIFACTS: set[tuple[str, tuple[int, ...], str]] = set()
+_PROJECT_ARTIFACT_IDENTITIES: dict[tuple[str, tuple[int, ...], str], tuple[int, ...]] = {}
+_PROJECT_ARTIFACT_DIGESTS: dict[tuple[str, tuple[int, ...], str], str] = {}
+
+
+@contextmanager
+def authorized_artifact_project_scope(project_id: str, binding: Any):
+    """Bind legacy path registrations to a host-authorized open project root.
+
+    Only the managed dispatcher enters this scope, after ProjectAuthority has
+    admitted the outer execution identity and opened its workspace binding.
+    Domain request bodies cannot choose either value.
+    """
+    from ._project_root import ProjectRootBinding
+
+    identity = getattr(binding, "identity", None)
+    root = getattr(binding, "path", None)
+    if (not isinstance(project_id, str) or not project_id
+            or not isinstance(binding, ProjectRootBinding)
+            or not isinstance(identity, tuple) or not identity
+            or root is None or getattr(binding, "_closed", False)):
+        raise _contract_error("PROJECT_IDENTITY_REQUIRED", "artifact registration requires an open authorized project binding")
+    token = _ARTIFACT_PROJECT_SCOPE.set((project_id, binding))
+    try:
+        yield
+    finally:
+        _ARTIFACT_PROJECT_SCOPE.reset(token)
+
+
+def _project_artifact_location(path: str | Path, *, worker_root: str | Path | None = None):
+    scope = _ARTIFACT_PROJECT_SCOPE.get()
+    if scope is None:
+        return None
+    project_id, binding = scope
+    if getattr(binding, "_closed", False):
+        return None
+    try:
+        root = Path(os.path.abspath(os.fspath(binding.path)))
+        candidate = Path(os.path.abspath(os.fspath(Path(path).expanduser())))
+        if worker_root is not None and Path(worker_root).resolve(strict=True) != root.resolve(strict=True):
+            return None
+        relative = candidate.relative_to(root)
+        if (not relative.parts
+                or any(not part or part in {".", ".."} or "/" in part or "\\" in part or "\x00" in part
+                       for part in relative.parts)):
+            return None
+        identity = tuple(binding.identity)
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
+        return None
+    if not identity:
+        return None
+    # A still-open directory handle can outlive the name it was opened from.
+    # Reopen the named root through the existing no-reparse binding API and
+    # compare its native identity before using the path-keyed registry.
+    try:
+        from ._project_root import close_binding_releasing, open_project_root_binding
+        current = open_project_root_binding(root)
+        try:
+            current_identity = tuple(current.identity)
+        finally:
+            close_binding_releasing(current, None)
+    except ExecutionContractError as exc:
+        if exc.details.get("cleanup_status") == "UNCONFIRMED":
+            raise
+        return None
+    except Exception:
+        return None
+    if current_identity != identity:
+        return None
+    normalized = os.path.normcase(os.path.normpath(str(candidate)))
+    return (project_id, identity, normalized), binding, tuple(relative.parts)
+
+
+def _project_artifact_key(path: str | Path, *, worker_root: str | Path | None = None):
+    location = _project_artifact_location(path, worker_root=worker_root)
+    return None if location is None else location[0]
+
+
+def _assert_project_root_name_identity(binding: Any, *, after_read: bool = False) -> None:
+    """Ensure the authorized root path still names the open root handle."""
+    from ._project_root import close_binding_releasing, open_project_root_binding
+
+    code = "ARTIFACT_CHANGED" if after_read else "ACCESS_VIOLATION"
+    message = ("bound project root name changed during artifact access" if after_read
+               else "bound project root name no longer identifies the authorized root")
+    current = None
+    try:
+        current = open_project_root_binding(binding.path)
+        if tuple(current.identity) != tuple(binding.identity):
+            raise _contract_error(code, message, stage="validation")
+    except ExecutionContractError:
+        raise
+    except Exception as exc:
+        raise _contract_error(code, message, stage="validation") from exc
+    finally:
+        if current is not None:
+            close_binding_releasing(current, None)
+
+
+def _bound_project_artifact_read_supported(binding: Any) -> bool:
+    from ._project_root import ProjectRootBinding
+
+    if not isinstance(binding, ProjectRootBinding) or binding._closed:
+        return False
+    api = getattr(binding, "_api", None)
+    if api is not None:
+        return bool(binding._handles) and all(callable(getattr(api, name, None)) for name in (
+            "open_child_directory", "open_source_for_snapshot", "full_identity",
+            "full_fingerprint", "relative_full_identity", "read_chunk", "info", "close",
+        ))
+    return (
+        binding._fd is not None
+        and os.open in getattr(os, "supports_dir_fd", set())
+        and os.stat in getattr(os, "supports_dir_fd", set())
+        and all(getattr(os, flag, 0) for flag in ("O_DIRECTORY", "O_NOFOLLOW", "O_NONBLOCK"))
+    )
 
 
 def _contract_error(
@@ -1421,6 +1544,345 @@ def _open_pinned_artifact(path: Path) -> tuple[Any, os.stat_result]:
         raise
 
 
+@contextmanager
+def _open_bound_project_artifact(binding: Any, relative_parts: Sequence[str]):
+    """Open one POSIX file beneath the already-open project root."""
+    from ._project_root import _finish_cleanup
+
+    if (not _bound_project_artifact_read_supported(binding)
+            or getattr(binding, "_api", None) is not None):
+        raise _contract_error(
+            "ACCESS_VIOLATION",
+            "POSIX descriptor-relative artifact reads are unavailable",
+        )
+    parts = tuple(relative_parts)
+    if (not parts or any(not isinstance(part, str) or not part or part in {".", ".."}
+                         or "/" in part or "\\" in part or "\x00" in part for part in parts)):
+        raise _contract_error("ACCESS_VIOLATION", "registered artifact path is not project-relative")
+
+    dir_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+    directories: list[int] = []
+    directory_names: list[tuple[int, str, int, tuple[int, int]]] = []
+    file_fd: int | None = None
+    primary_error: BaseException | None = None
+    try:
+        _assert_project_root_name_identity(binding)
+        current = os.dup(binding._fd)
+        directories.append(current)
+        for component in parts[:-1]:
+            child = os.open(component, dir_flags, dir_fd=current)
+            directories.append(child)
+            opened = os.fstat(child)
+            named = os.stat(component, dir_fd=current, follow_symlinks=False)
+            if (not stat.S_ISDIR(opened.st_mode) or not stat.S_ISDIR(named.st_mode)
+                    or (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino)):
+                raise _contract_error("ACCESS_VIOLATION", "registered artifact directory changed while opening")
+            directory_names.append((current, component, child, (opened.st_dev, opened.st_ino)))
+            current = child
+
+        name = parts[-1]
+        named_before = os.stat(name, dir_fd=current, follow_symlinks=False)
+        if not stat.S_ISREG(named_before.st_mode) or named_before.st_nlink != 1:
+            raise _contract_error("ACCESS_VIOLATION", "registered artifact must be a single-link regular file")
+        file_fd = os.open(name, file_flags, dir_fd=current)
+        opened_before = os.fstat(file_fd)
+        if (not stat.S_ISREG(opened_before.st_mode) or opened_before.st_nlink != 1
+                or _file_identity(opened_before) != _file_identity(named_before)):
+            raise _contract_error("ACCESS_VIOLATION", "registered artifact identity changed while opening")
+        yield file_fd, opened_before, current, name
+
+        opened_after = os.fstat(file_fd)
+        named_after = os.stat(name, dir_fd=current, follow_symlinks=False)
+        if (not stat.S_ISREG(opened_after.st_mode) or not stat.S_ISREG(named_after.st_mode)
+                or opened_after.st_nlink != 1 or named_after.st_nlink != 1
+                or _file_identity(opened_after) != _file_identity(opened_before)
+                or _file_identity(named_after) != _file_identity(opened_before)):
+            raise _contract_error("ARTIFACT_CHANGED", "registered artifact identity changed during access", stage="validation")
+        for parent_fd, component, child_fd, identity in directory_names:
+            opened_dir = os.fstat(child_fd)
+            named_dir = os.stat(component, dir_fd=parent_fd, follow_symlinks=False)
+            if (not stat.S_ISDIR(opened_dir.st_mode) or not stat.S_ISDIR(named_dir.st_mode)
+                    or (opened_dir.st_dev, opened_dir.st_ino) != identity
+                    or (named_dir.st_dev, named_dir.st_ino) != identity):
+                raise _contract_error("ARTIFACT_CHANGED", "registered artifact directory changed during access", stage="validation")
+        _assert_project_root_name_identity(binding, after_read=True)
+    except ExecutionContractError as exc:
+        primary_error = exc
+        raise
+    except OSError as exc:
+        primary_error = _contract_error(
+            "ACCESS_VIOLATION",
+            "registered artifact path could not be opened beneath its bound project root",
+        )
+        raise primary_error from exc
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        owned = ([] if file_fd is None else [file_fd]) + list(reversed(directories))
+        _finish_cleanup(os.close, owned, primary_error)
+
+
+def _windows_project_artifact_identity(fingerprint: Any) -> tuple[int, ...]:
+    file_identity, size, created, changed, written, links = fingerprint
+    return tuple(int(value) for value in file_identity) + (
+        int(size), int(created), int(changed), int(written), int(links),
+    )
+
+
+@contextmanager
+def _open_bound_project_artifact_windows(binding: Any, relative_parts: Sequence[str]):
+    """Hold a native no-reparse chain and a read-only Windows artifact handle."""
+    from ._project_root import _finish_cleanup
+    from ._windows_parameter_publish import _component
+
+    if not _bound_project_artifact_read_supported(binding) or binding._api is None:
+        raise _contract_error(
+            "ACCESS_VIOLATION",
+            "Windows artifact reads require the native bound-project handle API",
+        )
+    parts = tuple(relative_parts)
+    if (not parts or any(not isinstance(part, str) or not part or part in {".", ".."}
+                         or "/" in part or "\\" in part or "\x00" in part for part in parts)):
+        raise _contract_error("ACCESS_VIOLATION", "registered artifact path is not project-relative")
+
+    api = binding._api
+    directories: list[tuple[object, str, object, tuple[int, ...]]] = []
+    file_handle = None
+    primary_error: BaseException | None = None
+    try:
+        _assert_project_root_name_identity(binding)
+        root_handle = binding._handles[-1]
+        if tuple(api.info(root_handle, directory=True)[0]) != tuple(binding.identity):
+            raise _contract_error("ACCESS_VIOLATION", "bound Windows project root identity changed")
+        current = root_handle
+        for component in parts[:-1]:
+            _component(component)
+            child = api.open_child_directory(current, component)
+            directories.append((current, component, child, ()))
+            identity = tuple(api.full_identity(child, directory=True))
+            directories[-1] = (current, component, child, identity)
+            if tuple(api.relative_full_identity(current, component, directory=True)) != identity:
+                raise _contract_error("ACCESS_VIOLATION", "registered artifact directory changed while opening")
+            current = child
+
+        leaf = parts[-1]
+        _component(leaf)
+        file_handle = api.open_source_for_snapshot(current, leaf)
+        before = api.full_fingerprint(file_handle)
+        if int(before[5]) != 1:
+            raise _contract_error("ACCESS_VIOLATION", "registered artifact must be a single-link regular file")
+        if tuple(api.relative_full_identity(current, leaf)) != tuple(before[0]):
+            raise _contract_error("ACCESS_VIOLATION", "registered artifact identity changed while opening")
+        yield file_handle, before
+
+        after = api.full_fingerprint(file_handle)
+        if _windows_project_artifact_identity(after) != _windows_project_artifact_identity(before):
+            raise _contract_error("ARTIFACT_CHANGED", "registered artifact changed while being streamed", stage="validation")
+        for parent, component, child, identity in directories:
+            if (tuple(api.full_identity(child, directory=True)) != identity
+                    or tuple(api.relative_full_identity(parent, component, directory=True)) != identity):
+                raise _contract_error("ARTIFACT_CHANGED", "registered artifact directory changed while being read", stage="validation")
+        if tuple(api.info(root_handle, directory=True)[0]) != tuple(binding.identity):
+            raise _contract_error("ARTIFACT_CHANGED", "bound Windows project root changed while being read", stage="validation")
+        if tuple(api.relative_full_identity(current, leaf)) != tuple(before[0]):
+            raise _contract_error("ARTIFACT_CHANGED", "registered artifact name changed while being read", stage="validation")
+        _assert_project_root_name_identity(binding, after_read=True)
+    except ExecutionContractError as exc:
+        primary_error = exc
+        raise
+    except FileNotFoundError as exc:
+        primary_error = _contract_error("ARTIFACT_NOT_FOUND", "registered artifact or a project directory is unavailable")
+        raise primary_error from exc
+    except Exception as exc:
+        primary_error = _contract_error("ACCESS_VIOLATION", "Windows artifact path could not be opened beneath its bound project root")
+        raise primary_error from exc
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        owned = ([] if file_handle is None else [file_handle]) + [item[2] for item in reversed(directories)]
+        _finish_cleanup(api.close, owned, primary_error)
+
+
+def _capture_project_artifact_identity(
+    binding: Any, relative_parts: Sequence[str],
+) -> tuple[tuple[int, ...], str]:
+    """Pin identity and SHA-256 from one bounded stream on the opened handle."""
+    if getattr(binding, "_api", None) is not None:
+        api = binding._api
+        with _open_bound_project_artifact_windows(binding, relative_parts) as (handle, fingerprint):
+            file_size = int(fingerprint[1])
+            digest = hashlib.sha256()
+            observed_size = 0
+            while observed_size < file_size:
+                requested = min(1024 * 1024, file_size - observed_size)
+                block = api.read_chunk(handle, requested)
+                if not block:
+                    break
+                if len(block) > requested:
+                    raise _contract_error("ARTIFACT_CHANGED", "artifact stream exceeded its registered size", stage="validation")
+                digest.update(block)
+                observed_size += len(block)
+            if observed_size != file_size:
+                raise _contract_error("ARTIFACT_CHANGED", "artifact stream changed during registration", stage="validation")
+            return _windows_project_artifact_identity(fingerprint), digest.hexdigest()
+    with _open_bound_project_artifact(binding, relative_parts) as (fd, before, _parent_fd, _name):
+        file_size = int(before.st_size)
+        digest = hashlib.sha256()
+        observed_size = 0
+        while observed_size < file_size:
+            block = os.read(fd, min(1024 * 1024, file_size - observed_size))
+            if not block:
+                break
+            digest.update(block)
+            observed_size += len(block)
+        if observed_size != file_size:
+            raise _contract_error("ARTIFACT_CHANGED", "artifact stream changed during registration", stage="validation")
+        return _file_identity(before), digest.hexdigest()
+
+
+def _read_registered_project_artifact_windows(
+    path: Path,
+    binding: Any,
+    relative_parts: Sequence[str],
+    registered_identity: tuple[int, ...],
+    registered_digest: str,
+    *,
+    offset: int,
+    length: int,
+) -> dict[str, Any]:
+    api = binding._api
+    with _open_bound_project_artifact_windows(binding, relative_parts) as (handle, before):
+        file_size = int(before[1])
+        if _windows_project_artifact_identity(before) != registered_identity:
+            raise _contract_error(
+                "ACCESS_VIOLATION",
+                "the registered artifact name now identifies a different Windows file version",
+                stage="validation",
+            )
+        if offset >= file_size:
+            raise _contract_error(
+                "INVALID_CHUNK_RANGE",
+                f"Offset {offset} is out of bounds for file of size {file_size}",
+            )
+
+        digest = hashlib.sha256()
+        captured = bytearray()
+        observed_size = 0
+        while observed_size < file_size:
+            requested = min(1024 * 1024, file_size - observed_size)
+            block = api.read_chunk(handle, requested)
+            if not block:
+                break
+            if len(block) > requested:
+                raise _contract_error("ARTIFACT_CHANGED", "Windows artifact stream exceeded its fingerprinted size", stage="validation")
+            block_end = observed_size + len(block)
+            chunk_start = max(offset, observed_size)
+            chunk_end = min(offset + length, block_end)
+            if chunk_start < chunk_end:
+                captured.extend(block[chunk_start - observed_size:chunk_end - observed_size])
+            digest.update(block)
+            observed_size = block_end
+        if observed_size != file_size:
+            raise _contract_error("ARTIFACT_CHANGED", "Windows artifact stream ended before its fingerprinted size", stage="validation")
+
+        whole_file_sha256 = digest.hexdigest()
+        chunk_data = bytes(captured)
+        result = {
+            "file_path": str(path),
+            "file_size": file_size,
+            "whole_file_sha256": whole_file_sha256,
+            "offset": offset,
+            "length": len(chunk_data),
+            "chunk_sha256": hashlib.sha256(chunk_data).hexdigest(),
+            "data_bytes": chunk_data,
+            "eof": (offset + len(chunk_data)) >= file_size,
+        }
+    if whole_file_sha256 != registered_digest:
+        raise _contract_error("ARTIFACT_CHANGED", "registered artifact content digest changed", stage="validation")
+    return result
+
+
+def _read_registered_project_artifact(
+    path: Path,
+    binding: Any,
+    relative_parts: Sequence[str],
+    registered_identity: tuple[int, ...],
+    registered_digest: str,
+    *,
+    offset: int,
+    length: int,
+) -> dict[str, Any]:
+    """Hash and capture a chunk from the one registered file handle opened under the project fd."""
+    if getattr(binding, "_api", None) is not None:
+        return _read_registered_project_artifact_windows(
+            path, binding, relative_parts, registered_identity, registered_digest,
+            offset=offset, length=length,
+        )
+    with _open_bound_project_artifact(binding, relative_parts) as (fd, before, parent_fd, name):
+        file_size = int(before.st_size)
+        opened_identity = _file_identity(before)
+        if opened_identity != registered_identity:
+            raise _contract_error(
+                "ACCESS_VIOLATION",
+                "the registered artifact name now identifies a different file",
+                stage="validation",
+            )
+        if offset >= file_size:
+            raise _contract_error(
+                "INVALID_CHUNK_RANGE",
+                f"Offset {offset} is out of bounds for file of size {file_size}",
+            )
+
+        digest = hashlib.sha256()
+        captured = bytearray()
+        observed_size = 0
+        while observed_size < file_size:
+            block = os.read(fd, min(1024 * 1024, file_size - observed_size))
+            if not block:
+                break
+            block_end = observed_size + len(block)
+            chunk_start = max(offset, observed_size)
+            chunk_end = min(offset + length, block_end)
+            if chunk_start < chunk_end:
+                captured.extend(block[chunk_start - observed_size:chunk_end - observed_size])
+            digest.update(block)
+            observed_size = block_end
+
+        if observed_size != file_size:
+            raise _contract_error("ARTIFACT_CHANGED", "artifact stream ended before its fingerprinted size", stage="validation")
+        whole_file_sha256 = digest.hexdigest()
+
+        after = os.fstat(fd)
+        try:
+            named_after = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        except OSError as exc:
+            raise _artifact_changed(path, "project-relative name could not be revalidated") from exc
+        if (not stat.S_ISREG(after.st_mode) or not stat.S_ISREG(named_after.st_mode)
+                or after.st_nlink != 1 or named_after.st_nlink != 1
+                or observed_size != file_size
+                or _file_identity(after) != opened_identity
+                or _file_identity(named_after) != opened_identity):
+            raise _artifact_changed(path, "registered file identity or contents changed during the read")
+
+        chunk_data = bytes(captured)
+        result = {
+            "file_path": str(path),
+            "file_size": file_size,
+            "whole_file_sha256": whole_file_sha256,
+            "offset": offset,
+            "length": len(chunk_data),
+            "chunk_sha256": hashlib.sha256(chunk_data).hexdigest(),
+            "data_bytes": chunk_data,
+            "eof": (offset + len(chunk_data)) >= file_size,
+        }
+    if whole_file_sha256 != registered_digest:
+        raise _contract_error("ARTIFACT_CHANGED", "registered artifact content digest changed", stage="validation")
+    return result
+
+
 def _assert_pinned_artifact_stable(path: Path, before: os.stat_result, after: os.stat_result) -> None:
     """Verify both fd metadata and current pathname identity after reading."""
     if not stat.S_ISREG(after.st_mode) or _file_identity(after) != _file_identity(before):
@@ -1454,24 +1916,43 @@ def _read_pinned_chunk(path: Path, offset: int, length: int) -> dict[str, Any]:
             )
 
         identity = _file_identity(before)
-        cached_hash = _WHOLE_FILE_HASH_CACHE.get(identity)
+        # Windows does not expose a sufficiently stable mutation token in the
+        # metadata tuple used here. Reusing a cached digest could pair stale
+        # whole-file bytes with a fresh chunk after an in-place rewrite that
+        # preserves size and mtime. Rehash per request and capture the requested
+        # range from that same byte stream until a native pinned-handle design
+        # is independently established.
+        windows_stream = sys.platform == "win32"
+        cached_hash = None if windows_stream else _WHOLE_FILE_HASH_CACHE.get(identity)
+        captured_chunk = bytearray() if windows_stream else None
         if cached_hash is not None:
             whole_sha256 = cached_hash
         else:
             digest = hashlib.sha256()
             hashed_size = 0
             for block in iter(lambda: handle.read(1024 * 1024), b""):
+                if captured_chunk is not None:
+                    block_start = hashed_size
+                    block_end = block_start + len(block)
+                    chunk_start = max(offset, block_start)
+                    chunk_end = min(offset + length, block_end)
+                    if chunk_start < chunk_end:
+                        captured_chunk.extend(block[chunk_start - block_start:chunk_end - block_start])
                 digest.update(block)
                 hashed_size += len(block)
             if hashed_size != file_size:
                 raise _artifact_changed(path, f"size changed while hashing ({file_size} -> {hashed_size})")
             whole_sha256 = digest.hexdigest()
-            if len(_WHOLE_FILE_HASH_CACHE) > 1024:
-                _WHOLE_FILE_HASH_CACHE.clear()
-            _WHOLE_FILE_HASH_CACHE[identity] = whole_sha256
+            if sys.platform != "win32":
+                if len(_WHOLE_FILE_HASH_CACHE) > 1024:
+                    _WHOLE_FILE_HASH_CACHE.clear()
+                _WHOLE_FILE_HASH_CACHE[identity] = whole_sha256
 
-        handle.seek(offset)
-        chunk_data = handle.read(length)
+        if captured_chunk is not None:
+            chunk_data = bytes(captured_chunk)
+        else:
+            handle.seek(offset)
+            chunk_data = handle.read(length)
         after = os.fstat(handle.fileno())
         _assert_pinned_artifact_stable(path, before, after)
 
@@ -1658,19 +2139,80 @@ class ArtifactStore:
     @classmethod
     def register_artifact(cls, path_or_id: str | Path) -> str:
         resolved_str = str(Path(path_or_id).resolve())
-        cls._REGISTERED_ARTIFACTS.add(resolved_str)
-        cls._REGISTERED_ARTIFACTS.add(str(path_or_id))
+        location = _project_artifact_location(path_or_id)
+        scoped_key = None
+        scoped_identity = None
+        scoped_digest = None
+        if location is not None:
+            scoped_key, binding, relative_parts = location
+            try:
+                scoped_identity, scoped_digest = _capture_project_artifact_identity(binding, relative_parts)
+            except (ExecutionContractError, OSError, ValueError, TypeError) as exc:
+                if (isinstance(exc, ExecutionContractError)
+                        and exc.details.get("cleanup_status") == "UNCONFIRMED"):
+                    raise
+                # Keep the legacy path index behavior. An unsafe or unavailable
+                # file simply receives no project-read authorization.
+                scoped_identity = None
+                scoped_digest = None
+        with _ARTIFACT_REGISTRY_LOCK:
+            cls._REGISTERED_ARTIFACTS.add(resolved_str)
+            cls._REGISTERED_ARTIFACTS.add(str(path_or_id))
+            if scoped_key is not None and scoped_identity is not None and scoped_digest is not None:
+                _PROJECT_REGISTERED_ARTIFACTS.add(scoped_key)
+                _PROJECT_ARTIFACT_IDENTITIES[scoped_key] = scoped_identity
+                _PROJECT_ARTIFACT_DIGESTS[scoped_key] = scoped_digest
         return resolved_str
 
     @classmethod
     def is_registered_artifact(cls, path_or_id: str | Path) -> bool:
         p_str = str(path_or_id)
-        if p_str in cls._REGISTERED_ARTIFACTS:
-            return True
+        with _ARTIFACT_REGISTRY_LOCK:
+            if p_str in cls._REGISTERED_ARTIFACTS:
+                return True
+            try:
+                return str(Path(path_or_id).resolve()) in cls._REGISTERED_ARTIFACTS
+            except Exception:
+                return False
+
+    @classmethod
+    def is_registered_for_current_project(
+        cls, path_or_id: str | Path, *, worker_root: str | Path,
+    ) -> bool:
+        return cls.registered_project_artifact(path_or_id, worker_root=worker_root) is not None
+
+    @classmethod
+    def registered_project_artifact(
+        cls, path_or_id: str | Path, *, worker_root: str | Path,
+    ) -> tuple[Any, tuple[str, ...], tuple[int, ...], str] | None:
+        location = _project_artifact_location(path_or_id, worker_root=worker_root)
+        if location is None:
+            return None
+        key, binding, relative_parts = location
+        with _ARTIFACT_REGISTRY_LOCK:
+            identity = _PROJECT_ARTIFACT_IDENTITIES.get(key)
+            digest = _PROJECT_ARTIFACT_DIGESTS.get(key)
+            if key not in _PROJECT_REGISTERED_ARTIFACTS or identity is None or digest is None:
+                return None
+        return binding, relative_parts, identity, digest
+
+    @classmethod
+    def unregister_artifact(cls, path_or_id: str | Path) -> None:
+        """Remove one path from both compatibility and project-scoped indexes."""
+        raw = str(path_or_id)
         try:
-            return str(Path(path_or_id).resolve()) in cls._REGISTERED_ARTIFACTS
-        except Exception:
-            return False
+            resolved = str(Path(path_or_id).resolve())
+        except (OSError, RuntimeError, TypeError, ValueError):
+            resolved = raw
+        normalized = os.path.normcase(os.path.normpath(resolved))
+        with _ARTIFACT_REGISTRY_LOCK:
+            cls._REGISTERED_ARTIFACTS.discard(raw)
+            cls._REGISTERED_ARTIFACTS.discard(resolved)
+            removed = [key for key in _PROJECT_REGISTERED_ARTIFACTS if key[2] == normalized]
+            _PROJECT_REGISTERED_ARTIFACTS.difference_update(removed)
+            for key in removed:
+                _PROJECT_ARTIFACT_IDENTITIES.pop(key, None)
+                _PROJECT_ARTIFACT_DIGESTS.pop(key, None)
 
     def export_field_data(
         self,
@@ -1864,7 +2406,8 @@ def artifact_read(
     or project identifier in the request body.  ``model_tag`` is accepted for
     signature compatibility with the other G3 operations; reads do not touch the
     engine.  ``project_id`` and ``request_id`` are accepted-and-ignored; ``path``
-    is accepted as an alias for ``artifact_id``.
+    is accepted as an alias for ``artifact_id``. Project authorization comes
+    from the active host-managed project binding, never either body field.
 
     Two extra optional keys carry the integrity pins ACCEPTANCE C13 needs
     (``expected_sha256`` for the whole file, ``expected_chunk_sha256`` for the served
@@ -1911,17 +2454,35 @@ def artifact_read(
     if not resolved.is_file():
         raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact file not found: {resolved}")
 
-    # R02: artifact.read is restricted to registered published artifacts by default
-    require_registered = bool(arguments.get("require_registered", True))
-    if require_registered and not store.is_registered_artifact(resolved):
+    # The process-global compatibility registry is deliberately not an
+    # authorization source. Only a registration made while this exact
+    # authenticated project binding was active can authorize a public read.
+    registration = store.registered_project_artifact(resolved, worker_root=root)
+    if registration is None:
+        scope = _ARTIFACT_PROJECT_SCOPE.get()
+        if scope is not None and not _bound_project_artifact_read_supported(scope[1]):
+            raise _contract_error(
+                "ACCESS_VIOLATION",
+                "platform cannot securely open a registered artifact relative to its bound project root",
+                stage="validation",
+            )
         raise _contract_error(
             "ACCESS_VIOLATION",
-            f"Artifact {resolved} is not a registered published artifact; reading arbitrary project files is prohibited",
+            f"Artifact {resolved} is not registered in the current authorized project; reading arbitrary project files is prohibited",
             stage="validation",
         )
 
     _assert_no_symlink_components(resolved, field="artifact")
-    pinned = _read_pinned_chunk(resolved, offset=offset, length=length)
+    binding, relative_parts, registered_identity, registered_digest = registration
+    pinned = _read_registered_project_artifact(
+        resolved,
+        binding,
+        relative_parts,
+        registered_identity,
+        registered_digest,
+        offset=offset,
+        length=length,
+    )
     file_size = pinned["file_size"]
     whole_sha256 = pinned["whole_file_sha256"]
     expected_whole = arguments.get("expected_sha256")

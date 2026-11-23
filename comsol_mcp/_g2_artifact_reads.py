@@ -315,6 +315,9 @@ def dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution: 
     if execution.get("project_id") is not None and execution.get("project_id") != project_id:
         raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", f"{operation} project_id differs from the execution envelope")
     project = daemon.project_authority.authorize_operation(project_id, "inspect")
+    if project.get("project_id") != project_id:
+        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", f"{operation} authorization returned a different project identity")
+    project_id = project["project_id"]
     project_root = Path(project["workspace"])
     proof = _capture_project_host(daemon, project_id, project_root)
     _recheck_project_host(daemon, project_id, project_root, proof)
@@ -349,6 +352,9 @@ def _dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution:
 
     # Permission is deliberately checked before any artifact metadata query.
     project = daemon.project_authority.authorize_operation(project_id, "inspect")
+    if project.get("project_id") != project_id:
+        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", f"{operation} authorization returned a different project identity")
+    project_id = project["project_id"]
     project_root = Path(project["workspace"])
     root_identity = identify_project_root(project_root)
     host_identity = local_artifact_host_identity()

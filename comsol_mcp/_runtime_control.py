@@ -336,10 +336,8 @@ def render_probe(worker: Any, backend: Any, *, runtime_id: str, mode: str,
         try:
             shutil.rmtree(root)
             temp_root_removed = True
-            # The render artifact is deliberately ephemeral. Do not leave its
-            # path in ArtifactStore's process-global registered-artifact set.
-            ArtifactStore._REGISTERED_ARTIFACTS.discard(str(target))
-            ArtifactStore._REGISTERED_ARTIFACTS.discard(str(target.resolve()))
+            # Remove both compatibility and project-scoped registration state.
+            ArtifactStore.unregister_artifact(target)
         except OSError as exc:
             temp_cleanup_error = exc
     if worker_cleanup_error is not None or temp_cleanup_error is not None or not cleanup_complete or not temp_root_removed:

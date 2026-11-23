@@ -399,40 +399,101 @@ class BoundedOptimizer:
         self,
         grid_points_per_dim: int = 3,
         eval_fn: Callable[[dict[str, float]], dict[str, Any]] | None = None,
+        *,
+        stop_on_terminal_case_status: bool = False,
     ) -> dict[str, Any]:
         """Perform a structured grid exploration across parameter bounds respecting budget."""
         if eval_fn is None:
             raise ValueError("eval_fn is required")
 
         dims = list(self.parameter_bounds.keys())
-        grids: list[list[float]] = []
-        for d in dims:
-            lb, ub = self.parameter_bounds[d]
-            if grid_points_per_dim <= 1 or lb == ub:
-                grids.append([lb])
+        axes: list[tuple[str, float, float, float | None]] = []
+        axis_sizes: list[int] = []
+        for dim in dims:
+            low, high = self.parameter_bounds[dim]
+            if grid_points_per_dim <= 1 or low == high:
+                size, step = 1, 0.0
             else:
-                step = (ub - lb) / (grid_points_per_dim - 1)
-                grids.append([lb + i * step for i in range(grid_points_per_dim)])
+                # range.stop retains arbitrary-size Python integers; len(range(...))
+                # overflows once the grid exceeds Py_ssize_t.
+                size = range(grid_points_per_dim).stop
+                try:
+                    step = (high - low) / (size - 1)
+                except OverflowError:
+                    # Avoid converting an enormous denominator to float. The
+                    # per-index ratio is bounded in [0, 1] and remains safe.
+                    step = None
+                if step is not None and not math.isfinite(step):
+                    step = None
+            axes.append((dim, low, high, step))
+            axis_sizes.append(size)
+        candidate_count = math.prod(axis_sizes) if axis_sizes else 1
 
-        import itertools
-        idx = 0
-        for pt in itertools.product(*grids):
-            if not self.budget.can_evaluate():
+        def iter_indices():
+            if not axis_sizes:
+                yield ()
+                return
+            indices = [0] * len(axis_sizes)
+            while True:
+                yield tuple(indices)
+                for position in range(len(indices) - 1, -1, -1):
+                    indices[position] += 1
+                    if indices[position] < axis_sizes[position]:
+                        break
+                    indices[position] = 0
+                else:
+                    return
+
+        def axis_value(position: int, index: int) -> float:
+            dim, low, high, step = axes[position]
+            size = axis_sizes[position]
+            if index == 0:
+                return low
+            if index == size - 1:
+                return high
+            if step is None:
+                fraction = index / (size - 1)
+                return low * (1.0 - fraction) + high * fraction
+            return low + index * step
+
+        def iter_candidates():
+            for indices in iter_indices():
+                yield {
+                    dim: axis_value(position, indices[position])
+                    for position, (dim, _low, _high, _step) in enumerate(axes)
+                }
+
+        candidates = iter(iter_candidates())
+        idx = len(self.history)
+        evaluated_this_run = 0
+        unknown_seen = any(
+            c.raw_results.get("execution_state_unknown") is True
+            or c.raw_results.get("status") in {
+                "UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN",
+            }
+            for c in self.history
+        )
+        while self.budget.can_evaluate() and not unknown_seen:
+            try:
+                cand_params = next(candidates)
+            except StopIteration:
                 break
             idx += 1
-            cand_params = {dims[i]: pt[i] for i in range(len(dims))}
             candidate = self.evaluate_candidate(f"opt-case-{idx:03d}", cand_params, eval_fn)
-            if candidate.raw_results.get("execution_state_unknown") is True or candidate.raw_results.get("status") in {
+            evaluated_this_run += 1
+            case_status = candidate.raw_results.get("status")
+            if (candidate.raw_results.get("execution_state_unknown") is True or case_status in {
                 "UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN",
-            }:
+            }):
+                unknown_seen = True
+                break
+            if stop_on_terminal_case_status and case_status in {"FAILED", "NOT_RUN"}:
                 break
 
         feas_status = "FEASIBLE_FOUND" if self.best_candidate is not None else "NO_FEASIBLE_FOUND"
-        if any(c.raw_results.get("execution_state_unknown") is True
-               or c.raw_results.get("status") in {"UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN"}
-               for c in self.history):
+        if unknown_seen:
             feas_status = "EXECUTION_STATE_UNKNOWN"
-        elif not self.budget.can_evaluate():
+        elif evaluated_this_run < candidate_count and not self.budget.can_evaluate():
             feas_status = "BUDGET_EXHAUSTED"
 
         return {

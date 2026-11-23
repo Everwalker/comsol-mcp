@@ -632,20 +632,69 @@ def op_optimization_bounded_run(worker, model_tag, arguments):
     # Optimizer owns candidate budget, executor owns compute count. Cache hits
     # do not consume the compute budget; both figures are returned.
     compute_budget = ComputationBudget(max_cases=budget.max_cases, max_wall_time_s=budget.max_wall_time_s)
-    unknown_case = {'result': None}
+    stopped_case = {'result': None}
     def evaluate(params):
-        result = execute_case(worker, model_tag, study, definition, params, compute_budget, 'opt-' + str(len(optimizer.history)+1))
-        if result.get('status') == 'UNKNOWN':
-            unknown_case['result'] = result
+        case_id = 'opt-' + str(len(optimizer.history)+1)
+        try:
+            result = execute_case(worker, model_tag, study, definition, params, compute_budget, case_id)
+        except Exception as exc:
+            unknown = _exception_is_unknown(exc)
+            result = {'status': 'UNKNOWN' if unknown else 'FAILED', 'error': str(exc),
+                      'case_id': case_id, 'parameters': dict(params)}
+            if unknown:
+                result['execution_state_unknown'] = True
+            error_code = getattr(exc, 'code', None)
+            if error_code:
+                result['error_code'] = error_code
+        if (result.get('status') in {'FAILED', 'UNKNOWN', 'EXECUTION_STATE_UNKNOWN',
+                                     'ENGINE_STATE_UNKNOWN', 'NOT_RUN'}
+                or result.get('execution_state_unknown') is True):
+            stopped_case['result'] = result
         return result
-    result = optimizer.run_bounded_search(arguments.get('grid_points_per_dim',3), evaluate)
+    result = optimizer.run_bounded_search(
+        arguments.get('grid_points_per_dim',3), evaluate,
+        stop_on_terminal_case_status=True,
+    )
     result['search_status'] = result['status']
-    if unknown_case['result'] is not None:
+    terminal_case = stopped_case['result']
+    terminal_status = terminal_case.get('status') if terminal_case else None
+    terminal_unknown = bool(terminal_case and (
+        terminal_case.get('execution_state_unknown') is True
+        or terminal_status in {'UNKNOWN', 'EXECUTION_STATE_UNKNOWN', 'ENGINE_STATE_UNKNOWN'}
+    ))
+    if terminal_unknown:
         result['status'] = 'EXECUTION_STATE_UNKNOWN'
         result['execution_state_unknown'] = True
-        result['stopped_case'] = unknown_case['result']
+        result['search_status'] = 'EXECUTION_STATE_UNKNOWN'
+        result['completion_status'] = 'EXECUTION_STATE_UNKNOWN'
+        result['stopped_case'] = terminal_case
+    elif terminal_status == 'FAILED':
+        result['status'] = 'FAILED'
+        result['search_status'] = 'FAILED'
+        result['completion_status'] = 'CASE_FAILED'
+        result['stopped_case'] = terminal_case
+    elif terminal_status == 'NOT_RUN':
+        result['stopped_case'] = terminal_case
+        if terminal_case.get('reason') == 'BUDGET_EXHAUSTED':
+            # COMPLETE means the bounded scheduling request ended; these two
+            # fields retain that the parameter space was not fully traversed.
+            result['status'] = 'COMPLETE'
+            result['search_status'] = 'BUDGET_EXHAUSTED'
+            result['completion_status'] = 'BUDGET_EXHAUSTED'
+        else:
+            result['status'] = 'NOT_RUN'
+            result['search_status'] = 'NOT_RUN'
+            reason = terminal_case.get('reason')
+            result['completion_status'] = reason if isinstance(reason, str) and reason else 'NOT_RUN'
+    elif result['search_status'] == 'BUDGET_EXHAUSTED':
+        result['status'] = 'COMPLETE'
+        result['completion_status'] = 'BUDGET_EXHAUSTED'
+        # No candidate was dispatched after the optimizer observed the exhausted
+        # budget, so there is no stopped case to report.
+        result['stopped_case'] = None
     else:
         result['status'] = 'COMPLETE'
+        result['completion_status'] = 'ALL_CANDIDATES_EVALUATED'
     result['compute_budget'] = compute_budget.status()
     result['optimality'] = 'BEST_VERIFIED_FEASIBLE_SO_FAR' if result['best_candidate'] else 'NO_FEASIBLE_FOUND'
     return result
