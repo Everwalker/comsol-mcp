@@ -7,12 +7,12 @@
     "supplied _g2_property_path_guard.py overlay",
     "subsequent integrated software changes"
   ],
-  "candidate": "Development snapshot; source changed after the r6 Windows-only candidate due to T28. The public snapshot differs in documented local-only inputs; no native acceptance.",
+  "candidate": "r7 is a local source-bound interim candidate; the public snapshot differs in documented local-only inputs. Public MCP and native acceptance remain unverified.",
   "last_qualified_interim_candidate": {
-    "wheel_sha256": "2a70650d933569d5503ecccea255ae41f87ffe13f9c8baa5546ff50562f48541",
+    "wheel_sha256": "1d277c8bc02d8e95d935c10bacb0c5b24d11d36b82f9227a6daadb5dee85cb2b",
     "matches_snapshot": false,
-    "matches_local_source_at_check": false,
-    "scope": "The r4 three-platform bundle and r5 Windows-only bundle predate subsequent source changes. r4 Mac ARM64 offline installation passed and separate Mac notice bundles were built; the current source needs new bound artifacts. No COMSOL/Worker/license or cross-platform native acceptance."
+    "matches_local_source_at_check": true,
+    "scope": "Local source/stage/wheel binding; fresh Mac ARM Python 3.12 offline install and two fresh Windows Python 3.12 offline venv installs passed pip check and 208-file wheel/install comparison. No public MCP, COMSOL engine, Worker, license or native acceptance."
   },
   "review": "Final independent U01-U12 acceptance NOT_RUN",
   "tasks": {
@@ -137,7 +137,7 @@
       "execution_complete": false
     },
     "T25": {
-      "status": "TODO",
+      "status": "RUNNING",
       "implementation_done": false,
       "execution_complete": false
     },
@@ -436,6 +436,6 @@
     "T42_r4": "A local source-bound r4 wheel and three target bundles were produced; a fresh Mac ARM64 offline install and 208-file wheel/install comparison passed on the original bundle. Separate Mac bundles include verified notice materials; their own installation and native target execution remain unverified.",
     "T36": "Managed file-backed function reload now refuses an unverified project path before refresh, and Java source reads reject private/link paths. Independent review and 14 combined-source synthetic tests passed. The later engine path reread is not bound to the digest and native behavior remains unverified.",
     "T28": "Zero-dimensional EvalPoint statistics use point counting measure without a revolved spatial measure; provenance identifies adapter sums. Independent review and six combined-source synthetic tests passed. Native COMSOL point and spatial results remain unverified.",
-    "Windows_install_attempt": "A new installation attempt stopped during remote directory creation after a local output-decoding exception. Directory creation remains UNKNOWN; no package transfer or installation was dispatched. The unknown directory is fenced. The revised controller passed independent fake review; a further attempt awaits a user decision."
+    "Windows_install_attempt": "An earlier directory-creation attempt remains UNKNOWN and fenced. With explicit user permission, one distinct fresh attempt installed the hash-verified r7 package into two new Windows Python 3.12 environments; pip check and all 208 application file comparisons passed. The environment labels do not verify either COMSOL version. Public MCP and native behavior remain unverified."
   }
 }
