@@ -323,8 +323,8 @@ def test_finish_persists_unknown_without_terminal_timestamp(tmp_path):
     assert operation["status"] == job["status"] == "UNKNOWN"
     assert operation["finished_at"] is None and job["finished_at"] is None
     assert job["result"]["error"]["safe_retry"] is False
-    assert store.reconcile_after_restart() == [record["job_id"]]
-    assert store.job(record["job_id"])["status"] == "RECONCILING"
+    assert store.reconcile_after_restart() == []
+    assert store.job(record["job_id"])["status"] == "UNKNOWN"
 
 
 def test_future_schema_rejected(tmp_path):

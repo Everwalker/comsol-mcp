@@ -4825,11 +4825,13 @@ class OperationStore:
         self, *,
         preserve_verified_session_start: Callable[[dict[str, Any]], bool] | None = None,
     ) -> list[str]:
-        """Move interrupted jobs to RECONCILING without reopening verified starts.
+        """Reconcile interrupted work without rewriting ordinary UNKNOWN jobs.
 
-        A caller may preserve an UNKNOWN ``session.start`` only by validating
-        its complete durable lifecycle-recovery proof. No other operation or
-        status is eligible for this exception.
+        Ordinary project jobs remain UNKNOWN until an explicit, resource-bound
+        reconciliation observes their original Worker. Session lifecycle
+        operations retain their existing RECONCILING path; a caller may
+        preserve an UNKNOWN ``session.start`` only after validating its
+        complete durable lifecycle-recovery proof.
         """
         with self.lock:
             rows = self.db.execute(
@@ -4838,12 +4840,14 @@ class OperationStore:
             ).fetchall()
             job_ids = []
             for row in rows:
-                if (row["status"] == "UNKNOWN"
-                        and preserve_verified_session_start is not None):
+                if row["status"] == "UNKNOWN":
                     job = self._job(row)
                     operation = job.get("operation")
-                    if (isinstance(operation, dict)
-                            and operation.get("operation") == "session.start"
+                    operation_name = operation.get("operation") if isinstance(operation, dict) else None
+                    if not (isinstance(operation_name, str) and operation_name.startswith("session.")):
+                        continue
+                    if (operation_name == "session.start"
+                            and preserve_verified_session_start is not None
                             and preserve_verified_session_start(job) is True):
                         continue
                 job_ids.append(row["job_id"])
