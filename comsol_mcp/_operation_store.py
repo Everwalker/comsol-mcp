@@ -6426,9 +6426,37 @@ class OperationStore:
                     raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "solve/save dispatch rows differ from the attempt ledger")
                 job = self.operation_job(current.get("operation_id"))
                 job_id = job.get("job_id") if isinstance(job, dict) else None
-                durable_events = self.events(job_id, limit=1000) if isinstance(job_id, str) else []
-                actual_worker_rows = [item for item in durable_events if item.get("event") == "worker_request"]
-                if native_evidence.get("worker_event_rows") != actual_worker_rows:
+                expected_worker_rows = native_evidence.get("worker_event_rows")
+                if not isinstance(job_id, str) or not job_id or not isinstance(expected_worker_rows, list):
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "Worker evidence differs from the durable job event ledger")
+                worker_row_count = 0
+                worker_rows_match = True
+                for event_row in self.db.execute(
+                    "SELECT id,job_id,event,metadata,created_at FROM job_events "
+                    "WHERE job_id=? AND event='worker_request' ORDER BY id",
+                    (job_id,),
+                ):
+                    actual_worker_row = dict(event_row)
+                    try:
+                        actual_worker_row["metadata"] = json.loads(actual_worker_row.get("metadata") or "{}")
+                    except (TypeError, ValueError):
+                        worker_rows_match = False
+                        break
+                    if worker_row_count >= len(expected_worker_rows):
+                        worker_rows_match = False
+                        break
+                    try:
+                        worker_rows_match = (
+                            isinstance(expected_worker_rows[worker_row_count], dict)
+                            and canonical_json(expected_worker_rows[worker_row_count])
+                            == canonical_json(actual_worker_row)
+                        )
+                    except (TypeError, ValueError, OverflowError):
+                        worker_rows_match = False
+                    if not worker_rows_match:
+                        break
+                    worker_row_count += 1
+                if not worker_rows_match or worker_row_count != len(expected_worker_rows):
                     raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "Worker evidence differs from the durable job event ledger")
 
                 output = native_evidence.get("native_output_readback")

@@ -60,7 +60,9 @@ def build_initial_stage_fixture(
         "probes", "disabledvariables", "disabledcoordinatesystems", "disabledpair",
     }
     state: dict[str, Any] = {
-        "solved": False, "numerical": {}, "selection": {}, "submitted": [], "model_handles": [],
+        "solved": False, "numerical": {}, "selection": {},
+        "measure_selection": {"geometry": None, "dimension": None, "entities": []},
+        "submitted": [], "model_handles": [],
     }
     transport_requests: list[dict[str, Any]] = []
 
@@ -170,10 +172,13 @@ def build_initial_stage_fixture(
             elif receiver == "solver-sol1":
                 if method == "study": result = "std1"
                 elif method == "isAttached": result = True
+                elif method == "getSize": result = [9, 1]
+                elif method == "getSizeMulti": result = [1, 1]
                 elif method == "feature":
                     result = (handle("variables-v1", "SolverFeature") if args
                               else handle("solver-feature-list", "SolverFeatureList"))
                 elif method == "getPVals": result = [1.0]
+                elif method == "getPValsImag": result = [0.0]
                 elif method == "getSolutioninfo": result = handle("solution-info", "SolutionInfo")
                 elif method == "getMesh": result = "mesh2" if fault == "wrong_mesh" else "mesh1"
                 elif method == "label": result = "Solution 1"
@@ -234,6 +239,7 @@ def build_initial_stage_fixture(
             elif receiver == "solution-info":
                 if method == "getOuterSolnum": result = [1]
                 elif method == "getSolnum": result = [1]
+                elif method == "getLevels": result = 1
                 elif method == "getPNames": result = [["t"]]
                 elif method == "getPvals": result = [[1.0]]
                 elif method == "getUnits": result = [["s"]]
@@ -254,13 +260,21 @@ def build_initial_stage_fixture(
                 elif method == "get" and args == ["geom1"]: result = handle("geometry-geom1", "GeomSequence")
             elif receiver == "geometry-geom1":
                 if method == "getSDim": result = 2
+                elif method == "getNEntities": result = [3, 3, 1]
                 elif method == "lengthUnit": result = "m"
                 elif method == "isAxisymmetric": result = False
             elif receiver == "measure":
                 if method == "selection": result = handle("measure-selection", "MeshSelection")
             elif receiver == "measure-selection":
-                if method in {"geom", "set", "all"}: result = None
-                elif method == "entities": result = [1]
+                selected = state["measure_selection"]
+                if method == "geom" and len(args) == 2:
+                    selected["geometry"], selected["dimension"] = args; result = None
+                elif method == "geom": result = selected["geometry"]
+                elif method == "set": selected["entities"] = list(args[0]); result = None
+                elif method == "all": selected["entities"] = [1]; result = None
+                elif method == "entities": result = list(selected["entities"])
+                elif method == "inputDimension": result = selected["dimension"]
+                elif method == "dim": result = selected["dimension"]
             # Actual transient numerical Eval calls and automatically inferred units.
             elif receiver == "numerical-list":
                 if method == "tags": result = list(state["numerical"])
@@ -308,9 +322,10 @@ def build_initial_stage_fixture(
                 if method == "geom" and len(args) == 2: selected["geometry"], selected["dimension"] = args; result = None
                 elif method == "geom": result = selected["geometry"]
                 elif method in {"set", "all"}: selected["entities"] = [1]; result = None
-                elif method == "entities": result = [1]
+                elif method == "entities": result = list(selected["entities"])
                 elif method == "dim": result = selected["dimension"]
-                elif method == "named": result = None
+                elif method == "inputDimension": result = selected["dimension"]
+                elif method == "named": result = ""
                 elif method == "isInheriting": result = False
             elif receiver == "mesh-list":
                 if method == "tags": result = ["mesh1"]
@@ -485,9 +500,9 @@ def build_initial_stage_fixture(
                 worker_event_count = int(daemon.store.db.execute(
                     "SELECT COUNT(*) FROM job_events WHERE job_id=? AND event='worker_request'", (job_id,),
                 ).fetchone()[0])
-                if event_count > 1000 or event_count >= event_padding_total:
+                if event_count >= event_padding_total:
                     raise AssertionError(
-                        "fixture's original event transcript must fit the legacy 1000-row page before padding"
+                        "fixture's original event transcript must fit the requested total before padding"
                     )
                 additional = event_padding_total - event_count
                 for index in range(additional):

@@ -119,7 +119,7 @@ def test_registered_initial_stage_accepts_complete_fake_worker_output(tmp_path):
         assert (event_collection["expected_event_count"]
                 == event_collection["fetched_event_count"]
                 == event_collection["fetched_job_event_count"])
-        assert event_collection["fetched_job_event_count"] < 1000
+        assert event_collection["expected_page_count"] <= 2
         assert event_collection["job_row_count"] == 1
         assert event_collection["worker_request_event_count"] == len(proof["worker_event_rows"])
         assert event_collection["overflow_sentinel_count"] == 0
@@ -398,7 +398,7 @@ def test_initial_acceptance_collects_complete_job_snapshot_above_1000(tmp_path, 
             "attempt_evidence_kinds": [row.get("kind") for row in value.get("attempt", {}).get("evidence", [])],
         }
         padding = value["event_padding_receipt"]
-        assert padding["original_event_count"] <= 1000
+        assert padding["original_event_count"] < padding["final_event_count"]
         assert padding["final_event_count"] == 1101
         assert padding["all_original_worker_events_precede_padding"] is True
         # Controller validation and the store's transactional finalization
@@ -477,6 +477,58 @@ def test_initial_acceptance_collects_complete_job_snapshot_above_1000(tmp_path, 
             accepted, reasons = invoke(tampered)
             assert accepted is False, fault
             assert "complete bounded exact-job event snapshot and Worker projection" in reasons, fault
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize("tamper", [
+    "first_changed", "last_changed", "missing_first", "missing_last",
+    "extra_first", "extra_last",
+])
+def test_transactional_initial_acceptance_rejects_worker_event_row_changes(
+    tmp_path, monkeypatch, tamper,
+):
+    from comsol_mcp import _operation_store as operation_store
+
+    original_finalize = operation_store.OperationStore.finalize_initial_stage_output_acceptance
+
+    def finalize_with_tampered_worker_rows(
+        store, project_id, model_ref, attempt_id, *, expected_version, native_evidence, result,
+    ):
+        candidate = copy.deepcopy(native_evidence)
+        rows = candidate["worker_event_rows"]
+        assert rows
+        if tamper == "first_changed":
+            rows[0]["created_at"] = "tampered"
+        elif tamper == "last_changed":
+            rows[-1]["created_at"] = "tampered"
+        elif tamper == "missing_first":
+            rows.pop(0)
+        elif tamper == "missing_last":
+            rows.pop()
+        elif tamper == "extra_first":
+            rows.insert(0, copy.deepcopy(rows[0]))
+        elif tamper == "extra_last":
+            rows.append(copy.deepcopy(rows[-1]))
+        return original_finalize(
+            store, project_id, model_ref, attempt_id,
+            expected_version=expected_version,
+            native_evidence=candidate,
+            result=result,
+        )
+
+    monkeypatch.setattr(
+        operation_store.OperationStore,
+        "finalize_initial_stage_output_acceptance",
+        finalize_with_tampered_worker_rows,
+    )
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert value["attempt"]["status"] == "UNKNOWN"
+        assert value["attempt"]["acceptance_status"] == "UNKNOWN"
     finally:
         value["daemon"].close()
 
