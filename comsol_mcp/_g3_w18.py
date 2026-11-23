@@ -723,14 +723,22 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
                     sol_container = _call(model, "sol")
                     if sol_container and solution_tag:
                         sol_node = _call(sol_container, "get", solution_tag)
-                        is_init = _call(sol_node, "isInitialized") if hasattr(sol_node, "isInitialized") else True
-                        solution_state = "CURRENT_SOLUTION" if is_init else "STALE_SOLUTION"
+                        try:
+                            is_init = _call(sol_node, "isInitialized")
+                        except Exception as exc:
+                            if _worker_failure_unknown(exc):
+                                raise
+                            solution_state = "UNKNOWN_SOLUTION_STATE"
+                        else:
+                            solution_state = (
+                                "CURRENT_SOLUTION" if is_init else "STALE_SOLUTION"
+                            ) if isinstance(is_init, bool) else "UNKNOWN_SOLUTION_STATE"
                     else:
-                        solution_state = "CURRENT_SOLUTION"
+                        solution_state = "UNKNOWN_SOLUTION_STATE"
                 except Exception as exc:
                     if _worker_failure_unknown(exc):
                         raise
-                    solution_state = "CURRENT_SOLUTION"
+                    solution_state = "UNKNOWN_SOLUTION_STATE"
             else:
                 solution_state = "UNKNOWN_SOLUTION_STATE"
         except Exception as exc:

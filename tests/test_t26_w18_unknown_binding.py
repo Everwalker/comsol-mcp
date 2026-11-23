@@ -107,9 +107,9 @@ def test_plot_render_preserves_dataset_worker_unknown(
 
 @pytest.mark.parametrize(("failure_site", "expected_state"), [
     ("resolver", "UNKNOWN_SOLUTION_STATE"),
-    ("model.sol", "CURRENT_SOLUTION"),
+    ("model.sol", "UNKNOWN_SOLUTION_STATE"),
 ])
-def test_plot_render_keeps_deterministic_dataset_fallbacks(
+def test_plot_render_keeps_unknown_state_on_deterministic_read_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_site: str, expected_state: str,
 ) -> None:
     worker = MockWorker(tmp_path)
@@ -158,3 +158,47 @@ def test_plot_render_keeps_deterministic_dataset_fallbacks(
     )
 
     assert result["solution_state"] == expected_state
+
+
+def test_plot_render_does_not_call_unreadable_initialization_current(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    worker = MockWorker(tmp_path)
+    DISPATCH["plot.group_create"](
+        worker, "m1", {"tag": "pg_init_unknown", "dimension": 2, "dataset": "dset1"}
+    )
+    DISPATCH["plot.feature_create"](
+        worker, "m1", {
+            "group": "pg_init_unknown", "tag": "surf1", "type_id": "Surface",
+            "properties": {"expr": "T", "unit": "K"},
+        }
+    )
+    model = worker.model("m1")
+    solution = type("Solution", (), {"isInitialized": lambda _self: True})()
+
+    class SolutionContainer:
+        def get(self, _tag: str) -> object:
+            return solution
+
+    solution_container = SolutionContainer()
+    monkeypatch.setattr(_dataset_binding, "resolve_dataset_binding", lambda *_args, **_kwargs: {
+        "binding_complete": True, "solution": "sol1",
+    })
+    original_call = _g3_w18._call
+
+    def failed_initialization_read(node: object, method: str, *args: object) -> object:
+        if node is model and method == "sol":
+            return solution_container
+        if node is solution_container and method == "get":
+            return solution
+        if node is solution and method == "isInitialized":
+            raise ExecutionContractError(
+                "API_UNSUPPORTED", "isInitialized read was refused", stage="validation",
+            )
+        return original_call(node, method, *args)
+
+    monkeypatch.setattr(_g3_w18, "_call", failed_initialization_read)
+    result = _g3_w18.plot_render(
+        worker, "m1", {"path": "pg_init_unknown", "options": {"destination": "init.png"}}
+    )
+    assert result["solution_state"] == "UNKNOWN_SOLUTION_STATE"
