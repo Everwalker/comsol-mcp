@@ -1373,6 +1373,59 @@ def test_result_evaluate_measures_and_axisymmetric() -> None:
     assert res_max["cleanup"]["type_id"] == "MaxVolume"
 
 
+def test_axisymmetric_point_average_uses_counting_measure() -> None:
+    """0D EvalPoint statistics must not request a revolved spatial measure."""
+    tree = FWiredTree(sdim=2, is_axisymmetric=True, numerical_real=42.0)
+    tree.solution_info.props["getMaxInner"] = 1
+    tree.solver.getSizeMulti = lambda: tree.solver._guard("getSizeMulti", ()) or [1, 1]
+    original = tree.numerical_list.factory
+    created: list[Any] = []
+
+    def factory(tag: str, *args: Any) -> Any:
+        node = original(tag, *args)
+        if args and args[0] == "EvalPoint":
+            # The point feature exposes the documented point rows, without
+            # spatial integration properties such as intvolume/intsurface.
+            node.props.pop("intvolume", None)
+            node.props.pop("intsurface", None)
+            node.real_data = [[1.0], [1.0]] if tag.endswith("_meas") else [[2.0], [4.0]]
+        created.append(node)
+        return node
+
+    tree.numerical_list.factory = factory
+    result = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {
+            "expressions": ["T"], "solution": {"dataset": "dset1"},
+            "aggregate": "average", "entity_dim": 0, "complex_mode": "real",
+        }
+    })
+
+    assert [node.type_id for node in created] == ["EvalPoint", "EvalPoint"]
+    assert result["values"] == [[[[3.0]]]]
+    assert result["expression_units"] == {"T": "K"}
+    assert result["denominator_measure"] == [[[[2.0]]]]
+    assert result["axisymmetric"] is True
+    assert result["axisymmetric_measure_evidence"] == []
+    assert result["axisymmetric_factor_applied"] is False
+    assert result["axisymmetric_applied_count"] == 0
+    assert result["revolved_measure"] is None
+    assert result["denominator_source"] == (
+        "EvalPoint samples of 1 reduced by adapter counting-measure sum"
+    )
+    assert all("intvolume" not in node.props and "intsurface" not in node.props for node in created)
+
+    weighted = dispatch("result.evaluate", tree.worker, "Model", {
+        "spec": {
+            "expressions": ["T"], "solution": {"dataset": "dset1"},
+            "aggregate": "average", "entity_dim": 0, "complex_mode": "real",
+            "weight_expression": "1",
+        }
+    })
+    assert weighted["denominator_source"] == (
+        "EvalPoint samples of w='1' reduced by adapter counting-measure sum"
+    )
+
+
 def test_pinned_selection_without_entities_is_refused() -> None:
     """C05/§3: a selection that matches no entity must not come back as a vacuous 0.
 
@@ -1419,6 +1472,34 @@ def test_pinned_selection_without_entities_is_refused() -> None:
     })
     assert res["selection_measure"] == [[[[150.0], [150.0], [150.0]]]]
     assert res["selection_measure_source"].startswith("engine integral of 1 over the pinned selection")
+
+    # A pinned 0D selection is witnessed by native EvalPoint samples summed
+    # with counting measure; it must not be described as a spatial integral.
+    tree_point = FWiredTree(sdim=2, is_axisymmetric=True, numerical_real=42.0)
+    tree_point.solution_info.props["getMaxInner"] = 1
+    tree_point.solver.getSizeMulti = lambda: tree_point.solver._guard("getSizeMulti", ()) or [1, 1]
+    original_point_factory = tree_point.numerical_list.factory
+
+    def point_factory(tag: str, *args: Any) -> Any:
+        node = original_point_factory(tag, *args)
+        if args and args[0] == "EvalPoint":
+            node.props.pop("intvolume", None)
+            node.props.pop("intsurface", None)
+            node.real_data = [[1.0], [1.0]] if tag.endswith("_selmeasure") else [[2.0], [4.0]]
+        return node
+
+    tree_point.numerical_list.factory = point_factory
+    point_guard = dispatch("result.evaluate", tree_point.worker, "Model", {
+        "spec": {
+            "expressions": ["T"], "solution": {"dataset": "dset1"},
+            "aggregate": "integral", "entity_dim": 0, "complex_mode": "real",
+            "selection": [1],
+        }
+    })
+    assert point_guard["selection_measure_source"] == (
+        "EvalPoint samples of 1 reduced by adapter counting-measure sum"
+    )
+    assert point_guard["axisymmetric_factor_applied"] is False
 
 
 def test_result_evaluate_solution_spec_indices() -> None:

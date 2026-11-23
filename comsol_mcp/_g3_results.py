@@ -6872,8 +6872,11 @@ def _result_evaluate_body(
         except Exception:
             pass
 
-        axisymmetric_measure_required = is_axisymmetric and aggregate in (
-            "integral", "average", "std", "rms"
+        # Revolved geometric measures apply to positive-dimensional entities.
+        # EvalPoint aggregates use an explicit counting measure instead.
+        axisymmetric_measure_required = (
+            is_axisymmetric and ms.entity_dim > 0
+            and aggregate in ("integral", "average", "std", "rms")
         )
         if axisymmetric_measure_required:
             axisymmetric_measure_evidence.append(
@@ -7473,8 +7476,12 @@ def _result_evaluate_body(
                     if guard_selectors:
                         selection_measure = guard_field_array.select(**guard_selectors).values
                 selection_measure_source = (
-                    "engine integral of 1 over the pinned selection "
-                    f"({ms.integral_feature_type})"
+                    "EvalPoint samples of 1 reduced by adapter counting-measure sum"
+                    if ms.entity_dim == 0
+                    else (
+                        "engine integral of 1 over the pinned selection "
+                        f"({ms.integral_feature_type})"
+                    )
                 )
             except Exception as exc:
                 selection_measure_error = f"{type(exc).__name__}: {exc}"
@@ -7578,7 +7585,7 @@ def _result_evaluate_body(
                 m_value = None
                 m_read_error = f"{type(exc).__name__}: {exc}"
 
-            if is_axisymmetric and meas_feat is not None:
+            if axisymmetric_measure_required and meas_feat is not None:
                 # Measure the meridional cross-section once, then restore the
                 # native revolved measure even when the temporary run/read
                 # fails.  A broad ``except: pass`` here used to leave
@@ -7672,11 +7679,18 @@ def _result_evaluate_body(
                         "ZERO_OR_INVALID_MEASURE",
                         "weighted denominator must be strictly positive and finite for every exact selected solution tuple",
                     )
-            denominator_source = (
-                f"engine integral of w={weight_expression!r} over the selection"
-                if weight_expression
-                else "engine integral of 1 over the selection"
-            )
+            if ms.entity_dim == 0:
+                denominator_source = (
+                    f"EvalPoint samples of w={weight_expression!r} reduced by adapter counting-measure sum"
+                    if weight_expression
+                    else "EvalPoint samples of 1 reduced by adapter counting-measure sum"
+                )
+            else:
+                denominator_source = (
+                    f"engine integral of w={weight_expression!r} over the selection"
+                    if weight_expression
+                    else "engine integral of 1 over the selection"
+                )
 
             # §3: a weighted aggregate uses the numerator ∫w·f dμ over the *same*
             # dataset/selection/solution axes as the measure M = ∫w dμ.
@@ -8767,7 +8781,7 @@ def _result_evaluate_body(
         "axisymmetric_measure_evidence": axisymmetric_measure_evidence,
         "axisymmetric_factor_applied": bool(axisymmetric_measure_evidence),
         "axisymmetric_applied_count": 1 if axisymmetric_measure_evidence else 0,
-        "revolved_measure": denominator_measure if is_axisymmetric else None,
+        "revolved_measure": denominator_measure if axisymmetric_measure_required else None,
         "cross_section_measure": cross_section_measure,
         "denominator_measure": denominator_measure if aggregate in ("average", "std", "rms") else None,
         "selection_measure": selection_measure,
