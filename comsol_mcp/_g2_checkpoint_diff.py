@@ -639,7 +639,13 @@ def run_diff(backend,ref,body,execution,selected,isolation):
                 projections[role]=project(tag,role)
                 if hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:fail('EXECUTION_STATE_UNKNOWN','original checkpoint bytes changed during projection')
             except Exception as exc:
-                unknown=unknown or attempted;cause.append({'side':role,'stage':'owned_copy','path':{'segments':[]},'code':getattr(exc,'code','COPY_FAILED'),'message':str(exc),'cause_type':type(exc).__name__,'dispatched':attempted,'mutation_possible':attempted})
+                code=getattr(exc,'code','COPY_FAILED')
+                copy_cleanup_unknown=(code=='EXECUTION_STATE_UNKNOWN' and not attempted)
+                unknown=unknown or attempted or copy_cleanup_unknown
+                if copy_cleanup_unknown:
+                    cleanup['complete']=False
+                    cleanup['errors'].append({'side':role,'tag':tag,'path':str(target),'code':code,'message':str(exc),'cause_type':type(exc).__name__})
+                cause.append({'side':role,'stage':'owned_copy','path':{'segments':[]},'code':code,'message':str(exc),'cause_type':type(exc).__name__,'dispatched':attempted,'mutation_possible':attempted})
             finally:
                 try:
                     if attempted and tag in client_call('tags'):client_call('remove',tag)

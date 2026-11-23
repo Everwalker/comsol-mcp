@@ -26,6 +26,7 @@ def scalar(value,kind):
 class _PreflightOwner:
     def __init__(self,api):
         self._seal=_SEAL;self.api=api;self.registry=registry_for(api);self.sdk={};self.first_cause=None;self.scope=self.registry.scope();self.retired=False
+        self._allocation_call_serial=0;self._allocation_call_dispatched=False
         self._borrowed_outputs=[]
         if self.registry.owner is not api:fail('readonly preflight requires original API registry owner')
         if self.registry.unresolved():fail('readonly preflight root must precede acquisition; existing resources cannot be re-adopted')
@@ -79,10 +80,13 @@ class _PreflightOwner:
             value_reader=lambda actual:getattr(actual,'value',actual))
         return entry
     def allocation_call(self,name,dll,storage,*args,family,keepalive=()):
+        self._allocation_call_serial+=1;self._allocation_call_dispatched=False
         closer=self.function('CloseHandle' if family=='handle' else 'LocalFree',self.api.k)
         fn=self.function(name,dll)
         primary=None
-        try:return fn(*args)
+        try:
+            self._allocation_call_dispatched=True
+            return fn(*args)
         except BaseException as error:primary=error;self.remember(error);raise
         finally:
             try:self.capture(storage,family=family,closer=closer,keepalive=(*keepalive,primary))

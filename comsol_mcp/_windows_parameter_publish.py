@@ -293,25 +293,43 @@ class _API:
         disposition = 2 if create else 1  # FILE_CREATE / FILE_OPEN
         options = (0x1 if directory else 0x40) | 0x20 | 0x00200000
         preflight = getattr(self, '_readonly_preflight_owner', None)
-        if preflight is not None:
-            from ._windows_host_preflight_owner import scalar
-            status = scalar(preflight.allocation_call('NtCreateFile', self.nt, output,
-                       C.byref(output), access, C.byref(attributes), C.byref(io_status),
-                       None, 0x80, share, disposition, options, None, 0, family='handle',
-                       keepalive=(name_buffer, name, attributes, io_status)), 'NTSTATUS')
-        else:
-            try:
-                status = int(self.nt.NtCreateFile(C.byref(output), access, C.byref(attributes),
-                                                  C.byref(io_status), None, 0x80, share,
-                                                  disposition, options, None, 0))
-            except BaseException as primary:
-                if output.value not in {None, 0, C.c_void_p(-1).value}:
-                    self._retain_partial_relative(output, registry, original_closer, primary,
-                                                  (name_buffer, name, attributes, io_status))
-                raise
+        preflight_call_serial = (getattr(preflight, '_allocation_call_serial', None)
+                                 if preflight is not None else None)
+        native_call_returned = False
+        native_call_attempted = False
+        try:
+            if preflight is not None:
+                from ._windows_host_preflight_owner import scalar
+                raw_status = preflight.allocation_call('NtCreateFile', self.nt, output,
+                           C.byref(output), access, C.byref(attributes), C.byref(io_status),
+                           None, 0x80, share, disposition, options, None, 0, family='handle',
+                           keepalive=(name_buffer, name, attributes, io_status))
+                native_call_returned = True
+                status = scalar(raw_status, 'NTSTATUS')
+            else:
+                native = self.nt.NtCreateFile
+                native_call_attempted = True
+                status = int(native(C.byref(output), access, C.byref(attributes),
+                                    C.byref(io_status), None, 0x80, share,
+                                    disposition, options, None, 0))
+                native_call_returned = True
+        except BaseException as primary:
+            has_output = output.value not in {None, 0, C.c_void_p(-1).value}
+            preflight_dispatched = (preflight is not None
+                                    and getattr(preflight, '_allocation_call_serial', None) != preflight_call_serial
+                                    and getattr(preflight, '_allocation_call_dispatched', False) is True)
+            preflight_capture_attempted = (preflight is not None
+                                           and (native_call_returned or preflight_dispatched))
+            if (has_output or (create and (native_call_attempted or native_call_returned
+                                           or preflight_dispatched))):
+                self._retain_partial_relative(output, registry, original_closer, primary,
+                                              (name_buffer, name, attributes, io_status),
+                                              register=not preflight_capture_attempted)
+            raise
         if status < 0:
-            if preflight is None and output.value not in {None, 0, C.c_void_p(-1).value}:
-                primary = PublishError("NATIVE_STATUS_FAILED", "failed native status has an ambiguous output handle")
+            if output.value not in {None, 0, C.c_void_p(-1).value}:
+                primary = PublishError("NATIVE_STATUS_FAILED", "failed native status has an ambiguous output handle",
+                                       details={"native_status": status})
                 self._retain_partial_relative(output, registry, original_closer, primary,
                                               (name_buffer, name, attributes, io_status))
             unsigned_status = status & 0xFFFFFFFF
@@ -323,30 +341,81 @@ class _API:
                 raise FileExistsError(183, "relative entry already exists", leaf)
             dos_error = int(self.nt.RtlNtStatusToDosError(status))
             raise C.WinError(dos_error)
-        if registry is not None:
-            registry.acquire(self, output, original_closer, label="relative_file")
         expected_information = 2 if create else 1  # FILE_CREATED / FILE_OPENED
-        if int(io_status.Information) != expected_information:
+        actual_information = int(io_status.Information)
+        has_output = output.value not in {None, 0, C.c_void_p(-1).value}
+        if create and not has_output:
+            primary = PublishError("NATIVE_OUTPUT_INCOMPLETE", "successful FILE_CREATE returned no usable handle",
+                                   details={"native_status": status,
+                                            "iosb_information": actual_information,
+                                            "expected_information": expected_information})
+            self._retain_partial_relative(output, registry, original_closer, primary,
+                                          (name_buffer, name, attributes, io_status))
+        if actual_information != expected_information:
+            if create:
+                primary = PublishError("NATIVE_COMPLETION_MISMATCH",
+                                       "relative NtCreateFile completion information did not match its disposition",
+                                       details={"native_status": status,
+                                                "iosb_information": actual_information,
+                                                "expected_information": expected_information})
+                self._retain_partial_relative(output, registry, original_closer, primary,
+                                              (name_buffer, name, attributes, io_status))
+            if registry is not None:
+                registry.acquire(self, output, original_closer, label="relative_file")
             self.close(output)
             raise PublishError("ACCESS_VIOLATION", "relative file open did not produce the requested object")
+        if registry is not None:
+            try:
+                registry.acquire(self, output, original_closer, label="relative_file",
+                                 keepalive=(name_buffer, name, attributes, io_status) if create else ())
+            except BaseException as primary:
+                if create:
+                    self._retain_partial_relative(
+                        output, registry, original_closer, primary,
+                        (name_buffer, name, attributes, io_status),
+                        registry_error=primary, register=False)
+                raise
         return output
 
-    def _retain_partial_relative(self, output, registry, original_closer, primary, keepalive):
+    def _retain_partial_relative(self, output, registry, original_closer, primary, keepalive,
+                                 *, registry_error=None, register=True):
         # Provenance is this actual native out storage and original callback,
         # never a caller-supplied integer or journal/PID reconstruction.
-        if registry is not None:
-            entry = registry.acquire(self, output, original_closer,
-                                     label="partial_relative_output", keepalive=keepalive)
-            entry.state = "UNKNOWN"
-            entry.error = primary
+        has_output = output.value not in {None, 0, C.c_void_p(-1).value}
+        if registry is not None and has_output:
+            try:
+                entry = (registry.acquire(self, output, original_closer,
+                                          label="partial_relative_output", keepalive=keepalive)
+                         if register else registry.find(self, output))
+                if entry is not None:
+                    entry.state = "UNKNOWN"
+                    entry.error = primary
+                elif not register and registry_error is None:
+                    # The preflight owner already attempted native-output capture.
+                    registry_error = primary
+            except BaseException as error:
+                if registry_error is None:
+                    registry_error = error
+        retention_error = None
         if __package__:
-            from ._windows_state_restore import retain_unknown
-            retain_unknown(self, primary, output=output, closer=original_closer)
-        failure = PublishError("ACQUISITION_STATE_UNKNOWN", "original native output exists but acquisition is not terminal")
+            try:
+                from ._windows_state_restore import retain_unknown
+                retain_unknown(self, primary, output=output, closer=original_closer)
+            except BaseException as error:
+                retention_error = error
+        failure = PublishError("ACQUISITION_STATE_UNKNOWN",
+                               "NtCreateFile acquisition or completion is not terminal",
+                               details={"safe_retry": False, "native_output_present": has_output},
+                               stage="post_dispatch")
         failure.original_api = self
         failure.original_native_output = output
+        failure.original_native_context = tuple(keepalive)
         failure.original_cause = primary
         failure.safe_retry = False
+        if registry_error is not None:
+            failure.ownership_registry_error = registry_error
+        if retention_error is not None:
+            failure.state_retention_error = retention_error
         raise failure from primary
 
     def open_child_directory(self, parent_handle, leaf, *, add_file=False, add_directory=False):
@@ -816,7 +885,7 @@ def publish_chunks(project_root, destination, chunks, *, expected_sha256, expect
     except TypeError as error:
         raise PublishError("INVALID_REQUEST", "stream publication requires an iterable of byte chunks") from error
     digest = expected_sha256; size = expected_size; observed = hashlib.sha256(); observed_size = 0
-    handle = None; committed = False
+    handle = None; committed = False; creation_pending = False
     owned_created = False; identity = None
     try:
         with pinned_parent(project_root, destination, _api=_api) as (api, parent, parts, binding):
@@ -831,7 +900,9 @@ def publish_chunks(project_root, destination, chunks, *, expected_sha256, expect
             if api.exists_child(parent, parts[-1]):
                 raise PublishError("DESTINATION_EXISTS", "export destination already exists")
             try:
+                creation_pending = True
                 handle = api.create_owned(parent, temp_leaf); owned_created = True
+                creation_pending = False
                 identity = api.info(handle)[0]
                 for block in chunks:
                     if not isinstance(block, bytes):
@@ -877,9 +948,11 @@ def publish_chunks(project_root, destination, chunks, *, expected_sha256, expect
                 # failure must take the same-handle cleanup and typed-receipt
                 # path. BaseException interruptions still pass through while the
                 # finally block closes the handle.
-                # No temp was created when CREATE_NEW failed; the publisher
-                # therefore has no owned residual to remove or report unknown.
-                cleanup = not owned_created and not committed
+                # A definite pre-dispatch or FILE_CREATE refusal has no owned
+                # residual. An ambiguous CREATE is handled as UNKNOWN below.
+                creation_unknown = (creation_pending and isinstance(cause, PublishError)
+                                    and cause.code == "ACQUISITION_STATE_UNKNOWN")
+                cleanup = not owned_created and not committed and not creation_unknown
                 if handle is not None:
                     try:
                         api.delete_owned(handle); api.close(handle); handle = None
@@ -890,7 +963,8 @@ def publish_chunks(project_root, destination, chunks, *, expected_sha256, expect
                 code = (cause.code if isinstance(cause, PublishError) else
                         supplied_code if isinstance(supplied_code, str) and re.fullmatch(r'[A-Z][A-Z0-9_]{1,63}', supplied_code)
                         else 'ARTIFACT_PUBLISH_FAILED')
-                details = {'partial_change': committed, 'publication_committed': committed,
+                details = {'partial_change': committed or creation_unknown,
+                           'publication_committed': committed,
                            'cleanup_verified': cleanup, 'residual_status': 'ABSENT' if cleanup else 'UNKNOWN',
                            'final_state': 'ROLLED_BACK' if cleanup else 'UNKNOWN', 'cause_code': code,
                            'cause_type': type(cause).__name__,
@@ -898,9 +972,17 @@ def publish_chunks(project_root, destination, chunks, *, expected_sha256, expect
                            'source_sha256_observed': observed.hexdigest(),
                            'source_size_observed': observed_size,
                            'file_identity': {'device': identity[0], 'inode': identity[1]} if identity else None}
-                if committed or (owned_created and not cleanup):
-                    raise PublishError('ARTIFACT_PUBLISH_UNKNOWN', 'owned export publication or cleanup could not be verified',
-                                       details=details, stage='post_dispatch') from cause
+                if creation_unknown:
+                    details.update({'staging_state': 'UNKNOWN', 'execution_state_unknown': True,
+                                    'safe_retry': False})
+                unknown_outcome = committed or (owned_created and not cleanup) or creation_unknown
+                if unknown_outcome:
+                    details['safe_retry'] = False
+                    failure = PublishError('ARTIFACT_PUBLISH_UNKNOWN',
+                                           'export publication or staging creation could not be verified',
+                                           details=details, stage='post_dispatch')
+                    failure.safe_retry = False
+                    raise failure from cause
                 raise PublishError(code, 'export was refused or failed before publication', details=details) from cause
             finally:
                 if handle is not None:
