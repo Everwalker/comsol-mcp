@@ -7,7 +7,7 @@
     "supplied _g2_property_path_guard.py overlay",
     "subsequent integrated software changes"
   ],
-  "candidate": "The r11 Mac ARM source/wheel/offline-install build matched the local source after T24/T29/T37 integration but became stale after the W21 event-finalizer change. A non-circular T10 preparation identity was generated and independently reviewed or under review; audit attribution needs correction. The public snapshot differs in documented local-only inputs, and no live MCP or native acceptance is claimed.",
+  "candidate": "The r11 Mac ARM source/wheel/offline-install build matched the local source after T24/T29/T37 integration but became stale after the W21 event-finalizer change. Independent review verified the historical non-circular identity chain and found audit-source misattribution; r11 remains NOT_READY. An r12 offline rebuild is in progress. The public snapshot differs in documented local-only inputs, and no live MCP or native acceptance is claimed.",
   "last_qualified_interim_candidate": {
     "wheel_sha256": "443c526763fae2560fac61e7bd3b333bc459c234437d60e2ede8fb11beff94a0",
     "matches_snapshot": false,
@@ -446,7 +446,7 @@
     "W21": "The initial-stage finalizer now compares the complete ordered Worker-event ledger instead of a capped 1000-event read. Independent scoped review accepted the fix; 11 current-source synthetic tests and 17 independent synthetic tests passed, including a ledger exceeding 1000 events and tamper cases. No live COMSOL or native acceptance is claimed."
   },
   "recent_review_findings": {
-    "T10": "An r11 preparation record binds source, wheel, installation, adapter, runner and bootstrap and passed 39 fake tests; independent review is pending and the live gate remains disabled. The r11 build and binding are stale after the later W21 source change. Its audit quotes the actual user instruction but mislabels it as historical and conflates delegated preparation restrictions with user-wide authority. Actual permissions/provider route and all native behavior remain unverified.",
+    "T10": "Independent review found the historical r11 source/wheel/install and non-circular binding byte-consistent, with 39 copied-candidate fake tests passing, but current source differs in one file after W21 and the audit misattributes delegation restrictions to the user. The live gate is disabled; actual provider, permissions and native behavior remain unverified. A corrected current-source r12 offline rebuild is in progress.",
     "T24": "The final ID correction was independently accepted and integrated with the bounded-grid, budget and UNKNOWN fixes. Real COMSOL/Worker multi-case behavior remains unverified.",
     "T25": "The isolated time metadata fix passed scoped independent review and was integrated; native stage transfer, coordinate/variable mapping and interpolation remain unverified.",
     "T37": "The scoped reader and cleanup-error propagation were independently accepted and integrated. The synthetic Windows handle tests use POSIX-backed fakes; actual Windows handles, overwrite/rollback and large-file performance remain unverified.",
@@ -454,7 +454,8 @@
     "T29": "The scoped T29 patch was technically accepted and integrated. The reviewer could not independently see the serving model sublabel; delegation explicitly requested gpt-6-luna max. FastMCP still discards unknown root-level fields before the gateway; real COMSOL rendering and final acceptance remain open.",
     "T38": "Managed package publication can reach a substituted project root. An isolated POSIX prototype that preserves uncertain remnants and reports partial/UNKNOWN passed scoped synthetic review, but is not integrated or production-ready. Worker absolute output, Windows, dependency recovery, registration and trusted classification remain unresolved.",
     "T20": "A synthetic fake refresh read a substituted outside target after control-side handle-bound hashing. COMSOL 6.4 offline docs describe FileResource persistence and Interpolation import, but do not prove direct filename/resource binding or reopen/refresh safety. A durable engine-bound content identity or actual file-system isolation remains unverified.",
-    "W21": "The independently reviewed event comparison fix was integrated and checked with current-source fake tests. It preserves UNKNOWN and does not replay a Worker. Native execution remains unverified."
+    "W21": "The independently reviewed event comparison fix was integrated and checked with current-source fake tests. It preserves UNKNOWN and does not replay a Worker. Native execution remains unverified.",
+    "T13": "An isolated fake-only method error classification candidate is under independent review; shared engine behavior and actual Java Worker error categorization remain unverified, and historical fenced routes remain untouched."
   },
   "latest_local_build_only_candidate": {
     "wheel_sha256": "24e7b1f10b1e73edf21d7fe51732a10c3f9f45bdda5fd7e1471fe82099c82a76",
