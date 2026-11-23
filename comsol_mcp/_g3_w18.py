@@ -26,7 +26,7 @@ import uuid
 
 from ._artifact_store import ArtifactStore, trusted_project_root
 from ._execution_contract import ExecutionContractError
-from ._g2_engine import _call
+from ._g2_engine import _call, _worker_failure_unknown
 from ._g3_common import (
     bound_model,
     node_not_found,
@@ -727,11 +727,15 @@ def plot_render(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
                         solution_state = "CURRENT_SOLUTION" if is_init else "STALE_SOLUTION"
                     else:
                         solution_state = "CURRENT_SOLUTION"
-                except Exception:
+                except Exception as exc:
+                    if _worker_failure_unknown(exc):
+                        raise
                     solution_state = "CURRENT_SOLUTION"
             else:
                 solution_state = "UNKNOWN_SOLUTION_STATE"
-        except Exception:
+        except Exception as exc:
+            if _worker_failure_unknown(exc):
+                raise
             solution_state = "UNKNOWN_SOLUTION_STATE"
 
     expressions: list[str] = []

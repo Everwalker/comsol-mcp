@@ -28,7 +28,7 @@ from ._execution_contract import (
     permission_for_legacy_tool,
 )
 from ._execution_service import ExecutionService
-from ._runtime_state import save_runtime_state, restore_runtime_state
+from ._runtime_state import runtime_state_snapshot, save_runtime_state, restore_runtime_state
 from ._g2_docs import OfflineDocsIndex
 from ._g2_registry import CONTROL_IMPLEMENTED_OPERATIONS, IMPLEMENTED_OPERATIONS, LEGACY_FALLBACK_NAMES, is_implemented, validate_call
 from ._g2_contract import NodePath
@@ -1100,7 +1100,20 @@ class ManagedBackend:
                            "host_control": {"enabled": "host_control" in self.service.ledger.permissions,
                                              "scope": "current managed session", "config": "COMSOL_MCP_HOST_CONTROL"},
                            "worker": {k: v for k, v in runtime.items() if k != "token"}}
-            self.persist()
+            try:
+                self.persist()
+            except Exception as exc:
+                # The Worker is already connected.  A durable-state failure
+                # must retain that handle and prevent a normal retry.
+                details = {"cause_type": type(exc).__name__}
+                if isinstance(exc, ExecutionContractError):
+                    details["cause_code"] = exc.code
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "Worker connected, but managed runtime persistence failed",
+                    safe_retry=False,
+                    details=details,
+                ) from exc
             model_name = str(arguments.get("model_name") or "").strip()
             if model_name:
                 found = [m for m in srv._client.models() if m.name() == model_name or str(m.java.tag()) == model_name]
@@ -1114,6 +1127,13 @@ class ManagedBackend:
         if self.service is None or self.worker_identity is None:
             return
         ledger = self.service.ledger
+        if callable(getattr(self.store, "persist_runtime_snapshot", None)):
+            snapshot = runtime_state_snapshot(ledger, self.worker_identity)
+            lineage = getattr(ledger, "_legacy_project_lineage", {})
+            self.store.persist_runtime_snapshot(snapshot, self._model_project_bindings,
+                                                lineage, self.project_authorizer)
+            ledger._legacy_project_lineage = {}
+            return
         save_runtime_state(self.store, ledger, self.worker_identity)
         for state in ledger._models.values():
             key = self._model_project_key(state.ref.as_dict())
@@ -2666,6 +2686,13 @@ class ManagedBackend:
             # replace it, and permission/revision/dirty/isolation ordering is
             # untouched (this runs after all of those gates).
             unit_a_path_screen = self._g2_property_path_screen(execution.get("project_id"))
+            from ._g2_property_path_guard import require_known_file_path
+            create_body = prepared_a["body"]
+            for item in create_body["properties"]:
+                # This is the structural type argument used by create(), not
+                # caller-supplied semantic metadata; dispatch later verifies
+                # that the created node reports the same getType().
+                require_known_file_path(create_body["type_id"], item["name"], item["value"])
             self._screen_property_values(
                 unit_a_path_screen, prepared_a["body"]["properties"], "initial properties",
                 stage="before the node is created, before the write ticket is taken and before any engine setter")
@@ -3568,6 +3595,23 @@ class ManagedBackend:
                 native_context = self._stage_native_context.get(None)
                 mesh_snapshot_mode = self._stage_mesh_snapshot_context.get(None)
                 def dispatch_domain():
+                    if operation == "validate.report":
+                        from ._g3_report_publish import publish_project_report
+                        selected = active_session_context()
+                        project_id = execution.get("project_id")
+                        if (selected is not None and
+                                (selected.project_id != project_id or selected.session_id != session
+                                 or selected.backend is not self or selected.worker is not self.worker
+                                 or selected.service is not self.service)):
+                            raise ExecutionContractError("WORKER_BINDING_MISMATCH", "active session does not match report publication")
+
+                        def publish(destination, overwrite, report_json, report_md):
+                            return publish_project_report(
+                                self.project_root_binding, self.project_authorizer, project_id,
+                                destination, overwrite, report_json, report_md,
+                            )
+
+                        return function(self.worker, model_tag, domain_body, _report_publisher=publish)
                     if operation == "result.evaluate" and output_mode == "strict_field_readback":
                         if (isinstance(native_context, Mapping)
                                 and native_context.get("purpose") == "initial_stage_output"):
@@ -3597,6 +3641,18 @@ class ManagedBackend:
                     if operation == "mesh.inspect" and isinstance(mesh_snapshot_mode, dict):
                         return function(self.worker, model_tag, domain_body,
                                         _strict_snapshot_mode=mesh_snapshot_mode)
+                    if operation in {
+                        "geometry.feature_create", "geometry.feature_update",
+                        "geometry.workplane_edit", "geometry.import",
+                    }:
+                        # The W14 wrappers have a direct property adapter in
+                        # addition to the G2 setter routes. Install the same
+                        # managed project-root screen here; the request body
+                        # cannot supply or replace this capability.
+                        return function(
+                            self.worker, model_tag, domain_body,
+                            path_guard=self._g2_property_path_screen(execution.get("project_id")),
+                        )
                     return function(self.worker, model_tag, domain_body)
 
                 if operation in {"study.run", "mesh.convergence_study"}:
@@ -3828,11 +3884,12 @@ class ManagedBackend:
         write ticket and before the create mutation, and the same screen
         instance is re-checked at the ``execute_node_action`` dispatch
         boundary (a refusal there is still mutation-free for the witness).
-        The screen never establishes a physical project boundary: its probe
-        strings stay lexically inside the root, but a same-UID concurrent
-        swap of an already probed component can move kernel resolution
-        outside the root during the scan itself (recorded open item, see the
-        guard module docstring).
+        The POSIX control-side scan is rooted in the pinned project directory,
+        so replacing a traversed pathname does not redirect its FD-relative
+        metadata lookups. A name can still be replaced during the scan after
+        its check, and the original path can resolve outside by return. This
+        screen does not settle bare-relative semantics or constrain later
+        engine-side re-resolution; check-then-use TOCTOU remains open.
         """
         from ._g2_property_path_guard import (adjudicate_path_leaf, classify_string_leaf,
                                               typed_value_string_leaves)
@@ -3872,7 +3929,8 @@ class ManagedBackend:
                 if shape is None:
                     continue
                 allowed, reason = adjudicate_path_leaf(
-                    leaf, shape, project_root=resolve_root(), engine_host_proven=resolve_host())
+                    leaf, shape, project_root=resolve_root(), engine_host_proven=resolve_host(),
+                    project_root_binding=self.project_root_binding)
                 if not allowed:
                     findings.append({"where": f"{where}.{leaf_where}", "shape": shape, "reason": reason,
                                      "leaf_sha256": hashlib.sha256(
@@ -3887,10 +3945,10 @@ class ManagedBackend:
                     details={"mitigation": "t20-property-path-shape-partial",
                              "findings": findings,
                              "scope_limits": "lexical path-shape screen only; file/non-file semantics "
-                                             "and bare relative names remain undecided; the probe "
-                                             "strings stay lexically inside the root but a same-user "
-                                             "swap during the scan can move kernel resolution "
-                                             "outside it (recorded open)"})
+                                             "and bare relative names remain undecided; the "
+                                             "control-side walk uses the pinned project directory, "
+                                             "but names can change during the scan and before "
+                                             "engine use; path containment is not established"})
 
         return screen
 

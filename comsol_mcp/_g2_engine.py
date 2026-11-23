@@ -23,6 +23,7 @@ from ._g2_contract import (
     signature_spec, typed_value_from_engine, validate_property_set,
     validate_typed_value,
 )
+from ._g2_property_path_guard import require_known_file_path
 from ._g2_transactions import INVARIANT_TYPES, TransactionRecord, run_transaction, transaction_fingerprint
 
 
@@ -293,6 +294,11 @@ def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: M
     mutation_possible = False
     try:
         if operation == "node.create":
+            # type_id is the structural argument passed to create(), not a
+            # caller-declared semantic exemption. The resulting getType() is
+            # checked below before any initial property setter is called.
+            for item in body["properties"]:
+                require_known_file_path(body["type_id"], item["name"], item["value"])
             if path_guard is not None:
                 # T20 independent-review B1 (2026-11-09) dispatch-boundary re-check.
                 # The managed backend already screened these same validated initial
@@ -1427,10 +1433,47 @@ def _typed_readback_matches(requested: Mapping[str, Any], returned: Mapping[str,
     return bool(_typed_readback_comparison(requested, returned)["matched"])
 
 
+def _actual_node_type_id_for_file_property(node: Any) -> str:
+    """Read the resolved engine node's structural type; never use caller hints."""
+    try:
+        type_id = _call(node, "getType")
+    except Exception as exc:
+        if _worker_failure_unknown(exc):
+            if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN":
+                raise
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "the resolved node's getType() read ended in an unresolved Worker state",
+                stage="post_dispatch",
+                details={"probe": "getType", "cause_type": type(exc).__name__,
+                         "cause_code": getattr(exc, "code", None)},
+            ) from exc
+        if not isinstance(exc, ExecutionContractError) or exc.code != "API_UNSUPPORTED":
+            raise
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            "the engine did not provide an authoritative node type for filename semantics",
+        ) from exc
+    if not isinstance(type_id, str) or not type_id:
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            "the engine returned no authoritative node type for filename semantics",
+        )
+    return type_id
+
+
 def property_set(worker: Any, model_tag: str, path: Mapping[str, Any], properties: list[dict[str, Any]],
                  *, path_guard: Any | None = None,
                  on_probe_error: Callable[[Exception, str], None] | None = None) -> dict[str, Any]:
     node = resolve_node_path(_model(worker, model_tag), path)
+    node_type_id = (
+        _actual_node_type_id_for_file_property(node)
+        if any(isinstance(item, Mapping) and item.get("name") == "filename" for item in properties)
+        else None
+    )
+    for item in properties:
+        if isinstance(item, Mapping):
+            require_known_file_path(node_type_id, item.get("name"), item.get("value"))
     schemas = _schemas_for(node, properties, on_probe_error=on_probe_error)
     for item in properties:
         row = schemas.get(item.get("name")) if isinstance(item, Mapping) else None
@@ -1662,6 +1705,8 @@ def property_index_set(worker: Any, model_tag: str, path: Mapping[str, Any], nam
     if not isinstance(indices, list) or not indices or not all(isinstance(item, int) and not isinstance(item, bool) and item >= 0 for item in indices):
         raise PreWriteRefusal("INVALID_REQUEST", "indices must be non-negative integers")
     node = resolve_node_path(_model(worker, model_tag), path)
+    node_type_id = _actual_node_type_id_for_file_property(node) if name == "filename" else None
+    require_known_file_path(node_type_id, name, value)
     row = property_schema_from_engine(node, name)
     if row.get("metadata_status") != "KNOWN":
         supplied = value.get("java_signature") if isinstance(value, Mapping) else None
@@ -1774,6 +1819,8 @@ def property_entry_set(worker: Any, model_tag: str, path: Mapping[str, Any], nam
                        *, allow_unverified: bool = False, path_guard: Any | None = None) -> dict[str, Any]:
     if not isinstance(name, str) or not name or not isinstance(key, str): raise PreWriteRefusal("INVALID_REQUEST", "name and key are required")
     node = resolve_node_path(_model(worker, model_tag), path)
+    node_type_id = _actual_node_type_id_for_file_property(node) if name == "filename" else None
+    require_known_file_path(node_type_id, name, value)
     row = property_schema_from_engine(node, name)
     if row.get("metadata_status") != "KNOWN":
         signature = value.get("java_signature") if isinstance(value, Mapping) else None

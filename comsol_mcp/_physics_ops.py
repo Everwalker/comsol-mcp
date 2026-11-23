@@ -193,7 +193,8 @@ def _apply_physics_properties(
     model: Any, component: str, physics_tag: str, feature_tag: str,
     properties_json: str,
 ) -> list[dict[str, Any]]:
-    feat = model.java.component(component).physics(physics_tag).feature(feature_tag)
+    physics = model.java.component(component).physics(physics_tag)
+    feat = physics if not feature_tag else physics.feature(feature_tag)
     props = _normalize_properties(properties_json)
     return _apply_feature_properties(feat, props)
 

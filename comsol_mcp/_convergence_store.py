@@ -83,7 +83,8 @@ def resolve_cases(worker, refs):
         verify_producer(ctx,record['producer'])
         for key in ('server_instance_id','session_id'):
             require(record['model_ref'].get(key)==ctx['model_ref'].get(key),'Cross-runtime refinement case refused')
-        with observation_context(ctx['store'],record['model_ref'],record['revision'],ctx['producer']):
+        with observation_context(ctx['store'],record['model_ref'],record['revision'],ctx['producer'],
+                                project_id=ctx.get('project_id')):
             resolve_observation(worker,record['model_ref']['model_tag'],record['observation_ref'],allow_historical=True)
         records.append(record)
     settings=[(r['elements'],r['max_element_volume'],r['dofs'],r['tolerance'],r['tlist']) for r in records]

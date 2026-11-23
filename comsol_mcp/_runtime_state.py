@@ -43,9 +43,9 @@ def _worker_key(identity: Mapping[str, Any]) -> str:
     return value
 
 
-def save_runtime_state(store: Any, ledger: SessionLedger, worker_identity: Mapping[str, Any], active_tickets: Iterable[ExecutionTicket] = ()) -> dict[str, Any]:
-    """Persist all ledger fields; ticket metadata is retained for UNKNOWN recovery."""
-    identity = dict(worker_identity); runtime_id = _worker_key(identity)
+def runtime_state_snapshot(ledger: SessionLedger, worker_identity: Mapping[str, Any], active_tickets: Iterable[ExecutionTicket] = ()) -> dict[str, Any]:
+    """Build the runtime snapshot without writing it."""
+    identity = dict(worker_identity); _worker_key(identity)
     models = {}
     for tag, state in ledger._models.items():
         models[tag] = {"ref": state.ref.as_dict(), "revision": state.revision, "fingerprint": state.fingerprint,
@@ -55,9 +55,15 @@ def save_runtime_state(store: Any, ledger: SessionLedger, worker_identity: Mappi
     tickets = [{"operation_id": t.operation_id, "request_id": t.request_id, "request_hash": t.request_hash, "operation": t.operation,
                 "model_ref": t.model_ref.as_dict(), "expected_revision": t.expected_revision,
                 "external_event_counter": t.external_event_counter, "fingerprint": t.fingerprint} for t in active_tickets]
-    state = {"schema_version": RUNTIME_STATE_SCHEMA_VERSION, "worker_identity": identity, "session_id": ledger.session_id,
+    return {"schema_version": RUNTIME_STATE_SCHEMA_VERSION, "worker_identity": identity, "session_id": ledger.session_id,
              "server_instance_id": ledger.server_instance_id, "server_ownership": ledger.server_ownership,
              "permissions": sorted(ledger.permissions), "generations": dict(ledger._generations), "models": models, "active_tickets": tickets}
+
+
+def save_runtime_state(store: Any, ledger: SessionLedger, worker_identity: Mapping[str, Any], active_tickets: Iterable[ExecutionTicket] = ()) -> dict[str, Any]:
+    """Persist all ledger fields; ticket metadata is retained for UNKNOWN recovery."""
+    state = runtime_state_snapshot(ledger, worker_identity, active_tickets)
+    runtime_id = _worker_key(state["worker_identity"])
     _put(store, "sessions", ledger.session_id, state); _put(store, "runtimes", runtime_id, state)
     return state
 
@@ -86,6 +92,7 @@ def restore_runtime_state(store: Any, session_id: str, worker_identity: Mapping[
     if not isinstance(server, str) or not server: raise RuntimeStateError("current worker server_instance_id is required")
     ledger = SessionLedger(session_id, server, server_ownership=state["server_ownership"], permissions=set(state["permissions"]))
     ledger._generations.update({str(k): int(v) for k, v in state["generations"].items()})
+    legacy_project_lineage: dict[str, dict[str, Any]] = {}
     unknown: list[dict[str, Any]] = []
     for tag, raw in state["models"].items():
         ownership = raw["ownership"]
@@ -96,6 +103,7 @@ def restore_runtime_state(store: Any, session_id: str, worker_identity: Mapping[
             # mapping or creating a new generation and resetting its counters.
             # Normalize to the historical version, not a future current one.
             if isinstance(ref_data, Mapping) and ref_data.get("schema_version") is True:
+                legacy_project_lineage[tag] = dict(ref_data)
                 ref_data = {**ref_data, "schema_version": 1}
             ref = ModelRef(**ref_data); ledger._models[tag] = _ModelState(ref=ref, revision=int(raw["revision"]), fingerprint=raw.get("fingerprint"), external_event_counter=int(raw["external_event_counter"]), observed_external_event_counter=int(raw["observed_external_event_counter"]), dirty=bool(raw["dirty"]), retired=bool(raw["retired"]), active_operation_id=None)
             ledger.model_ownership[tag] = ownership
@@ -109,4 +117,5 @@ def restore_runtime_state(store: Any, session_id: str, worker_identity: Mapping[
             ledger._models[tag].dirty = True; unknown.append({"operation_id": raw["active_operation_id"], "status": "UNKNOWN", "safe_retry": False})
     for ticket in state.get("active_tickets", []):
         unknown.append({"operation_id": ticket.get("operation_id"), "status": "UNKNOWN", "safe_retry": False})
+    ledger._legacy_project_lineage = legacy_project_lineage
     return ledger, unknown

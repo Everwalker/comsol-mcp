@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from ._g2_engine import _worker_failure_unknown
+
 
 _DERIVED_TYPES = frozenset({
     "CutPoint1D", "CutPoint2D", "CutPoint3D",
@@ -31,12 +33,16 @@ def _call(node: Any, method: str, *args: Any) -> tuple[bool, Any, dict[str, Any]
     try:
         fn = getattr(node, method)
     except Exception as exc:  # noqa: BLE001 - read boundary
+        if _worker_failure_unknown(exc):
+            raise
         return False, None, _err("API_UNSUPPORTED", f"{method} accessor is unavailable: {type(exc).__name__}: {exc}")
     if not callable(fn):
         return False, None, _err("API_UNSUPPORTED", f"{method} accessor is not callable")
     try:
         return True, fn(*args), None
     except Exception as exc:  # noqa: BLE001 - retain the native read failure
+        if _worker_failure_unknown(exc):
+            raise
         code = getattr(exc, "code", None)
         if not isinstance(code, str) or not code:
             code = "ENGINE_READ_FAILED"
@@ -120,10 +126,12 @@ def resolve_dataset_binding(model: Any, dataset_tag: str,
                             requested_solution: str | None = None) -> dict[str, Any]:
     """Resolve ``dataset_tag`` to a real solution/component/geometry binding.
 
-    Missing nodes, wrong tags, cycles, incompatible Join branches and every
-    native read failure are returned as an explicit non-complete result.  The
-    function is read-only and does not manufacture defaults except for the
-    documented unique single-component/single-geometry derivation.
+    Missing nodes, wrong tags, cycles, incompatible Join branches and
+    determinate native read failures are returned as an explicit non-complete
+    result. Structured Worker UNKNOWN is re-raised so callers can preserve the
+    unresolved execution state. The function is read-only and does not
+    manufacture defaults except for the documented unique
+    single-component/single-geometry derivation.
     """
     if not isinstance(dataset_tag, str) or not dataset_tag.strip():
         result = _base(str(dataset_tag))

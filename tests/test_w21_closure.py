@@ -24,7 +24,7 @@ def sample():
 def test_registered_observation_cannot_be_replaced_or_forged(tmp_path):
     worker=SimpleNamespace(project_root=tmp_path)
     store=OperationStore(tmp_path/'operations.sqlite')
-    with observation_context(store, {'model_tag':'m1','generation':1},3,'real-w17-job'):
+    with observation_context(store, {'model_tag':'m1','generation':1},3,'real-w17-job', project_id='test-project'):
         ref=register_observation(worker,'m1',sample())
         result=validate_solution(worker,'m1',{'observation_ref':ref,'criteria':{'range':[300,310]},'values':None,'observations':None})
         assert result['numerical_verification_status']=='PASS'
@@ -35,7 +35,7 @@ def test_registered_observation_cannot_be_replaced_or_forged(tmp_path):
         assert forged['numerical_verification_status']=='FAIL'
         with pytest.raises(ExecutionContractError,match='another model'):
             resolve_observation(worker,'other',ref)
-    with observation_context(store, {'model_tag':'m1','generation':1},4,'next-job'):
+    with observation_context(store, {'model_tag':'m1','generation':1},4,'next-job', project_id='test-project'):
         with pytest.raises(ExecutionContractError,match='revision'):
             resolve_observation(worker,'m1',ref)
     store.close()
@@ -43,7 +43,7 @@ def test_registered_observation_cannot_be_replaced_or_forged(tmp_path):
 
 def test_changed_observation_artifact_refused(tmp_path):
     worker=SimpleNamespace(project_root=tmp_path);store=OperationStore(tmp_path/'ops.sqlite')
-    with observation_context(store,{'model_tag':'m'},1,'producer'):
+    with observation_context(store,{'model_tag':'m'},1,'producer', project_id='test-project'):
         ref=register_observation(worker,'m',sample())
         record=store.get_metadata('artifacts',ref['observation_id'])
         from pathlib import Path
@@ -93,7 +93,7 @@ def test_w13_applied_change_is_not_partial_failure():
 
 def test_missing_producer_and_replaced_solution_refused(tmp_path, monkeypatch):
     worker=SimpleNamespace(project_root=tmp_path);store=OperationStore(tmp_path/'ops.sqlite')
-    with observation_context(store, {'model_tag':'m'}, 1, 'producer'):
+    with observation_context(store, {'model_tag':'m'}, 1, 'producer', project_id='test-project'):
         ref=register_observation(worker, 'm', sample())
         monkeypatch.setattr(OperationStore, 'get_operation', lambda *args: None)
         with pytest.raises(ExecutionContractError, match='producer'):

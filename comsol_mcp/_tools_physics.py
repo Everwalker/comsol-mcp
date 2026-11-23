@@ -131,6 +131,8 @@ def create_physics_feature(
     in the current physics interface, as these vary per physics type and COMSOL version.
     properties_json format: [{"name": "prop_name", "value": "value"}] or
     {"prop_name": "value", ...}.
+    A non-empty feature_tag is required; use update_physics_feature to set
+    properties on the physics interface itself.
     """
 
     def _impl() -> dict[str, Any]:
@@ -141,7 +143,8 @@ def create_physics_feature(
         ftype = feature_type.strip()
         if not phys:
             raise ValueError("physics_tag is required.")
-        # Empty feature_tag is the explicit parent-interface form.
+        if not ftag:
+            raise ValueError("feature_tag is required to create a child physics feature.")
         if not ftype:
             raise ValueError("feature_type is required.")
         result = _create_physics_feature(model, comp, phys, ftag, ftype)
@@ -173,7 +176,6 @@ def update_physics_feature(
         ftag = feature_tag.strip()
         if not phys:
             raise ValueError("physics_tag is required.")
-        # Empty feature_tag is the explicit parent-interface form.
         applied = _apply_physics_properties(model, comp, phys, ftag, properties_json)
         return {
             "component": comp,

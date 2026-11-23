@@ -36,7 +36,7 @@ Every engine call below is verified against one of two local sources:
   SolverSequence`` with ``getPVals() -> double[]`` and ``study() -> String``;
   ``Study.feature()``; ``StudyFeature.type()``/``PropFeature.getType()``.
 * The local COMSOL 6.4 documentation corpus
-  (``/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py``):
+  (``COMSOL-6.4-KB/kb.py``):
   * results API page **Interp** (``comsol_api_results.52.082.html``, sha256
     ``156412ab29631518953b57d6948b88a0181bf5312984b1a0f9e840a6ad848421``):
     ``model.result().numerical().create(<ftag>,"Interp")`` +
@@ -1135,6 +1135,13 @@ def _resolve_dataset_binding(
             _fence_native_receiver(model), dataset_tag, requested_solution=requested_solution
         )
     except Exception as exc:
+        if _worker_failure_unknown(exc):
+            if getattr(exc, "code", None) == "EXECUTION_STATE_UNKNOWN":
+                raise
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "dataset binding Worker read has unresolved state",
+                stage="post_dispatch", details={"cause_code": getattr(exc, "code", None)},
+            ) from exc
         # Every dataset type requires a resolved binding. A derived dataset's
         # ``data`` property may name an upstream dataset, not a solution;
         # neither that string nor requested solution membership proves binding.
@@ -5734,6 +5741,16 @@ def _result_evaluate_body(
             str(dataset_binding["error"].get("message", "requested solution does not match dataset")),
             details={"dataset_binding": dict(dataset_binding)},
         )
+    if (not isinstance(dataset_binding, Mapping)
+            or dataset_binding.get("binding_complete") is not True):
+        raise PreWriteRefusal(
+            "DATASET_BINDING_INCOMPLETE",
+            "result.evaluate requires a complete native dataset-to-solution binding",
+            details={
+                "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
+                "mutation_issued": False,
+            },
+        )
     # COMSOL 6.4 rejects a raw Eval numerical feature when its data dataset is
     # Join.  Refuse before creating any numerical node; the supported Join
     # paths are Interp point evaluation and the native Av*/Int* aggregate
@@ -5756,7 +5773,6 @@ def _result_evaluate_body(
         solution_spec.get("solution")
         or (dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None)
         or _string_or_none(dset_node, "solution", [])
-        or _string_or_none(dset_node, "data", [])
     )
     # The R9/T07 actual worker transcripts show COMSOL 6.4 publishing an empty
     # outer axis for the attached stationary sequence and rejecting the
@@ -8692,6 +8708,7 @@ def _result_evaluate_body(
         "expressions": expressions,
         "dataset": dataset_tag,
         "solution": solution_tag,
+        "dataset_binding": dict(dataset_binding),
         "aggregate": aggregate,
         "complex_mode": complex_mode,
         "complex_transform_order": requested_transform_order,

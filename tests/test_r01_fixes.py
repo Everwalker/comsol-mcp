@@ -345,7 +345,7 @@ class TestObservationRefValidation:
             "field_array": {"axes": ["expression", "outer", "inner", "point"]},
             "expressions": ["T", "HeatFlow"],
         }
-        with observation_context(store, model_ref, 3, producer["operation_id"]):
+        with observation_context(store, model_ref, 3, producer["operation_id"], project_id="test-project"):
             observation_ref = register_observation(worker, model_tag, field_sample)
         return worker, store, model_ref, observation_ref
 
@@ -365,7 +365,8 @@ class TestObservationRefValidation:
             }
         })
         assert res["status"] == STATUS_PASS
-        assert res["numerical_verification_status"] == STATUS_PASS
+        assert res["external_numerical_verification_status"] == STATUS_PASS
+        assert res["numerical_verification_status"] == STATUS_UNVERIFIED
         assert res["scope"] == "EXTERNAL_DATA_ONLY"
         assert res["model_validated"] is False
         assert res["observation_origin"] == "CALLER_SUPPLIED"
@@ -374,7 +375,7 @@ class TestObservationRefValidation:
         """Only a completed producer and backend-registered hash yields MODEL_VALIDATED."""
         worker, store, model_ref, observation_ref = self._registered_observation(tmp_path, monkeypatch)
         try:
-            with observation_context(store, model_ref, 3, "validation-request"):
+            with observation_context(store, model_ref, 3, "validation-request", project_id="test-project"):
                 res = validate_solution(worker, "m1", {
                     "solution": {"dataset": "dset1"},
                     "criteria": {"range": [0.0, 400.0]},
@@ -403,7 +404,7 @@ class TestObservationRefValidation:
             scope="MODEL_VALIDATED",
         )
         try:
-            with observation_context(store, model_ref, 3, "validation-request"):
+            with observation_context(store, model_ref, 3, "validation-request", project_id="test-project"):
                 res = validate_solution(worker, "m1", {
                     "solution": {"dataset": "dset1"},
                     "criteria": {"range": [0.0, 400.0]},
@@ -420,7 +421,7 @@ class TestObservationRefValidation:
         worker, store, model_ref, observation_ref = self._registered_observation(tmp_path, monkeypatch)
         other_ref = {**model_ref, "model_tag": "other-model", "generation": 1}
         try:
-            with observation_context(store, other_ref, 3, "other-model-validation"):
+            with observation_context(store, other_ref, 3, "other-model-validation", project_id="test-project"):
                 res = validate_solution(worker, "other-model", {
                     "solution": {"dataset": "dset1"},
                     "criteria": {"range": [0.0, 400.0]},
@@ -437,7 +438,7 @@ class TestObservationRefValidation:
         worker, store, model_ref, observation_ref = self._registered_observation(tmp_path, monkeypatch)
         try:
             altered_ref = {**observation_ref, "sha256": "0" * 64}
-            with observation_context(store, model_ref, 3, "validation-request"):
+            with observation_context(store, model_ref, 3, "validation-request", project_id="test-project"):
                 res = validate_solution(worker, "m1", {
                     "solution": {"dataset": "dset1"},
                     "criteria": {"range": [300.0, 350.0]},

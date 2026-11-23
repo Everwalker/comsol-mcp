@@ -333,6 +333,7 @@ class SessionLedger:
     permissions: set[str] = field(default_factory=lambda: {"inspect", "project_write", "compute"})
     _generations: dict[str, int] = field(default_factory=dict, init=False, repr=False)
     _models: dict[str, _ModelState] = field(default_factory=dict, init=False, repr=False)
+    _legacy_project_lineage: dict[str, dict[str, Any]] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         if self.server_ownership not in {"shared", "mcp_managed", "user_owned"}:

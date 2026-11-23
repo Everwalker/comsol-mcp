@@ -14,16 +14,12 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import os
-from pathlib import Path
 import re
-import tempfile
 import time
 import types
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from ._artifact_store import ArtifactStore, trusted_project_root
 from ._execution_contract import ExecutionContractError
 from ._g2_engine import _call, _worker_failure_unknown
 
@@ -32,6 +28,7 @@ from ._g2_engine import _call, _worker_failure_unknown
 STATUS_PASS = "PASS"
 STATUS_FAIL = "FAIL"
 STATUS_UNVERIFIED = "UNVERIFIED"
+STATUS_INCOMPLETE = "INCOMPLETE"
 STATUS_NOT_APPLICABLE = "NOT_APPLICABLE"
 STATUS_BLOCKED = "BLOCKED"
 STATUS_ERROR = "ERROR"
@@ -390,6 +387,7 @@ class ValidationReport:
     warnings: List[str]
     evidence_hash: str
     input_assumption_sensitivity: Any = None
+    caller_status_claims: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def input_assumption_sensitivity_status(self) -> str:
@@ -400,6 +398,9 @@ class ValidationReport:
 
     def _presentation_fields(self) -> dict[str, Any]:
         return {
+            "report_evidence_provenance": "CALLER_SUPPLIED_NOT_AUTHENTICATED",
+            "model_validated": False,
+            "caller_status_claims_provenance": "CALLER_SUPPLIED_NOT_AUTHENTICATED",
             "input_assumption_provenance_status": (
                 "CALLER_SUPPLIED_NOT_AUTHENTICATED" if self.input_assumptions else "NOT_PROVIDED"
             ),
@@ -426,6 +427,11 @@ class ValidationReport:
         md = f"# Validation Report: {self.source_identity}\n\n"
         md += f"**Runtime Version:** {self.runtime_version}\n"
         md += f"**Dataset:** {self.dataset_ref}\n\n"
+        md += ("**Evidence provenance:** Caller-supplied report data and status claims are not "
+               "authenticated as evidence for the current model.\n\n")
+        md += "## Caller-Supplied Status Claims\n"
+        md += "**Provenance status:** `CALLER_SUPPLIED_NOT_AUTHENTICATED`.\n\n"
+        md += self._markdown_json_block(self.caller_status_claims)
         md += "## Input Assumptions and Provenance\n"
         md += self._markdown_json_block(self.input_assumptions)
         provenance_status = self._presentation_fields()["input_assumption_provenance_status"]
@@ -927,6 +933,16 @@ def validate_boundary_conditions(worker: Any, model_tag: str, arguments: Mapping
 
 
 def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep external mathematical checks separate from model verification."""
+    result = _validate_solution_impl(worker, model_tag, arguments)
+    if result.get("scope") == "EXTERNAL_DATA_ONLY":
+        return {**result,
+                "external_numerical_verification_status": result["numerical_verification_status"],
+                "numerical_verification_status": STATUS_UNVERIFIED}
+    return result
+
+
+def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.solution: verify solution existence, finite check, range, benchmark error."""
     arguments = _unpack_wrapped_arguments(arguments)
 
@@ -1151,6 +1167,18 @@ def validate_solution(worker: Any, model_tag: str, arguments: Mapping[str, Any])
 
 
 def validate_conservation(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Evaluate caller data without presenting it as a bound model observation."""
+    result = _validate_conservation_external(worker, model_tag, arguments)
+    return {
+        **result,
+        "scope": "EXTERNAL_DATA_ONLY",
+        "model_validated": False,
+        "external_numerical_verification_status": result["numerical_verification_status"],
+        "numerical_verification_status": STATUS_UNVERIFIED,
+    }
+
+
+def _validate_conservation_external(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """validate.conservation: energy, mass, or flux conservation residual validation."""
     arguments = _unpack_wrapped_arguments(arguments)
 
@@ -1302,11 +1330,16 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
     }
 
 
-def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                    _report_publisher: Callable[..., Any] | None = None) -> dict[str, Any]:
     """validate.report: aggregate validation results and generate JSON and Markdown reports."""
     arguments = _unpack_wrapped_arguments(arguments)
 
-    destination = arguments.get("destination")
+    requested_destination = arguments.get("destination")
+    if requested_destination and not callable(_report_publisher):
+        raise ExecutionContractError("MANAGED_CONTEXT_REQUIRED", "report publication requires a backend-owned project capability",
+                                     stage="validation")
+    # Only the backend-owned publisher may write; the request names no root.
     raw_overwrite = arguments.get("overwrite", False)
     if isinstance(raw_overwrite, str):
         lowered = raw_overwrite.strip().lower()
@@ -1337,6 +1370,21 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     evidence_content = json.dumps(data, sort_keys=True)
     evidence_hash = hashlib.sha256(evidence_content.encode("utf-8")).hexdigest()
 
+    caller_status_claims: dict[str, Any] = {}
+
+    def collect_status_claims(value: Any, path: str = "$") -> None:
+        if isinstance(value, Mapping):
+            for key in ("status", "numerical_verification_status", "physical_validation_status"):
+                if key in value:
+                    caller_status_claims[f"{path}.{key}"] = value[key]
+            for key, child in value.items():
+                collect_status_claims(child, f"{path}.{key}")
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value):
+                collect_status_claims(child, f"{path}[{index}]")
+
+    collect_status_claims(data)
+
     child_statuses = []
     if "status" in data:
         child_statuses.append(data["status"])
@@ -1357,86 +1405,7 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             if "numerical_verification_status" in v:
                 child_statuses.append(v["numerical_verification_status"])
 
-    store: ArtifactStore | None = None
-    try:
-        root = trusted_project_root(worker)
-        store = ArtifactStore(project_root=root)
-    except Exception:
-        env_root = os.environ.get("COMSOL_PROJECT_ROOT")
-        if env_root and Path(env_root).is_dir():
-            try:
-                store = ArtifactStore(project_root=Path(env_root).resolve())
-            except Exception:
-                store = None
-        if store is None and destination:
-            try:
-                dest_p = Path(destination).expanduser().resolve()
-                store = ArtifactStore(project_root=dest_p.parent if dest_p.parent.exists() else Path("/"))
-            except Exception:
-                store = None
-
-    write_ok = True
-    write_error = None
-    dest_path: Path | None = None
-    sibling_path: Path | None = None
-
-    if destination:
-        try:
-            dest_cand = Path(destination).expanduser()
-            if dest_cand.is_dir():
-                write_ok = False
-                write_error = f"Destination path '{destination}' is an existing directory, not a file"
-            else:
-                env_root = os.environ.get("COMSOL_PROJECT_ROOT")
-                if env_root and Path(env_root).is_dir():
-                    try:
-                        resolved_env = Path(env_root).resolve()
-                        dest_cand.resolve().relative_to(resolved_env)
-                        if store is None or store.project_root != resolved_env:
-                            store = ArtifactStore(project_root=resolved_env)
-                    except ValueError:
-                        pass
-
-                if store is not None:
-                    try:
-                        dest_path = store.resolve_safe_path(destination, allow_overwrite=overwrite)
-                    except Exception:
-                        dest_path = store.resolve_safe_path(str(dest_cand.resolve()), allow_overwrite=overwrite)
-                else:
-                    dest_path = dest_cand.resolve()
-
-                if dest_path.suffix.lower() == ".json":
-                    sibling_candidate = dest_path.with_suffix(".md")
-                elif dest_path.suffix.lower() == ".md":
-                    sibling_candidate = dest_path.with_suffix(".json")
-                else:
-                    sibling_candidate = None
-
-                if sibling_candidate:
-                    if store is not None:
-                        try:
-                            sibling_path = store.resolve_safe_path(str(sibling_candidate), allow_overwrite=overwrite)
-                        except Exception:
-                            sibling_path = store.resolve_safe_path(str(sibling_candidate.resolve()), allow_overwrite=overwrite)
-                    else:
-                        sibling_path = sibling_candidate.resolve()
-
-                if not overwrite:
-                    if dest_path.exists():
-                        write_ok = False
-                        write_error = f"Destination file '{dest_path}' already exists and overwrite is False"
-                    elif sibling_path and sibling_path.exists():
-                        write_ok = False
-                        write_error = f"Sibling report file '{sibling_path}' already exists and overwrite is False"
-        except Exception as exc:
-            write_ok = False
-            write_error = str(exc)
-
-    if not write_ok:
-        overall_status = STATUS_FAIL
-        exec_status = STATUS_FAIL
-        num_status = STATUS_FAIL
-    elif any(s == STATUS_FAIL for s in child_statuses):
+    if any(s == STATUS_FAIL for s in child_statuses):
         overall_status = STATUS_FAIL
         exec_status = STATUS_PASS
         num_status = STATUS_FAIL
@@ -1452,14 +1421,21 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         overall_status = STATUS_UNSUPPORTED
         exec_status = STATUS_PASS
         num_status = STATUS_UNSUPPORTED
-    elif any(s in (STATUS_UNVERIFIED, STATUS_UNKNOWN, "UNKNOWN") for s in child_statuses) or not child_statuses:
-        overall_status = STATUS_UNVERIFIED
+    elif any(s in (STATUS_UNKNOWN, "UNKNOWN") for s in child_statuses):
+        overall_status = STATUS_INCOMPLETE
+        exec_status = STATUS_PASS
+        num_status = STATUS_UNVERIFIED
+    elif any(s == STATUS_UNVERIFIED for s in child_statuses) or not child_statuses:
+        # Report construction completed, while the supplied validation evidence
+        # remains unverified. Keep that numerical state separate from operation
+        # classification, where INCOMPLETE is a known successful outcome.
+        overall_status = STATUS_INCOMPLETE
         exec_status = STATUS_PASS
         num_status = STATUS_UNVERIFIED
     elif all(s == STATUS_PASS for s in child_statuses):
-        overall_status = STATUS_PASS
+        overall_status = STATUS_INCOMPLETE
         exec_status = STATUS_PASS
-        num_status = STATUS_PASS
+        num_status = STATUS_UNVERIFIED
     else:
         overall_status = STATUS_UNVERIFIED
         exec_status = STATUS_PASS
@@ -1479,90 +1455,23 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         warnings=data.get("warnings", []),
         evidence_hash=evidence_hash,
         input_assumption_sensitivity=data.get("input_assumption_sensitivity"),
+        caller_status_claims=caller_status_claims,
     )
 
     report_json = report.to_json()
     report_md = report.to_markdown()
 
-    if destination and write_ok and dest_path:
-        tmp_dest_path: Path | None = None
-        tmp_sib_path: Path | None = None
-        try:
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            fd, tmp_name = tempfile.mkstemp(
-                prefix=f".{dest_path.name}.tmp.", suffix=".partial", dir=str(dest_path.parent)
-            )
-            os.close(fd)
-            tmp_dest_path = Path(tmp_name)
-
-            if dest_path.suffix.lower() == ".json":
-                with tmp_dest_path.open("w", encoding="utf-8") as f:
-                    f.write(report_json)
-                    f.flush()
-                    os.fsync(f.fileno())
-
-                if sibling_path:
-                    fd_s, tmp_s_name = tempfile.mkstemp(
-                        prefix=f".{sibling_path.name}.tmp.", suffix=".partial", dir=str(sibling_path.parent)
-                    )
-                    os.close(fd_s)
-                    tmp_sib_path = Path(tmp_s_name)
-                    with tmp_sib_path.open("w", encoding="utf-8") as f:
-                        f.write(report_md)
-                        f.flush()
-                        os.fsync(f.fileno())
-            elif dest_path.suffix.lower() == ".md":
-                with tmp_dest_path.open("w", encoding="utf-8") as f:
-                    f.write(report_md)
-                    f.flush()
-                    os.fsync(f.fileno())
-
-                if sibling_path:
-                    fd_s, tmp_s_name = tempfile.mkstemp(
-                        prefix=f".{sibling_path.name}.tmp.", suffix=".partial", dir=str(sibling_path.parent)
-                    )
-                    os.close(fd_s)
-                    tmp_sib_path = Path(tmp_s_name)
-                    with tmp_sib_path.open("w", encoding="utf-8") as f:
-                        f.write(report_json)
-                        f.flush()
-                        os.fsync(f.fileno())
-            else:
-                with tmp_dest_path.open("w", encoding="utf-8") as f:
-                    f.write(report_md)
-                    f.flush()
-                    os.fsync(f.fileno())
-
-            os.replace(tmp_dest_path, dest_path)
-            tmp_dest_path = None
-            ArtifactStore.register_artifact(dest_path)
-
-            if sibling_path and tmp_sib_path:
-                os.replace(tmp_sib_path, sibling_path)
-                tmp_sib_path = None
-                ArtifactStore.register_artifact(sibling_path)
-
-        except Exception as exc:
-            overall_status = STATUS_FAIL
-            exec_status = STATUS_FAIL
-            write_error = str(exc)
-        finally:
-            if tmp_dest_path and tmp_dest_path.exists():
-                try:
-                    tmp_dest_path.unlink()
-                except Exception:
-                    pass
-            if tmp_sib_path and tmp_sib_path.exists():
-                try:
-                    tmp_sib_path.unlink()
-                except Exception:
-                    pass
+    publication = None
+    if requested_destination and callable(_report_publisher):
+        publication = _report_publisher(requested_destination, overwrite, report_json, report_md)
 
     res = {
         "status": overall_status,
         "execution_status": exec_status,
         "numerical_verification_status": num_status,
         "physical_validation_status": STATUS_UNVERIFIED,
+        "scope": "CALLER_SUPPLIED_DATA_ONLY",
+        "model_validated": False,
         "report_summary": {
             "source_identity": source_id,
             "runtime_version": runtime_ver,
@@ -1572,8 +1481,8 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "report_markdown": report_md,
         "report_json": report_json,
     }
-    if write_error:
-        res["write_error"] = write_error
+    if publication is not None:
+        res["publication"] = publication
     return res
 
 

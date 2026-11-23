@@ -106,7 +106,7 @@ DENIAL_MESSAGE = "synthetic t35 job-read fake authority denial"
 PROJECT_A = "t35jr-proj-A-20261112"
 PROJECT_B = "t35jr-proj-B-20261112"
 
-READ_KINDS = ("job_row", "events", "list_jobs")
+READ_KINDS = ("binding", "job_row", "events", "list_jobs")
 
 
 class _FakeProjectAuthority:
@@ -209,10 +209,14 @@ def _install_read_spies(store: OperationStore, timeline: list[tuple[str, ...]]) 
     a full job read (the returned row materializes the durable result), so
     for ``job.result``/``job.status`` non-disclosure is asserted at the
     response level, not by forbidding the post-authorization binding read.
+    The current bounded log route is observed at its binding snapshot and
+    bounded event page; neither spy alters the underlying return value.
     """
     real_job = store.job
     real_events = store.events
     real_list_jobs = store.list_jobs
+    real_log_snapshot = store.job_log_read_snapshot
+    real_log_page = store.job_log_page_bounded
 
     def spy_job(job_id: str) -> Any:
         timeline.append(("job_row", job_id))
@@ -226,9 +230,34 @@ def _install_read_spies(store: OperationStore, timeline: list[tuple[str, ...]]) 
         timeline.append(("list_jobs", str(kwargs.get("project_id"))))
         return real_list_jobs(*args, **kwargs)
 
+    def spy_log_snapshot(job_id: str, *args: Any, **kwargs: Any) -> Any:
+        timeline.append(("binding", job_id))
+        return real_log_snapshot(job_id, *args, **kwargs)
+
+    def spy_log_page(job_id: str, *args: Any, **kwargs: Any) -> Any:
+        timeline.append(("events", job_id))
+        return real_log_page(job_id, *args, **kwargs)
+
     store.job = spy_job  # type: ignore[method-assign]
     store.events = spy_events  # type: ignore[method-assign]
     store.list_jobs = spy_list_jobs  # type: ignore[method-assign]
+    store.job_log_read_snapshot = spy_log_snapshot  # type: ignore[method-assign]
+    store.job_log_page_bounded = spy_log_page  # type: ignore[method-assign]
+
+
+def _install_status_wait_read_spy(
+    store: OperationStore, timeline: list[tuple[str, ...]],
+) -> None:
+    """Record the bounded status/wait row read without replacing its result."""
+    real_status_wait = store.job_for_status_wait
+
+    def spy_status_wait(job_id: str, *, max_inline_result_bytes: int) -> Any:
+        timeline.append(("job_row", job_id))
+        return real_status_wait(
+            job_id, max_inline_result_bytes=max_inline_result_bytes,
+        )
+
+    store.job_for_status_wait = spy_status_wait  # type: ignore[method-assign]
 
 
 def _create_synthetic_job(
@@ -408,7 +437,7 @@ def test_t35jread_job_log_authorized_bound_project_uses_authority_before_events(
     job succeeds on the canonical outer route with exactly the synthetic
     sentinel events, and the ordered timeline proves
     ``authorize_operation(A, 'inspect')`` occurs before the first job/events
-    read and that the log read order is job-row-then-events."""
+    read and that the log read order is binding-then-events."""
     events = ("T35JR-EVT-LOGALPHA-4c17", "T35JR-EVT-LOGBRAVO-8de2")
     store = OperationStore(":memory:")
     try:
@@ -425,9 +454,9 @@ def test_t35jread_job_log_authorized_bound_project_uses_authority_before_events(
         # Authority gate is part of the proposed positive contract too:
         assert authority.calls == [(PROJECT_A, "inspect")]
         assert timeline[0] == ("authority", PROJECT_A, "inspect")
-        assert ("job_row", job_id) in timeline[1:]
+        assert ("binding", job_id) in timeline[1:]
         assert [entry for entry in timeline if entry[0] == "events"] == [("events", job_id)]
-        assert timeline.index(("job_row", job_id)) < timeline.index(("events", job_id))
+        assert timeline.index(("binding", job_id)) < timeline.index(("events", job_id))
     finally:
         store.close()
 
@@ -713,9 +742,9 @@ def test_t35jread_nested_registry_call_job_log_authorized_bound_project_success(
         assert [event["metadata"]["marker"] for event in response["data"]["events"]] == list(events)
         assert authority.calls == [(PROJECT_A, "inspect")]
         assert timeline[0] == ("authority", PROJECT_A, "inspect")
-        assert ("job_row", job_id) in timeline[1:]
+        assert ("binding", job_id) in timeline[1:]
         assert [entry for entry in timeline if entry[0] == "events"] == [("events", job_id)]
-        assert timeline.index(("job_row", job_id)) < timeline.index(("events", job_id))
+        assert timeline.index(("binding", job_id)) < timeline.index(("events", job_id))
     finally:
         store.close()
 
@@ -773,9 +802,9 @@ def test_t35jread_legacy_underscore_job_log_authorized_bound_project_uses_author
         assert [event["metadata"]["marker"] for event in response["data"]["events"]] == list(events)
         assert authority.calls == [(PROJECT_A, "inspect")]
         assert timeline[0] == ("authority", PROJECT_A, "inspect")
-        assert ("job_row", job_id) in timeline[1:]
+        assert ("binding", job_id) in timeline[1:]
         assert [entry for entry in timeline if entry[0] == "events"] == [("events", job_id)]
-        assert timeline.index(("job_row", job_id)) < timeline.index(("events", job_id))
+        assert timeline.index(("binding", job_id)) < timeline.index(("events", job_id))
     finally:
         store.close()
 
@@ -950,6 +979,7 @@ def test_t35jread_job_status_A_authorized_returns_A_bound_result() -> None:
         job_id = _create_synthetic_job(store, project_id=PROJECT_A, tag="status-pos", result_marker=marker)
         timeline: list[tuple[str, ...]] = []
         _install_read_spies(store, timeline)
+        _install_status_wait_read_spy(store, timeline)
         authority = _FakeProjectAuthority({PROJECT_A: {"inspect"}}, timeline=timeline)
         receiver = _InertDispatchReceiver(store, authority)
         response = _canonical_route(receiver, "job.status", {"job_id": job_id}, PROJECT_A)
@@ -959,6 +989,7 @@ def test_t35jread_job_status_A_authorized_returns_A_bound_result() -> None:
         assert authority.calls == [(PROJECT_A, "inspect")]
         assert timeline[0] == ("authority", PROJECT_A, "inspect")
         assert ("job_row", job_id) in timeline[1:]
+        _assert_authority_precedes_first_read(timeline, "same-project job.status")
     finally:
         store.close()
 
@@ -970,6 +1001,7 @@ def test_t35jread_job_wait_A_authorized_returns_A_bound_result() -> None:
         job_id = _create_synthetic_job(store, project_id=PROJECT_A, tag="wait-pos", result_marker=marker)
         timeline: list[tuple[str, ...]] = []
         _install_read_spies(store, timeline)
+        _install_status_wait_read_spy(store, timeline)
         authority = _FakeProjectAuthority({PROJECT_A: {"inspect"}}, timeline=timeline)
         receiver = _InertDispatchReceiver(store, authority)
         response = _canonical_route(receiver, "job.wait", {"job_id": job_id, "timeout_s": 0.0}, PROJECT_A)
@@ -979,5 +1011,6 @@ def test_t35jread_job_wait_A_authorized_returns_A_bound_result() -> None:
         assert authority.calls == [(PROJECT_A, "inspect")]
         assert timeline[0] == ("authority", PROJECT_A, "inspect")
         assert ("job_row", job_id) in timeline[1:]
+        _assert_authority_precedes_first_read(timeline, "same-project job.wait")
     finally:
         store.close()

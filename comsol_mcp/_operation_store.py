@@ -2003,6 +2003,68 @@ class OperationStore:
             row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
             return self._job(row) if row else None
 
+    def job_for_status_wait(
+        self, job_id: str, *, max_inline_result_bytes: int,
+    ) -> dict[str, Any] | None:
+        """Read status/wait data without decoding an oversized stored result.
+
+        The result byte count and job row are read in one SQLite snapshot. Small
+        results use the existing ``_job`` projection unchanged. For a result
+        above the inline budget, this returns the job row plus an explicit
+        ``job.result`` retrieval hint, without selecting or JSON-decoding
+        ``operations.result`` in Python. SQLite may still need to scan or
+        temporarily convert the stored TEXT for ``length(CAST(... AS BLOB))``;
+        this is not a whole-process memory bound.
+        """
+        if type(max_inline_result_bytes) is not int or max_inline_result_bytes < 0:
+            raise ValueError("max_inline_result_bytes must be a non-negative integer")
+        with self.lock:
+            started_transaction = not self.db.in_transaction
+            if started_transaction:
+                self.db.execute("BEGIN")
+            try:
+                row = self.db.execute(
+                    "SELECT j.*,o.operation AS _status_wait_operation,"
+                    "length(CAST(o.result AS BLOB)) AS _status_wait_result_bytes "
+                    "FROM jobs j LEFT JOIN operations o ON o.operation_id=j.operation_id "
+                    "WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    value = None
+                else:
+                    result_bytes = row["_status_wait_result_bytes"]
+                    if result_bytes is None or result_bytes <= max_inline_result_bytes:
+                        job_row = self.db.execute(
+                            "SELECT * FROM jobs WHERE job_id=?", (job_id,),
+                        ).fetchone()
+                        value = self._job(job_row) if job_row else None
+                    else:
+                        value = {
+                            key: row[key] for key in row.keys()
+                            if key not in {
+                                "_status_wait_operation", "_status_wait_result_bytes",
+                            }
+                        }
+                        value["metadata"] = json.loads(value["metadata"] or "{}")
+                        value["effective_timeouts"] = json.loads(
+                            value.get("effective_timeouts") or "{}"
+                        )
+                        # The public status schema defines operation as a name;
+                        # the legacy _job projection additionally nests the full
+                        # operation/result record for inline-sized results.
+                        value["operation"] = row["_status_wait_operation"]
+                        value["result_omitted"] = True
+                        value["result_size_bytes"] = int(result_bytes)
+                        value["result_available_via"] = "job.result"
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("COMMIT")
+                return value
+            except BaseException:
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def update_job(
         self,
         job_id: str,
@@ -4828,6 +4890,110 @@ class OperationStore:
                     f"ON CONFLICT({column}) DO UPDATE SET metadata=excluded.metadata",
                     (key, json.dumps(metadata, sort_keys=True)),
                 )
+
+    def persist_runtime_snapshot(self, state: dict[str, Any], project_bindings: dict[str, str | None],
+                                 legacy_lineage: dict[str, dict[str, Any]], project_authorizer: Any) -> None:
+        """Publish a ledger snapshot and its revision records in one transaction."""
+        from ._execution_contract import ExecutionContractError
+
+        session_id = state["session_id"]
+        identity = state["worker_identity"]
+        runtime_id = identity.get("runtime_id") or identity.get("worker_instance_id")
+        if not isinstance(runtime_id, str) or not runtime_id:
+            raise ValueError("worker identity requires runtime_id or worker_instance_id")
+        with self.lock:
+            if self.db.in_transaction:
+                raise RuntimeError("cannot persist runtime snapshot inside an existing transaction")
+            try:
+                self.db.execute("BEGIN IMMEDIATE")
+                legacy_projects = {}
+                if legacy_lineage:
+                    row = self.db.execute("SELECT metadata FROM sessions WHERE session_id=?", (session_id,)).fetchone()
+                    saved = json.loads(row[0]) if row is not None else None
+                    if not isinstance(saved, dict):
+                        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy session lineage is unavailable")
+                    saved_identity = saved.get("worker_identity")
+                    if (not isinstance(saved_identity, dict)
+                            or saved_identity.get("worker_instance_id") != identity.get("worker_instance_id")
+                            or type(saved_identity.get("connection_epoch")) is not int
+                            or saved_identity.get("connection_epoch") != identity.get("connection_epoch")
+                            or saved.get("server_instance_id") != state.get("server_instance_id")):
+                        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy Worker lineage changed")
+                    for tag, old_ref in legacy_lineage.items():
+                        saved_model = saved.get("models", {}).get(tag, {})
+                        saved_ref = saved_model.get("ref") if isinstance(saved_model, dict) else None
+                        current_model = state["models"].get(tag)
+                        if (not isinstance(saved_ref, dict) or old_ref.get("schema_version") is not True
+                                or json.dumps(saved_ref, sort_keys=True) != json.dumps(old_ref, sort_keys=True)
+                                or not isinstance(current_model, dict)
+                                or json.dumps({**old_ref, "schema_version": 1}, sort_keys=True)
+                                != json.dumps(current_model["ref"], sort_keys=True)):
+                            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy ModelRef lineage changed")
+                        old_key = json.dumps(old_ref, sort_keys=True, separators=(",", ":"))
+                        new_key = json.dumps(current_model["ref"], sort_keys=True, separators=(",", ":"))
+                        projects = []
+                        for model_key in (old_key, new_key):
+                            item = self.db.execute("SELECT metadata FROM revisions WHERE model_key=?", (model_key,)).fetchone()
+                            metadata = json.loads(item[0]) if item is not None else {}
+                            if not isinstance(metadata, dict):
+                                raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy project binding is malformed")
+                            project = metadata.get("project_id")
+                            if project is not None:
+                                if not isinstance(project, str) or not project:
+                                    raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy project binding is invalid")
+                                projects.append(project)
+                        claimed = project_bindings.get(new_key)
+                        if claimed is not None and (not projects or claimed not in projects):
+                            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy project claim is not durably bound")
+                        if len(set(projects)) > 1:
+                            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "legacy and current project bindings conflict")
+                        project = projects[0] if projects else None
+                        if project is not None:
+                            if not callable(project_authorizer):
+                                raise ExecutionContractError("PERMISSION_DENIED", "legacy project authority is unavailable")
+                            project_authorizer(project, "project_write")
+                        legacy_projects[new_key] = project
+                for table, column, key in (("sessions", "session_id", session_id),
+                                           ("runtimes", "runtime_id", runtime_id)):
+                    row = self.db.execute(f"SELECT metadata FROM {table} WHERE {column}=?", (key,)).fetchone()
+                    current = json.loads(row[0]) if row is not None else {}
+                    if not isinstance(current, dict):
+                        raise RuntimeError(f"persisted {table} metadata is malformed")
+                    merged = {**current, **state}
+                    self.db.execute(
+                        f"INSERT INTO {table}({column},metadata) VALUES(?,?) "
+                        f"ON CONFLICT({column}) DO UPDATE SET metadata=excluded.metadata",
+                        (key, json.dumps(merged, sort_keys=True)),
+                    )
+                for model in state["models"].values():
+                    ref = model["ref"]
+                    key = json.dumps(ref, sort_keys=True, separators=(",", ":"))
+                    row = self.db.execute("SELECT metadata FROM revisions WHERE model_key=?", (key,)).fetchone()
+                    previous = json.loads(row[0]) if row is not None else {}
+                    stored_project = previous.get("project_id")
+                    claimed_project = project_bindings.get(key)
+                    if (claimed_project is not None and stored_project is not None
+                            and claimed_project != stored_project):
+                        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "ModelRef project binding changed")
+                    project_id = (legacy_projects[key] if key in legacy_projects else
+                                  claimed_project if claimed_project is not None else stored_project)
+                    metadata = {
+                        "model_ref": ref, "revision": model["revision"], "dirty": model["dirty"],
+                        "fingerprint": model["fingerprint"], "active_operation_id": model["active_operation_id"],
+                        "attribution": "PROJECT_BOUND" if isinstance(project_id, str) else "UNATTRIBUTED",
+                    }
+                    if isinstance(project_id, str):
+                        metadata["project_id"] = project_id
+                    self.db.execute(
+                        "INSERT INTO revisions(model_key,metadata,revision) VALUES(?,?,?) "
+                        "ON CONFLICT(model_key) DO UPDATE SET metadata=excluded.metadata,revision=excluded.revision",
+                        (key, json.dumps(metadata, sort_keys=True), int(metadata["revision"])),
+                    )
+                self.db.execute("COMMIT")
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
 
     def merge_metadata_fields(self, table: str, key: str, updates: dict[str, Any]) -> dict[str, Any]:
         """Atomically merge top-level fields for shared runtime metadata rows.

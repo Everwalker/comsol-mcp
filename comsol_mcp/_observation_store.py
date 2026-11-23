@@ -79,6 +79,11 @@ def resolve_observation(worker, model_tag, ref, *, allow_historical=False):
     record = ctx['store'].get_metadata('artifacts', ref['observation_id'])
     if not record or record.get('kind') != 'w17_observation':
         raise PreWriteRefusal('UNREGISTERED_OBSERVATION', 'Observation was not registered by W17')
+    project_id = ctx.get('project_id')
+    if not isinstance(project_id, str) or not project_id:
+        raise PreWriteRefusal('PROJECT_IDENTITY_REQUIRED', 'Observation requires an admitted project identity')
+    if record.get('project_id') != project_id:
+        raise PreWriteRefusal('PROJECT_IDENTITY_MISMATCH', 'Observation belongs to another or unattributed project')
     verify_producer(ctx, record['producer'])
     if record['model_tag'] != model_tag or record['model_ref'] != ctx['model_ref']:
         raise PreWriteRefusal('CROSS_MODEL_REFUSED', 'Observation belongs to another model or worker epoch')

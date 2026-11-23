@@ -1,11 +1,11 @@
-"""T35: characterization of terminal-event write faults in ``ControlDaemon._finish``.
+"""T35: terminal-event write faults in ``ControlDaemon._finish``.
 
 Scope (current candidate behaviour, characterization only):
 ``ControlDaemon._finish`` (_control_daemon.py:13102-13132) commits the durable
 terminal write first — ``store.finish`` (_operation_store.py:1870-1934) and
 ``store.update_job`` (_operation_store.py:2001-2061) — and only afterwards
 writes the terminal status event via ``store.add_event``
-(_operation_store.py:2238-2243), then calls
+(_operation_store.py:2238-2243), then attempts
 ``self._release_terminal_resource_reservations`` for a terminal status.
 
 What is REAL (product code under test):
@@ -25,13 +25,9 @@ What is FAKE (bounded scaffolding, no attestation value):
   skipped) the release call, never real resource release.
 - ``InjectedTerminalEventFailure`` is a synthetic exception raised by a test
   wrapper installed around the fresh store's ``add_event`` for the exact
-  ``SUCCEEDED`` terminal event call.  It is NOT a disk-failure simulation,
-  NOT an observed production fault, and these assertions characterize the
-  current candidate (event write sequenced after the committed durable
-  terminal write, exception propagated unwrapped, release skipped) — they do
-  not claim this is the final ideal terminal contract.
-
-These tests were written, not executed, per task rules.
+  ``SUCCEEDED`` terminal event call. It is not a disk-failure simulation.
+  The prior characterization is preserved in the isolated baseline; this
+  version asserts the new response-only warning and release-attempt behavior.
 """
 from __future__ import annotations
 
@@ -72,6 +68,10 @@ class _FinishReceiver:
         self._release_terminal_resource_reservations = (
             self.release_spy._release_terminal_resource_reservations
         )
+        self.logged_exceptions = 0
+
+    def _log_exception(self) -> None:
+        self.logged_exceptions += 1
 
 
 def _admitted(receiver: _FinishReceiver, *, request_id: str, idempotency_key: str) -> dict[str, Any]:
@@ -132,11 +132,8 @@ def test_finish_success_writes_rows_terminal_event_and_exactly_one_release():
         receiver.store.close()
 
 
-def test_terminal_succeeded_event_add_event_fault_keeps_committed_rows_and_skips_release():
-    """Fault control: only the fresh store's add_event is replaced; it raises
-    exactly on the SUCCEEDED terminal-event call.  Characterizes the current
-    candidate: the durable finish/update_job commits survive, the terminal
-    event row is absent, and the release spy has observed nothing."""
+def test_terminal_succeeded_event_fault_reports_warning_and_attempts_release():
+    """A failed terminal event leaves the committed result and reports the fault."""
     receiver = _FinishReceiver()
     store = receiver.store
     original_add_event = store.add_event
@@ -154,38 +151,43 @@ def test_terminal_succeeded_event_add_event_fault_keeps_committed_rows_and_skips
 
         store.add_event = fault_on_terminal_event
 
-        raised: BaseException | None = None
-        try:
-            ControlDaemon._finish(
-                cast(ControlDaemon, receiver), record, envelope, "SUCCEEDED")
-        except InjectedTerminalEventFailure as exc:
-            raised = exc
+        returned = ControlDaemon._finish(
+            cast(ControlDaemon, receiver), record, envelope, "SUCCEEDED")
 
-        # The injected fault was hit exactly once, on the SUCCEEDED terminal
-        # event call, and _finish propagated that exact exception unwrapped.
-        # (Any other raised exception escapes this test uncaught by design.)
+        # The event fault is reported as a non-durable control warning, not
+        # as an engine failure. The already serialized result has no warning.
         assert add_event_calls == ["SUCCEEDED"], add_event_calls
-        assert type(raised) is InjectedTerminalEventFailure, raised
+        assert returned is envelope
+        warning = returned["execution"]["post_commit_warning"]
+        assert warning["failed_steps"] == ["terminal_event_write"]
+        assert warning["diagnostic_durable"] is False
+        assert receiver.logged_exceptions == 1
+        stored_envelope = {
+            **envelope,
+            "execution": {k: v for k, v in envelope["execution"].items()
+                          if k != "post_commit_warning"},
+        }
 
         # finish() and update_job() committed before the failed event write:
         operation = store.get_operation(record["operation_id"])
         assert operation is not None, record["operation_id"]
         assert operation["status"] == "SUCCEEDED", operation["status"]
-        assert operation["result"] == envelope, operation["result"]
+        assert operation["result"] == stored_envelope, operation["result"]
         assert operation["finished_at"] is not None
 
         job = store.job(record["job_id"])
         assert job is not None, record["job_id"]
         assert job["status"] == "SUCCEEDED", job["status"]
         assert job["finished_at"] is not None
-        assert job["result"] == envelope
+        assert job["result"] == stored_envelope
 
         # The terminal status event row is absent, and no other event was added.
         events = store.events(record["job_id"])
         assert [event["event"] for event in events] == [], events
 
-        # The fault preceded the terminal release call: the spy saw nothing.
-        assert receiver.release_spy.calls == [], receiver.release_spy.calls
+        # The fake release was attempted once; this is not proof of an actual
+        # resource release.
+        assert receiver.release_spy.calls == [record["job_id"]]
     finally:
         store.add_event = original_add_event
         store.close()

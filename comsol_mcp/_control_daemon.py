@@ -18,6 +18,7 @@ from pathlib import Path
 import platform
 import re
 import secrets
+import sqlite3
 from socketserver import TCPServer
 import subprocess
 import threading
@@ -114,6 +115,11 @@ _SCOPED_LEGACY_JOB_READS = frozenset({
 # real-principal security guarantee.
 _JOB_LOG_ADMISSION_MAX_BINDING_BYTES = 4 * 1024 * 1024
 _JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+# Status/wait historically include the same stored result twice. Relative to
+# the existing 4 MiB job.log response budget, two raw result copies at this
+# threshold use one eighth of that budget, leaving room for metadata/framing.
+# This is per-result guidance, not a status/wait response or RSS guarantee.
+_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES = _JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES // 16
 DESKTOP_OPERATIONS = frozenset({
     "desktop.status", "desktop.bind", "desktop.show_model", "desktop.select_node",
     "desktop.capture", "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
@@ -1426,6 +1432,13 @@ class ControlDaemon:
                         refused = self._error(
                             "WORKER_RETIRED_OR_UNKNOWN",
                             "the selected Worker/server lane is fenced and cannot accept new work",
+                            data={"engine_dispatched": False}, safe_retry=False,
+                        )
+                        return self._finish(record, refused, "FAILED")
+                    except SessionIdentityConflict:
+                        refused = self._error(
+                            "SESSION_IDENTITY_CONFLICT",
+                            "selected model endpoint conflicts with an existing scheduler identity",
                             data={"engine_dispatched": False}, safe_retry=False,
                         )
                         return self._finish(record, refused, "FAILED")
@@ -13180,33 +13193,235 @@ class ControlDaemon:
     def _finish(self, record, result, status, *, _native_lifecycle_transition=None,
                 _native_resource_release_observation=None):
         execution = result.setdefault("execution", {})
-        execution.update({key: record[key] for key in ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")})
+        identity_keys = ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")
+        execution.update({key: record[key] for key in identity_keys})
+
+        def execution_identity():
+            return {key: record[key] for key in identity_keys}
+
+        def read_authoritative_terminal(expected_status=None):
+            try:
+                with self.store.lock:
+                    if self.store.db.in_transaction:
+                        return None, None, "transaction_open", None, None
+                    operation = self.store.get_operation(record["operation_id"])
+                    job = self.store.job(record["job_id"])
+            except Exception as read_exc:
+                log_error_type = None
+                try:
+                    self._log_exception()
+                except Exception as log_exc:
+                    log_error_type = type(log_exc).__name__
+                return None, None, "readback_failed", type(read_exc).__name__, log_error_type
+
+            if (not isinstance(operation, dict) or not isinstance(job, dict)
+                    or operation.get("operation_id") != record["operation_id"]
+                    or job.get("job_id") != record["job_id"]
+                    or job.get("operation_id") != record["operation_id"]
+                    or not isinstance(job.get("operation"), dict)
+                    or job["operation"].get("operation_id") != record["operation_id"]
+                    or any(operation.get(key) != record[key]
+                           for key in ("request_id", "operation_id", "request_hash", "idempotency_key"))):
+                return None, None, "identity_mismatch", None, None
+
+            authoritative_status = operation.get("status")
+            if (authoritative_status not in TERMINAL
+                    or job.get("status") != authoritative_status
+                    or (expected_status is not None and authoritative_status != expected_status)):
+                return None, authoritative_status, "status_unresolved", None, None
+
+            authoritative_result = operation.get("result")
+            if not isinstance(authoritative_result, dict):
+                return None, authoritative_status, "result_unavailable", None, None
+            stored_execution = authoritative_result.get("execution")
+            if (job.get("result") != authoritative_result
+                    or not isinstance(stored_execution, dict)
+                    or any(stored_execution.get(key) != record[key]
+                           for key in ("operation_id", "job_id"))
+                    or any(key in stored_execution and stored_execution[key] != record[key]
+                           for key in ("request_id", "request_hash", "idempotency_key"))):
+                return None, authoritative_status, "result_identity_mismatch", None, None
+            return authoritative_result, authoritative_status, None, None, None
+
+        def add_response_warning(target, *, failed_steps, authoritative_status,
+                                 store_error_type=None, readback_error_type=None,
+                                 log_error_types=(), event_error_type=None,
+                                 warning_code="LATE_RESULT_TRACE_WRITE_FAILED"):
+            target.setdefault("execution", {}).update(execution_identity())
+            warning = {
+                "code": warning_code,
+                "failed_steps": failed_steps,
+                "diagnostic_durable": False,
+                "durability_scope": "response_only",
+                "authoritative_status": authoritative_status,
+                "log_attempt": "FAILED" if log_error_types else "SUCCEEDED",
+            }
+            if store_error_type is not None:
+                warning["store_error_type"] = store_error_type
+            if readback_error_type is not None:
+                warning["readback_error_type"] = readback_error_type
+            if event_error_type is not None:
+                warning["event_error_type"] = event_error_type
+            if log_error_types:
+                warning["log_error_type"] = log_error_types[-1]
+            target["execution"]["late_result_warning"] = warning
+            return target
+
         if _native_lifecycle_transition is None:
-            accepted, authoritative_status = self.store.finish(record["operation_id"], status=status, result=result)
+            try:
+                accepted, authoritative_status = self.store.finish(
+                    record["operation_id"], status=status, result=result)
+            except sqlite3.Error as finish_exc:
+                log_error_types = []
+                try:
+                    self._log_exception()
+                except Exception as log_exc:
+                    log_error_types.append(type(log_exc).__name__)
+                authoritative_result, stored_status, issue, read_error_type, read_log_error_type = (
+                    read_authoritative_terminal())
+                if read_log_error_type is not None:
+                    log_error_types.append(read_log_error_type)
+                failed_steps = ["operation_store_finish"]
+                if issue not in (None, "result_unavailable"):
+                    failed_steps.append("authoritative_readback")
+                if log_error_types:
+                    failed_steps.append("control_errors_log_write")
+                if issue == "result_unavailable":
+                    response = self._error(
+                        "AUTHORITATIVE_RESULT_UNAVAILABLE",
+                        "terminal operation has no persisted result; the rejected late result was not returned",
+                        data={"status": stored_status, "authoritative_result_available": False},
+                    )
+                elif issue is None:
+                    response = authoritative_result
+                else:
+                    response = self._error(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "finish storage failed and the committed operation/job terminal result could not be verified",
+                        safe_retry=False,
+                        data={"status": "UNKNOWN", "observed_operation_status": stored_status,
+                              "authoritative_result_available": False},
+                    )
+                return add_response_warning(
+                    response,
+                    failed_steps=failed_steps,
+                    authoritative_status=(stored_status if issue in (None, "result_unavailable")
+                                           else "UNKNOWN"),
+                    store_error_type=type(finish_exc).__name__,
+                    readback_error_type=read_error_type,
+                    log_error_types=log_error_types,
+                    warning_code="LATE_RESULT_FINISH_STORAGE_FAILED",
+                )
         else:
             proposed, revision = _native_lifecycle_transition
             accepted, authoritative_status = self.session_lifecycle.save(proposed, expected_revision=revision,
                 _finish_operation=(record["operation_id"], status, result))
         if not accepted:
-            # F02: The store rejected this write because the job is already in a
-            # terminal state.  Return the authoritative persistent result instead
-            # of the candidate that was just rejected, and emit the authoritative
-            # status event so RPC/SQLite/events are all consistent.
-            job = self.store.job(record["job_id"])
-            authoritative_result = (job.get("result") if job else None) or result
-            self.store.add_event(record["job_id"], "LateResultRecorded", {
-                "operation_id": record["operation_id"],
-                "rejected_status": status,
-                "authoritative_status": authoritative_status,
-                "at": time.time(),
-            })
+            # D03 rejects the candidate. Re-read both rows after the transaction
+            # closes; a job result alone does not prove the operation/job binding.
+            authoritative_result, stored_status, issue, read_error_type, read_log_error_type = (
+                read_authoritative_terminal(expected_status=authoritative_status))
+            if issue == "result_unavailable":
+                authoritative_result = self._error(
+                    "AUTHORITATIVE_RESULT_UNAVAILABLE",
+                    "terminal operation has no persisted result; the rejected late result was not returned",
+                    data={"status": stored_status, "authoritative_result_available": False},
+                )
+                authoritative_result["execution"] = execution_identity()
+            elif issue is not None:
+                response = self._error(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "the committed operation/job terminal result could not be verified",
+                    safe_retry=False,
+                    data={"status": "UNKNOWN", "observed_operation_status": stored_status,
+                          "authoritative_result_available": False},
+                )
+                if issue == "readback_failed":
+                    failed_steps = ["authoritative_readback"]
+                    log_error_types = [read_log_error_type] if read_log_error_type else []
+                    if log_error_types:
+                        failed_steps.append("control_errors_log_write")
+                    return add_response_warning(
+                        response,
+                        failed_steps=failed_steps,
+                        authoritative_status="UNKNOWN",
+                        readback_error_type=read_error_type,
+                        log_error_types=log_error_types,
+                        warning_code="LATE_RESULT_READBACK_FAILED",
+                    )
+                return response
+            try:
+                self.store.add_event(record["job_id"], "LateResultRecorded", {
+                    "operation_id": record["operation_id"],
+                    "rejected_status": status,
+                    "authoritative_status": authoritative_status,
+                    "at": time.time(),
+                })
+            except Exception as event_exc:
+                failed_steps = ["late_result_event_write"]
+                log_error_types = []
+                try:
+                    self._log_exception()
+                except Exception as log_exc:
+                    failed_steps.append("control_errors_log_write")
+                    log_error_types.append(type(log_exc).__name__)
+                return add_response_warning(
+                    authoritative_result,
+                    failed_steps=failed_steps,
+                    authoritative_status=stored_status,
+                    event_error_type=type(event_exc).__name__,
+                    log_error_types=log_error_types,
+                )
             return authoritative_result
-        self.store.update_job(record["job_id"], authoritative_status, {"finished_observed_at": time.time()})
-        self.store.add_event(record["job_id"], authoritative_status, {"operation_id": record["operation_id"], "at": time.time()})
-        if authoritative_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}:
-            released = self._release_terminal_resource_reservations(record["job_id"])
-            if _native_resource_release_observation is not None:
-                _native_resource_release_observation.update(released)
+        terminal = authoritative_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}
+        post_commit_failures = []
+        release_observation = None
+
+        def log_post_commit_fault(failed_step: str) -> None:
+            post_commit_failures.append(failed_step)
+            try:
+                self._log_exception()
+            except Exception:
+                if "control_errors_log_write" not in post_commit_failures:
+                    post_commit_failures.append("control_errors_log_write")
+
+        try:
+            try:
+                self.store.update_job(record["job_id"], authoritative_status,
+                                     {"finished_observed_at": time.time()})
+            except Exception:
+                if not terminal:
+                    raise
+                # finish() already committed the result/status; this metadata
+                # observation is secondary and cannot change the caller result.
+                log_post_commit_fault("job_metadata_write")
+            try:
+                self.store.add_event(record["job_id"], authoritative_status, {
+                    "operation_id": record["operation_id"], "at": time.time(),
+                })
+            except Exception:
+                if not terminal:
+                    raise
+                # A missing terminal event is a trace fault, not an engine
+                # failure to return to the caller.
+                log_post_commit_fault("terminal_event_write")
+        finally:
+            if terminal:
+                released = self._release_terminal_resource_reservations(record["job_id"])
+                release_observation = released
+                if _native_resource_release_observation is not None:
+                    _native_resource_release_observation.update(released)
+        if post_commit_failures:
+            # finish() already serialized the durable result. This warning is
+            # response-only, so a same-key retry can return the stored result
+            # without this transient diagnostic.
+            result["execution"]["post_commit_warning"] = {
+                "code": "POST_COMMIT_WRITE_FAILURE",
+                "failed_steps": post_commit_failures,
+                "diagnostic_durable": False,
+                "durability_scope": "operation_result",
+                "resource_release_observation": release_observation,
+            }
         return result
 
     def _release_terminal_accounting(self, job_id, coordinator, kind):
@@ -13399,7 +13614,10 @@ class ControlDaemon:
             if not isinstance(job_id, str) or not job_id:
                 return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
             with job_snapshot(job_id) as authorized:
-                job = self.store.job(job_id) if authorized else None
+                job = self.store.job_for_status_wait(
+                    job_id,
+                    max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
+                ) if authorized else None
             if not job:
                 return self._error("NODE_NOT_FOUND", "job not found")
             timeout_s = arguments.get("timeout_s", 30.0)
@@ -13413,7 +13631,10 @@ class ControlDaemon:
             start_wait = time.monotonic()
             while True:
                 with job_snapshot(job_id) as authorized:
-                    job = self.store.job(job_id) if authorized else None
+                    job = self.store.job_for_status_wait(
+                        job_id,
+                        max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
+                    ) if authorized else None
                 if not job:
                     return self._error("NODE_NOT_FOUND", "job not found")
                 if job["status"] in TERMINAL:
@@ -13492,7 +13713,15 @@ class ControlDaemon:
                     "data": {},
                 }
         with job_snapshot(job_id) as authorized:
-            job = self.store.job(job_id) if authorized and isinstance(job_id, str) else None
+            if authorized and isinstance(job_id, str) and norm_op == "job_status":
+                job = self.store.job_for_status_wait(
+                    job_id,
+                    max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
+                )
+            else:
+                # job.result deliberately remains on the original full-result
+                # compatibility path; this budget applies only to status/wait.
+                job = self.store.job(job_id) if authorized and isinstance(job_id, str) else None
             if not job:
                 return self._error("NODE_NOT_FOUND", "job not found")
             if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:

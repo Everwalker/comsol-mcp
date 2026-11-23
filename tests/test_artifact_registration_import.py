@@ -574,7 +574,8 @@ def test_geometry_import_receives_only_resolved_managed_path_and_returns_digest(
         model_execution = adopted["execution"]
         observed = []
 
-        def fake_geometry_import(_worker, _model_tag, args):
+        def fake_geometry_import(_worker, _model_tag, args, *, path_guard):
+            assert callable(path_guard)
             observed.append(dict(args))
             return {
                 "success": True,

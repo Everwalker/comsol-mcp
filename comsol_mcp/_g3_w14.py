@@ -153,7 +153,8 @@ import os
 from typing import Any, Callable, Mapping, Sequence
 
 from ._g2_contract import ExecutionContractError, NodePath
-from ._g2_engine import _call, _worker_failure_unknown, property_set
+from ._g2_engine import _actual_node_type_id_for_file_property, _call, _worker_failure_unknown, property_set
+from ._g2_property_path_guard import require_known_file_path
 from ._execution_contract import PreWriteRefusal
 from ._g3_common import (
     MEASURE_METRICS,
@@ -162,7 +163,6 @@ from ._g3_common import (
     call_probe,
     definition_properties,
     measure_selection,
-    node_type,
     node_not_found,
     operation_arguments,
     probe_state_unknown,
@@ -745,8 +745,19 @@ def _require_component(worker: Any, model_tag: str, component: str) -> Any:
 
 
 def _node_kind(node: Any) -> str | None:
-    """``getType()`` readback through the shared helper (``None`` when absent)."""
-    return node_type(node)
+    """Best-effort type readback without suppressing a Worker UNKNOWN."""
+    try:
+        value = _call(node, "getType")
+    except Exception as exc:
+        if _worker_failure_unknown(exc):
+            if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN":
+                raise
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "geometry feature type read ended in an unresolved Worker state",
+                stage="post_dispatch", details={"probe": "getType", "cause_type": type(exc).__name__},
+            ) from exc
+        return None
+    return str(value) if value is not None else None
 
 
 def _sequence_from_path(worker: Any, model_tag: str, path: Any, *,
@@ -1025,6 +1036,29 @@ def _feature_properties(node: Any, definition: Mapping[str, Any], type_id: str, 
     return payload, "engine_property_enumeration"
 
 
+def _preflight_import_filename(type_id: str, definition: Mapping[str, Any], *,
+                               path_guard: Any | None = None,
+                               label: str = "definition") -> None:
+    """Check only the documented Import.filename pair before a G3 write.
+
+    The type comes from the structural create argument or the resolved node's
+    getType() readback.  No caller semantic flag participates in this check.
+    """
+    if type_id != "Import" or "filename" not in definition:
+        return
+    value = definition["filename"]
+    typed = value if isinstance(value, Mapping) else (
+        {"kind": "string", "shape": [], "data": value} if isinstance(value, str) else value
+    )
+    require_known_file_path(type_id, "filename", typed)
+    if path_guard is not None:
+        path_guard(
+            typed,
+            where=f"{label}.filename",
+            stage="before the geometry feature is created or its property is set",
+        )
+
+
 def _apply_inputs(worker: Any, model_tag: str, feature_path: Mapping[str, Any], type_id: str,
                   inputs: Mapping[str, Any] | None) -> dict[str, Any]:
     """Bind documented object-selection properties of one geometry feature.
@@ -1291,12 +1325,14 @@ def geometry_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
 
 
 def _feature_create_common(worker: Any, model_tag: str, args: Mapping[str, Any], *,
-                           label: str = "parent") -> dict[str, Any]:
+                           label: str = "parent",
+                           path_guard: Any | None = None) -> dict[str, Any]:
     parent = args[label]
     sequence_path, sequence, kind, info = _sequence_from_path(worker, model_tag, parent, label=label)
     tag = validate_tag(args["tag"])
     type_id = _validate_feature_type(args["type_id"])
     definition = property_definition(args.get("definition") or {}, "definition")
+    _preflight_import_filename(type_id, definition, path_guard=path_guard)
     property_source = args.get("property_source", "documented")
     if property_source not in {"documented", "engine"}:
         raise ExecutionContractError("INVALID_REQUEST", "property_source must be 'documented' or 'engine'")
@@ -1378,7 +1414,8 @@ def _feature_create_common(worker: Any, model_tag: str, args: Mapping[str, Any],
     return result
 
 
-def geometry_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def geometry_feature_create(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                            path_guard: Any | None = None) -> dict[str, Any]:
     args = operation_arguments(
         arguments, ("parent", "tag", "type_id", "properties", "definition", "inputs", "property_source"),
         ("parent", "tag", "type_id"),
@@ -1386,10 +1423,11 @@ def geometry_feature_create(worker: Any, model_tag: str, arguments: Mapping[str,
     merged = dict(args)
     if merged.get("definition") is None and merged.get("properties") is not None:
         merged["definition"] = merged["properties"]
-    return _feature_create_common(worker, model_tag, merged, label="parent")
+    return _feature_create_common(worker, model_tag, merged, label="parent", path_guard=path_guard)
 
 
-def geometry_feature_update(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def geometry_feature_update(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                            path_guard: Any | None = None) -> dict[str, Any]:
     args = operation_arguments(
         arguments, ("path", "definition", "properties", "inputs", "property_source"), ("path",)
     )
@@ -1427,6 +1465,7 @@ def geometry_feature_update(worker: Any, model_tag: str, arguments: Mapping[str,
     }
     if definition is not None:
         definition = property_definition(definition, "definition")
+        _preflight_import_filename(type_id, definition, path_guard=path_guard)
         documented = GEOMETRY_FEATURE_PROPERTIES.get(type_id)
         if documented is None and property_source != "engine":
             raise ExecutionContractError(
@@ -1508,7 +1547,8 @@ def geometry_workplane_create(worker: Any, model_tag: str, arguments: Mapping[st
     return _feature_create_common(worker, model_tag, merged, label="geometry")
 
 
-def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                            path_guard: Any | None = None) -> dict[str, Any]:
     """Apply a typed action plan to the nested 2D geometry of a work plane."""
     args = operation_arguments(arguments, ("workplane", "actions"), ("workplane", "actions"))
     workplane_path, sequence, kind, info = _sequence_from_path(worker, model_tag, args["workplane"], label="workplane")
@@ -1521,6 +1561,8 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
         raise ExecutionContractError("INVALID_REQUEST", "actions must be an array of action objects")
     if not raw_actions:
         raise ExecutionContractError("INVALID_REQUEST", "actions must not be empty")
+    before = _feature_tags(sequence)
+    planned_types: dict[str, str] = {}
     planned: list[dict[str, Any]] = []
     for index, raw in enumerate(raw_actions):
         action = require_mapping(raw, f"actions[{index}]")
@@ -1539,10 +1581,15 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
                 f"actions[{index}]",
             )
             tag = validate_tag(action.get("tag"), f"actions[{index}].tag")
-            _validate_feature_type(action.get("type_id"))
+            type_id = _validate_feature_type(action.get("type_id"))
             if action.get("definition", action.get("properties")) is not None:
-                property_definition(action.get("definition", action.get("properties")),
-                                    f"actions[{index}].definition")
+                definition = property_definition(action.get("definition", action.get("properties")),
+                                                 f"actions[{index}].definition")
+                _preflight_import_filename(
+                    type_id, definition, path_guard=path_guard,
+                    label=f"actions[{index}].definition",
+                )
+            planned_types[tag] = type_id
             if action.get("inputs") is not None:
                 require_mapping(action["inputs"], f"actions[{index}].inputs")
         elif name == "update":
@@ -1550,12 +1597,27 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
                 action, ("action", "tag", "definition", "properties", "inputs", "property_source"),
                 f"actions[{index}]",
             )
-            validate_tag(action.get("tag"), f"actions[{index}].tag")
+            tag = validate_tag(action.get("tag"), f"actions[{index}].tag")
             if action.get("definition", action.get("properties")) is None and action.get("inputs") is None:
                 raise ExecutionContractError(
                     "INVALID_REQUEST",
                     f"actions[{index}] must carry definition/properties or inputs",
                 )
+            if action.get("definition", action.get("properties")) is not None:
+                definition = property_definition(action.get("definition", action.get("properties")),
+                                                 f"actions[{index}].definition")
+                if "filename" in definition:
+                    type_id = planned_types.get(tag)
+                    if type_id is None and tag in before:
+                        type_id = _actual_node_type_id_for_file_property(_feature_node(sequence, tag))
+                    if type_id is None:
+                        raise node_not_found(
+                            f"geometry feature {tag!r} does not exist in this work-plane sequence"
+                        )
+                    _preflight_import_filename(
+                        type_id, definition, path_guard=path_guard,
+                        label=f"actions[{index}].definition",
+                    )
         elif name == "remove":
             reject_unknown_keys(action, ("action", "tag"), f"actions[{index}]")
             validate_tag(action.get("tag"), f"actions[{index}].tag")
@@ -1568,7 +1630,6 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
             if action.get("until_tag") is not None:
                 validate_tag(action["until_tag"], f"actions[{index}].until_tag")
         planned.append(action)
-    before = _feature_tags(sequence)
     applied: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
     not_executed: list[dict[str, Any]] = []
@@ -1600,6 +1661,7 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
                         "property_source": action.get("property_source", "documented"),
                     },
                     label="parent",
+                    path_guard=path_guard,
                 )
             elif name == "update":
                 sub = {"path": None, "definition": action.get("definition", action.get("properties")),
@@ -1608,7 +1670,7 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
                 inner = NodePath.from_wire(workplane_path)
                 sub["path"] = NodePath(tuple(inner.segments) + (NodePath.from_wire(
                     {"segments": [{"collection": "feature", "tag": tag}]}).segments[0],)).as_dict()
-                record = geometry_feature_update(worker, model_tag, sub)
+                record = geometry_feature_update(worker, model_tag, sub, path_guard=path_guard)
             elif name == "remove":
                 tag = validate_tag(action.get("tag"), "actions[%d].tag" % index)
                 inner = NodePath.from_wire(workplane_path)
@@ -1660,8 +1722,19 @@ def geometry_workplane_edit(worker: Any, model_tag: str, arguments: Mapping[str,
                                    "execution_state_unknown": True})
                     not_executed.extend(planned[index + 1:])
                     break
+            if isinstance(record, Mapping) and record.get("execution_state_unknown") is True:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "workplane action returned an unresolved Worker state",
+                    stage="post_dispatch",
+                    details={"action": name, "action_index": index, "partial_result": dict(record),
+                             "applied": applied, "not_executed": planned[index + 1:]},
+                )
             applied.append(record)
         except ExecutionContractError as exc:
+            if _worker_failure_unknown(exc):
+                # No further tags/readback or action may be sent to this Worker.
+                raise
             failed.append({"action": name, "error": str(exc), "code": exc.code, "partial_change": bool(applied)})
             not_executed.extend(planned[index + 1:])
             break
@@ -1880,7 +1953,8 @@ def geometry_finalize(worker: Any, model_tag: str, arguments: Mapping[str, Any])
     return result
 
 
-def geometry_import(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def geometry_import(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                    path_guard: Any | None = None) -> dict[str, Any]:
     args = operation_arguments(
         arguments, ("geometry", "tag", "artifact_id", "options"), ("geometry", "tag", "artifact_id"),
     )
@@ -1917,7 +1991,7 @@ def geometry_import(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "property_source": "documented",
         "_documented_import_filename_fallback": True,
     }
-    result = _feature_create_common(worker, model_tag, merged, label="parent")
+    result = _feature_create_common(worker, model_tag, merged, label="parent", path_guard=path_guard)
     result.update({
         "artifact_id": artifact_id,
         "artifact_path_verbatim": True,

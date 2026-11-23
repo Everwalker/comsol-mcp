@@ -11130,25 +11130,38 @@
             "type": "string",
             "enum": [
               "QUEUED",
+              "STARTING",
               "RUNNING",
               "SUCCEEDED",
               "FAILED",
               "CANCELLED",
+              "EXPIRED",
+              "LOST",
               "RECONCILING",
               "UNKNOWN"
             ]
           },
           "operation": {
-            "type": "string"
+            "type": ["string", "object"]
           },
           "created_at": {
-            "type": "number"
+            "type": "string"
           },
           "started_at": {
-            "type": "number"
+            "type": ["string", "null"]
           },
           "finished_at": {
-            "type": "number"
+            "type": ["string", "null"]
+          },
+          "result_omitted": {
+            "type": "boolean"
+          },
+          "result_size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "result_available_via": {
+            "const": "job.result"
           }
         },
         "required": [

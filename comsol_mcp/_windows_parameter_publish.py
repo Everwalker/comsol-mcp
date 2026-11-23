@@ -798,7 +798,8 @@ def publish(project_root, destination, payload, *, _api=None):
                           expected_size=len(payload), _api=_api)
 
 
-def publish_chunks(project_root, destination, chunks, *, expected_sha256, expected_size, _api=None):
+def publish_chunks(project_root, destination, chunks, *, expected_sha256, expected_size,
+                   expected_project_identity=None, _api=None):
     """Publish a stream supplied by an internal, already-pinned source reader.
 
     The caller owns and verifies the source handle. This function owns only the
@@ -819,6 +820,13 @@ def publish_chunks(project_root, destination, chunks, *, expected_sha256, expect
     owned_created = False; identity = None
     try:
         with pinned_parent(project_root, destination, _api=_api) as (api, parent, parts, binding):
+            if expected_project_identity is not None:
+                root, _ = validate_paths(project_root, destination)
+                matched = [identity for path, identity in binding
+                           if ntpath.normcase(path) == ntpath.normcase(root)]
+                if len(matched) != 1 or tuple(matched[0]) != tuple(expected_project_identity):
+                    raise PublishError("PROJECT_WORKSPACE_IDENTITY_MISMATCH",
+                                       "published project root differs from the admitted root")
             temp_leaf = '.parameter-export.' + secrets.token_hex(16) + '.partial'
             if api.exists_child(parent, parts[-1]):
                 raise PublishError("DESTINATION_EXISTS", "export destination already exists")

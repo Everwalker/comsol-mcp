@@ -387,6 +387,8 @@ def publish_parameter_table_bytes_no_clobber(
     project_root: str | Path,
     destination_relative_path: Any,
     payload: bytes,
+    *,
+    expected_project_identity: tuple[int, ...] | None = None,
 ) -> dict[str, Any]:
     """Publish bounded bytes inside a project using a no-clobber atomic name."""
     if not isinstance(payload, bytes) or not payload:
@@ -394,6 +396,7 @@ def publish_parameter_table_bytes_no_clobber(
     return _publish_project_chunks_no_clobber(
         project_root, destination_relative_path, (payload,),
         expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+        expected_project_identity=expected_project_identity,
     )
 
 
@@ -563,6 +566,7 @@ def _publish_project_chunks_no_clobber(
     *,
     expected_sha256: str,
     expected_size: int,
+    expected_project_identity: tuple[int, ...] | None = None,
 ) -> dict[str, Any]:
     """Stream bytes to a pinned project parent and commit without replacement.
 
@@ -585,6 +589,10 @@ def _publish_project_chunks_no_clobber(
             # The publisher still receives the original lexical root and pins
             # its ancestor chain before creating bytes.
             ArtifactStore(project_root).resolve_safe_path(destination_relative_path, allow_overwrite=False)
+            if expected_project_identity is not None:
+                return publish_chunks(project_root, destination_relative_path, chunks,
+                                      expected_sha256=expected_sha256, expected_size=expected_size,
+                                      expected_project_identity=expected_project_identity)
             return publish_chunks(project_root, destination_relative_path, chunks,
                                   expected_sha256=expected_sha256, expected_size=expected_size)
         except PublishError as exc:
@@ -670,6 +678,9 @@ def _publish_project_chunks_no_clobber(
         raise _contract_error("ARTIFACT_PUBLISH_UNKNOWN", message, stage="post_dispatch", details=details)
 
     try:
+        if (expected_project_identity is not None
+                and directory_identity[len(root.parts) - 1] != tuple(expected_project_identity)):
+            raise _contract_error("PROJECT_WORKSPACE_IDENTITY_MISMATCH", "published project root differs from the admitted root")
         if not current_binding_matches():
             raise _contract_error("ACCESS_VIOLATION", "project directory binding changed before export preparation")
         try:
