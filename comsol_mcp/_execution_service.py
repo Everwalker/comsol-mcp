@@ -11,6 +11,7 @@ import json
 import hashlib
 
 from ._execution_contract import (
+    _G3_CATALOG_EFFECTS,
     ExecutionContractError,
     ModelRef,
     SessionLedger,
@@ -483,13 +484,37 @@ class ExecutionService:
         the server-side legacy registry permission decision and are deliberately
         not given a synthetic revision.
         """
-        # Only the serial backend may supply this effect, after actual public
-        # receiver/version/signature validation. Other legacy routes are unchanged.
-        permission = (permission_for_effect(effect) if tool_name == "api_invoke"
-                      else permission_for_legacy_tool(tool_name))
+        args = dict(arguments or {})
+        # Re-resolve these two dynamic operations at the session gate from
+        # their exact operation ID and effective arguments. The request body
+        # and the caller-supplied ``effect`` keyword are not authorization
+        # inputs; only a precise top-level inspect action resolves to READ.
+        g3_manage_operations = {
+            "material_group_manage": "material.group_manage",
+            "physics_multiphysics_manage": "physics.multiphysics_manage",
+            "material.group_manage": "material.group_manage",
+            "physics.multiphysics_manage": "physics.multiphysics_manage",
+        }
+        g3_operation = g3_manage_operations.get(tool_name)
+        if tool_name == "api_invoke":
+            permission = permission_for_effect(effect)
+        elif g3_operation is not None:
+            from ._g3_ops import execution_effect
+            catalog_effect = execution_effect(g3_operation, args) or "DYNAMIC"
+            trusted_effect = _G3_CATALOG_EFFECTS.get(str(catalog_effect).upper())
+            if trusted_effect is None:
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "G3 operation has no trusted session effect classification",
+                    stage="pre_dispatch",
+                )
+            effect = trusted_effect
+            permission = permission_for_effect(trusted_effect)
+        else:
+            # api_invoke and every other legacy route keep their existing
+            # authorization semantics.
+            permission = permission_for_legacy_tool(tool_name)
         if session_id is not None and session_id != self.ledger.session_id:
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "request session_id does not match this control session")
-        args = dict(arguments or {})
         for name in path_parameters:
             if name in args and args[name]:
                 args[name] = str(canonical_project_path(self.project_root, args[name]))

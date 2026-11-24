@@ -397,10 +397,9 @@ class _RuntimeObservationBinding:
 
 #: G3 (W13-W16) catalogue effect -> write-ticket effect classification.  The
 #: catalogue remains the single source of truth (``_g3_ops.EFFECTS``); this
-#: table only translates its effect names.  An unrecognised effect fails
-#: closed instead of defaulting to an inspect permission.  ``DYNAMIC`` is
-#: resolved server-side to the write class: every dynamic G3 sub-action in
-#: this round mutates the model, so the strictest path is the honest default.
+#: table only translates its effect names. An unrecognised effect fails closed
+#: instead of defaulting to an inspect permission. ``DYNAMIC`` defaults to the
+#: write class; the G3 action resolver marks verified inspect branches as READ.
 _G3_EFFECT_MAP: dict[str, str] = {
     "READ": "inspect",
     "WRITE": "project_write",
@@ -3710,7 +3709,7 @@ class ManagedBackend:
         mapped back to its own error code here instead of being flattened into
         ``EXECUTION_STATE_UNKNOWN`` by the conservative legacy-callback path.
         """
-        from ._g3_ops import DISPATCH, EFFECTS, REQUIRES_ISOLATION
+        from ._g3_ops import DISPATCH, EFFECTS, REQUIRES_ISOLATION, execution_effect
         if self.service is None or self.worker is None:
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
         function = DISPATCH.get(operation)
@@ -3747,6 +3746,7 @@ class ManagedBackend:
                 runtime_identity = _validate_bound_runtime(self.worker, self, target_runtime_id)
         native_ticket_context = self._stage_native_context.get(None)
         catalog_effect = str(EFFECTS.get(operation, "")).upper()
+        resolved_catalog_effect = execution_effect(operation, body) or catalog_effect
         private_xmesh_ticket = False
         if (isinstance(native_ticket_context, Mapping)
                 and native_ticket_context.get("variables_xmesh_ticket") is True):
@@ -3766,9 +3766,9 @@ class ManagedBackend:
             # This is the server-owned initial-stage ephemeral xmesh lifecycle.
             # It reuses the registered solver.inspect implementation while
             # requiring project_write authority and a real EVALUATE ticket.
-            catalog_effect = "EVALUATE"
+            resolved_catalog_effect = "EVALUATE"
             private_xmesh_ticket = True
-        effect = _G3_EFFECT_MAP.get(catalog_effect)
+        effect = _G3_EFFECT_MAP.get(resolved_catalog_effect)
         if effect is None:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
         self._require_external_execution_authority(

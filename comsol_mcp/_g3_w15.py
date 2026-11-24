@@ -46,8 +46,7 @@ local sources; nothing is guessed from a display name.
     ``isInheriting()``, ``dim()``; ``LocalSelection.named(String)``.
   - ``Model.getUsedProducts()`` and ``Model.isReadOnly()``.
 
-* The local COMSOL 6.4 documentation corpus
-  ``/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py``:
+* The local COMSOL 6.4 documentation corpus:
 
   - ``COMSOL_ProgrammingReferenceManual`` page 148 (PDF) / page 165: material
     type vocabulary (``Common``, ``Switch``, ``Link``, ``PorousMedia``,
@@ -1802,6 +1801,31 @@ def material_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     }
 
 
+def _material_tensor_readback_checks(
+    tensor_records: list[dict[str, Any]], envelope: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    readback_values = envelope.get("readback_values")
+    observed: dict[Any, Any] = dict(readback_values) if isinstance(readback_values, Mapping) else {}
+    for failed_row in envelope.get("failed") or []:
+        if isinstance(failed_row, Mapping) and failed_row.get("name") and failed_row.get("readback") is not None:
+            observed.setdefault(failed_row["name"], failed_row["readback"])
+    for record in tensor_records:
+        returned = observed.get(record["property"])
+        if returned is None:
+            record["readback_check"] = {
+                "equivalent": None,
+                "rule": "no_readback",
+                "reason": "the property was not read back (the write failed or was not executed); the tensor "
+                          "adapter cannot confirm the storage form without a readback",
+            }
+        else:
+            record["readback_check"] = material_tensor_readback(
+                record["property"], record, returned,
+                schema={"shape_rank": record.get("storage_rank")}, label=record["property"]
+            )
+    return tensor_records
+
+
 def material_set_properties(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path", "group", "properties", "provenance"),
                               ("path", "group", "properties"))
@@ -1818,28 +1842,7 @@ def material_set_properties(worker: Any, model_tag: str, arguments: Mapping[str,
                                 documented=_def_group_documented(group), records=tensor_records)
     group_path = path_with_segment(canonical, "propertyGroup", group)
     envelope = _property_write(group_path, worker, model_tag, payload)
-    readback_values = envelope["readback_values"] if isinstance(envelope["readback_values"], Mapping) else {}
-    # A readback that *mismatched* is still a readback: the frozen G2 envelope
-    # files it under ``failed`` with the observed value, and the tensor check
-    # wants it (that is exactly the case where "what was lost" matters).
-    observed_readbacks: dict[Any, Any] = dict(readback_values)
-    for failed_row in envelope["failed"]:
-        if isinstance(failed_row, Mapping) and failed_row.get("name") and failed_row.get("readback") is not None:
-            observed_readbacks.setdefault(failed_row["name"], failed_row["readback"])
-    for record in tensor_records:
-        schema = {"shape_rank": record.get("storage_rank")}
-        returned = observed_readbacks.get(record["property"])
-        if returned is None:
-            record["readback_check"] = {
-                "equivalent": None,
-                "rule": "no_readback",
-                "reason": "the property was not read back (the write failed or was not executed); the tensor "
-                          "adapter cannot confirm the storage form without a readback",
-            }
-        else:
-            record["readback_check"] = material_tensor_readback(
-                record["property"], record, returned, schema=schema, label=record["property"]
-            )
+    _material_tensor_readback_checks(tensor_records, envelope)
 
     applied = [{
         "group": group,
@@ -1921,6 +1924,8 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
     failed: list[dict[str, Any]] = []
     not_executed: list[dict[str, Any]] = []
     execution_state_unknown = False
+    mutation_dispatched = False
+    input_preflight_refused = False
     try:
         if action == "create":
             # MaterialModelList.create(String, String): tag + group type.  The
@@ -1947,6 +1952,7 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
                                                 records=group_tensor_records)
                     envelope = _property_write(path_with_segment(canonical, "propertyGroup", group),
                                                worker, model_tag, payload)
+                    _material_tensor_readback_checks(group_tensor_records, envelope)
                     applied.append({"action": "create.set_properties", "properties": envelope["applied"],
                                     "readback_values": envelope["readback_values"],
                                     "tensor_adapter": group_tensor_records})
@@ -1981,25 +1987,51 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
         else:  # update
             group_node = _call(node, "propertyGroup", group)
             recorded: dict[str, Any] = {"action": "update", "group": group}
+            # Every update needs a confirmed current input set before any
+            # description, input, or property write.  A failed probe is not an
+            # empty set: that would turn an unknown precondition into a write
+            # plan that may conflict with the real model state.
+            current_probe = call_probe(group_node, "input")
+            probe_error = current_probe.get("error") if isinstance(current_probe, Mapping) else None
+            probe_code = probe_error.get("code") if isinstance(probe_error, Mapping) else None
+            if ((isinstance(current_probe, Mapping) and probe_state_unknown(current_probe))
+                    or probe_code == "EXECUTION_STATE_UNKNOWN"):
+                input_preflight_refused = True
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "current material property group inputs are unknown; update refused before writes",
+                    details={"probe": "input", "probe_state_unknown": True},
+                    stage="pre_dispatch",
+                )
+            if not isinstance(current_probe, Mapping) or current_probe.get("ok") is not True:
+                if not isinstance(probe_code, str) or not probe_code or probe_code == "EXECUTION_STATE_UNKNOWN":
+                    probe_code = "API_UNSUPPORTED"
+                raise ExecutionContractError(
+                    probe_code,
+                    "current material property group inputs could not be read; update refused before writes",
+                    details={"probe": "input", "probe_error_code": probe_code},
+                    stage="pre_dispatch",
+                )
+            raw_current = current_probe.get("value")
+            if (not isinstance(raw_current, (list, tuple))
+                    or not all(isinstance(item, str) and item.strip() for item in raw_current)
+                    or len(set(raw_current)) != len(raw_current)):
+                raise ExecutionContractError(
+                    "API_UNSUPPORTED",
+                    "current material property group inputs have an invalid shape or duplicate names; update refused before writes",
+                    details={"probe": "input", "expected": "unique_nonempty_string_array"},
+                    stage="pre_dispatch",
+                )
+            current = list(raw_current)
             description = definition.get("description")
             if description is not None:
                 description = require_string(description, "definition.description", max_length=512)
-                _call(group_node, "descr", description)
-                probe = call_probe(group_node, "descr")
-                if not (probe["ok"] and probe["value"] == description):
-                    raise ExecutionContractError(
-                        "EXECUTION_STATE_UNKNOWN",
-                        f"property group description readback did not confirm {description!r}",
-                    )
-                recorded["description"] = description
             inputs = definition.get("inputs")
+            input_plan: tuple[list[str], list[str], list[str]] | None = None
             if inputs is not None:
                 # MaterialModel.addInput(String) (javap) / removeInput(String);
                 # the Programming Reference documents property-group model inputs
                 # as the quantities a property can depend on.
-                current_probe = call_probe(group_node, "input")
-                current = ([str(item) for item in current_probe["value"]]
-                           if current_probe["ok"] and current_probe["value"] else [])
                 add: list[str] = []
                 remove: list[str] = []
                 if isinstance(inputs, Mapping):
@@ -2010,32 +2042,65 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
                         remove = require_string_array(inputs["remove"], "definition.inputs.remove")
                 else:
                     add = require_string_array(inputs, "definition.inputs")
-                changes: list[dict[str, Any]] = []
+                # Validate the complete input change set before the description
+                # or any input is written. A conflict discovered halfway through
+                # the loops below would otherwise leave earlier calls applied
+                # while the operation reported a clean FAILED result.
                 for name in add:
                     if name in current:
-                        # Deliberately *not* a PreWriteRefusal: this loop's own
-                        # addInput calls below may already have happened, so a
-                        # later iteration cannot prove the engine was untouched.
-                        # It stays fail-closed -- see the TAG_CONFLICT stage
-                        # sweep in tests/test_m1_product_repairs.py.
                         raise ExecutionContractError(
                             "TAG_CONFLICT", f"property group input {name!r} already exists"
                         )
-                    _call(group_node, "addInput", name)
-                    changes.append({"method": "addInput", "name": name})
                 for name in remove:
                     if name not in current:
-                        # Deliberately *not* a PreWriteRefusal: the add loop above
-                        # may already have called addInput, so this raise cannot
-                        # prove the engine was untouched.  It stays fail-closed
-                        # (EXECUTION_STATE_UNKNOWN via the dispatch witness) --
-                        # see the stage sweep in tests/test_m1_product_repairs.py.
                         raise ExecutionContractError(
                             "NODE_NOT_FOUND", f"property group input {name!r} does not exist"
                         )
+                input_plan = (current, add, remove)
+
+            props = definition.get("properties")
+            payload = None
+            tensor_records: list[dict[str, Any]] = []
+            if props is not None:
+                props = property_definition(props, "definition.properties")
+                payload = _property_payload(group_node, props, label=f"definition.properties[{group}]",
+                                            documented=_def_group_documented(group), records=tensor_records)
+
+            if description is not None:
+                mutation_dispatched = True
+                _call(group_node, "descr", description)
+                probe = call_probe(group_node, "descr")
+                if not (probe["ok"] and probe["value"] == description):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        f"property group description readback did not confirm {description!r}",
+                    )
+                recorded["description"] = description
+                if not applied:
+                    applied.append(recorded)
+
+            if input_plan is not None:
+                current, add, remove = input_plan
+                changes: list[dict[str, Any]] = []
+                for name in add:
+                    mutation_dispatched = True
+                    _call(group_node, "addInput", name)
+                    changes.append({"method": "addInput", "name": name})
+                    recorded["inputs"] = {"changes": list(changes), "readback": None}
+                    if not applied:
+                        applied.append(recorded)
+                for name in remove:
+                    mutation_dispatched = True
                     _call(group_node, "removeInput", name)
                     changes.append({"method": "removeInput", "name": name})
+                    recorded["inputs"] = {"changes": list(changes), "readback": None}
+                    if not applied:
+                        applied.append(recorded)
                 after_probe = call_probe(group_node, "input")
+                if not after_probe["ok"]:
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN", "property group input readback failed after update"
+                    )
                 readback = ([str(item) for item in after_probe["value"]]
                             if after_probe["ok"] and after_probe["value"] else [])
                 expected = sorted((set(current) | set(add)) - set(remove))
@@ -2046,30 +2111,43 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
                         f"state {expected}",
                     )
                 recorded["inputs"] = {"changes": changes, "readback": readback}
-            props = definition.get("properties")
-            if props is not None:
-                props = property_definition(props, "definition.properties")
-                payload = _property_payload(group_node, props, label=f"definition.properties[{group}]",
-                                            documented=_def_group_documented(group))
+                if not applied:
+                    applied.append(recorded)
+
+            if payload is not None:
                 envelope = _property_write(path_with_segment(canonical, "propertyGroup", group),
                                            worker, model_tag, payload)
+                _material_tensor_readback_checks(tensor_records, envelope)
                 recorded["properties"] = envelope["applied"]
                 recorded["readback_values"] = envelope["readback_values"]
+                if tensor_records:
+                    recorded["tensor_adapter"] = tensor_records
                 failed.extend(_normalise_property_failures(envelope["failed"], action="set_properties",
                                                            group=group))
                 not_executed.extend(envelope["not_executed"])
                 execution_state_unknown = execution_state_unknown or envelope["execution_state_unknown"]
-            applied.append(recorded)
+                if (envelope["applied"] or not envelope["failed"]) and not applied:
+                    applied.append(recorded)
+            if not applied and not failed:
+                applied.append(recorded)
     except ExecutionContractError as exc:
-        execution_state_unknown = execution_state_unknown or exc.code == "EXECUTION_STATE_UNKNOWN"
+        uncertain_after_dispatch = mutation_dispatched and exc.code not in {"API_UNSUPPORTED", "METHOD_REJECTED"}
+        execution_state_unknown = execution_state_unknown or exc.code == "EXECUTION_STATE_UNKNOWN" or uncertain_after_dispatch
         failed.append({
             "action": action,
             "group": group,
             "error": {"code": exc.code, "message": str(exc)},
-            "partial_change": bool(applied),
-            "execution_state_unknown": exc.code == "EXECUTION_STATE_UNKNOWN",
+            "partial_change": bool(applied) or uncertain_after_dispatch or (
+                exc.code == "EXECUTION_STATE_UNKNOWN" and not input_preflight_refused
+            ),
+            "execution_state_unknown": execution_state_unknown,
         })
 
+    status = _status(applied, failed, not_executed, execution_state_unknown)
+    if input_preflight_refused:
+        status["partial_change"] = False
+    if action == "inspect":
+        status["partial_change"] = False
     return {
         "path": canonical,
         "action": action,
@@ -2077,7 +2155,7 @@ def material_group_manage(worker: Any, model_tag: str, arguments: Mapping[str, A
         "applied": applied,
         "failed": failed,
         "not_executed": not_executed,
-        **_status(applied, failed, not_executed, execution_state_unknown),
+        **status,
     }
 
 
@@ -3424,6 +3502,8 @@ def physics_multiphysics_manage(worker: Any, model_tag: str, arguments: Mapping[
                                       "LiveLink/help create calls; an unknown token is refused before the write",
         **_status(applied, failed, not_executed, execution_state_unknown),
     }
+    if action == "inspect":
+        result["partial_change"] = False
     if verified is not None:
         result["license_hint"] = {
             "products": verified["license_products"],

@@ -12609,6 +12609,26 @@ class ControlDaemon:
         if scoped_operation in {"api.invoke", "api_invoke"}:
             from ._g2_public_api import routed_arguments, provisional_effect
             effect = provisional_effect(routed_arguments(operation, arguments))
+        # The catalogue marks these two manage operations DYNAMIC because
+        # their top-level action selects read versus mutation. Resolve only
+        # the exact operation and effective body here; registry wrappers keep
+        # the body nested under ``arguments``. Missing or malformed bodies
+        # retain the catalogue's fail-closed DYNAMIC effect.
+        g3_aliases = {
+            "material_group_manage": "material.group_manage",
+            "physics_multiphysics_manage": "physics.multiphysics_manage",
+        }
+        g3_operation = g3_aliases.get(scoped_operation, scoped_operation)
+        if g3_operation in {"material.group_manage", "physics.multiphysics_manage"}:
+            effect_arguments = arguments
+            if operation in {"registry_call", "operation_call"}:
+                nested = arguments.get("arguments")
+                effect_arguments = nested if isinstance(nested, Mapping) else {}
+            try:
+                from ._g3_ops import execution_effect
+                effect = execution_effect(g3_operation, effect_arguments) or "DYNAMIC"
+            except Exception:
+                effect = "DYNAMIC"
         permission = self._permission_for_effect(effect)
         if permission == "trusted_code":
             self._require_t037_policy(scoped_operation)

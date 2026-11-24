@@ -211,6 +211,25 @@ def _effect_sources() -> tuple[dict[str, str], dict[str, str]]:
 
 EFFECTS, EFFECT_SOURCES = _effect_sources()
 
+_READ_ACTIONS = frozenset({
+    ("material.group_manage", "inspect"),
+    ("physics.multiphysics_manage", "inspect"),
+})
+
+
+def execution_effect(operation_id: Any, arguments: Mapping[str, Any] | None = None) -> str | None:
+    """Resolve action-shaped catalog effects before the managed write gate.
+
+    These manage operations include a read-only ``inspect`` action alongside
+    mutations. The catalog marks the operation DYNAMIC so the control plane can
+    select the action's actual effect without granting write access to inspect.
+    """
+    action = arguments.get("action") if isinstance(arguments, Mapping) else None
+    if (isinstance(operation_id, str) and isinstance(action, str)
+            and (operation_id, action) in _READ_ACTIONS):
+        return "READ"
+    return effect_of(operation_id)
+
 #: Every operation whose effect is not a pure model read must run isolated.
 #: The parent re-checks this set against the catalogue before dispatching.
 REQUIRES_ISOLATION: frozenset[str] = frozenset(
@@ -265,6 +284,7 @@ __all__ = [
     "describe",
     "dispatch",
     "effect_of",
+    "execution_effect",
     "is_implemented",
     "requires_isolation",
 ]
