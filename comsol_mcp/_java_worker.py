@@ -79,6 +79,15 @@ class JavaWorkerError(RuntimeError):
         ) or _structured_true(self.failure, "execution_state_unknown")
 
 
+def _raise_without_exception_context(error: BaseException) -> None:
+    """Raise a public error without retaining the active private exception."""
+    try:
+        raise error from None
+    except BaseException as public_error:
+        public_error.__context__ = None
+        raise
+
+
 def _source_binding_refusal(request: Mapping[str, Any], code: str, message: str) -> JavaWorkerError:
     """A code request refused before its operation frame reaches the Worker."""
     request_id = request.get("request_id")
@@ -984,14 +993,25 @@ class PersistentJavaWorker:
                 if require_source_binding:
                     probe = {"type": "source_binding_capabilities", "request_id": f"bind-{uuid.uuid4().hex}"}
                     transport_stage = "source_binding_probe_write"
-                    stream.write((json.dumps(probe, separators=(",", ":")) + "\n").encode()); stream.flush()
-                    transport_stage = "source_binding_probe_reply"
-                    capability = json.loads(stream.readline())
+                    try:
+                        stream.write((json.dumps(probe, separators=(",", ":")) + "\n").encode()); stream.flush()
+                        transport_stage = "source_binding_probe_reply"
+                        capability = json.loads(stream.readline())
+                    except Exception as exc:
+                        public_error = _source_binding_refusal(
+                            data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                            f"Worker source-binding probe failed before operation-frame write "
+                            f"(stage={transport_stage}; cause_type={type(exc).__name__})",
+                        )
+                        del exc
+                        _raise_without_exception_context(public_error)
                     try:
                         correlated_probe = self._validate_request_reply(probe, capability)
                     except JavaWorkerError as exc:
-                        raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                            "Worker source-binding capability reply was uncorrelated") from exc
+                        public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                            "Worker source-binding capability reply was uncorrelated")
+                        del exc
+                        _raise_without_exception_context(public_error)
                     result = capability.get("result") if isinstance(capability, Mapping) else None
                     if (not correlated_probe or not isinstance(capability, Mapping)
                             or capability.get("type") != "source_binding_capabilities"
@@ -1016,8 +1036,11 @@ class PersistentJavaWorker:
                 reply = json.loads(stream.readline())
         except (TimeoutError, socket.timeout) as exc:
             if require_source_binding and not source_operation_dispatched:
-                raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                    f"Worker source-binding capability probe timed out before code dispatch (stage={transport_stage})") from exc
+                public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    f"Worker source-binding capability probe timed out before code dispatch "
+                    f"(stage={transport_stage}; cause_type={type(exc).__name__})")
+                del exc
+                _raise_without_exception_context(public_error)
             if request_id:
                 self._known_requests.setdefault(str(request_id), {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"})
             raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id",
@@ -1025,8 +1048,11 @@ class PersistentJavaWorker:
                        "transport_stage": transport_stage, "errno": getattr(exc, "errno", None)}) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, TypeError, AttributeError) as exc:
             if require_source_binding and not source_operation_dispatched:
-                raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                    f"Worker source-binding capability probe was invalid (stage={transport_stage})") from exc
+                public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    f"Worker source-binding capability probe was invalid "
+                    f"(stage={transport_stage}; cause_type={type(exc).__name__})")
+                del exc
+                _raise_without_exception_context(public_error)
             diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
                           "reason": "protocol_error", "transport_stage": transport_stage,
                           "cause_type": type(exc).__name__}
@@ -1035,8 +1061,11 @@ class PersistentJavaWorker:
             raise JavaWorkerError(str(exc), reply=diagnostic) from exc
         except OSError as exc:
             if require_source_binding and not source_operation_dispatched:
-                raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                    f"Worker source-binding channel failed before code dispatch (stage={transport_stage})") from exc
+                public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
+                    f"Worker source-binding channel failed before code dispatch "
+                    f"(stage={transport_stage}; cause_type={type(exc).__name__})")
+                del exc
+                _raise_without_exception_context(public_error)
             diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
                           "reason": "transport_error", "transport_stage": transport_stage, "errno": exc.errno}
             if request_id:
