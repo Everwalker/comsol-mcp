@@ -3862,6 +3862,13 @@ class ManagedBackend:
             try:
                 shared_tags = shared_probe()
             except Exception as exc:
+                if getattr(exc, "execution_state_unknown", False) is True:
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "cross-client model-use Worker read is UNKNOWN; close was not dispatched",
+                        stage="validation",
+                        details={"cause_type": type(exc).__name__, "safe_retry": False},
+                    ) from exc
                 raise ExecutionContractError("MODEL_SHARED_STATE_UNKNOWN",
                                              "cross-client model-use readback failed before close dispatch",
                                              stage="validation", details={"cause_type": type(exc).__name__}) from exc
