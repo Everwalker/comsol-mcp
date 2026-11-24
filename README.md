@@ -4,6 +4,8 @@
 
 `comsol-mcp` 是连接 AI 助手与 COMSOL Multiphysics 的通用 MCP 服务。它提供受管理的项目、会话、模型、任务、结果和文件工作流，也保留连接已有 COMSOL Server 并由 Desktop 查看同一服务端模型的入口。它面向具体任务输入和项目级代码；不针对固定科学案例，也不保证 COMSOL 未支持的功能、许可证或物理结论。
 
+超出普通行内范围的持久化 `job.log` 事件恢复步骤见[中文指南](docs/job-log-oversize-recovery.md) / [English guide](docs/job-log-oversize-recovery.md#english)。
+
 ## 当前状态与适用范围
 
 通用核心仍在开发，尚未完成统一验收。目标平台包括 Windows x64 + COMSOL 6.3/6.4，以及 macOS ARM64 + COMSOL 6.4；现有证据不构成这些组合的完整产品验收。
