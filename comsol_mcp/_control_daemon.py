@@ -13191,6 +13191,11 @@ class ControlDaemon:
                     pinned_error = dict(published_error)
                     pinned_error["safe_retry"] = False
                     result["error"] = pinned_error
+            elif (exc.code == "SAVED_STATE_UNKNOWN"
+                  and exc.stage == "post_dispatch"
+                  and exc.safe_retry is False):
+                status = "UNKNOWN"
+                result["execution_state_unknown"] = True
             elif exc.code == "ENGINE_UNRESPONSIVE":
                 # A transport failure before the callback was dispatched leaves no
                 # engine work to reconcile: report it as a retryable failure
