@@ -3778,7 +3778,7 @@ class ManagedBackend:
         isolation = (
             self._require_g2_isolation()
             if ((operation in REQUIRES_ISOLATION
-                 and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code"})
+                 and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code", "file_write"})
                 # include_solution=false temporarily changes the bound Model's
                 # documented excludeComputedDataInMph option and verifies its
                 # restoration around saveCopy. Keep every package call inside
