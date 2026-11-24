@@ -1271,12 +1271,60 @@ def geometry_sequence_create(worker: Any, model_tag: str, arguments: Mapping[str
         raise ExecutionContractError(
             "EXECUTION_STATE_UNKNOWN", f"geometry {tag!r} was created but the tag readback does not show it"
         )
-    readback_dimension = call_probe(sequence, "getSDim")["value"]
-    if isinstance(readback_dimension, int) and not isinstance(readback_dimension, bool) and readback_dimension != dimension:
-        raise ExecutionContractError(
-            "EXECUTION_STATE_UNKNOWN",
-            f"geometry {tag!r} readback space dimension {readback_dimension} does not match the requested {dimension}",
-        )
+    dimension_probe = call_probe(sequence, "getSDim")
+    readback_dimension = dimension_probe["value"]
+    dimension_unknown = probe_state_unknown(dimension_probe)
+    if (dimension_unknown or not dimension_probe["ok"]
+            or not isinstance(readback_dimension, int) or isinstance(readback_dimension, bool)
+            or readback_dimension != dimension):
+        error = dimension_probe.get("error") or {}
+        if dimension_unknown:
+            failure_code = "EXECUTION_STATE_UNKNOWN"
+            failure_message = (
+                f"geometry {tag!r} was created and its tag was read back, but getSDim() returned an "
+                f"unknown execution state (code {error.get('code')!r})"
+            )
+        elif not dimension_probe["ok"]:
+            failure_code = str(error.get("code") or "DIMENSION_READBACK_UNAVAILABLE")
+            failure_message = f"geometry {tag!r} was created, but getSDim() readback was unavailable"
+        elif not isinstance(readback_dimension, int) or isinstance(readback_dimension, bool):
+            failure_code = "DIMENSION_READBACK_INVALID"
+            failure_message = f"geometry {tag!r} getSDim() did not return an integer"
+        else:
+            failure_code = "DIMENSION_READBACK_MISMATCH"
+            failure_message = (
+                f"geometry {tag!r} readback space dimension {readback_dimension} "
+                f"does not match the requested {dimension}"
+            )
+        failed = [{
+            "stage": "dimension_readback",
+            "code": failure_code,
+            "message": failure_message + "; no later geometry probes were dispatched",
+            "mutation_issued": False,
+            "partial_change": True,
+            "execution_state_unknown": dimension_unknown,
+        }]
+        not_executed = [
+            {"stage": "post_create_readback", "probe": name, "dispatched": False,
+             "reason": "dimension readback did not verify the created geometry sequence"}
+            for name in ("lengthUnit", "isAxisymmetric", "feature.tags")
+        ]
+        result = {
+            "component": component,
+            "path": {"segments": [{"collection": "component", "tag": component},
+                                   {"collection": "geom", "tag": tag}]},
+            "tag": tag,
+            "dimension": dimension,
+            "dimension_readback": readback_dimension if dimension_probe["ok"] else None,
+            "created": True,
+            "readback": {"geometries": after},
+            "applied": [{"stage": "geometry_sequence_create", "tag": tag}],
+            "failed": failed,
+            "not_executed": not_executed,
+            "notes": ["the geometry sequence tag is present, but its entity dimension did not verify"],
+        }
+        result.update(_status(result["applied"], failed, not_executed, dimension_unknown))
+        return result
     return {
         "component": component,
         "path": {"segments": [{"collection": "component", "tag": component}, {"collection": "geom", "tag": tag}]},
@@ -2760,7 +2808,18 @@ def definition_coordinate_manage(worker: Any, model_tag: str, arguments: Mapping
         rows = []
         for tag in _definition_tags(container):
             node = _call(container, "get", tag)
-            rows.append({"tag": tag, "type_id": _node_kind(node), "label": call_probe(node, "label")["value"]})
+            label_probe = call_probe(node, "label")
+            if probe_state_unknown(label_probe):
+                error = label_probe.get("error") or {}
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"coordinate system {tag!r} label read returned an unknown execution state "
+                    f"(code {error.get('code')!r}); this list stops before probing later entries",
+                    details={"probe_state_unknown": True, "probe": "label",
+                             "execution_state_unknown": True},
+                )
+            rows.append({"tag": tag, "type_id": _node_kind(node),
+                         "label": label_probe["value"] if label_probe["ok"] else None})
         return {
             "action": action,
             "component": component,

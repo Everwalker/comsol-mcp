@@ -2265,19 +2265,39 @@ def selection_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
     rows = []
     for tag in tag_list(container, collection_spec("selection")):
         node = child_node(worker, model_tag, parent, "selection", tag)
-        entities_probe = call_probe(node, "entities")
+        def read_probe(method: str) -> dict[str, Any]:
+            probe = call_probe(node, method)
+            if probe_state_unknown(probe):
+                error = probe.get("error") or {}
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"selection {tag!r} {method}() read returned an unknown execution state "
+                    f"(code {error.get('code')!r}); this list stops before later probes or entries",
+                    details={"probe_state_unknown": True, "probe": method,
+                             "execution_state_unknown": True},
+                )
+            return probe
+
+        entities_probe = read_probe("entities")
         entities = list(entities_probe["value"]) if entities_probe["ok"] and isinstance(entities_probe["value"], (list, tuple)) else None
+        type_probe = read_probe("getType")
+        entity_dimension_probe = read_probe("dim")
+        dimension_probe = read_probe("dimension")
+        inheriting_probe = read_probe("isInheriting")
+        geometry_probe = read_probe("geom")
+        named_probe = read_probe("named")
+        geometry_value = geometry_probe["value"]
         rows.append({
             "tag": tag,
-            "type_id": node_type(node),
-            "entity_dimension": call_probe(node, "dim")["value"],
-            "dimension": call_probe(node, "dimension")["value"],
+            "type_id": str(type_probe["value"]) if type_probe["ok"] and type_probe["value"] is not None else None,
+            "entity_dimension": entity_dimension_probe["value"],
+            "dimension": dimension_probe["value"],
             "entity_count": len(entities) if entities is not None else None,
             "entities_sha256": entity_list_hash(entities) if entities is not None else None,
             "entities_error": None if entities_probe["ok"] else entities_probe["error"],
-            "is_inheriting": call_probe(node, "isInheriting")["value"],
-            "geometry": probe_geometry_tag(node),
-            "named": call_probe(node, "named")["value"],
+            "is_inheriting": inheriting_probe["value"],
+            "geometry": geometry_value if isinstance(geometry_value, str) and geometry_value else None,
+            "named": named_probe["value"],
         })
     return {"scope": scope, "selections": rows, "count": len(rows),
             "notes": ["entity ids are geometry-version dependent; no cross-revision stability is promised"]}
