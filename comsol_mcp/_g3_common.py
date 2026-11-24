@@ -61,6 +61,8 @@ import hashlib
 import json
 import math
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from ._g2_contract import (
@@ -78,6 +80,45 @@ from ._g2_engine import (
     _worker_failure_code,
     _worker_failure_unknown,
 )
+
+_FAIL_ON_UNKNOWN_PROBES: ContextVar[bool] = ContextVar("g3_fail_on_unknown_probes", default=False)
+
+
+@contextmanager
+def fail_on_unknown_probes():
+    """Raise structured UNKNOWN probe failures inside a scoped inventory read."""
+    token = _FAIL_ON_UNKNOWN_PROBES.set(True)
+    try:
+        yield
+    finally:
+        _FAIL_ON_UNKNOWN_PROBES.reset(token)
+
+
+def _raise_unknown_probe(method: str) -> None:
+    error = ExecutionContractError(
+        "EXECUTION_STATE_UNKNOWN",
+        f"COMSOL {method} probe ended in an unknown Worker state; dependency inventory stopped",
+        safe_retry=False,
+        details={"execution_state_unknown": True, "safe_retry": False},
+        stage="post_dispatch",
+    )
+    try:
+        raise error from None
+    except ExecutionContractError as public_error:
+        public_error.__context__ = None
+        raise
+
+
+def raise_unknown_probe_if_scoped(exc: Exception, method: str) -> None:
+    """Promote a structured UNKNOWN metadata/helper probe only in inventory scope."""
+    if (_FAIL_ON_UNKNOWN_PROBES.get()
+            and (_worker_failure_unknown(exc) or error_code_of(exc) == "EXECUTION_STATE_UNKNOWN")):
+        _raise_unknown_probe(method)
+
+
+def scoped_unknown_probe_callback() -> Callable[[Exception, str], None] | None:
+    """Return the UNKNOWN callback only for an active scoped inventory read."""
+    return raise_unknown_probe_if_scoped if _FAIL_ON_UNKNOWN_PROBES.get() else None
 
 # ---------------------------------------------------------------------------
 # Identity / envelope fields that the control plane owns and this layer never
@@ -791,7 +832,10 @@ def node_type(node: Any) -> str | None:
     """Best-effort ``getType()`` readback; ``None`` when the node has no such API."""
     try:
         value = getattr(node, "getType")()
-    except Exception:
+    except Exception as exc:
+        if (_FAIL_ON_UNKNOWN_PROBES.get()
+                and (_worker_failure_unknown(exc) or error_code_of(exc) == "EXECUTION_STATE_UNKNOWN")):
+            _raise_unknown_probe("getType")
         return None
     return str(value) if value is not None else None
 
@@ -808,22 +852,25 @@ def call_probe(node: Any, method: str, *args: Any,
     A *structured* ``EXECUTION_STATE_UNKNOWN`` (explicit code, or the worker's
     ``execution_state_unknown``/``engine_state_unknown`` flag on
     ``failure``/``reply``/``details``, T21 parent finding 2026-11-08) is never
-    an optional-getter miss: the probe record carries
-    ``execution_state_unknown=True`` at the top level and in its error record
-    so a caller cannot demote it into "unreadable, continue".  Ordinary
-    METHOD_REJECTED/API_UNSUPPORTED probe failures keep their optional
-    data-shaped behaviour.  Success records keep their pre-existing shape
-    unchanged (``ok``/``value``/``error``); the marker is added only to
-    failure records, where the demotion could happen.
+    an optional-getter miss. By default the probe record preserves the marker;
+    a scoped dependency-inventory read can use ``fail_on_unknown_probes()`` to
+    stop at the first such probe. Ordinary METHOD_REJECTED/API_UNSUPPORTED
+    probe failures keep their optional data-shaped behaviour. Success records
+    keep their pre-existing shape unchanged (``ok``/``value``/``error``); the
+    marker is added only to failure records where demotion could happen.
     """
     try:
         return {"ok": True, "value": getattr(node, method)(*args), "error": None}
     except Exception as exc:  # noqa: BLE001 - probe must not raise
         if include_engine_failure_details:
             error = describe_engine_failure(exc, method)
+            if _FAIL_ON_UNKNOWN_PROBES.get() and error.get("execution_state_unknown") is True:
+                _raise_unknown_probe(method)
             return {"ok": False, "value": None, "error": error,
                     "execution_state_unknown": bool(error.get("execution_state_unknown"))}
         unknown = _worker_failure_unknown(exc) or error_code_of(exc) == "EXECUTION_STATE_UNKNOWN"
+        if _FAIL_ON_UNKNOWN_PROBES.get() and unknown:
+            _raise_unknown_probe(method)
         return {
             "ok": False,
             "value": None,

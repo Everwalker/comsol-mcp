@@ -14,7 +14,7 @@ from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
-from typing import Any
+from typing import Any, Callable
 
 from comsol_mcp._server import (
     COMSOL_SERVER_MCP_HOME, COMSOL_ROOT, DEFAULT_HOST,
@@ -62,24 +62,38 @@ def _runtime_output_dir() -> Path:
 # Model label / path helpers (used by _status_payload, moved here to avoid
 # pulling in _model.py which depends on this module)
 # ---------------------------------------------------------------------------
-def _safe_model_label(model: Any | None) -> str:
+def _safe_model_label(
+    model: Any | None,
+    *,
+    on_probe_error: Callable[[Exception, str], None] | None = None,
+) -> str:
     if model is None:
         return ""
     try:
         return str(model.java.label())
-    except Exception:
+    except Exception as exc:
+        if on_probe_error is not None:
+            on_probe_error(exc, "label")
         try:
             return str(model.name())
-        except Exception:
+        except Exception as fallback_exc:
+            if on_probe_error is not None:
+                on_probe_error(fallback_exc, "name")
             return ""
 
 
-def _safe_model_path(model: Any | None) -> str:
+def _safe_model_path(
+    model: Any | None,
+    *,
+    on_probe_error: Callable[[Exception, str], None] | None = None,
+) -> str:
     if model is None:
         return ""
     try:
         path = str(model.java.getFilePath() or "")
-    except Exception:
+    except Exception as exc:
+        if on_probe_error is not None:
+            on_probe_error(exc, "getFilePath")
         path = ""
     if path:
         return str(Path(path).resolve())

@@ -1217,7 +1217,12 @@ def function_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     return result
 
 
-def _function_inspect_payload(node: Any, type_id: str | None) -> dict[str, Any]:
+def _function_inspect_payload(
+    node: Any,
+    type_id: str | None,
+    *,
+    on_probe_error: Callable[[Exception, str], None] | None = None,
+) -> dict[str, Any]:
     allowed = FUNCTION_TYPE_PROPERTIES.get(type_id or "", None)
     if allowed is None:
         return {
@@ -1245,7 +1250,9 @@ def _function_inspect_payload(node: Any, type_id: str | None) -> dict[str, Any]:
         "property_metadata": {
             name: {"kind": row.get("kind"), "shape_rank": row.get("shape_rank"),
                    "value_type": row.get("value_type"), "allowed_values": row.get("allowed_values")}
-            for name, row in _metadata_rows(node, sorted(allowed)).items()
+            for name, row in _metadata_rows(
+                node, sorted(allowed), on_probe_error=on_probe_error,
+            ).items()
         },
         "type_properties_verified": True,
     }
@@ -1265,7 +1272,10 @@ def function_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     path, node = resolve_path(worker, model_tag, args["path"], label="path")
     type_id = node_type(node)
     names = call_probe(node, "functionNames")
-    payload = _function_inspect_payload(node, type_id)
+    from . import _g3_common
+    payload = _function_inspect_payload(
+        node, type_id, on_probe_error=_g3_common.scoped_unknown_probe_callback(),
+    )
     settings = payload.get("settings") if isinstance(payload.get("settings"), Mapping) else {}
 
     def setting_value(label: str) -> Any:

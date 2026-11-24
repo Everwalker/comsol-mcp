@@ -137,9 +137,71 @@ def _archive_names(value: Any) -> list[str]:
     return safe
 
 
+def _inventory_unknown_error() -> ExecutionContractError:
+    return ExecutionContractError(
+        "EXECUTION_STATE_UNKNOWN",
+        "COMSOL Worker state is unknown during dependency inventory; automatic retry is unsafe",
+        safe_retry=False,
+        details={"execution_state_unknown": True, "safe_retry": False},
+        stage="post_dispatch",
+    )
+
+
+def _raise_inventory_unknown(exc: Exception) -> None:
+    from ._g2_engine import _worker_failure_unknown
+
+    if not _worker_failure_unknown(exc):
+        return
+    error = _inventory_unknown_error()
+    try:
+        raise error from None
+    except ExecutionContractError as public_error:
+        public_error.__context__ = None
+        raise
+
+
+def _contains_inventory_unknown(value: Any, seen: set[int] | None = None) -> bool:
+    """Recognize only explicit structured UNKNOWN markers in helper results."""
+    if seen is None:
+        seen = set()
+    if isinstance(value, Mapping):
+        identity = id(value)
+        if identity in seen:
+            return False
+        seen.add(identity)
+        if any(value.get(key) is True for key in (
+            "execution_state_unknown", "engine_state_unknown", "probe_state_unknown",
+        )):
+            return True
+        if value.get("code") == "EXECUTION_STATE_UNKNOWN" or value.get("status") == "EXECUTION_STATE_UNKNOWN":
+            return True
+        return any(_contains_inventory_unknown(item, seen) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        identity = id(value)
+        if identity in seen:
+            return False
+        seen.add(identity)
+        return any(_contains_inventory_unknown(item, seen) for item in value)
+    return False
+
+
+def _raise_inventory_result_unknown(value: Any) -> None:
+    if _contains_inventory_unknown(value):
+        error = _inventory_unknown_error()
+        try:
+            raise error from None
+        except ExecutionContractError as public_error:
+            public_error.__context__ = None
+            raise
+
+
 def _resource_inventory(worker: Any, model_tag: str) -> list[dict[str, Any]]:
-    model = worker.client().model(model_tag)
-    rows = model.java.getFileResourceInventory()
+    try:
+        model = worker.client().model(model_tag)
+        rows = model.java.getFileResourceInventory()
+    except Exception as exc:
+        _raise_inventory_unknown(exc)
+        raise
     if not isinstance(rows, (list, tuple)):
         raise PreWriteRefusal("DEPENDENCY_INVENTORY_UNAVAILABLE", "COMSOL FileResource inventory returned an invalid shape")
     if len(rows) > MAX_INVENTORY_ROWS:
@@ -184,11 +246,17 @@ def _path_values_from_function(data: Mapping[str, Any]) -> list[str]:
 
 
 def _model_component_details(worker: Any, model_tag: str) -> tuple[list[Mapping[str, Any]], list[str]]:
+    from . import _g3_common
     from ._model_ops import _model_tree_data
 
     try:
-        tree = _model_tree_data(worker.client().model(model_tag))
+        with _g3_common.fail_on_unknown_probes():
+            tree = _model_tree_data(
+                worker.client().model(model_tag),
+                on_probe_error=_g3_common.scoped_unknown_probe_callback(),
+            )
     except Exception as exc:
+        _raise_inventory_unknown(exc)
         return [], [f"model_structure:{type(exc).__name__}"]
     components = tree.get("component_details") if isinstance(tree, Mapping) else None
     if not isinstance(components, list):
@@ -206,7 +274,7 @@ def _model_component_details(worker: Any, model_tag: str) -> tuple[list[Mapping[
 def _feature_filename_refs(
     worker: Any, model_tag: str, components: Sequence[Mapping[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    from . import _g3_w14
+    from . import _g3_common, _g3_w14
     refs: list[dict[str, Any]] = []
     errors: list[str] = []
     visited = 0
@@ -222,7 +290,9 @@ def _feature_filename_refs(
                 continue
             path = {"segments": [{"collection": "component", "tag": component}, {"collection": "geom", "tag": geom}]}
             try:
-                inv = _g3_w14.geometry_inspect(worker, model_tag, {"path": path})
+                with _g3_common.fail_on_unknown_probes():
+                    inv = _g3_w14.geometry_inspect(worker, model_tag, {"path": path})
+                _raise_inventory_result_unknown(inv)
                 for feature in inv.get("features", []):
                     visited += 1
                     if visited > MAX_INVENTORY_ROWS:
@@ -232,9 +302,11 @@ def _feature_filename_refs(
                     tag = feature.get("tag")
                     if not isinstance(tag, str) or not tag:
                         continue
-                    details = _g3_w14.geometry_inspect(worker, model_tag, {
-                        "path": path, "feature_properties": {tag: ["filename"]},
-                    })
+                    with _g3_common.fail_on_unknown_probes():
+                        details = _g3_w14.geometry_inspect(worker, model_tag, {
+                            "path": path, "feature_properties": {tag: ["filename"]},
+                        })
+                    _raise_inventory_result_unknown(details)
                     row = next((candidate for candidate in details.get("features", [])
                                 if isinstance(candidate, Mapping) and candidate.get("tag") == tag), {})
                     values = row.get("property_values") if isinstance(row, Mapping) else None
@@ -248,12 +320,13 @@ def _feature_filename_refs(
             except PreWriteRefusal:
                 raise
             except Exception as exc:
+                _raise_inventory_unknown(exc)
                 errors.append(f"geometry:{component}/{geom}:{type(exc).__name__}")
     return refs, errors
 
 
 def _dependencies_report(worker: Any, model_tag: str, context: Mapping[str, Any], *, verify_hashes: bool) -> dict[str, Any]:
-    from . import _g3_w13
+    from . import _g3_common, _g3_w13
 
     _require_context(context, "project_root", "project_id", "model_ref")
     root = Path(str(context["project_root"])).resolve(strict=True)
@@ -268,14 +341,18 @@ def _dependencies_report(worker: Any, model_tag: str, context: Mapping[str, Any]
     }
     errors: list[str] = []
     components, structure_errors = _model_component_details(worker, model_tag)
+    _raise_inventory_result_unknown(components)
     errors.extend(structure_errors)
     function_scopes: list[tuple[str, dict[str, Any]]] = [("global", {})]
     function_scopes.extend((f"component:{row['tag']}", {"component": row["tag"]}) for row in components)
     function_count = 0
     for scope_name, scope_args in function_scopes:
         try:
-            functions = _g3_w13.function_list(worker, model_tag, scope_args)
+            with _g3_common.fail_on_unknown_probes():
+                functions = _g3_w13.function_list(worker, model_tag, scope_args)
+            _raise_inventory_result_unknown(functions)
         except Exception as exc:
+            _raise_inventory_unknown(exc)
             errors.append(f"function_inventory:{scope_name}:{type(exc).__name__}")
             continue
         rows = functions.get("functions") if isinstance(functions, Mapping) else None
@@ -294,7 +371,9 @@ def _dependencies_report(worker: Any, model_tag: str, context: Mapping[str, Any]
                 errors.append(f"function:{scope_name}:{row['tag']}:type_unavailable")
                 continue
             try:
-                inspected = _g3_w13.function_inspect(worker, model_tag, {"path": row["path"]})
+                with _g3_common.fail_on_unknown_probes():
+                    inspected = _g3_w13.function_inspect(worker, model_tag, {"path": row["path"]})
+                _raise_inventory_result_unknown(inspected)
                 if not isinstance(inspected, Mapping) or inspected.get("type_properties_verified") is not True:
                     errors.append(f"function:{scope_name}:{row['tag']}:properties_unverified")
                     continue
@@ -303,6 +382,7 @@ def _dependencies_report(worker: Any, model_tag: str, context: Mapping[str, Any]
                     file_refs.append({"kind": "function_data", "tag": row["tag"],
                                       "function_type": kind, "source_path": raw})
             except Exception as exc:
+                _raise_inventory_unknown(exc)
                 errors.append(f"function:{scope_name}:{row['tag']}:{type(exc).__name__}")
     cad_refs, cad_errors = _feature_filename_refs(worker, model_tag, components)
     file_refs.extend(cad_refs)
@@ -321,10 +401,15 @@ def _dependencies_report(worker: Any, model_tag: str, context: Mapping[str, Any]
         resource["verification"] = "UNVERIFIED"
     if verify_hashes:
         from ._artifact_store import ArtifactStore, _assert_no_symlink_components, _open_pinned_artifact, _assert_pinned_artifact_stable
-        model = worker.client().model(model_tag)
+        try:
+            model = worker.client().model(model_tag)
+        except Exception as exc:
+            _raise_inventory_unknown(exc)
+            raise
         try:
             saved_path = str(model.java.getFilePath() or "")
-        except Exception:
+        except Exception as exc:
+            _raise_inventory_unknown(exc)
             saved_path = ""
         saved = (_project_file(root, saved_path, hash_file=True) if saved_path
                  else {"state": "UNVERIFIED", "reason": "model_not_saved"})

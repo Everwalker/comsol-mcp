@@ -8,7 +8,7 @@ import contextvars
 import json
 import uuid
 from contextlib import contextmanager
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterator, Mapping, Sequence
 
 
 # ---------------------------------------------------------------------------
@@ -1186,7 +1186,11 @@ def _evaluate_aggregate(
 # ---------------------------------------------------------------------------
 # Model tree
 # ---------------------------------------------------------------------------
-def _model_tree_data(model: Any) -> dict[str, Any]:
+def _model_tree_data(
+    model: Any,
+    *,
+    on_probe_error: Callable[[Exception, str], None] | None = None,
+) -> dict[str, Any]:
     from comsol_mcp._state import _safe_model_label, _safe_model_path
     java = model.java
     components = [str(tag) for tag in java.component().tags()]
@@ -1202,9 +1206,19 @@ def _model_tree_data(model: Any) -> dict[str, Any]:
                 "materials": [str(tag) for tag in comp.material().tags()],
             }
         )
+    label = (
+        _safe_model_label(model)
+        if on_probe_error is None
+        else _safe_model_label(model, on_probe_error=on_probe_error)
+    )
+    file_path = (
+        _safe_model_path(model)
+        if on_probe_error is None
+        else _safe_model_path(model, on_probe_error=on_probe_error)
+    )
     return {
-        "label": _safe_model_label(model),
-        "file_path": _safe_model_path(model),
+        "label": label,
+        "file_path": file_path,
         "components": components,
         "component_details": component_details,
         "parameters": [str(name) for name in java.param().varnames()],
