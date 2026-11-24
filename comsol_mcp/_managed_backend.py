@@ -4544,30 +4544,57 @@ class ManagedBackend:
         elif operation == "node.property_entry_set": data = property_entry_set(self.worker, model_tag, body.get("path", {}), body.get("name", ""), body.get("key", ""), body.get("value", {}), path_guard=self._g2_property_path_screen(project_id))
         elif operation == "code.execute_java":
             from ._g2_code import describe_snapshot, read_source_snapshot
+            from ._java_worker import (
+                PersistentJavaWorker, _new_local_predispatch_context,
+                _validated_local_predispatch_refusal_reply,
+            )
             snapshot = read_source_snapshot(self.project_root_binding or self.project_root,
                                             body.get("source_artifact", ""))
             description = describe_snapshot(snapshot, body.get("entrypoint", ""))
             if body.get("mode") not in {"trusted", "execute"}:
                 raise ExecutionContractError("PERMISSION_DENIED", "code execution requires mode=trusted or mode=execute")
             before = self.worker.backend_snapshot(model_tag)
+            predispatch_context = (
+                _new_local_predispatch_context(
+                    worker=self.worker, request_id=operation_id, source_snapshot=snapshot,
+                    model_tag=model_tag, source_sha256=description["source_sha256"],
+                    entrypoint=description["entrypoint"],
+                )
+                if isinstance(self.worker, PersistentJavaWorker) else None
+            )
             try:
+                worker_kwargs = {
+                    "source_bytes": snapshot.raw_bytes,
+                    "expected_source_sha256": snapshot.sha256,
+                    "request_id": operation_id,
+                }
+                if predispatch_context is not None:
+                    worker_kwargs["_predispatch_context"] = predispatch_context
                 reply = self.worker.execute_java(
                     model_tag, snapshot.path.name, description["entrypoint"], body.get("arguments", {}),
-                    source_bytes=snapshot.raw_bytes, expected_source_sha256=snapshot.sha256,
-                    request_id=operation_id,
+                    **worker_kwargs,
                 )
             except Exception as exc:
-                # An exception is not a Worker receipt. Its attached mapping may
-                # be stale, contradictory, uncorrelated, or caller supplied, so
-                # never let it establish success or a retryable compile refusal.
-                return _t18_unknown_java_result(
-                    description, before, model_tag, operation_id,
-                    getattr(exc, "reply", None), exception=exc,
+                local_reply = None
+                if predispatch_context is not None:
+                    local_reply = _validated_local_predispatch_refusal_reply(
+                        exc, worker=self.worker, request_id=operation_id,
+                        operation_type="code_execute", context=predispatch_context,
+                        model_tag=model_tag, source_sha256=description["source_sha256"],
+                        entrypoint=description["entrypoint"], source_snapshot=snapshot,
+                    )
+                if local_reply is None:
+                    # An attached reply cannot establish a local transport witness.
+                    return _t18_unknown_java_result(
+                        description, before, model_tag, operation_id,
+                        getattr(exc, "reply", None), exception=exc,
+                    )
+                reply = local_reply
+                rejection = "source_binding"
+            else:
+                rejection = _t18_bound_not_executed_rejection(
+                    reply, description, operation_id, model_tag,
                 )
-
-            rejection = _t18_bound_not_executed_rejection(
-                reply, description, operation_id, model_tag,
-            )
             if rejection is not None:
                 safe_reply = _t18_safe_worker_reply(reply, description, operation_id)
                 data = execution_result(

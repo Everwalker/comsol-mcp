@@ -100,6 +100,214 @@ def _source_binding_refusal(request: Mapping[str, Any], code: str, message: str)
     return JavaWorkerError(message, reply=reply)
 
 
+_LOCAL_PREDISPATCH_CAPABILITY = object()
+_LOCAL_PREDISPATCH_STAGES = frozenset({"connect"})
+_LOCAL_PREDISPATCH_MESSAGE = "Worker connection failed before code_execute dispatch"
+
+
+class _JavaWorkerLocalPreDispatchToken:
+    """One invocation-bound witness, consumed across all its error objects."""
+
+    def __init__(self, *, worker: Any, request_id: str, source_snapshot: Any,
+                 model_tag: str, source_sha256: str, entrypoint: str) -> None:
+        self.worker = worker
+        self.request_id = request_id
+        self.operation_type = "code_execute"
+        self.source_snapshot = source_snapshot
+        self.model_tag = model_tag
+        self.source_sha256 = source_sha256
+        self.entrypoint = entrypoint
+        self._consumed = False
+        self._consume_lock = threading.Lock()
+
+
+def _new_local_predispatch_context(*, worker: Any, request_id: str,
+                                   source_snapshot: Any, model_tag: str,
+                                   source_sha256: str, entrypoint: str
+                                   ) -> _JavaWorkerLocalPreDispatchToken:
+    """Bind the token to the exact Worker invocation before dispatch."""
+    return _JavaWorkerLocalPreDispatchToken(
+        worker=worker, request_id=request_id, source_snapshot=source_snapshot,
+        model_tag=model_tag, source_sha256=source_sha256, entrypoint=entrypoint,
+    )
+
+
+def _local_predispatch_context_matches(request: Mapping[str, Any], context: Any,
+                                       worker: Any) -> bool:
+    if type(context) is not _JavaWorkerLocalPreDispatchToken:
+        return False
+    snapshot = context.source_snapshot
+    model_tag = context.model_tag
+    source_sha256 = context.source_sha256
+    entrypoint = context.entrypoint
+    if (context.worker is not worker
+            or context.operation_type != "code_execute"
+            or type(context.request_id) is not str or not context.request_id
+            or request.get("type") != context.operation_type
+            or request.get("request_id") != context.request_id
+            or type(model_tag) is not str or not model_tag or request.get("tag") != model_tag
+            or type(source_sha256) is not str
+            or request.get("expected_source_sha256") != source_sha256
+            or type(entrypoint) is not str or not entrypoint
+            or request.get("entrypoint") != entrypoint):
+        return False
+    try:
+        raw_bytes = _validate_source_snapshot_fields(request)
+        snapshot_bytes = snapshot.raw_bytes
+        snapshot_sha256 = snapshot.sha256
+        snapshot_name = snapshot.path.name
+    except (AttributeError, JavaWorkerError, TypeError):
+        return False
+    return (type(snapshot_bytes) is bytes and raw_bytes == snapshot_bytes
+            and hashlib.sha256(raw_bytes).hexdigest() == source_sha256
+            and snapshot_sha256 == source_sha256
+            and snapshot_name == request.get("source_name"))
+
+
+class _JavaWorkerLocalPreDispatchRefusal(JavaWorkerError):
+    """Private proof for a local connect failure before code dispatch."""
+
+    def __init__(self, request: Mapping[str, Any], *, worker: Any,
+                 context: _JavaWorkerLocalPreDispatchToken,
+                 capability: object) -> None:
+        if (capability is not _LOCAL_PREDISPATCH_CAPABILITY
+                or not _local_predispatch_context_matches(request, context, worker)):
+            raise TypeError("local pre-dispatch refusal requires a matching JavaWorker call context")
+        code = "WORKER_SOURCE_BINDING_UNAVAILABLE"
+        message = _LOCAL_PREDISPATCH_MESSAGE
+        base = _source_binding_refusal(request, code, message)
+        reply = dict(base.reply)
+        failure = dict(reply["failure"])
+        identity = {
+            "model_tag": context.model_tag,
+            "source_sha256": context.source_sha256,
+            "entrypoint": context.entrypoint,
+        }
+        reply.update(identity)
+        failure.update(identity)
+        reply["failure"] = failure
+        reply["transport_stage"] = "connect"
+        super().__init__(message, reply=reply)
+        self._local_capability = capability
+        self._worker_origin = worker
+        self._call_context = context
+        self._call_token = context
+        self.request_id = context.request_id
+        self.operation_type = context.operation_type
+        self.model_tag = context.model_tag
+        self.source_sha256 = context.source_sha256
+        self.entrypoint = context.entrypoint
+        self.source_snapshot_origin = context.source_snapshot
+        self.transport_stage = "connect"
+        self.source_operation_dispatched = False
+        self.execution_state_unknown = False
+        self.safe_retry = False
+
+
+def _local_source_binding_refusal(worker: Any, request: Mapping[str, Any], *,
+                                  context: Any) -> _JavaWorkerLocalPreDispatchRefusal | None:
+    if not _local_predispatch_context_matches(request, context, worker):
+        return None
+    return _JavaWorkerLocalPreDispatchRefusal(
+        request, worker=worker, context=context, capability=_LOCAL_PREDISPATCH_CAPABILITY,
+    )
+
+
+def _validated_local_predispatch_refusal_reply(
+    error: BaseException, *, worker: Any, request_id: str, operation_type: str,
+    context: Any, model_tag: str, source_sha256: str, entrypoint: str,
+    source_snapshot: Any,
+) -> dict[str, Any] | None:
+    """Consume one private local proof only for its exact invocation and snapshot."""
+    if (type(error) is not _JavaWorkerLocalPreDispatchRefusal
+            or error._local_capability is not _LOCAL_PREDISPATCH_CAPABILITY
+            or error._worker_origin is not worker):
+        return None
+    token = error._call_token
+    if type(token) is not _JavaWorkerLocalPreDispatchToken:
+        return None
+    with token._consume_lock:
+        if token._consumed:
+            return None
+        token._consumed = True
+        code = "WORKER_SOURCE_BINDING_UNAVAILABLE"
+        raw = error.reply
+        failure = raw.get("failure") if isinstance(raw, Mapping) else None
+        nested = error.failure
+        if (type(context) is not _JavaWorkerLocalPreDispatchToken
+                or error._call_context is not context or error._call_token is not context
+                or context is not token or context.worker is not worker
+                or context.request_id != request_id
+                or context.operation_type != operation_type
+                or context.source_snapshot is not source_snapshot
+                or context.model_tag != model_tag or context.source_sha256 != source_sha256
+                or context.entrypoint != entrypoint
+                or error.source_snapshot_origin is not source_snapshot
+                or type(request_id) is not str or not request_id
+                or request_id != error.request_id
+                or operation_type != "code_execute" or error.operation_type != operation_type
+                or error.transport_stage not in _LOCAL_PREDISPATCH_STAGES
+                or error.model_tag != model_tag or error.source_sha256 != source_sha256
+                or error.entrypoint != entrypoint
+                or error.source_operation_dispatched is not False
+                or error.execution_state_unknown is not False or error.safe_retry is not False
+                or str(error) != _LOCAL_PREDISPATCH_MESSAGE
+                or error.__cause__ is not None or error.__context__ is not None
+                or not isinstance(failure, Mapping) or not isinstance(nested, Mapping)):
+            return None
+        if (raw.get("ok") is not False or raw.get("status") != "FAILED"
+                or raw.get("request_id") != request_id or raw.get("type") != operation_type
+                or raw.get("code") != code or raw.get("message") != _LOCAL_PREDISPATCH_MESSAGE
+                or raw.get("transport_stage") != "connect"
+                or "success" in raw or "result" in raw or "_source_binding_verified" in raw):
+            return None
+        identity = {"model_tag": model_tag, "source_sha256": source_sha256,
+                    "entrypoint": entrypoint}
+        for record in (raw, failure, nested):
+            if (record.get("code") != code
+                    or record.get("source_operation_dispatched") is not False
+                    or record.get("execution_state_unknown") is not False
+                    or record.get("safe_retry") is not False
+                    or any(record.get(name) != value for name, value in identity.items())):
+                return None
+        if (failure.get("message") != _LOCAL_PREDISPATCH_MESSAGE
+                or nested.get("message") != _LOCAL_PREDISPATCH_MESSAGE):
+            return None
+        return {
+            "ok": False, "status": "FAILED", "request_id": request_id,
+            "type": operation_type, "code": code,
+            "message": _LOCAL_PREDISPATCH_MESSAGE,
+            "model_tag": model_tag, "source_sha256": source_sha256,
+            "entrypoint": entrypoint,
+            "source_operation_dispatched": False,
+            "execution_state_unknown": False, "safe_retry": False,
+            "transport_stage": "connect",
+            "failure": {
+                "code": code, "message": _LOCAL_PREDISPATCH_MESSAGE,
+                "model_tag": model_tag, "source_sha256": source_sha256,
+                "entrypoint": entrypoint,
+                "source_operation_dispatched": False,
+                "execution_state_unknown": False, "safe_retry": False,
+            },
+        }
+
+
+def _unknown_worker_transport_error(request: Mapping[str, Any], *, stage: str,
+                                    reason: str, cause_type: str | None = None) -> JavaWorkerError:
+    diagnostic: dict[str, Any] = {
+        "status": "UNKNOWN", "request_id": request.get("request_id"),
+        "type": request.get("type"), "transport_stage": stage,
+        "reason": reason, "execution_state_unknown": True, "safe_retry": False,
+    }
+    if type(cause_type) is str and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type):
+        diagnostic["cause_type"] = cause_type
+    diagnostic["failure"] = {
+        "code": "WORKER_SOURCE_BINDING_UNAVAILABLE",
+        "execution_state_unknown": True, "safe_retry": False,
+    }
+    return JavaWorkerError("Worker request outcome is unknown", reply=diagnostic)
+
+
 def _validate_source_snapshot_fields(request: Mapping[str, Any]) -> bytes:
     expected = request.get("expected_source_sha256")
     if not isinstance(expected, str) or not _SOURCE_SHA256_RE.fullmatch(expected):
@@ -965,7 +1173,8 @@ class PersistentJavaWorker:
 
     def _request(self, data: dict[str, Any], *, timeout_s: float | None,
                  require_source_binding: bool = False,
-                 before_dispatch: Callable[[], None] | None = None) -> dict[str, Any]:
+                 before_dispatch: Callable[[], None] | None = None,
+                 predispatch_context: Any = None) -> dict[str, Any]:
         if getattr(self, "_startup_unknown", None) is not None:
             raise self._startup_unknown
         self.endpoint  # Re-derive a T037 port from its original factory before any RPC.
@@ -978,7 +1187,9 @@ class PersistentJavaWorker:
         transport_stage = "connect"
         source_operation_dispatched = False
         try:
-            with socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s) as conn:
+            conn = socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s)
+            transport_stage = "connection_setup"
+            with conn:
                 conn.settimeout(timeout_s)
                 stream = conn.makefile("rwb")
                 transport_stage = "authentication"
@@ -986,8 +1197,9 @@ class PersistentJavaWorker:
                 auth = json.loads(stream.readline())
                 if not auth.get("ok"):
                     if require_source_binding:
-                        raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                            "Worker authentication did not establish a source-bound code channel")
+                        raise _unknown_worker_transport_error(
+                            data, stage=transport_stage, reason="authentication_rejected",
+                        )
                     raise JavaWorkerError(str(auth), reply={"status": "UNKNOWN", "execution_state_unknown": True,
                         "request_id": request_id, "transport_stage": transport_stage, "reason": "authentication_rejected"})
                 if require_source_binding:
@@ -998,18 +1210,19 @@ class PersistentJavaWorker:
                         transport_stage = "source_binding_probe_reply"
                         capability = json.loads(stream.readline())
                     except Exception as exc:
-                        public_error = _source_binding_refusal(
-                            data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                            f"Worker source-binding probe failed before operation-frame write "
-                            f"(stage={transport_stage}; cause_type={type(exc).__name__})",
+                        public_error = _unknown_worker_transport_error(
+                            data, stage=transport_stage, reason="source_binding_probe_transport_failed",
+                            cause_type=type(exc).__name__,
                         )
                         del exc
                         _raise_without_exception_context(public_error)
                     try:
                         correlated_probe = self._validate_request_reply(probe, capability)
                     except JavaWorkerError as exc:
-                        public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                            "Worker source-binding capability reply was uncorrelated")
+                        public_error = _unknown_worker_transport_error(
+                            data, stage=transport_stage, reason="source_binding_probe_uncorrelated",
+                            cause_type=type(exc).__name__,
+                        )
                         del exc
                         _raise_without_exception_context(public_error)
                     result = capability.get("result") if isinstance(capability, Mapping) else None
@@ -1021,12 +1234,22 @@ class PersistentJavaWorker:
                             or result.get("source_binding_protocol") != _SOURCE_BINDING_PROTOCOL
                             or result.get("worker_build_id") != _SOURCE_BINDING_WORKER_BUILD_ID
                             or not isinstance(result.get("instance_id"), str) or not result["instance_id"]):
-                        raise _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                            "Worker does not prove the required source-binding protocol/build")
+                        raise _unknown_worker_transport_error(
+                            data, stage=transport_stage, reason="source_binding_capability_mismatch",
+                        )
                     data["expected_worker_build_id"] = _SOURCE_BINDING_WORKER_BUILD_ID
                     data["expected_worker_instance_id"] = result["instance_id"]
                     if before_dispatch is not None:
-                        before_dispatch()
+                        transport_stage = "before_dispatch_callback"
+                        try:
+                            before_dispatch()
+                        except Exception as exc:
+                            public_error = _unknown_worker_transport_error(
+                                data, stage=transport_stage, reason="before_dispatch_callback_failed",
+                                cause_type=type(exc).__name__,
+                            )
+                            del exc
+                            _raise_without_exception_context(public_error)
                 transport_stage = "request_write"
                 # Once any part of the code request is written, a transport
                 # failure is an uncertain execution and must not be replayed.
@@ -1035,39 +1258,52 @@ class PersistentJavaWorker:
                 transport_stage = "reply_read"
                 reply = json.loads(stream.readline())
         except (TimeoutError, socket.timeout) as exc:
-            if require_source_binding and not source_operation_dispatched:
-                public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                    f"Worker source-binding capability probe timed out before code dispatch "
-                    f"(stage={transport_stage}; cause_type={type(exc).__name__})")
+            if (require_source_binding and data.get("type") == "code_execute"
+                    and transport_stage in _LOCAL_PREDISPATCH_STAGES):
+                public_error = _local_source_binding_refusal(
+                    self, data, context=predispatch_context,
+                )
+                if public_error is None:
+                    public_error = _unknown_worker_transport_error(
+                        data, stage=transport_stage, reason="local_predispatch_context_missing",
+                        cause_type=type(exc).__name__,
+                    )
                 del exc
                 _raise_without_exception_context(public_error)
             if request_id:
                 self._known_requests.setdefault(str(request_id), {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"})
             raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id",
-                reply={"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
+                reply={"status": "UNKNOWN", "execution_state_unknown": True, "safe_retry": False,
+                       "source_operation_dispatched": source_operation_dispatched,
+                       "request_id": request_id, "type": data.get("type"),
                        "transport_stage": transport_stage, "errno": getattr(exc, "errno", None)}) from exc
         except (json.JSONDecodeError, UnicodeDecodeError, TypeError, AttributeError) as exc:
-            if require_source_binding and not source_operation_dispatched:
-                public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                    f"Worker source-binding capability probe was invalid "
-                    f"(stage={transport_stage}; cause_type={type(exc).__name__})")
-                del exc
-                _raise_without_exception_context(public_error)
-            diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
+            diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "safe_retry": False,
+                          "request_id": request_id, "type": data.get("type"),
                           "reason": "protocol_error", "transport_stage": transport_stage,
                           "cause_type": type(exc).__name__}
+            if source_operation_dispatched:
+                diagnostic["source_operation_dispatched"] = True
             if request_id:
                 self._known_requests.setdefault(str(request_id), dict(diagnostic))
             raise JavaWorkerError(str(exc), reply=diagnostic) from exc
         except OSError as exc:
-            if require_source_binding and not source_operation_dispatched:
-                public_error = _source_binding_refusal(data, "WORKER_SOURCE_BINDING_UNAVAILABLE",
-                    f"Worker source-binding channel failed before code dispatch "
-                    f"(stage={transport_stage}; cause_type={type(exc).__name__})")
+            if (require_source_binding and data.get("type") == "code_execute"
+                    and transport_stage in _LOCAL_PREDISPATCH_STAGES):
+                public_error = _local_source_binding_refusal(
+                    self, data, context=predispatch_context,
+                )
+                if public_error is None:
+                    public_error = _unknown_worker_transport_error(
+                        data, stage=transport_stage, reason="local_predispatch_context_missing",
+                        cause_type=type(exc).__name__,
+                    )
                 del exc
                 _raise_without_exception_context(public_error)
-            diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
-                          "reason": "transport_error", "transport_stage": transport_stage, "errno": exc.errno}
+            diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True,
+                          "safe_retry": False, "request_id": request_id,
+                          "type": data.get("type"), "reason": "transport_error",
+                          "transport_stage": transport_stage, "errno": exc.errno}
             if request_id:
                 self._known_requests.setdefault(str(request_id), dict(diagnostic))
             raise JavaWorkerError(f"ENGINE_UNRESPONSIVE: Worker endpoint could not be reached (stage={transport_stage}, errno={exc.errno})",
@@ -1199,7 +1435,8 @@ class PersistentJavaWorker:
         callback(event)
 
     def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
-               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+               queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None,
+               _predispatch_context: Any = None) -> dict[str, Any]:
         if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
             raise JavaWorkerError("unknown private worker command")
         owner = getattr(self, "_coupled_admission_owner", None)
@@ -1231,7 +1468,8 @@ class PersistentJavaWorker:
         try:
             reply = self._request(body, timeout_s=rpc_timeout_s,
                                   require_source_binding=source_binding_required,
-                                  before_dispatch=mark_dispatched if source_binding_required else None)
+                                  before_dispatch=mark_dispatched if source_binding_required else None,
+                                  predispatch_context=_predispatch_context)
         except JavaWorkerTimeout as exc:
             self._emit_request_event("unknown", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
             raise
@@ -1327,12 +1565,14 @@ class PersistentJavaWorker:
     def execute_java(self, model_tag: str, source_name: str, entrypoint: str, arguments: Mapping[str, Any], *,
                      source_bytes: bytes, expected_source_sha256: str,
                      request_id: str | None = None,
-                     rpc_timeout_s: float | None = None) -> dict[str, Any]:
+                     rpc_timeout_s: float | None = None,
+                     _predispatch_context: Any = None) -> dict[str, Any]:
         """Execute a previously described source against the named Worker model."""
         return self.submit("code_execute", {"tag": model_tag, **_encode_source_snapshot(source_name, source_bytes),
                            "entrypoint": entrypoint, "arguments": dict(arguments or {}),
                            "expected_source_sha256": expected_source_sha256},
-                           request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+                           request_id=request_id, rpc_timeout_s=rpc_timeout_s,
+                           _predispatch_context=_predispatch_context)
 
     def backend_snapshot(self, model_tag: str, *, request_id: str | None = None,
                          rpc_timeout_s: float | None = None) -> dict[str, Any]:
