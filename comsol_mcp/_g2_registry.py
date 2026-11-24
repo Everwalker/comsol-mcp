@@ -981,6 +981,23 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         effective["oneOf"] = [{"required": ["before"], "not": {"required": ["after"]}}, {"required": ["after"], "not": {"required": ["before"]}}]
     elif operation_id == "api.invoke":
         properties["declared_effect"] = {"type": "string", "enum": ["READ", "WRITE"], "description": "Assertion only; the server determines actual effect from the reviewed exact capability."}
+    if operation_id in {"plot.group_create", "plot.feature_create"} and isinstance(properties, dict):
+        # Create handlers also treat [] and null as an empty no-op property set.
+        # Nonempty arrays are rejected before the handler can create a node.
+        properties["properties"] = {
+            "oneOf": [
+                {"type": "object"},
+                {"type": "array", "maxItems": 0},
+                {"type": "null"},
+            ],
+            "description": "Property-name to JSON-value mapping; [] and null mean no properties.",
+        }
+    elif operation_id == "plot.update" and isinstance(properties, dict):
+        # The update handler calls require_mapping before accessing the model.
+        properties["properties"] = {
+            "type": "object",
+            "description": "Property-name to JSON-value mapping consumed by the plot handler.",
+        }
     if operation_id in {"model.dependencies", "model.rebuild_target"} and isinstance(properties, dict):
         # Additive managed-wire revision binding. The historical catalog copy
         # and its 272-action source contract are intentionally unchanged.
@@ -1894,6 +1911,19 @@ def registry_manifest(profile: str | None = None) -> dict[str, Any]:
     }
 
 
+def _validate_plot_create_properties(operation_id: str, arguments: Mapping[str, Any]) -> None:
+    """Admit exactly the no-op and mapping shapes consumed by plot create."""
+    if operation_id not in {"plot.group_create", "plot.feature_create"} or "properties" not in arguments:
+        return
+    properties = arguments["properties"]
+    if properties is None or isinstance(properties, Mapping) or (isinstance(properties, list) and not properties):
+        return
+    raise ExecutionContractError(
+        "INVALID_REQUEST",
+        f"{operation_id}.properties must be an object, null, or an empty array",
+    )
+
+
 def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: bool = False,
                   allow_coordinator_only: bool = False) -> ActionEntry:
     """Validate a catalog operation before it reaches a control/engine call.
@@ -1923,6 +1953,7 @@ def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: 
     missing = [name for name in required if name not in arguments and not (allow_unbound_identity and name in identity_fields)]
     if missing:
         raise ExecutionContractError("INVALID_REQUEST", f"missing required operation arguments: {', '.join(missing)}")
+    _validate_plot_create_properties(entry.operation_id, arguments)
     _validate_operation_shape(entry.operation_id, arguments)
     return entry
 

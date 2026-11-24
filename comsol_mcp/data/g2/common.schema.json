@@ -121,8 +121,11 @@
         },
         "data": {},
         "unit": {
-          "type": "string",
-          "description": "For expression/string TypedValue only, this is an optional textual annotation. It is not written as a separate target-property unit setting, is not appended to data, and does not cause unit conversion. Only if the caller chooses to write a unit literal explicitly may it be included in expression text in data (for example, 3[mm]); expressions need not contain a unit literal. This annotation does not identify units of variables or property defaults and does not establish COMSOL physical interpretation."
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "For expression/string TypedValue only, a non-null unit is an optional textual annotation; other kinds accept only null. Explicit unit:null is preserved for any kind. It is not written as a separate target-property unit setting, is not appended to data, and does not cause unit conversion. Only if the caller chooses to write a unit literal explicitly may it be included in expression text in data (for example, 3[mm]); expressions need not contain a unit literal. This annotation does not identify units of variables or property defaults and does not establish COMSOL physical interpretation."
         },
         "java_signature": {
           "type": "string"
@@ -134,6 +137,30 @@
         "data"
       ],
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "expression",
+                  "string"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "else": {
+            "properties": {
+              "unit": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "description": "Backend must additionally validate data shape/range and match explicit Java signature. Expression data remain strings."
     },
     "PropertySet": {
