@@ -101,8 +101,21 @@ def _source_binding_refusal(request: Mapping[str, Any], code: str, message: str)
 
 
 _LOCAL_PREDISPATCH_CAPABILITY = object()
-_LOCAL_PREDISPATCH_STAGES = frozenset({"connect"})
 _LOCAL_PREDISPATCH_MESSAGE = "Worker connection failed before code_execute dispatch"
+_LOCAL_SERIALIZATION_MESSAGE = "Worker code request could not be serialized before dispatch"
+_LOCAL_PREDISPATCH_VARIANTS = {
+    "connect": (
+        "WORKER_SOURCE_BINDING_UNAVAILABLE",
+        _LOCAL_PREDISPATCH_MESSAGE,
+        "connection_failed",
+    ),
+    "request_serialization": (
+        "WORKER_REQUEST_SERIALIZATION_FAILED",
+        _LOCAL_SERIALIZATION_MESSAGE,
+        "request_serialization_failed",
+    ),
+}
+_LOCAL_PREDISPATCH_STAGES = frozenset(_LOCAL_PREDISPATCH_VARIANTS)
 
 
 class _JavaWorkerLocalPreDispatchToken:
@@ -165,16 +178,23 @@ def _local_predispatch_context_matches(request: Mapping[str, Any], context: Any,
 
 
 class _JavaWorkerLocalPreDispatchRefusal(JavaWorkerError):
-    """Private proof for a local connect failure before code dispatch."""
+    """Private proof for one local failure before code_execute dispatch."""
 
     def __init__(self, request: Mapping[str, Any], *, worker: Any,
                  context: _JavaWorkerLocalPreDispatchToken,
-                 capability: object) -> None:
+                 capability: object, stage: str = "connect",
+                 cause_type: str | None = None) -> None:
         if (capability is not _LOCAL_PREDISPATCH_CAPABILITY
+                or stage not in _LOCAL_PREDISPATCH_VARIANTS
                 or not _local_predispatch_context_matches(request, context, worker)):
             raise TypeError("local pre-dispatch refusal requires a matching JavaWorker call context")
-        code = "WORKER_SOURCE_BINDING_UNAVAILABLE"
-        message = _LOCAL_PREDISPATCH_MESSAGE
+        code, message, reason = _LOCAL_PREDISPATCH_VARIANTS[stage]
+        if stage == "request_serialization" and (
+                type(cause_type) is not str
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type)):
+            raise TypeError("local serialization refusal requires a safe exception type")
+        if stage == "connect":
+            cause_type = None
         base = _source_binding_refusal(request, code, message)
         reply = dict(base.reply)
         failure = dict(reply["failure"])
@@ -185,8 +205,12 @@ class _JavaWorkerLocalPreDispatchRefusal(JavaWorkerError):
         }
         reply.update(identity)
         failure.update(identity)
+        for record in (reply, failure):
+            record["reason"] = reason
+            record["transport_stage"] = stage
+            if cause_type is not None:
+                record["cause_type"] = cause_type
         reply["failure"] = failure
-        reply["transport_stage"] = "connect"
         super().__init__(message, reply=reply)
         self._local_capability = capability
         self._worker_origin = worker
@@ -198,7 +222,9 @@ class _JavaWorkerLocalPreDispatchRefusal(JavaWorkerError):
         self.source_sha256 = context.source_sha256
         self.entrypoint = context.entrypoint
         self.source_snapshot_origin = context.source_snapshot
-        self.transport_stage = "connect"
+        self.transport_stage = stage
+        self.reason = reason
+        self.cause_type = cause_type
         self.source_operation_dispatched = False
         self.execution_state_unknown = False
         self.safe_retry = False
@@ -211,6 +237,93 @@ def _local_source_binding_refusal(worker: Any, request: Mapping[str, Any], *,
     return _JavaWorkerLocalPreDispatchRefusal(
         request, worker=worker, context=context, capability=_LOCAL_PREDISPATCH_CAPABILITY,
     )
+
+
+def _local_request_serialization_refusal(
+    worker: Any, request: Mapping[str, Any], *, context: Any, cause_type: str,
+) -> _JavaWorkerLocalPreDispatchRefusal | None:
+    if not _local_predispatch_context_matches(request, context, worker):
+        return None
+    return _JavaWorkerLocalPreDispatchRefusal(
+        request, worker=worker, context=context,
+        capability=_LOCAL_PREDISPATCH_CAPABILITY,
+        stage="request_serialization", cause_type=cause_type,
+    )
+
+
+def _local_predispatch_error_variant(
+    error: BaseException, *, worker: Any, context: Any,
+) -> tuple[str, str, str] | None:
+    if (type(error) is not _JavaWorkerLocalPreDispatchRefusal
+            or error._local_capability is not _LOCAL_PREDISPATCH_CAPABILITY
+            or error._worker_origin is not worker
+            or type(context) is not _JavaWorkerLocalPreDispatchToken
+            or error._call_context is not context or error._call_token is not context
+            or context.worker is not worker
+            or error.source_snapshot_origin is not context.source_snapshot
+            or error.request_id != context.request_id
+            or error.operation_type != "code_execute"
+            or error.model_tag != context.model_tag
+            or error.source_sha256 != context.source_sha256
+            or error.entrypoint != context.entrypoint
+            or error.source_operation_dispatched is not False
+            or error.execution_state_unknown is not False or error.safe_retry is not False
+            or error.__cause__ is not None or error.__context__ is not None):
+        return None
+    stage = error.transport_stage
+    variant = _LOCAL_PREDISPATCH_VARIANTS.get(stage)
+    if variant is None:
+        return None
+    code, message, reason = variant
+    if str(error) != message or error.reason != reason:
+        return None
+    raw = error.reply
+    failure = raw.get("failure") if isinstance(raw, Mapping) else None
+    nested = error.failure
+    if not isinstance(failure, Mapping) or not isinstance(nested, Mapping) or dict(failure) != dict(nested):
+        return None
+    identity = {
+        "model_tag": context.model_tag,
+        "source_sha256": context.source_sha256,
+        "entrypoint": context.entrypoint,
+    }
+    for record in (raw, failure, nested):
+        if (record.get("code") != code or record.get("message") != message
+                or record.get("reason") != reason
+                or record.get("transport_stage") != stage
+                or record.get("source_operation_dispatched") is not False
+                or record.get("execution_state_unknown") is not False
+                or record.get("safe_retry") is not False
+                or any(record.get(name) != value for name, value in identity.items())):
+            return None
+    if (raw.get("ok") is not False or raw.get("status") != "FAILED"
+            or raw.get("request_id") != context.request_id
+            or raw.get("type") != "code_execute"
+            or "success" in raw or "result" in raw
+            or "_source_binding_verified" in raw):
+        return None
+    if stage == "request_serialization":
+        cause_type = error.cause_type
+        if (type(cause_type) is not str
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type)
+                or any(record.get("cause_type") != cause_type for record in (raw, failure, nested))):
+            return None
+    elif error.cause_type is not None or any("cause_type" in record for record in (raw, failure, nested)):
+        return None
+    return variant
+
+
+def _local_predispatch_error_matches_call(
+    error: BaseException, *, worker: Any, request: Mapping[str, Any], context: Any,
+) -> bool:
+    if not _local_predispatch_context_matches(request, context, worker):
+        return False
+    variant = _local_predispatch_error_variant(error, worker=worker, context=context)
+    if variant is None:
+        return False
+    token = context
+    with token._consume_lock:
+        return not token._consumed
 
 
 def _validated_local_predispatch_refusal_reply(
@@ -230,7 +343,11 @@ def _validated_local_predispatch_refusal_reply(
         if token._consumed:
             return None
         token._consumed = True
-        code = "WORKER_SOURCE_BINDING_UNAVAILABLE"
+        variant = _local_predispatch_error_variant(error, worker=worker, context=context)
+        if variant is None:
+            return None
+        code, message, reason = variant
+        stage = error.transport_stage
         raw = error.reply
         failure = raw.get("failure") if isinstance(raw, Mapping) else None
         nested = error.failure
@@ -251,45 +368,56 @@ def _validated_local_predispatch_refusal_reply(
                 or error.entrypoint != entrypoint
                 or error.source_operation_dispatched is not False
                 or error.execution_state_unknown is not False or error.safe_retry is not False
-                or str(error) != _LOCAL_PREDISPATCH_MESSAGE
-                or error.__cause__ is not None or error.__context__ is not None
                 or not isinstance(failure, Mapping) or not isinstance(nested, Mapping)):
             return None
         if (raw.get("ok") is not False or raw.get("status") != "FAILED"
                 or raw.get("request_id") != request_id or raw.get("type") != operation_type
-                or raw.get("code") != code or raw.get("message") != _LOCAL_PREDISPATCH_MESSAGE
-                or raw.get("transport_stage") != "connect"
+                or raw.get("code") != code or raw.get("message") != message
+                or raw.get("reason") != reason or raw.get("transport_stage") != stage
                 or "success" in raw or "result" in raw or "_source_binding_verified" in raw):
             return None
         identity = {"model_tag": model_tag, "source_sha256": source_sha256,
                     "entrypoint": entrypoint}
         for record in (raw, failure, nested):
             if (record.get("code") != code
+                    or record.get("message") != message
+                    or record.get("reason") != reason
+                    or record.get("transport_stage") != stage
                     or record.get("source_operation_dispatched") is not False
                     or record.get("execution_state_unknown") is not False
                     or record.get("safe_retry") is not False
                     or any(record.get(name) != value for name, value in identity.items())):
                 return None
-        if (failure.get("message") != _LOCAL_PREDISPATCH_MESSAGE
-                or nested.get("message") != _LOCAL_PREDISPATCH_MESSAGE):
+        if stage == "request_serialization":
+            cause_type = error.cause_type
+            if (type(cause_type) is not str
+                    or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type)
+                    or any(record.get("cause_type") != cause_type for record in (raw, failure, nested))):
+                return None
+        elif error.cause_type is not None or any("cause_type" in record for record in (raw, failure, nested)):
             return None
-        return {
+        result = {
             "ok": False, "status": "FAILED", "request_id": request_id,
             "type": operation_type, "code": code,
-            "message": _LOCAL_PREDISPATCH_MESSAGE,
+            "message": message, "reason": reason,
             "model_tag": model_tag, "source_sha256": source_sha256,
             "entrypoint": entrypoint,
             "source_operation_dispatched": False,
             "execution_state_unknown": False, "safe_retry": False,
-            "transport_stage": "connect",
+            "transport_stage": stage,
             "failure": {
-                "code": code, "message": _LOCAL_PREDISPATCH_MESSAGE,
+                "code": code, "message": message, "reason": reason,
                 "model_tag": model_tag, "source_sha256": source_sha256,
                 "entrypoint": entrypoint,
                 "source_operation_dispatched": False,
                 "execution_state_unknown": False, "safe_retry": False,
+                "transport_stage": stage,
             },
         }
+        if stage == "request_serialization":
+            result["cause_type"] = cause_type
+            result["failure"]["cause_type"] = cause_type
+        return result
 
 
 def _unknown_worker_transport_error(request: Mapping[str, Any], *, stage: str,
@@ -306,6 +434,32 @@ def _unknown_worker_transport_error(request: Mapping[str, Any], *, stage: str,
         "execution_state_unknown": True, "safe_retry": False,
     }
     return JavaWorkerError("Worker request outcome is unknown", reply=diagnostic)
+
+
+def _unknown_worker_serialization_error(
+    request: Mapping[str, Any], *, cause_type: str, after_callback: bool,
+) -> JavaWorkerError:
+    if (type(cause_type) is not str
+            or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type)):
+        cause_type = "Exception"
+    reason = ("request_serialization_after_callback_failed" if after_callback
+              else "request_serialization_failed")
+    code = "WORKER_REQUEST_SERIALIZATION_FAILED"
+    message = "Worker request serialization failed; execution state is unknown"
+    diagnostic: dict[str, Any] = {
+        "status": "UNKNOWN", "request_id": request.get("request_id"),
+        "type": request.get("type"), "code": code, "message": message,
+        "reason": reason, "transport_stage": "request_serialization",
+        "execution_state_unknown": True, "safe_retry": False,
+        "cause_type": cause_type,
+        "failure": {
+            "code": code, "message": message, "reason": reason,
+            "transport_stage": "request_serialization",
+            "execution_state_unknown": True, "safe_retry": False,
+            "cause_type": cause_type,
+        },
+    }
+    return JavaWorkerError(message, reply=diagnostic)
 
 
 def _validate_source_snapshot_fields(request: Mapping[str, Any]) -> bytes:
@@ -1186,6 +1340,7 @@ class PersistentJavaWorker:
             timeout_s = owner.worker_transport_cap(str(data.get("type")), 30.0 if timeout_s is None else timeout_s)
         transport_stage = "connect"
         source_operation_dispatched = False
+        request_frame: bytes | None = None
         try:
             conn = socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s)
             transport_stage = "connection_setup"
@@ -1239,22 +1394,69 @@ class PersistentJavaWorker:
                         )
                     data["expected_worker_build_id"] = _SOURCE_BINDING_WORKER_BUILD_ID
                     data["expected_worker_instance_id"] = result["instance_id"]
-                    if before_dispatch is not None:
-                        transport_stage = "before_dispatch_callback"
-                        try:
-                            before_dispatch()
-                        except Exception as exc:
-                            public_error = _unknown_worker_transport_error(
-                                data, stage=transport_stage, reason="before_dispatch_callback_failed",
-                                cause_type=type(exc).__name__,
+                if require_source_binding and data.get("type") == "code_execute":
+                    # Serialize once before the audit callback. A failure here
+                    # can use the invocation-bound T18 witness; a later
+                    # callback or final-frame failure cannot.
+                    transport_stage = "request_serialization"
+                    try:
+                        preflight_frame = (json.dumps(data, separators=(",", ":")) + "\n").encode()
+                    except Exception as exc:
+                        cause_type = type(exc).__name__
+                        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type):
+                            cause_type = "Exception"
+                        local_error = _local_request_serialization_refusal(
+                            self, data, context=predispatch_context,
+                            cause_type=cause_type,
+                        )
+                        if local_error is None:
+                            public_error = _unknown_worker_serialization_error(
+                                data, cause_type=cause_type, after_callback=False,
                             )
-                            del exc
-                            _raise_without_exception_context(public_error)
+                        else:
+                            public_error = local_error
+                        if request_id:
+                            self._known_requests[str(request_id)] = dict(public_error.reply)
+                        del exc
+                        _raise_without_exception_context(public_error)
+                    if before_dispatch is None:
+                        request_frame = preflight_frame
+                if require_source_binding and before_dispatch is not None:
+                    transport_stage = "before_dispatch_callback"
+                    try:
+                        before_dispatch()
+                    except Exception as exc:
+                        public_error = _unknown_worker_transport_error(
+                            data, stage=transport_stage, reason="before_dispatch_callback_failed",
+                            cause_type=type(exc).__name__,
+                        )
+                        del exc
+                        _raise_without_exception_context(public_error)
+                # Preserve the private callback contract: if it changes the
+                # payload, the final frame includes that change. If its later
+                # encoding fails, its callback may already have had effects,
+                # so that failure remains UNKNOWN.
+                if request_frame is None:
+                    transport_stage = "request_serialization"
+                    try:
+                        request_frame = (json.dumps(data, separators=(",", ":")) + "\n").encode()
+                    except Exception as exc:
+                        cause_type = type(exc).__name__
+                        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type):
+                            cause_type = "Exception"
+                        public_error = _unknown_worker_serialization_error(
+                            data, cause_type=cause_type,
+                            after_callback=before_dispatch is not None,
+                        )
+                        if request_id:
+                            self._known_requests[str(request_id)] = dict(public_error.reply)
+                        del exc
+                        _raise_without_exception_context(public_error)
                 transport_stage = "request_write"
                 # Once any part of the code request is written, a transport
                 # failure is an uncertain execution and must not be replayed.
                 source_operation_dispatched = require_source_binding
-                stream.write((json.dumps(data, separators=(",", ":")) + "\n").encode()); stream.flush()
+                stream.write(request_frame); stream.flush()
                 transport_stage = "reply_read"
                 reply = json.loads(stream.readline())
         except (TimeoutError, socket.timeout) as exc:
@@ -1272,11 +1474,15 @@ class PersistentJavaWorker:
                 _raise_without_exception_context(public_error)
             if request_id:
                 self._known_requests.setdefault(str(request_id), {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"})
-            raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id",
+            timeout_error = JavaWorkerTimeout(
+                "RPC timeout; worker request may still be executing; query the original request_id",
                 reply={"status": "UNKNOWN", "execution_state_unknown": True, "safe_retry": False,
                        "source_operation_dispatched": source_operation_dispatched,
                        "request_id": request_id, "type": data.get("type"),
-                       "transport_stage": transport_stage, "errno": getattr(exc, "errno", None)}) from exc
+                       "transport_stage": transport_stage, "errno": getattr(exc, "errno", None)},
+            )
+            del exc
+            _raise_without_exception_context(timeout_error)
         except (json.JSONDecodeError, UnicodeDecodeError, TypeError, AttributeError) as exc:
             diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "safe_retry": False,
                           "request_id": request_id, "type": data.get("type"),
@@ -1286,7 +1492,11 @@ class PersistentJavaWorker:
                 diagnostic["source_operation_dispatched"] = True
             if request_id:
                 self._known_requests.setdefault(str(request_id), dict(diagnostic))
-            raise JavaWorkerError(str(exc), reply=diagnostic) from exc
+            public_error = JavaWorkerError(
+                "Worker protocol error; request state is UNKNOWN", reply=diagnostic,
+            )
+            del exc
+            _raise_without_exception_context(public_error)
         except OSError as exc:
             if (require_source_binding and data.get("type") == "code_execute"
                     and transport_stage in _LOCAL_PREDISPATCH_STAGES):
@@ -1474,18 +1684,46 @@ class PersistentJavaWorker:
             self._emit_request_event("unknown", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
             raise
         except JavaWorkerError as exc:
-            if source_binding_required and exc.reply.get("source_operation_dispatched") is False:
-                self._known_requests.setdefault(identifier, dict(exc.reply))
+            trusted_local_refusal = (
+                source_binding_required and kind == "code_execute"
+                and _local_predispatch_error_matches_call(
+                    exc, worker=self, request=body, context=_predispatch_context,
+                )
+            )
+            if trusted_local_refusal:
+                self._known_requests[identifier] = dict(exc.reply)
                 self._emit_request_event("binding_refused", request_id=identifier, kind=kind,
-                                         payload=body, status="FAILED", code=exc.reply.get("code"))
+                                         payload=body, status="FAILED", code=exc.reply.get("code"),
+                                         transport_stage=exc.reply.get("transport_stage"))
                 raise
-            # No correlated return reached submit. Preserve the original cause,
-            # but make its already-recorded UNKNOWN visible to every consumer.
-            # Correlated SDK FAILED replies return normally and are observed.
-            exc.reply.update(status="UNKNOWN", execution_state_unknown=True, request_id=identifier)
+            # A plain JavaWorkerError may not certify that no request was
+            # dispatched. Drop its dispatch assertion and publish UNKNOWN.
+            # Correlated Worker FAILED replies return normally and are observed.
+            failure = exc.reply.get("failure")
+            safe_reply = dict(exc.reply)
+            safe_reply.update(status="UNKNOWN", execution_state_unknown=True,
+                              safe_retry=False, request_id=identifier)
+            safe_reply.pop("source_operation_dispatched", None)
+            if isinstance(failure, Mapping):
+                safe_failure = dict(failure)
+                safe_failure.update(execution_state_unknown=True, safe_retry=False)
+                safe_failure.pop("source_operation_dispatched", None)
+                safe_reply["failure"] = safe_failure
+            exc.reply = safe_reply
             exc.execution_state_unknown = True
-            self._known_requests.setdefault(identifier, dict(exc.reply))
-            self._emit_request_event("unresponsive", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
+            self._known_requests[identifier] = dict(exc.reply)
+            event_fields: dict[str, Any] = {"error": "Worker request outcome is unknown"}
+            if exc.reply.get("transport_stage") == "request_serialization":
+                event_fields.update(
+                    code="WORKER_REQUEST_SERIALIZATION_FAILED",
+                    transport_stage="request_serialization",
+                    reason=(exc.reply.get("reason") if exc.reply.get("reason") in {
+                        "request_serialization_failed",
+                        "request_serialization_after_callback_failed",
+                    } else "request_serialization_failed"),
+                )
+            self._emit_request_event("unresponsive", request_id=identifier, kind=kind,
+                                     payload=body, status="UNKNOWN", **event_fields)
             raise
         if source_binding_required and kind == "code_execute" and not _source_failure_proves_no_model_dispatch(reply):
             # The Worker has returned a correlated response on the same

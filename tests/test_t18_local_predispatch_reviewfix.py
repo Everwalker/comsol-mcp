@@ -113,7 +113,8 @@ def _request_for(context, request_id: str) -> dict:
 
 
 def test_local_witness_is_bound_one_use_and_not_created_from_reply_alone() -> None:
-    assert _LOCAL_PREDISPATCH_STAGES == frozenset({"connect"})
+    # The accepted T13 witness also covers the source-bound first serialization.
+    assert _LOCAL_PREDISPATCH_STAGES == frozenset({"connect", "request_serialization"})
     error, expected = _witness_fixture()
     refusal = _validated_local_predispatch_refusal_reply(error, **expected)
     assert refusal is not None

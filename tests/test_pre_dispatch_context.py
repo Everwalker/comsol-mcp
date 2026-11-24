@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import errno
 import traceback
 import unittest
 from unittest.mock import patch
@@ -128,7 +129,7 @@ class PreDispatchContextTests(unittest.TestCase):
                 return exc, stream, worker, connect.call_count
         return reply, stream, worker, connect.call_count
 
-    def test_source_probe_failure_is_sanitized_and_keeps_refusal_contract(self) -> None:
+    def test_compile_probe_transport_failure_is_sanitized_and_remains_unknown(self) -> None:
         exc, stream, _worker, connect_count = self.run_request(
             require_source_binding=True,
             fail_probe=True,
@@ -137,11 +138,18 @@ class PreDispatchContextTests(unittest.TestCase):
         self.assertIsNone(exc.__context__)
         self.assertIsNone(exc.__cause__)
         self.assertNotIn(SECRET, exception_material(exc))
-        self.assertEqual(exc.reply.get("status"), "FAILED")
-        self.assertEqual(exc.reply.get("code"), "WORKER_SOURCE_BINDING_UNAVAILABLE")
-        self.assertIs(exc.reply.get("source_operation_dispatched"), False)
-        self.assertIs(exc.reply.get("execution_state_unknown"), False)
+        self.assertEqual(exc.reply.get("status"), "UNKNOWN")
+        self.assertEqual(exc.reply.get("request_id"), "memory-request")
+        self.assertEqual(exc.reply.get("type"), "code_compile")
+        self.assertEqual(exc.reply.get("transport_stage"), "source_binding_probe_reply")
+        self.assertEqual(exc.reply.get("reason"), "source_binding_probe_transport_failed")
+        self.assertEqual(exc.reply.get("cause_type"), "JSONDecodeError")
+        self.assertNotIn("source_operation_dispatched", exc.reply)
+        self.assertEqual(exc.reply.get("failure", {}).get("code"), "WORKER_SOURCE_BINDING_UNAVAILABLE")
+        self.assertIs(exc.reply.get("execution_state_unknown"), True)
         self.assertIs(exc.reply.get("safe_retry"), False)
+        self.assertIs(exc.reply.get("failure", {}).get("execution_state_unknown"), True)
+        self.assertIs(exc.reply.get("failure", {}).get("safe_retry"), False)
         self.assertEqual(connect_count, 1)
         self.assertEqual(stream.frame_types(), [None, "source_binding_capabilities"])
 
@@ -154,18 +162,26 @@ class PreDispatchContextTests(unittest.TestCase):
         self.assertIsNone(exc.__context__)
         self.assertIsNone(exc.__cause__)
         self.assertNotIn(SECRET, exception_material(exc))
-        self.assertEqual(exc.reply.get("status"), "FAILED")
-        self.assertEqual(exc.reply.get("code"), "WORKER_SOURCE_BINDING_UNAVAILABLE")
-        self.assertIs(exc.reply.get("execution_state_unknown"), False)
+        self.assertEqual(exc.reply.get("status"), "UNKNOWN")
+        self.assertEqual(exc.reply.get("request_id"), "memory-request")
+        self.assertEqual(exc.reply.get("type"), "code_compile")
+        self.assertEqual(exc.reply.get("transport_stage"), "source_binding_probe_reply")
+        self.assertEqual(exc.reply.get("reason"), "source_binding_probe_uncorrelated")
+        self.assertEqual(exc.reply.get("cause_type"), "JavaWorkerError")
+        self.assertNotIn("source_operation_dispatched", exc.reply)
+        self.assertEqual(exc.reply.get("failure", {}).get("code"), "WORKER_SOURCE_BINDING_UNAVAILABLE")
+        self.assertIs(exc.reply.get("execution_state_unknown"), True)
         self.assertIs(exc.reply.get("safe_retry"), False)
+        self.assertIs(exc.reply.get("failure", {}).get("execution_state_unknown"), True)
+        self.assertIs(exc.reply.get("failure", {}).get("safe_retry"), False)
         self.assertEqual(connect_count, 1)
         self.assertEqual(stream.frame_types(), [None, "source_binding_capabilities"])
 
-    def test_source_probe_connect_timeout_keeps_refusal_contract(self) -> None:
+    def test_code_compile_connect_timeout_is_unknown_and_redacted(self) -> None:
         worker = make_worker()
         stream = MemoryStream()
         with patch.object(_java_worker.socket, "create_connection",
-                          side_effect=TimeoutError(SECRET)) as connect:
+                          side_effect=TimeoutError(errno.ETIMEDOUT, SECRET)) as connect:
             try:
                 worker._request(
                     {"type": "code_compile", "request_id": "memory-timeout"},
@@ -175,15 +191,22 @@ class PreDispatchContextTests(unittest.TestCase):
             except BaseException as exc:
                 error = exc
             else:
-                self.fail("source-probe connect unexpectedly succeeded")
+                self.fail("code_compile connect unexpectedly succeeded")
+        self.assertIsInstance(error, _java_worker.JavaWorkerTimeout)
         self.assertIsInstance(error, _java_worker.JavaWorkerError)
         self.assertIsNone(error.__context__)
         self.assertIsNone(error.__cause__)
         self.assertNotIn(SECRET, exception_material(error))
-        self.assertEqual(error.reply.get("status"), "FAILED")
-        self.assertEqual(error.reply.get("code"), "WORKER_SOURCE_BINDING_UNAVAILABLE")
-        self.assertIs(error.reply.get("execution_state_unknown"), False)
+        self.assertEqual(error.reply.get("status"), "UNKNOWN")
+        self.assertEqual(error.reply.get("request_id"), "memory-timeout")
+        self.assertEqual(error.reply.get("type"), "code_compile")
+        self.assertEqual(error.reply.get("transport_stage"), "connect")
+        self.assertEqual(error.reply.get("errno"), errno.ETIMEDOUT)
+        self.assertIs(error.reply.get("execution_state_unknown"), True)
         self.assertIs(error.reply.get("safe_retry"), False)
+        self.assertEqual(worker._known_requests.get("memory-timeout"), {
+            "request_id": "memory-timeout", "status": "UNKNOWN", "reason": "rpc_timeout",
+        })
         self.assertEqual(connect.call_count, 1)
         self.assertEqual(stream.frame_types(), [])
 

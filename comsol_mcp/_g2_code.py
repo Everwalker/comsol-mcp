@@ -256,7 +256,31 @@ def execution_result(*, description: Mapping[str, Any], worker_reply: Mapping[st
         and reply.get("execution_state_unknown") is not True
         and failure.get("execution_state_unknown") is not True
     )
-    known_failure = known_pre_dispatch or known_source_rejection or known_compile_failure
+    known_serialization_refusal = (
+        failure_code == "WORKER_REQUEST_SERIALIZATION_FAILED"
+        and reply.get("code") == failure_code
+        and failure.get("code") == failure_code
+        and reply.get("ok") is False and reply.get("status") == "FAILED"
+        and reply.get("type") == "code_execute"
+        and reply.get("transport_stage") == "request_serialization"
+        and failure.get("transport_stage") == "request_serialization"
+        and reply.get("reason") == "request_serialization_failed"
+        and failure.get("reason") == "request_serialization_failed"
+        and reply.get("source_operation_dispatched") is False
+        and failure.get("source_operation_dispatched") is False
+        and reply.get("execution_state_unknown") is False
+        and failure.get("execution_state_unknown") is False
+        and reply.get("safe_retry") is False and failure.get("safe_retry") is False
+        and reply.get("model_tag") == expected_model_tag
+        and failure.get("model_tag") == expected_model_tag
+        and reply.get("source_sha256") == description.get("source_sha256")
+        and failure.get("source_sha256") == description.get("source_sha256")
+        and reply.get("entrypoint") == description.get("entrypoint")
+        and failure.get("entrypoint") == description.get("entrypoint")
+        and "success" not in reply and "result" not in reply
+    )
+    known_failure = (known_pre_dispatch or known_source_rejection
+                     or known_compile_failure or known_serialization_refusal)
     unknown = unknown_signal or not known_failure
     partial_change = bool(
         reply.get("partial_change")
@@ -266,11 +290,17 @@ def execution_result(*, description: Mapping[str, Any], worker_reply: Mapping[st
         or (after and before and after != before)
         or unknown
     )
+    error_code = ("WORKER_REQUEST_SERIALIZATION_FAILED" if known_serialization_refusal else
+                  str(failure_code) if known_source_rejection or known_compile_failure else
+                  "EXECUTION_STATE_UNKNOWN" if unknown else "ENGINE_CALL_FAILED")
+    error = {"code": error_code,
+             "phase": "request_serialization" if known_serialization_refusal else "execute",
+             "message": str(reply.get("message") or reply.get("failure") or "Java execution failed"),
+             "partial_changes": partial_change, "safe_retry": False,
+             "engine_state": "UNKNOWN" if unknown else "IDLE",
+             **({"worker_failure_code": str(failure_code)} if failure_code else {})}
+    if known_serialization_refusal:
+        error["transport_stage"] = "request_serialization"
     return {"success": False, "data": {**data, "partial_change": partial_change,
-            "execution_state_unknown": unknown}, "error": {"code": "EXECUTION_STATE_UNKNOWN" if unknown else (
-                str(failure_code) if known_source_rejection or known_compile_failure else "ENGINE_CALL_FAILED"),
-            "phase": "execute", "message": str(reply.get("message") or reply.get("failure") or "Java execution failed"),
-            "partial_changes": partial_change, "safe_retry": False,
-            "engine_state": "UNKNOWN" if unknown else "IDLE",
-            **({"worker_failure_code": str(failure_code)} if failure_code else {})},
+            "execution_state_unknown": unknown}, "error": error,
             "execution_success": False}

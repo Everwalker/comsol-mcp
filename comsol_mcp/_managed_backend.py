@@ -57,6 +57,7 @@ _T18_WORKER_FAILURE_CODES = frozenset({
     "SOURCE_SNAPSHOT_INVALID", "WORKER_SOURCE_BINDING_MISMATCH",
     "WORKER_SOURCE_BINDING_UNAVAILABLE", "WORKER_RESPONSE_UNCORRELATED",
     "WORKER_RESPONSE_ID_MISMATCH", "WORKER_RESPONSE_ID_MISSING",
+    "WORKER_REQUEST_SERIALIZATION_FAILED",
     "ENGINE_CALL_FAILED", "ENGINE_UNRESPONSIVE", "ENTRYPOINT_REJECTED",
     "PROTOCOL_ERROR", "UNKNOWN",
 })
@@ -68,7 +69,7 @@ _T18_TRUSTED_CODE_POLICY = "javac_ast_resolved_ModelUtil_owner_and_static_initia
 _T18_WORKER_STATUSES = frozenset({"QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "UNKNOWN"})
 _T18_TRANSPORT_STAGES = frozenset({
     "connect", "authentication", "source_binding_probe_write",
-    "source_binding_probe_reply", "request_write", "reply_read",
+    "source_binding_probe_reply", "request_serialization", "request_write", "reply_read",
 })
 _T18_DIAGNOSTIC_KINDS = frozenset({"ERROR", "WARNING", "MANDATORY_WARNING", "NOTE", "OTHER"})
 
@@ -204,7 +205,8 @@ def _t18_bound_not_executed_rejection(reply: Any, description: Mapping[str, Any]
 def _t18_safe_worker_reply(reply: Any, description: Mapping[str, Any],
                            worker_request_id: str, *, force_unknown: bool = False,
                            exception: BaseException | None = None,
-                           transport_stage: str | None = None) -> dict[str, Any]:
+                           transport_stage: str | None = None,
+                           expected_model_tag: str | None = None) -> dict[str, Any]:
     raw = reply if isinstance(reply, Mapping) else {}
     status = raw.get("status")
     safe: dict[str, Any] = {
@@ -223,14 +225,21 @@ def _t18_safe_worker_reply(reply: Any, description: Mapping[str, Any],
             safe["observed_request_id"] = safe_id
     if not force_unknown and type(raw.get("ok")) is bool:
         safe["ok"] = raw["ok"]
+    if type(expected_model_tag) is str and raw.get("model_tag") == expected_model_tag:
+        safe["model_tag"] = expected_model_tag
+    if raw.get("source_sha256") == description.get("source_sha256"):
+        safe["source_sha256"] = description["source_sha256"]
+    if raw.get("entrypoint") == description.get("entrypoint"):
+        safe["entrypoint"] = description["entrypoint"]
     code = _t18_safe_failure_code(raw.get("code"))
     if code:
         safe["code"] = code
     if force_unknown:
         safe["execution_state_unknown"] = True
         safe["partial_change"] = True
+        safe["safe_retry"] = False
     else:
-        for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched"):
+        for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched", "safe_retry"):
             if type(raw.get(name)) is bool:
                 safe[name] = raw[name]
     stage = transport_stage or raw.get("transport_stage")
@@ -240,6 +249,7 @@ def _t18_safe_worker_reply(reply: Any, description: Mapping[str, Any],
     if type(reason) is str and reason in {
         "rpc_timeout", "transport_error", "protocol_error", "authentication_rejected",
         "worker_response_request_id_mismatch", "worker_response_request_id_missing",
+        "request_serialization_failed", "request_serialization_after_callback_failed",
     }:
         safe["reason"] = reason
     errno = raw.get("errno")
@@ -258,6 +268,9 @@ def _t18_safe_worker_reply(reply: Any, description: Mapping[str, Any],
         name = type(exception).__name__
         if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", name):
             safe["exception_type"] = name
+    cause_type = raw.get("cause_type")
+    if type(cause_type) is str and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", cause_type):
+        safe["cause_type"] = cause_type
 
     raw_failure = raw.get("failure")
     if isinstance(raw_failure, Mapping):
@@ -269,16 +282,30 @@ def _t18_safe_worker_reply(reply: Any, description: Mapping[str, Any],
             failure["source_sha256"] = description["source_sha256"]
         if raw_failure.get("entrypoint") == description.get("entrypoint"):
             failure["entrypoint"] = description["entrypoint"]
+        if type(expected_model_tag) is str and raw_failure.get("model_tag") == expected_model_tag:
+            failure["model_tag"] = expected_model_tag
         if raw_failure.get("policy") == _T18_TRUSTED_CODE_POLICY:
             failure["policy"] = raw_failure["policy"]
+        if (type(raw_failure.get("cause_type")) is str
+                and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", raw_failure["cause_type"])):
+            failure["cause_type"] = raw_failure["cause_type"]
+        failure_reason = raw_failure.get("reason")
+        if type(failure_reason) is str and failure_reason in {
+            "request_serialization_failed", "request_serialization_after_callback_failed",
+        }:
+            failure["reason"] = failure_reason
+        failure_stage = raw_failure.get("transport_stage")
+        if type(failure_stage) is str and failure_stage in _T18_TRANSPORT_STAGES:
+            failure["transport_stage"] = failure_stage
         diagnostics = raw_failure.get("diagnostics", raw.get("diagnostics"))
         if isinstance(diagnostics, list):
             failure["diagnostics"] = _t18_safe_diagnostics(diagnostics)
         if force_unknown:
             failure["execution_state_unknown"] = True
             failure["partial_change"] = True
+            failure["safe_retry"] = False
         else:
-            for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched"):
+            for name in ("execution_state_unknown", "partial_change", "source_operation_dispatched", "safe_retry"):
                 if type(raw_failure.get(name)) is bool:
                     failure[name] = raw_failure[name]
         chain = raw_failure.get("cause_chain")
@@ -4597,19 +4624,30 @@ class ManagedBackend:
                         getattr(exc, "reply", None), exception=exc,
                     )
                 reply = local_reply
-                rejection = "source_binding"
+                rejection = ("request_serialization"
+                             if local_reply.get("transport_stage") == "request_serialization"
+                             else "source_binding")
             else:
                 rejection = _t18_bound_not_executed_rejection(
                     reply, description, operation_id, model_tag,
                 )
             if rejection is not None:
-                safe_reply = _t18_safe_worker_reply(reply, description, operation_id)
+                safe_reply = _t18_safe_worker_reply(
+                    reply, description, operation_id, expected_model_tag=model_tag,
+                )
                 data = execution_result(
                     description=description, worker_reply=safe_reply,
                     before=_t18_safe_snapshot(before, model_tag), expected_model_tag=model_tag,
                 )
                 failure_code = reply["failure"]["code"]
-                if rejection == "source_binding":
+                if rejection == "request_serialization":
+                    data["error"].update({
+                        "code": "WORKER_REQUEST_SERIALIZATION_FAILED",
+                        "phase": "request_serialization",
+                        "message": "Java request serialization failed before dispatch",
+                        "safe_retry": False,
+                    })
+                elif rejection == "source_binding":
                     data["error"]["code"] = failure_code
                     data["error"]["message"] = "Java source binding was refused before model dispatch"
                     data["error"]["safe_retry"] = False
