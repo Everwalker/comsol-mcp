@@ -9,6 +9,7 @@ as executable operations.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
@@ -268,7 +269,9 @@ class ActionEntry:
 
     def as_dict(self) -> dict[str, Any]:
         catalog_schema = dict(self.input_schema)
-        effective_schema = _effective_input_schema(catalog_schema, self.operation_id)
+        effective_schema = _describe_schema_with_common_definitions(
+            _effective_input_schema(catalog_schema, self.operation_id)
+        )
         result = {
             "operation_id": self.operation_id,
             "mcp_tool_name": self.mcp_tool_name,
@@ -657,6 +660,75 @@ class ActionEntry:
                 "no projection, quadrature-comparison, or physical acceptance is implied."
             )
         return result
+
+
+_DESCRIBE_COMMON_NAMESPACE = "comsol_common"
+_DESCRIBE_COMMON_REFERENCE_PREFIX = "common.schema.json#/$defs/"
+
+
+@lru_cache(maxsize=1)
+def _describe_common_definitions() -> dict[str, Any]:
+    common_schema_path = Path(__file__).resolve().parent / "data" / "g2" / "common.schema.json"
+    common_schema = json.loads(common_schema_path.read_text(encoding="utf-8"))
+    return common_schema["$defs"]
+
+
+def _describe_schema_with_common_definitions(schema: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a standalone describe schema with its referenced common $defs."""
+    definitions = _describe_common_definitions()
+    included: dict[str, Any] = {}
+
+    def local_reference(name: str) -> str:
+        return f"#/$defs/{_DESCRIBE_COMMON_NAMESPACE}/{name}"
+
+    def referenced_common_definition(reference: str, *, in_common_schema: bool) -> str | None:
+        if reference.startswith(_DESCRIBE_COMMON_REFERENCE_PREFIX):
+            name = reference[len(_DESCRIBE_COMMON_REFERENCE_PREFIX):]
+        elif in_common_schema and reference.startswith("#/$defs/"):
+            name = reference[len("#/$defs/"):]
+        else:
+            return None
+        if "/" in name or name not in definitions:
+            return None
+        return name
+
+    def include(name: str) -> None:
+        if name in included:
+            return
+        # Mark before descending so a future recursive common definition closes safely.
+        included[name] = None
+        included[name] = transform(definitions[name], in_common_schema=True)
+
+    def transform(value: Any, *, in_common_schema: bool = False) -> Any:
+        if isinstance(value, Mapping):
+            result: dict[str, Any] = {}
+            for key, item in value.items():
+                if key == "$ref" and isinstance(item, str):
+                    name = referenced_common_definition(item, in_common_schema=in_common_schema)
+                    if name is not None:
+                        include(name)
+                        result[key] = local_reference(name)
+                        continue
+                result[key] = transform(item, in_common_schema=in_common_schema)
+            return result
+        if isinstance(value, list):
+            return [transform(item, in_common_schema=in_common_schema) for item in value]
+        return value
+
+    effective_schema = transform(schema)
+    if included:
+        root_defs = effective_schema.get("$defs", {})
+        if not isinstance(root_defs, Mapping):
+            raise ValueError("describe input_schema $defs must be an object")
+        root_defs = dict(root_defs)
+        common_defs = root_defs.get(_DESCRIBE_COMMON_NAMESPACE, {})
+        if not isinstance(common_defs, Mapping):
+            raise ValueError("describe input_schema common $defs namespace must be an object")
+        common_defs = dict(common_defs)
+        common_defs.update(included)
+        root_defs[_DESCRIBE_COMMON_NAMESPACE] = common_defs
+        effective_schema["$defs"] = root_defs
+    return effective_schema
 
 
 _ACTION_RESULT_SCHEMA: dict[str, Any] = {
