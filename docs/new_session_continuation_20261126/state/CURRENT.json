@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "继续 T37：评估已存在的原子交换与回滚能力能否安全适配结果产物覆盖，保留并发写入和跨平台限制；同时处理其他不依赖旧 UNKNOWN 的事项。",
+  "next_action": "等待本地 Qwen 对启动入口与报告隔离的独立分析；并继续 T37 覆盖竞态和其他可执行软件缺口，不改变旧 UNKNOWN。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -140,10 +140,13 @@
       "implementation_done": true,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T12"
+        "references/CURRENT_20261123.json#/tasks/T12",
+        "comsol_mcp/_g2_contract.py",
+        "tests/test_t12_typed_property_roundtrip.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Synthetic int64-to-float64 precision correction tested; native typed round-trip and full acceptance remain open."
     },
     "T13": {
       "status": "RUNNING",
@@ -1029,6 +1032,26 @@
       "verification_command": ".venv/bin/python -m pytest -q tests/test_t20_bare_relative_semantics_20261108.py tests/test_t20_generic_filename_boundary_20261108.py",
       "verification_result": "4 passed in 0.33s; known Interpolation filename and ordinary string controls only",
       "remaining": "Generic unclassified property names and native engine working-directory semantics remain open."
+    },
+    {
+      "id": "20261126-T12-int64-widening",
+      "scope": "T12 / U02 typed property software correction; synthetic model only",
+      "base_commit": "7b0b516247c6ea556379b0f16181f9a43d451725",
+      "finding": "The existing int64-to-float64 property conversion silently rounded nonrepresentable integers, allowing a different value to be written.",
+      "changes": [
+        "comsol_mcp/_g2_contract.py: reject int64-to-float64 conversion when any integer is not exactly representable",
+        "tests/test_t12_typed_property_roundtrip.py: scalar/vector negative controls and exact scalar positive control"
+      ],
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_t12_typed_property_roundtrip.py tests/test_t12_typed_properties_fake.py tests/test_t13_typed_numeric_prewrite.py",
+      "verification_result": "29 passed, 35 subtests passed in 0.15s; fake Worker",
+      "remaining": "Actual COMSOL supported-type round trips and final T12 acceptance are not established."
+    },
+    {
+      "id": "20261126-T26-T27-dataset-controls",
+      "scope": "T26/T27 current source, synthetic Worker only",
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_t26_dataset_reference.py tests/test_t26_component_free_eval.py tests/test_t26_w18_unknown_binding.py tests/test_t27_result_metadata.py",
+      "verification_result": "23 passed in 0.47s",
+      "remaining": "Real models, stored solutions and target platform behavior remain unverified."
     }
   ]
 }

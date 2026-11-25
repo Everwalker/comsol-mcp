@@ -231,6 +231,9 @@ def validate_typed_value(value: Mapping[str, Any], *, expected: Mapping[str, Any
         expected_kind = expected.get("kind") or expected.get("value_type")
         if expected_kind and expected_kind != kind and not (expected_kind == "string" and kind == "expression"):
             if expected_kind == "float64" and kind in {"int32", "int64"}:
+                if kind == "int64" and any(int(float(item)) != item for item in _flatten(data)):
+                    raise _error("PROPERTY_TYPE_MISMATCH",
+                                 "int64 value cannot be represented exactly as float64")
                 def _widen_floats(v: Any) -> Any:
                     return [_widen_floats(x) for x in v] if isinstance(v, list) else (float(v) if v is not None else None)
                 kind = "float64"

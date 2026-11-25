@@ -109,6 +109,24 @@ def test_int32_into_double_property_is_a_recorded_explicit_widening():
     assert row["comparison"]["matched"] is True
 
 
+def test_int64_into_double_property_must_not_lose_integer_precision():
+    node = _Node()
+    with pytest.raises(ExecutionContractError) as exc:
+        _write(node, "ndbl", {"kind": "int64", "shape": [], "data": 2**53 + 1})
+    assert exc.value.code == "PROPERTY_TYPE_MISMATCH"
+    assert not _sets(node)
+
+    result = _write(node, "ndbl", {"kind": "int64", "shape": [], "data": 2**53})
+    assert result["success"] is True
+    assert _sets(node)[0][2]["data"] == float(2**53)
+
+    vector_node = _Node()
+    with pytest.raises(ExecutionContractError) as exc:
+        _write(vector_node, "dvec", {"kind": "int64", "shape": [2], "data": [1, 2**53 + 1]})
+    assert exc.value.code == "PROPERTY_TYPE_MISMATCH"
+    assert not _sets(vector_node)
+
+
 def test_empty_double_vector_round_trip_preserves_the_zero_length_shape():
     node = _Node()
     result = _write(node, "dvec", {"kind": "float64", "shape": [0], "data": []})
