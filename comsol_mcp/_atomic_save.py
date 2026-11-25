@@ -205,6 +205,10 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _candidate_identity(info: os.stat_result) -> tuple[int, int, int, int]:
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+
+
 def atomic_save(
     destination: str | Path,
     save_callback: Callable[[Path], Any],
@@ -321,12 +325,16 @@ def atomic_save(
     try:
         if _observed_presence(temporary_path) is False:
             raise ValueError("save callback did not create its requested candidate file")
-        if not stat.S_ISREG(temporary_path.lstat().st_mode):
+        candidate = temporary_path.lstat()
+        if not stat.S_ISREG(candidate.st_mode):
             raise ValueError("save callback candidate is not a regular file")
         _validate_mph_zip(temporary_path)
         _fsync_file(temporary_path)
         size = temporary_path.stat().st_size
         digest = _sha256(temporary_path)
+        verified = temporary_path.lstat()
+        if not stat.S_ISREG(verified.st_mode) or _candidate_identity(verified) != _candidate_identity(candidate):
+            raise ValueError("save callback candidate changed during verification")
     except Exception as exc:
         raise AtomicSaveError(
             f"Candidate save was not publishable: {exc}",
@@ -349,6 +357,9 @@ def atomic_save(
             # It closes the exists-check race without a nonportable overwrite.
             os.link(temporary_path, destination_path)
         publication_status = "published"
+        published = destination_path.lstat()
+        if not stat.S_ISREG(published.st_mode) or _candidate_identity(published) != _candidate_identity(verified):
+            raise ValueError("published checkpoint differs from the verified candidate")
         if not overwrite:
             temporary_path.unlink()
         durable_parent = _fsync_parent(destination_path)

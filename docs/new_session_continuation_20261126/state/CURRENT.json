@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "检查 T37 暂存验证与发布之间的换名竞态；等待本地 Qwen 返回启动入口分析。",
+  "next_action": "处理 T41 普通入口的工具清单断言和 doctor 对项目根配置的诊断缺口；保留新旧原生 UNKNOWN。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -397,11 +397,12 @@
         "comsol_mcp/_artifact_store.py",
         "tests/test_t37_scoped_migration.py",
         "comsol_mcp/_atomic_save.py",
-        "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint"
+        "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint",
+        "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Observed symlink candidate refused; rename race, overwrite/rollback and native acceptance remain open."
+      "session_scope_note": "Detects an observed staging swap after publication and avoids false verified success; it does not prevent the write or establish race-free rollback/native acceptance."
     },
     "T38": {
       "status": "RUNNING",
@@ -687,11 +688,12 @@
       "evidence_refs": [
         "references/CURRENT_20261123.json#/tasks/T08.a",
         "comsol_mcp/_atomic_save.py",
-        "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint"
+        "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint",
+        "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Observed symlink candidate refused; rename race, overwrite/rollback and native acceptance remain open."
+      "session_scope_note": "Detects an observed staging swap after publication and avoids false verified success; it does not prevent the write or establish race-free rollback/native acceptance."
     },
     "T08.b": {
       "status": "TODO",
@@ -1100,6 +1102,26 @@
       "verification_result": "22 passed in 0.70s; synthetic isolation proof, temporary projects and SQLite",
       "remaining": "Actual owned-server isolation proof, full native same-solution report validation, and T30.c acceptance remain open; product isolation and historical UNKNOWN were not changed.",
       "analysis_model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S; max reasoning; read-only analysis of report isolation"
+    },
+    {
+      "id": "20261126-T08-staging-swap-detection",
+      "scope": "T08.a / T37 scoped synthetic-file publication truthfulness",
+      "base_commit": "f2a0d2f9a7a6a91256892a0320e2cd72",
+      "finding": "A candidate swapped immediately before no-clobber publication could be reported verified with the old candidate hash.",
+      "changes": [
+        "comsol_mcp/_atomic_save.py: compare regular-file identity, size and mtime during validation and after publication",
+        "tests/test_atomic_save.py: deterministic replacement before link returns a published error rather than false verified success"
+      ],
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_atomic_save.py tests/test_t08_atomic_publish_outcomes_parent_20261109.py tests/test_t08_atomic_publish_candidate_controls_20261109.py tests/test_t08_parent_observation_f1_20261109.py tests/test_t08_publication_remediation_independent_20261109.py",
+      "verification_result": "44 passed in 0.46s; local synthetic files",
+      "remaining": "The replacement may already have been published before detection; pathname-based same-UID races, preserved prior bytes, Windows and real COMSOL are not established."
+    },
+    {
+      "id": "20261126-T41-delegate-observation",
+      "scope": "Subagent-reported startup probe; not inherited as product/native acceptance",
+      "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S, max reasoning",
+      "observation": "Although delegated a read-only audit, the agent reports starting an isolated temporary MCP/control daemon in /private/tmp, calling tools/list and read-only doctor/server_info without a COMSOL engine, and terminating its own daemon. The initial sandbox attempt to bind loopback was denied. This process launch exceeded the delegated read-only scope; its raw evidence and cleanup have not been independently verified by the main agent.",
+      "remaining": "The historical frozen Mac and Windows attempts remain unchanged. This report does not close T05.a, T10 or native acceptance; request details without rerunning the probe."
     }
   ]
 }

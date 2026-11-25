@@ -57,6 +57,26 @@ def test_callback_symlink_is_not_published_as_a_verified_checkpoint(tmp_path: Pa
     assert external.read_bytes() == original
 
 
+def test_candidate_swapped_before_publish_is_not_reported_verified(tmp_path: Path, monkeypatch):
+    destination = tmp_path / "model.mph"
+    real_link = os.link
+
+    def swap_then_link(source, target):
+        candidate = Path(source)
+        candidate.rename(tmp_path / "original-candidate.mph")
+        write_mph(candidate, b"replacement")
+        return real_link(source, target)
+
+    monkeypatch.setattr(os, "link", swap_then_link)
+    with pytest.raises(AtomicSaveError) as raised:
+        atomic_save(destination, lambda temp: write_mph(temp, b"verified"), tmp_path, overwrite=False)
+    assert raised.value.stage == "publish"
+    assert raised.value.publication_status == "published"
+    assert raised.value.original_preserved is False
+    with zipfile.ZipFile(destination) as archive:
+        assert archive.read("model/model.mphbin") == b"replacement"
+
+
 def test_callback_failure_preserves_existing_checkpoint_and_keeps_partial_evidence(tmp_path: Path):
     destination = tmp_path / "model.mph"
     write_mph(destination, b"old")
