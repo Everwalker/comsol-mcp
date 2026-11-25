@@ -354,7 +354,7 @@ class ScopedArtifactMigrationTests(unittest.TestCase):
             self.assertEqual(result["file_path"], str(target))
             self.assertEqual(list(root.glob(f".{target.name}.backup.*")), [])
 
-    def test_current_post_publish_failure_has_no_backup_or_unknown_receipt(self) -> None:
+    def test_overwrite_exception_after_publication_reports_unknown(self) -> None:
         with self._tmpdir() as temp:
             root = Path(temp)
             target = root / "post-publish-failure.json"
@@ -369,14 +369,31 @@ class ScopedArtifactMigrationTests(unittest.TestCase):
                 return result
 
             with mock.patch.object(artifact_store.os, "replace", side_effect=publish_then_race_and_fail):
-                with self.assertRaises(OSError) as error:
+                with self.assertRaises(ExecutionContractError) as error:
                     ArtifactStore(root).export_field_data(
                         target.name, {"values": [10], "status": {"ok": True}}, allow_overwrite=True,
                     )
 
-            self.assertNotIsInstance(error.exception, ExecutionContractError)
+            self.assertEqual(error.exception.code, "ARTIFACT_PUBLISH_UNKNOWN")
+            self.assertFalse(error.exception.safe_retry)
+            self.assertEqual(error.exception.stage, "post_dispatch")
             self.assertEqual(target.read_bytes(), b"concurrent writer")
             self.assertEqual(list(root.glob(f".{target.name}.backup.*")), [])
+
+    def test_overwrite_exception_preserves_uncommitted_staging_bytes(self) -> None:
+        with self._tmpdir() as temp:
+            root = Path(temp)
+            target = root / "unconfirmed-overwrite.json"
+            target.write_bytes(b"old value")
+            with mock.patch.object(artifact_store.os, "replace", side_effect=OSError("synthetic interruption")):
+                with self.assertRaises(ExecutionContractError) as error:
+                    ArtifactStore(root).export_field_data(
+                        target.name, {"values": [10], "status": {"ok": True}}, allow_overwrite=True,
+                    )
+            self.assertEqual(error.exception.code, "ARTIFACT_PUBLISH_UNKNOWN")
+            self.assertEqual(target.read_bytes(), b"old value")
+            stage = root / error.exception.details["staging_path"]
+            self.assertTrue(stage.is_file())
 
     def test_no_clobber_restore_primitive_preserves_concurrent_target_and_backup(self) -> None:
         with self._tmpdir() as temp:

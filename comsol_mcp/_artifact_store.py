@@ -2294,7 +2294,22 @@ class ArtifactStore:
                 # existing regular file.  The immediate authorization check
                 # above prevents a newly appeared symlink or directory from
                 # being silently accepted.
-                os.replace(tmp_path, authorized_target)
+                try:
+                    os.replace(tmp_path, authorized_target)
+                except OSError as exc:
+                    # The replace may have completed before the error was
+                    # observed. Preserve any remaining staging name and do not
+                    # claim either rollback or safe retry.
+                    staging_path = tmp_path.relative_to(self.project_root).as_posix()
+                    tmp_path = None
+                    raise _contract_error(
+                        "ARTIFACT_PUBLISH_UNKNOWN",
+                        "overwrite publication could not be confirmed",
+                        stage="post_dispatch",
+                        details={"destination": authorized_target.relative_to(self.project_root).as_posix(),
+                                 "staging_path": staging_path, "final_state": "UNKNOWN",
+                                 "sha256": sha256, "safe_retry": False},
+                    ) from exc
             else:
                 # ``os.link`` is an atomic no-clobber publish when the temp file
                 # lives in the same directory.  It cannot overwrite a target

@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "保留报告 FILE_WRITE 隔离门禁，核对无引擎副作用的报告发布与真实隔离策略之间的冲突；同时继续不依赖旧原生 UNKNOWN 的独立软件工作。",
+  "next_action": "继续 T37：评估已存在的原子交换与回滚能力能否安全适配结果产物覆盖，保留并发写入和跨平台限制；同时处理其他不依赖旧 UNKNOWN 的事项。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -390,10 +390,13 @@
       "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T37"
+        "references/CURRENT_20261123.json#/tasks/T37",
+        "comsol_mcp/_artifact_store.py",
+        "tests/test_t37_scoped_migration.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Overwrite error truthfulness improved; race, rollback, and native/target acceptance remain open."
     },
     "T38": {
       "status": "RUNNING",
@@ -1005,6 +1008,27 @@
       "verification_result": "32 passed in 0.38s; temporary SQLite/project and synthetic Worker only",
       "observed_existing_failure": "tests/test_t30_current_dispatch.py failed before source fix: ISOLATION_PROOF_REQUIRED for unbound synthetic report with FILE_WRITE effect. Existing isolation gate was not removed. A previous broader selection also exposed two stale caller-only expectations, corrected in the scoped test file.",
       "remaining": "Native same-solution evidence, managed report under current isolation policy, full T30.c acceptance, and independent final review remain open; historic UNKNOWN remains frozen."
+    },
+    {
+      "id": "20261126-T37-overwrite-unknown",
+      "scope": "T37 / U08–U09 scoped software correction; no claim of safe overwrite or rollback",
+      "base_commit": "018b96f8d5ec5e6bb5db1771b9c435da65030cc9",
+      "finding": "A synthetic failure after overwrite publication previously propagated a plain OSError even though the target could already have changed.",
+      "changes": [
+        "comsol_mcp/_artifact_store.py: classify an unconfirmed overwrite as ARTIFACT_PUBLISH_UNKNOWN with post_dispatch and safe_retry=false, preserve any remaining staging file and record its relative path",
+        "tests/test_t37_scoped_migration.py: post-publication exception and preserved-stage controls"
+      ],
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_t37_scoped_migration.py tests/test_g3_artifact_hardening.py::test_export_does_not_overwrite_without_explicit_authorization tests/test_g3_artifact_hardening.py::test_failed_overwrite_preserves_original_hash tests/test_g3_artifact_hardening.py::test_export_no_clobber_publish_preserves_target_created_after_preflight",
+      "verification_result": "13 passed in 0.09s; isolated temporary files on macOS",
+      "additional_observation": "The full tests/test_g3_artifact_hardening.py selection had 3 failures because legacy artifact-read tests omit the now-required authenticated project scope; 23 tests passed. No artifact-read policy was weakened.",
+      "remaining": "The explicit check-to-replace race and old-byte rollback remain unresolved. The existing synthetic race demonstration still reproduces it; Windows and real product behavior are unverified."
+    },
+    {
+      "id": "20261126-T20-filename-controls",
+      "scope": "T19.a/T20.a synthetic public route; isolation verifier stubbed; no native proof",
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_t20_bare_relative_semantics_20261108.py tests/test_t20_generic_filename_boundary_20261108.py",
+      "verification_result": "4 passed in 0.33s; known Interpolation filename and ordinary string controls only",
+      "remaining": "Generic unclassified property names and native engine working-directory semantics remain open."
     }
   ]
 }
