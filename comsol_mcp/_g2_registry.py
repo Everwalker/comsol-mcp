@@ -266,6 +266,7 @@ class ActionEntry:
     route: str
     required_tests: tuple[str, ...]
     notes: str = ""
+    catalog_output_schema: Mapping[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         catalog_schema = dict(self.input_schema)
@@ -296,6 +297,8 @@ class ActionEntry:
             "notes": self.notes,
             "executable": is_implemented(self.operation_id) or self.operation_id in LEGACY_FALLBACK_NAMES,
         }
+        if self.operation_id == "job.status" and self.catalog_output_schema is not None:
+            result["catalog_output_schema"] = json.loads(json.dumps(self.catalog_output_schema))
         if self.operation_id in {"parameter.import", "parameter.export"}:
             result["data_schema"] = _parameter_io_data_schema(self.operation_id)
             result["runtime_dispatch_contract"] = {
@@ -1772,6 +1775,7 @@ def _catalog_entries() -> tuple[ActionEntry, ...]:
             output_contract=str(item.get("output_contract") or "ActionResult"), route=str(item.get("route") or ""),
             required_tests=tuple(str(value) for value in item.get("required_tests", []) if isinstance(value, str)),
             notes=str(item.get("notes") or ""),
+            catalog_output_schema=item.get("output_schema") if item.get("operation_id") == "job.status" and isinstance(item.get("output_schema"), Mapping) else None,
         ))
     return tuple(entries)
 
