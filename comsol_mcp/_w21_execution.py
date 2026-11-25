@@ -14,7 +14,7 @@ from pathlib import Path
 
 from ._artifact_store import ArtifactStore, trusted_project_root
 from ._execution_contract import PreWriteRefusal
-from ._g2_engine import _call
+from ._g2_engine import _call, _worker_failure_unknown
 from ._g3_common import bound_model, tag_list
 from ._g3_w13 import parameter_get, parameter_set
 from ._g3_w16 import study_run
@@ -57,9 +57,20 @@ def _execution_is_unknown(value):
             or isinstance(error, dict) and error.get('code') in {'EXECUTION_STATE_UNKNOWN', 'ENGINE_UNRESPONSIVE'})
 
 
+def _exception_chain(exc):
+    seen = set()
+    cause = exc
+    while isinstance(cause, BaseException) and id(cause) not in seen:
+        seen.add(id(cause))
+        yield cause
+        cause = cause.__cause__
+
+
 def _exception_is_unknown(exc):
-    code = getattr(exc, 'code', None)
-    return code in {'EXECUTION_STATE_UNKNOWN', 'ENGINE_UNRESPONSIVE', 'WORKER_TIMEOUT'}
+    return _worker_failure_unknown(exc) or any(
+        getattr(cause, 'code', None) in {'ENGINE_UNRESPONSIVE', 'WORKER_TIMEOUT'}
+        for cause in _exception_chain(exc)
+    )
 
 
 def key_for(kind, tag, name):
@@ -243,7 +254,9 @@ def exported_input_identity(source, model):
             bindings.append({'function': json.loads(match.group(2)), 'filename': filename,
                              'imported_sha256': hashlib.sha256(payload).hexdigest()})
             return match.group(1) + json.dumps('sha256:' + hashlib.sha256(payload).hexdigest()) + match.group(4)
-        except Exception:
+        except Exception as exc:
+            if _exception_is_unknown(exc):
+                raise
             # An unreadable import cannot become a reusable cache identity.
             bindings.append({'unresolved_import': uuid.uuid4().hex})
             return match.group(0)
@@ -301,8 +314,10 @@ def model_identity(worker, tag, parameter_names, definition, study):
             require(source_solutions, 'Initial source solution is not resolved')
             initial_sources.extend(solution_identity(worker, tag, sol) for sol in source_solutions)
     except Exception as exc:
-        # Unknown initial dependencies must never share a cache identity.
-        # The actual model can still solve within the normal dispatch budget.
+        if _exception_is_unknown(exc):
+            raise
+        # An unresolved dependency bypasses cache reuse; uncertain Worker state
+        # was re-raised above.
         cache_policy = 'BYPASS_UNRESOLVED_INITIAL_DEPENDENCY: ' + str(exc)
         initial_sources = [{'non_reusable_request': uuid.uuid4().hex}]
     return dict(model_ref=current_context()['model_ref'], configuration_sha256=digest(lines),
