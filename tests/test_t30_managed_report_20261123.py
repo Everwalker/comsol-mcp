@@ -12,7 +12,7 @@ from comsol_mcp._project_authority import ProjectAuthority
 
 
 @pytest.fixture
-def project_lane(tmp_path):
+def project_lane(tmp_path, monkeypatch):
     store = OperationStore(tmp_path / "store.sqlite")
     grants = {"inspect", "project_write"}
     authority = ProjectAuthority(store, workspace_root=tmp_path,
@@ -26,6 +26,9 @@ def project_lane(tmp_path):
     backend = ManagedBackend(tmp_path / "backend", store, service=service, worker=object(),
                              registry={}, project_root=root)
     backend.project_authorizer = authority.authorize_operation
+    # The fake Worker has no owned server; this fixture verifies downstream
+    # project authorization and publication, not the isolation proof itself.
+    monkeypatch.setattr(backend, "_require_g2_isolation", lambda: {"synthetic_owned_server": True})
     try:
         yield backend, authority, project, root, grants
     finally:

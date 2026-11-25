@@ -24,6 +24,8 @@ def test_daemon_project_report_authorization_and_publication(tmp_path, monkeypat
     service = ExecutionService(SessionLedger("report-session", "test-server"), NoEngineSnapshot(), project_root=root)
     daemon = ControlDaemon(tmp_path / "control", project_root=root, service=service,
                            registry={}, worker=SyntheticWorker())
+    # Model an already-owned server without claiming native isolation proof.
+    monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: {"synthetic_owned_server": True})
     try:
         creation = daemon.dispatch({"operation": "project.create", "arguments": {
             "label": "synthetic-report", "workspace": "synthetic-report",

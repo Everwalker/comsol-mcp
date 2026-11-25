@@ -21,7 +21,7 @@ class NoEngineSnapshot:
         raise AssertionError(f"report dispatch must not snapshot model {model_tag}")
 
 
-def test_current_control_dispatch_separates_report_axes_and_project_write(tmp_path):
+def test_current_control_dispatch_separates_report_axes_and_project_write(tmp_path, monkeypatch):
     workspace_root = tmp_path / "projects"
     workspace_root.mkdir()
     service = ExecutionService(
@@ -36,6 +36,15 @@ def test_current_control_dispatch_separates_report_axes_and_project_write(tmp_pa
         worker=SyntheticWorker(),
         project_root=workspace_root,
     )
+    isolation_calls = []
+
+    def synthetic_isolation():
+        isolation_calls.append(True)
+        return {"synthetic_owned_server": True}
+
+    # Only the owner proof is simulated. Project authority, dispatch and file
+    # publication below are real and do not establish native isolation.
+    monkeypatch.setattr(daemon.backend, "_require_g2_isolation", synthetic_isolation)
     try:
         created = daemon.dispatch({
             "operation": "project.create",
@@ -78,6 +87,7 @@ def test_current_control_dispatch_separates_report_axes_and_project_write(tmp_pa
         assert data["numerical_verification_status"] == "UNVERIFIED"
         assert data["physical_validation_status"] == "UNVERIFIED"
         assert data["model_validated"] is False
+        assert isolation_calls == [True]
         outcome = classify("validate.report", data)
         assert outcome.state == STATE_SUCCEEDED
         assert outcome.execution_status == "PASS"
