@@ -28,7 +28,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from ._execution_contract import ExecutionContractError
+from ._execution_contract import ExecutionContractError, ResourceReservationOutcome
 from ._windows_sid import is_canonical_sid
 
 
@@ -3282,28 +3282,37 @@ class DiskResourceCoordinator:
 
     def reserve_queued_job(self, job_id: str, *, transactional_admission=None) -> dict[str, Any]:
         """Derive operation/estimate from durable records and atomically bind+reserve."""
-        if not _nonempty(job_id):
-            _fail("INVALID_DISK_RESERVATION", "job identity is required")
-        if self.storage_provider is None:
-            _fail("DISK_STORAGE_PROVIDER_UNSUPPORTED",
-                  "no reviewed native storage provider is available on this host",
-                  capability_state=CapabilityState.UNSUPPORTED.value)
         with self.store.lock:
-            context = _durable_job_context(self.store.db, job_id)
-            if context["job_status"] != "QUEUED" or context["operation_status"] != "QUEUED":
-                _fail("RESOURCE_RESERVATION_NOT_PREDISPATCH",
-                      "disk admission must complete before the durable operation enters RUNNING",
-                      job_status=context["job_status"], operation_status=context["operation_status"])
-            profile = self.config.resolve(context["project_id"])
-            if context["canonical_operation_id"] not in profile.allowed_operations:
-                _fail("RESOURCE_RESERVATION_OPERATION_UNSUPPORTED",
-                      "canonical operation is outside the trusted disk profile")
-            estimate = profile.estimate_for(context["canonical_operation_id"])
-            permission = _permission_for_disk_operation(context["canonical_operation_id"])
-            _authorize_profile_project(self.authority, profile, profile.project_id, permission,
-                                       code_prefix="RESOURCE_RESERVATION")
-            observation = self.storage_provider.read_observation(profile)
-            now_ns = time.monotonic_ns()
+            if self.store.db.in_transaction:
+                raise ExecutionContractError(
+                    "RESOURCE_RESERVATION_TRANSACTION_OWNERSHIP_UNKNOWN",
+                    "disk coordinator cannot acquire an already-active OperationStore transaction",
+                    safe_retry=False, stage="pre_dispatch")
+            try:
+                if not _nonempty(job_id):
+                    _fail("INVALID_DISK_RESERVATION", "job identity is required")
+                if self.storage_provider is None:
+                    _fail("DISK_STORAGE_PROVIDER_UNSUPPORTED",
+                          "no reviewed native storage provider is available on this host",
+                          capability_state=CapabilityState.UNSUPPORTED.value)
+                context = _durable_job_context(self.store.db, job_id)
+                if context["job_status"] != "QUEUED" or context["operation_status"] != "QUEUED":
+                    _fail("RESOURCE_RESERVATION_NOT_PREDISPATCH",
+                          "disk admission must complete before the durable operation enters RUNNING",
+                          job_status=context["job_status"], operation_status=context["operation_status"])
+                profile = self.config.resolve(context["project_id"])
+                if context["canonical_operation_id"] not in profile.allowed_operations:
+                    _fail("RESOURCE_RESERVATION_OPERATION_UNSUPPORTED",
+                          "canonical operation is outside the trusted disk profile")
+                estimate = profile.estimate_for(context["canonical_operation_id"])
+                permission = _permission_for_disk_operation(context["canonical_operation_id"])
+                _authorize_profile_project(self.authority, profile, profile.project_id, permission,
+                                           code_prefix="RESOURCE_RESERVATION")
+                observation = self.storage_provider.read_observation(profile)
+                now_ns = time.monotonic_ns()
+            except ExecutionContractError as exc:
+                exc.resource_reservation_outcome = ResourceReservationOutcome.NOT_COMMITTED
+                raise
             try:
                 self.store.db.execute("BEGIN IMMEDIATE")
                 current = _durable_job_context(self.store.db, job_id)
@@ -3325,19 +3334,31 @@ class DiskResourceCoordinator:
                         _fail("RESOURCE_RESERVATION_CALLBACK_INVALID",
                               "additional resource admission must be a trusted internal callback")
                     additional_result = transactional_admission()
+                output = {**result, "operation_id": context["canonical_operation_id"],
+                          "trusted_estimate_bytes": estimate,
+                          "disk_resource_profile_id": profile.profile_id,
+                          "disk_resource_profile_sha256": profile.sha256,
+                          "host_id": profile.host_id, "storage_id": profile.storage_id,
+                          "evidence_classification": "HOST_OBSERVED_ADMISSION_ONLY"}
+                if transactional_admission is not None:
+                    output["additional_admission"] = additional_result
                 self.store.db.execute("COMMIT")
-            except BaseException:
+            except BaseException as exc:
+                if isinstance(exc, ExecutionContractError):
+                    exc.__dict__.pop("resource_reservation_outcome", None)
+                rollback_confirmed = False
                 if self.store.db.in_transaction:
-                    self.store.db.execute("ROLLBACK")
+                    try:
+                        self.store.db.execute("ROLLBACK")
+                    except BaseException:
+                        pass
+                    else:
+                        rollback_confirmed = not self.store.db.in_transaction
+                # A COMMIT whose ACK was lost leaves no open transaction and
+                # is deliberately not marked as a confirmed refusal.
+                if rollback_confirmed and isinstance(exc, ExecutionContractError):
+                    exc.resource_reservation_outcome = ResourceReservationOutcome.NOT_COMMITTED
                 raise
-        output = {**result, "operation_id": context["canonical_operation_id"],
-                  "trusted_estimate_bytes": estimate,
-                  "disk_resource_profile_id": profile.profile_id,
-                  "disk_resource_profile_sha256": profile.sha256,
-                  "host_id": profile.host_id, "storage_id": profile.storage_id,
-                  "evidence_classification": "HOST_OBSERVED_ADMISSION_ONLY"}
-        if transactional_admission is not None:
-            output["additional_admission"] = additional_result
         return output
 
     def release_terminal_job(self, job_id: str) -> dict[str, Any]:

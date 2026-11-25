@@ -44,7 +44,9 @@ class ThreadingHTTPServer(_StdlibThreadingHTTPServer):
         self.server_name = "127.0.0.1"
         self.server_port = self.server_address[1]
 
-from ._execution_contract import ExecutionContractError, canonical_request_hash
+from ._execution_contract import (
+    ExecutionContractError, ResourceReservationOutcome, canonical_request_hash,
+)
 from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
 from ._operation_store import (
     IdempotencyConflict, JobCleanupError, JobResultReadError, JobEventFieldReadError, OperationStore,
@@ -12990,6 +12992,8 @@ class ControlDaemon:
             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "reconcile unfinished engine work before new operations"), "FAILED")
         disk_admission_required = False
         memory_admission_required = False
+        resource_reservation_attempted = False
+        pre_dispatch_resource_reserved = False
         disk_coordinator = self._disk_resource_coordinator
         memory_coordinator = self._memory_resource_coordinator
         disk_operation = operation
@@ -13021,14 +13025,18 @@ class ControlDaemon:
                         callback = lambda: memory_coordinator.reserve_prepared_in_transaction(
                             job_id, memory_prepared,
                         )
+                    resource_reservation_attempted = True
                     disk_admission = disk_coordinator.reserve_queued_job(
                         job_id, transactional_admission=callback,
                     )
+                    pre_dispatch_resource_reserved = True
                     memory_admission = disk_admission.pop("additional_admission", None)
                 elif memory_admission_required:
+                    resource_reservation_attempted = True
                     memory_admission = memory_coordinator.reserve_queued_job(
                         job_id, prepared=memory_prepared,
                     )
+                    pre_dispatch_resource_reserved = True
                 if disk_admission_required:
                     self.store.add_event(job_id, "W26DiskAdmission", {
                         "status": "RESERVED",
@@ -13059,33 +13067,61 @@ class ControlDaemon:
                         "engine_dispatched": False,
                     })
             except ExecutionContractError as exc:
+                if (resource_reservation_attempted and not pre_dispatch_resource_reserved
+                        and getattr(exc, "resource_reservation_outcome", None)
+                        is not ResourceReservationOutcome.NOT_COMMITTED):
+                    return self._finish(record, self._error(
+                        "RESOURCE_ADMISSION_STATE_UNKNOWN",
+                        "resource reservation state could not be established before engine dispatch",
+                        data={"engine_dispatched": False, "resource_admission": "UNKNOWN",
+                              "cause_type": type(exc).__name__},
+                        execution_state_unknown=True, safe_retry=False,
+                    ), "UNKNOWN")
                 refusal = self._exception(exc)
                 refusal.setdefault("data", {}).update({
                     "engine_dispatched": False,
                     "resource_admission": "REFUSED",
                 })
-                return self._finish(record, refusal, "FAILED")
+                return self._finish(record, refusal, "FAILED",
+                                    _pre_dispatch_resource_reserved=pre_dispatch_resource_reserved)
             except Exception as exc:
-                self._log_exception()
+                try:
+                    self._log_exception()
+                except Exception:
+                    pass
                 return self._finish(record, self._error(
                     "RESOURCE_ADMISSION_STATE_UNKNOWN",
                     "resource reservation state could not be established before engine dispatch",
                     data={"engine_dispatched": False, "resource_admission": "UNKNOWN",
                           "cause_type": type(exc).__name__},
                     execution_state_unknown=True, safe_retry=False,
-                ), "UNKNOWN")
+                ), "UNKNOWN",
+                    _pre_dispatch_resource_reserved=pre_dispatch_resource_reserved)
 
         resource_admission_required = disk_admission_required or memory_admission_required
 
         running_metadata = {"queue_wait_s": now - submitted, "engine_started_at": time.time()}
         if resource_admission_required:
-            transitioned, current_status, current_job = self.store.transition_status(
-                job_id, expected_statuses="QUEUED", new_status="RUNNING",
-                metadata=running_metadata, event_name="RUNNING",
-                event_meta={"operation_id": operation_id, "at": time.time(),
-                            "disk_reservation_precedes_worker": disk_admission_required,
-                            "memory_reservation_precedes_worker": memory_admission_required},
-            )
+            try:
+                transitioned, current_status, current_job = self.store.transition_status(
+                    job_id, expected_statuses="QUEUED", new_status="RUNNING",
+                    metadata=running_metadata, event_name="RUNNING",
+                    event_meta={"operation_id": operation_id, "at": time.time(),
+                                "disk_reservation_precedes_worker": disk_admission_required,
+                                "memory_reservation_precedes_worker": memory_admission_required},
+                )
+            except Exception as exc:
+                # This transaction is before backend.invoke and includes the
+                # RUNNING trace row. Only _finish may establish a terminal
+                # result; a competing cancel remains authoritative.
+                return self._finish(record, self._error(
+                    "PRE_DISPATCH_STATE_WRITE_FAILED",
+                    "RUNNING state/trace persistence failed before engine dispatch",
+                    data={"failed_step": "running_status_and_event_transition",
+                          "engine_dispatched": False, "cause_type": type(exc).__name__},
+                    safe_retry=False,
+                ), "FAILED",
+                    _pre_dispatch_resource_reserved=pre_dispatch_resource_reserved)
             if not transitioned:
                 if current_status in {"CANCELLED", "FAILED", "EXPIRED", "LOST", "SUCCEEDED"}:
                     self._release_terminal_resource_reservations(job_id)
@@ -13098,9 +13134,19 @@ class ControlDaemon:
                     "queued disk-admitted job changed before the RUNNING fence",
                     data={"observed_status": current_status, "engine_dispatched": False},
                     execution_state_unknown=True, safe_retry=False,
-                ), "UNKNOWN")
+                ), "UNKNOWN",
+                    _pre_dispatch_resource_reserved=pre_dispatch_resource_reserved)
         else:
-            self.store.update_job(job_id, "RUNNING", running_metadata)
+            try:
+                self.store.update_job(job_id, "RUNNING", running_metadata)
+            except Exception as exc:
+                return self._finish(record, self._error(
+                    "PRE_DISPATCH_STATE_WRITE_FAILED",
+                    "RUNNING state could not be persisted before engine dispatch",
+                    data={"failed_step": "running_status_write", "engine_dispatched": False,
+                          "cause_type": type(exc).__name__},
+                    safe_retry=False,
+                ), "FAILED")
         current_job = self.store.job(job_id)
         if current_job and current_job["status"] == "CANCELLED":
             if resource_admission_required:
@@ -13112,12 +13158,42 @@ class ControlDaemon:
                 safe_retry=True,
             )
         if not resource_admission_required:
-            self.store.add_event(job_id, "RUNNING", {"operation_id": operation_id, "at": time.time()})
+            try:
+                self.store.add_event(job_id, "RUNNING", {"operation_id": operation_id, "at": time.time()})
+            except Exception as exc:
+                # backend.invoke has not started, so this trace failure is a
+                # known pre-dispatch control-plane failure. Keep retry disabled.
+                return self._finish(record, self._error(
+                    "PRE_DISPATCH_TRACE_WRITE_FAILED",
+                    "RUNNING trace event could not be persisted before engine dispatch",
+                    data={"event": "RUNNING", "engine_dispatched": False,
+                          "cause_type": type(exc).__name__},
+                    safe_retry=False,
+                ), "FAILED")
         with self.lock:
             self.running[job_id] = {"started": now, "last_event": now, "timeouts": timeouts, "execution_warned": False, "progress_warned": False}
+        worker_event_phases = {
+            "binding_refused", "submitted", "unknown", "unresponsive", "observed", "status_observed",
+        }
         def worker_event(event):
             # Synchronous submission events commit before a Java request is sent.
-            self.store.add_event(job_id, "worker_request", event)
+            safe_phase = "unrecognized"
+            try:
+                safe_event = dict(event) if isinstance(event, Mapping) else {}
+                phase = safe_event.get("phase")
+                safe_phase = (phase if type(phase) is str and phase in worker_event_phases
+                              else "unrecognized")
+                safe_event["phase"] = safe_phase
+                self.store.add_event(job_id, "worker_request", safe_event)
+            except Exception:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "worker request trace write failed; operation state remains UNKNOWN",
+                    safe_retry=False,
+                    details={"failure_class": "TRACE_WRITE_FAILURE",
+                             "cause_code": "WORKER_TRACE_WRITE_FAILED",
+                             "event": "worker_request", "phase": safe_phase},
+                ) from None
             with self.lock:
                 if job_id in self.running:
                     self.running[job_id]["last_event"] = time.monotonic()
@@ -13181,6 +13257,8 @@ class ControlDaemon:
             result = self._exception(exc)
             if exc.code == "EXECUTION_STATE_UNKNOWN":
                 status = "UNKNOWN"
+                if exc.details.get("failure_class") == "TRACE_WRITE_FAILURE":
+                    result["execution_state_unknown"] = True
                 # The exception object keeps its own declared safe_retry claim
                 # as evidence, but once this job is decided UNKNOWN the outer
                 # published error must not advertise retry. Pin it on a copy
@@ -13224,7 +13302,8 @@ class ControlDaemon:
         return self._finish(record, result, status)
 
     def _finish(self, record, result, status, *, _native_lifecycle_transition=None,
-                _native_resource_release_observation=None):
+                _native_resource_release_observation=None,
+                _pre_dispatch_resource_reserved=False):
         execution = result.setdefault("execution", {})
         identity_keys = ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")
         execution.update({key: record[key] for key in identity_keys})
@@ -13300,6 +13379,23 @@ class ControlDaemon:
             target["execution"]["late_result_warning"] = warning
             return target
 
+        def pre_dispatch_resource_release(issue, stored_status):
+            if not _pre_dispatch_resource_reserved:
+                return None
+            if issue in (None, "result_unavailable") and stored_status in TERMINAL:
+                observation = self._release_terminal_resource_reservations(record["job_id"])
+            else:
+                observation = {"state": "NOT_ATTEMPTED",
+                               "reservation_state": "UNCONFIRMED"}
+            return {"durability_scope": "response_only", **observation}
+
+        def attach_pre_dispatch_resource_release(target, observation):
+            if observation is not None:
+                target.setdefault("execution", {})[
+                    "pre_dispatch_resource_release_observation"
+                ] = observation
+            return target
+
         if _native_lifecycle_transition is None:
             try:
                 accepted, authoritative_status = self.store.finish(
@@ -13335,8 +13431,9 @@ class ControlDaemon:
                         data={"status": "UNKNOWN", "observed_operation_status": stored_status,
                               "authoritative_result_available": False},
                     )
+                resource_observation = pre_dispatch_resource_release(issue, stored_status)
                 return add_response_warning(
-                    response,
+                    attach_pre_dispatch_resource_release(response, resource_observation),
                     failed_steps=failed_steps,
                     authoritative_status=(stored_status if issue in (None, "result_unavailable")
                                            else "UNKNOWN"),
@@ -13354,6 +13451,7 @@ class ControlDaemon:
             # closes; a job result alone does not prove the operation/job binding.
             authoritative_result, stored_status, issue, read_error_type, read_log_error_type = (
                 read_authoritative_terminal(expected_status=authoritative_status))
+            resource_observation = pre_dispatch_resource_release(issue, stored_status)
             if issue == "result_unavailable":
                 authoritative_result = self._error(
                     "AUTHORITATIVE_RESULT_UNAVAILABLE",
@@ -13374,15 +13472,15 @@ class ControlDaemon:
                     log_error_types = [read_log_error_type] if read_log_error_type else []
                     if log_error_types:
                         failed_steps.append("control_errors_log_write")
-                    return add_response_warning(
+                    return attach_pre_dispatch_resource_release(add_response_warning(
                         response,
                         failed_steps=failed_steps,
                         authoritative_status="UNKNOWN",
                         readback_error_type=read_error_type,
                         log_error_types=log_error_types,
                         warning_code="LATE_RESULT_READBACK_FAILED",
-                    )
-                return response
+                    ), resource_observation)
+                return attach_pre_dispatch_resource_release(response, resource_observation)
             try:
                 self.store.add_event(record["job_id"], "LateResultRecorded", {
                     "operation_id": record["operation_id"],
@@ -13398,46 +13496,49 @@ class ControlDaemon:
                 except Exception as log_exc:
                     failed_steps.append("control_errors_log_write")
                     log_error_types.append(type(log_exc).__name__)
-                return add_response_warning(
+                return attach_pre_dispatch_resource_release(add_response_warning(
                     authoritative_result,
                     failed_steps=failed_steps,
                     authoritative_status=stored_status,
                     event_error_type=type(event_exc).__name__,
                     log_error_types=log_error_types,
-                )
-            return authoritative_result
+                ), resource_observation)
+            return attach_pre_dispatch_resource_release(authoritative_result, resource_observation)
         terminal = authoritative_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}
         post_commit_failures = []
+        post_commit_failure_types = {}
         release_observation = None
 
-        def log_post_commit_fault(failed_step: str) -> None:
+        def log_post_commit_fault(failed_step: str, failure: Exception) -> None:
             post_commit_failures.append(failed_step)
+            post_commit_failure_types[failed_step] = type(failure).__name__
             try:
                 self._log_exception()
-            except Exception:
+            except Exception as log_exc:
                 if "control_errors_log_write" not in post_commit_failures:
                     post_commit_failures.append("control_errors_log_write")
+                    post_commit_failure_types["control_errors_log_write"] = type(log_exc).__name__
 
         try:
             try:
                 self.store.update_job(record["job_id"], authoritative_status,
                                      {"finished_observed_at": time.time()})
-            except Exception:
+            except Exception as metadata_exc:
                 if not terminal:
                     raise
                 # finish() already committed the result/status; this metadata
                 # observation is secondary and cannot change the caller result.
-                log_post_commit_fault("job_metadata_write")
+                log_post_commit_fault("job_metadata_write", metadata_exc)
             try:
                 self.store.add_event(record["job_id"], authoritative_status, {
                     "operation_id": record["operation_id"], "at": time.time(),
                 })
-            except Exception:
+            except Exception as event_exc:
                 if not terminal:
                     raise
                 # A missing terminal event is a trace fault, not an engine
                 # failure to return to the caller.
-                log_post_commit_fault("terminal_event_write")
+                log_post_commit_fault("terminal_event_write", event_exc)
         finally:
             if terminal:
                 released = self._release_terminal_resource_reservations(record["job_id"])
@@ -13451,8 +13552,9 @@ class ControlDaemon:
             result["execution"]["post_commit_warning"] = {
                 "code": "POST_COMMIT_WRITE_FAILURE",
                 "failed_steps": post_commit_failures,
+                "failure_types": dict(post_commit_failure_types),
                 "diagnostic_durable": False,
-                "durability_scope": "operation_result",
+                "durability_scope": "response_only",
                 "resource_release_observation": release_observation,
             }
         return result

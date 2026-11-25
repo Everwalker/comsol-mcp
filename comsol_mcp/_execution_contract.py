@@ -8,6 +8,7 @@ revision, permission, and path decisions are made before an engine call.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -50,6 +51,12 @@ class ExecutionContractError(RuntimeError):
         """Attach the original exception type/message so evidence keeps it."""
         self.details = {**self.details, "cause_type": type(exc).__name__, "cause_message": str(exc)[:500]}
         return self
+
+
+class ResourceReservationOutcome(str, Enum):
+    """Coordinator evidence about whether a resource reservation committed."""
+
+    NOT_COMMITTED = "NOT_COMMITTED"
 
 
 class PreWriteRefusal(ExecutionContractError):

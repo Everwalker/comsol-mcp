@@ -24,7 +24,7 @@ import sys
 import time
 from typing import Any, Mapping
 
-from ._execution_contract import ExecutionContractError
+from ._execution_contract import ExecutionContractError, ResourceReservationOutcome
 
 
 MEMORY_PROFILE_SCHEMA = "comsol-mcp.memory-resource-profile/v1"
@@ -1016,19 +1016,50 @@ class MemoryResourceCoordinator:
                 "evidence_classification": "HOST_OBSERVED_ADMISSION_ONLY"}
 
     def reserve_queued_job(self, job_id: str, *, prepared: Mapping[str, Any] | None = None) -> dict[str, Any]:
-        prepared = prepared or self.prepare_queued_job(job_id)
         with self.store.lock:
+            if self.store.db.in_transaction:
+                raise ExecutionContractError(
+                    "RESOURCE_RESERVATION_TRANSACTION_OWNERSHIP_UNKNOWN",
+                    "memory coordinator cannot acquire an already-active OperationStore transaction",
+                    safe_retry=False, stage="pre_dispatch")
+        try:
+            prepared = prepared or self.prepare_queued_job(job_id)
+        except ExecutionContractError as exc:
+            with self.store.lock:
+                if self.store.db.in_transaction:
+                    raise
+            exc.resource_reservation_outcome = ResourceReservationOutcome.NOT_COMMITTED
+            raise
+        with self.store.lock:
+            if self.store.db.in_transaction:
+                raise ExecutionContractError(
+                    "RESOURCE_RESERVATION_TRANSACTION_OWNERSHIP_UNKNOWN",
+                    "memory coordinator cannot acquire an already-active OperationStore transaction",
+                    safe_retry=False, stage="pre_dispatch")
             try:
                 self.store.db.execute("BEGIN IMMEDIATE")
                 result = self.reserve_prepared_in_transaction(job_id, prepared)
+                output = {**result, "operation_id": prepared["context"]["canonical_operation_id"],
+                          "trusted_estimate_bytes": prepared["estimate_bytes"],
+                          "evidence_classification": "HOST_OBSERVED_ADMISSION_ONLY"}
                 self.store.db.execute("COMMIT")
-            except BaseException:
+            except BaseException as exc:
+                if isinstance(exc, ExecutionContractError):
+                    exc.__dict__.pop("resource_reservation_outcome", None)
+                rollback_confirmed = False
                 if self.store.db.in_transaction:
-                    self.store.db.execute("ROLLBACK")
+                    try:
+                        self.store.db.execute("ROLLBACK")
+                    except BaseException:
+                        pass
+                    else:
+                        rollback_confirmed = not self.store.db.in_transaction
+                # A COMMIT whose ACK was lost leaves no open transaction and
+                # is deliberately not marked as a confirmed refusal.
+                if rollback_confirmed and isinstance(exc, ExecutionContractError):
+                    exc.resource_reservation_outcome = ResourceReservationOutcome.NOT_COMMITTED
                 raise
-        return {**result, "operation_id": prepared["context"]["canonical_operation_id"],
-                "trusted_estimate_bytes": prepared["estimate_bytes"],
-                "evidence_classification": "HOST_OBSERVED_ADMISSION_ONLY"}
+        return output
 
     def release_terminal_if_reserved(self, job_id: str) -> dict[str, Any] | None:
         from . import _w26_os_resources as resources
