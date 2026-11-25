@@ -1070,18 +1070,27 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
         if not is_finite:
             passed = False
 
-        if "range" in criteria and isinstance(criteria["range"], (list, tuple)) and len(criteria["range"]) == 2:
-            min_v, max_v = criteria["range"]
-            in_range = range_check(values, float(min_v), float(max_v))
-            checks["range"] = in_range
-            if not in_range:
-                passed = False
-
         if is_finite and values:
             try:
                 metrics["statistics"] = weighted_statistics(values, [1.0] * len(values))
             except Exception:
                 pass
+
+    if "range" in criteria:
+        bounds = criteria["range"]
+        try:
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 2 or not values:
+                raise ValueError("range requires two bounds and numeric values")
+            min_v, max_v = map(float, bounds)
+            if not math.isfinite(min_v) or not math.isfinite(max_v) or min_v > max_v:
+                raise ValueError("range bounds must be finite and ordered")
+            in_range = range_check(values, min_v, max_v)
+        except (TypeError, ValueError, OverflowError):
+            in_range = False
+            checks["range_error"] = "range requires two finite, ordered bounds and numeric values"
+        checks["range"] = in_range
+        if not in_range:
+            passed = False
 
     oracle_name = criteria.get("oracle")
     if oracle_name:

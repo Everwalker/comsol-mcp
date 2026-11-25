@@ -413,7 +413,9 @@ class TestG3ValidationOperations:
             }
         })
         assert data["execution_status"] == STATUS_PASS
-        assert data["numerical_verification_status"] == STATUS_PASS
+        assert data["numerical_verification_status"] == STATUS_UNVERIFIED
+        assert data["external_numerical_verification_status"] == STATUS_PASS
+        assert data["model_validated"] is False
         assert data["physical_validation_status"] == STATUS_UNVERIFIED
         assert data["status"] == STATUS_PASS
 
@@ -448,7 +450,9 @@ class TestG3ValidationOperations:
             }
         })
         assert data["execution_status"] == STATUS_PASS
-        assert data["numerical_verification_status"] == STATUS_FAIL
+        assert data["numerical_verification_status"] == STATUS_UNVERIFIED
+        assert data["external_numerical_verification_status"] == STATUS_FAIL
+        assert data["model_validated"] is False
         assert data["status"] == STATUS_FAIL
 
     def test_dispatch_validate_conservation(self):

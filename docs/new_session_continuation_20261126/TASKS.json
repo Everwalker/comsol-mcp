@@ -1,0 +1,3145 @@
+{
+  "schema_version": 3,
+  "scope": "Frozen U01-U12; 52 inherited parent steps plus 27 refinements; these are scheduling records, not 79 independent product requirements",
+  "created_date": "2026-11-26",
+  "timezone": "Asia/Shanghai",
+  "basis_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+  "source_inputs": {
+    "public_snapshot_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+    "public_snapshot_tree": "29d983bb66b1da911aee520a2a6e831b30882c35",
+    "source_branch_at_review": "wip/universal-completion-20261123-recovery",
+    "default_source": "Fixed public commit only; the property-path guard is now tracked in that source.",
+    "historical_attachment_policy": "Preserve original attachment and G3 as historical evidence if included; do not overlay the old guard or G3 onto the latest source.",
+    "prior_workpack_commit": "b575db2389f5b1dfe5548cd489fc178fb216bffe",
+    "qualification": "DEVELOPMENT_SOURCE_NOT_RELEASE; current source is ahead of scoped R22 artifacts and no native/final acceptance is inferred."
+  },
+  "dependency_semantics": {
+    "depends_on": "Implementation readiness: DONE, NOT_APPLICABLE, IMPLEMENTED or implementation_done=true can unblock independent software work.",
+    "finished_dependencies": "Actual finished execution/qualification: predecessor must be DONE or justified NOT_APPLICABLE with evidence. Do not substitute IMPLEMENTED.",
+    "attempt_dependencies": "A documented actual attempt (execution_complete=true) or finished task is required. A failed real attempt can unlock its repair task.",
+    "validation_check_dependencies": "Each named target check must actually be DONE with evidence. A different machine/version or synthetic pass does not count.",
+    "children": "Display unfinished refinements before their parent; children are not automatically rolled up. Parent native acceptance remains separate.",
+    "finished_is_not_product_acceptance": "DONE records completion of the stated step. A completed reviewer report can reject the product. Whole-product success additionally requires all U criteria, applicable targets and an independent ACCEPT for the actual candidate.",
+    "source_acceptance_is_not_session_authority": "Historical DONE records do not transfer runtime handles, permissions or authorization for a new native attempt.",
+    "implementation_readiness_t10": "Where the implementation needs the completed software binding/transaction seam, depend on T10.d rather than the native-blocked parent T10. T10 remains BLOCKED in state and remains required for final acceptance."
+  },
+  "groups": [
+    {
+      "id": "G0",
+      "title": "恢复候选、继承证据与选择可用环境"
+    },
+    {
+      "id": "G1",
+      "title": "优先打通一条真实纵向闭环"
+    },
+    {
+      "id": "G2",
+      "title": "通用模型与对象操作"
+    },
+    {
+      "id": "G3",
+      "title": "版本自省、帮助与可编程执行"
+    },
+    {
+      "id": "G4",
+      "title": "一般建模、计算与阶段传递"
+    },
+    {
+      "id": "G5",
+      "title": "真实结果、图像与验证契约"
+    },
+    {
+      "id": "G6",
+      "title": "持久作业、控制面和资源生命周期"
+    },
+    {
+      "id": "G7",
+      "title": "项目产物、保护与可迁移恢复"
+    },
+    {
+      "id": "G8",
+      "title": "普通安装、Desktop 与平台交付"
+    },
+    {
+      "id": "G9",
+      "title": "有限迁移测试、独立终审与交付"
+    }
+  ],
+  "waves": [
+    {
+      "id": "W0",
+      "title": "新会话一次接续核对",
+      "purpose": "保留已完成恢复与覆盖任务；按当前可观察状态选择已有工作树或固定源新目录，不等待被删除会话。"
+    },
+    {
+      "id": "W1",
+      "title": "承接已整合修复并处理当前阻断",
+      "purpose": "T10.a–d及T30.a/b已报告完成；处理T30.c和当前权限/产物缺口，保留旧native UNKNOWN，不重开已完成软件修复。"
+    },
+    {
+      "id": "W2",
+      "title": "正常安装后的真实纵向闭环",
+      "purpose": "在一个已有合法可用活跃目标完成公开 MCP 正向调用、求解、数值/图像、保存/新 Worker 重开。"
+    },
+    {
+      "id": "W3",
+      "title": "归并通用能力与可靠性软件缺口",
+      "purpose": "根据既有 U 合同补缺，复用受审片段；不再为每个片段建立多层审签。"
+    },
+    {
+      "id": "W4",
+      "title": "发行、生命周期与三个原生目标",
+      "purpose": "三架构构件保留，三个活跃 native 目标各自完成适用链；可提前准备和独立验证。"
+    },
+    {
+      "id": "W5",
+      "title": "两族迁移、独立统一审查和交付",
+      "purpose": "冻结候选后完成两个 Windows 版本上的两族小任务，有限整改，结论绑定代码/构件。"
+    }
+  ],
+  "scope_targets": {
+    "required_groups": "U01-U12",
+    "required_native": [
+      "windows-x64-6.3",
+      "windows-x64-6.4",
+      "macos-arm64-6.4"
+    ],
+    "required_distributions": [
+      "windows-x64",
+      "macos-arm64",
+      "macos-x64"
+    ],
+    "optional_science": [
+      "W22",
+      "W23",
+      "W24"
+    ],
+    "independent_final_reviewer": true
+  },
+  "scheduling_rules": [
+    "Priority waves guide scheduling, not new all-or-nothing gates. Within allowed scope continue ready independent work when another item is externally blocked.",
+    "Original depends_on is retained for acceptance lineage. Software-only provenance/identity work can start against available allowed modules before native predecessors finish; that does not satisfy native acceptance.",
+    "First accepted installed positive chain is a high priority result. Existing initialize/list and attach-only error prove only their own scope.",
+    "Freeze a stable product candidate for actual tests. Reuse unaffected accepted evidence. Do not continuously rebuild all packages for documentary changes.",
+    "Explicitly refused commands/outcomes/resources remain fenced; do not retry, rename, delegate or recreate the same refused outcome. Check genuine later matching authorization before any otherwise-blocked action.",
+    "Final completion requires all applicable U criteria, three active native targets and real independent reviewer acceptance. If only external blockers remain, report implemented scope plus blockers, never universal completion.",
+    "Inspect current environment/authorization only within its actual scope. Never rerun a specifically refused outcome by renaming, alternative entrypoint or delegation.",
+    "Parent historical DONE statuses are retained; required new-candidate refinements are separate. No bulk reset and no blanket historical PASS inheritance.",
+    "After a child verifies the required software portion, the parent may be marked implementation_done=true with evidence while its native obligations remain open. No automatic roll-up.",
+    "Maintain one compact working progress ledger. Refer to immutable history instead of appending duplicate receipts for each read, hash or formatting change.",
+    "When a native target is unavailable, prepare or execute independent tasks and other targets. Only after no authorized required action remains may the run pause as WAITING_EXTERNAL with precise unblock conditions.",
+    "Cold start is a one-time environment/source check, not a reset of historical T01.a/T03.a or a new product requirement.",
+    "The old conversation has been deleted. Do not wait for its future messages or reuse inherited process/session handles. Inspect only current observable source/recovery facts within authorization; keep old UNKNOWN resources isolated.",
+    "If a verified existing checkout is usable, continue there without overwriting modifications; otherwise recover the fixed source to an independent new directory. Do not overwrite the old recovery stage or terminate unknown processes.",
+    "The raw latest state is preserved exactly for status/implementation_done/execution_complete. Current documentary evidence and new controls may narrow claims but do not silently erase or upgrade history.",
+    "R22 is an older interim offline artifact, not the current source qualification. Rebuild only a coherent necessary candidate for the next real flow, not a new three-platform bundle after every independent small patch.",
+    "Preparation scopes in selected tasks permit bounded read-only or isolated software work before integration dependencies finish; they cannot satisfy completion gates, run frozen actions, or authorize native execution."
+  ],
+  "tasks": [
+    {
+      "id": "T01.a",
+      "parent_id": "T01",
+      "priority_wave": "W0",
+      "planning_status": "READY_SOURCE_QUALIFICATION",
+      "task": "承接已完成的固定源恢复与资格记录；新会话一次核对当前工作树或从7cc3183固定公开源恢复，保留本地改动。",
+      "depends_on": [],
+      "acceptance": "原恢复任务的DONE保持历史范围；当前会话取得可核对的源码即可继续，不要求等待旧会话。公开guard已入库，旧附件不覆盖当前源。",
+      "scope_notes": [
+        "固定公开快照7cc3183已包含guard及后续整合源码，默认恢复无需任何源码overlay。",
+        "旧G3附件仅是历史证据，不能用来覆盖当前公开账本、伪造原始日志或升级测试通过。",
+        "本机磁盘、恢复进程和工作树是否仍在尚未由本包观察；按一次当前只读核对决定，不断言/等待旧会话状态。",
+        "保留原恢复DONE，不将当前会话启动核对扩展成重跑所有历史任务。"
+      ],
+      "record_type": "refinement",
+      "group": "G0",
+      "requirement_groups": [
+        "U01",
+        "U12"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_task": "恢复 b575db2 固定公开快照和用户附件的两个原始文件，形成有来源记录的新开发候选；先做正常源码/依赖/构建资格核验。",
+      "prior_pack_acceptance": "新目录保有公开快照和附件的准确来源，缺失模块字节可取得；正常源码依赖/导入/构建的允许检查有明确结果。此步骤不证明运行安全、历史 live-to-candidate 等同或产品已验收。不能把恢复成功当解除 T10 HOLD。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T01.a"
+    },
+    {
+      "id": "T03.a",
+      "parent_id": "T03",
+      "priority_wave": "W0",
+      "planning_status": "READY_DOCUMENTATION",
+      "task": "承接79项当前账本与覆盖关系，按新会话实际候选维护一个紧凑CURRENT视图。",
+      "depends_on": [],
+      "acceptance": "79个任务ID及最新原始状态不重置；最新原文可追溯，任务实现、原生资格、证据可得性和当前授权分开。",
+      "scope_notes": [
+        "CURRENT_20261123包含全部79项，原始状态精确继承，原始FULL_COMPLETION仅作为更早历史。",
+        "字段中仍可见R16/R17旧描述；R22独立证据是更近离线记录，但也不是最新源或原生接受。"
+      ],
+      "record_type": "refinement",
+      "group": "G0",
+      "requirement_groups": [
+        "U12"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。 历史父项 T03 是证据来源，不是本子项的执行前置；即使父项需重开，也先更新当前覆盖视图。",
+      "prior_pack_task": "从原 FULL_COMPLETION 继承 52 父项状态，建立 79 项紧凑当前视图；分开软件实现、真实执行、来源可用性与历史围栏。",
+      "prior_pack_acceptance": "保留 52 原 ID/状态与上游证据定位；新增 27 项不重置已完成历史。当前来源写 b575 + 附件，实际候选另记录；T35 状态与实际工作不一致有说明。每次更新 next_action 为一个可执行动作。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T03.a"
+    },
+    {
+      "id": "T07.a",
+      "parent_id": "T07",
+      "priority_wave": "W0",
+      "planning_status": "READY_AUTHORIZATION_ASSESSMENT",
+      "task": "承接历史授权/资源边界调查；对新会话实际拟执行动作核对匹配授权，保护旧UNKNOWN。",
+      "depends_on": [],
+      "acceptance": "历史DONE不作为新的执行许可。当前软件工作继续；明确受拒/冻结动作仅在确有匹配后续授权时处理，不能靠改名或另一个会话重试。",
+      "scope_notes": [
+        "旧auto-review拒绝不能通过换名、新目录、改命令或委派重试规避。",
+        "不要把历史资源围栏泛化成所有机器所有新项目永久禁止。"
+      ],
+      "record_type": "refinement",
+      "group": "G1",
+      "requirement_groups": [
+        "U06"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_task": "核对现有会话和当前环境是否已有匹配的新独立项目执行授权，精确保留两个旧 UNKNOWN 与 f49 被拒范围。",
+      "prior_pack_acceptance": "识别可合法开展的新项目/目标，或记录精确外部阻塞和最小解阻项。当前用户要求完成项目不能被解释为重试具体已拒绝动作；旧资源围栏也不泛化为全部软件工作禁止。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T07.a"
+    },
+    {
+      "id": "T01",
+      "group": "G0",
+      "task": "从固定公开提交恢复工作树，保留现存用户修改，核对必要源文件与构件来源；发现 sparse/缺 blob 时补齐实际所需内容。",
+      "depends_on": [],
+      "requirement_groups": [
+        "U01",
+        "U12"
+      ],
+      "acceptance": "新目录可获得约定源码；不能用已知 tree hash 冒充全体文件字节已恢复；不依赖旧本地目录。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W0",
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T01",
+      "children": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "DONE"
+    },
+    {
+      "id": "T02",
+      "group": "G0",
+      "task": "继承已接受 Java snapshot v2 和已完成 FULL_COMPLETION 指针切换；保持旧证据范围，按新候选实际影响更新接续关系。",
+      "depends_on": [
+        "T01"
+      ],
+      "requirement_groups": [
+        "U04",
+        "U08",
+        "U12"
+      ],
+      "acceptance": "已接受代码/测试/runner 关系清楚；当前候选只对受影响范围重验，旧 v1 历史证据不改写。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W0",
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T02",
+      "children": [],
+      "prior_pack_baseline_status": "DONE"
+    },
+    {
+      "id": "T03",
+      "group": "G0",
+      "task": "从真实 action 目录及原 60 测试的子断言建立/更新一次 U01–U12 覆盖表，区分现有证据、缺口、案例科学、平台跳过和外部阻塞。",
+      "depends_on": [
+        "T01"
+      ],
+      "requirement_groups": [
+        "U12"
+      ],
+      "acceptance": "实际目录数量与映射一致；不把注册工具数、受控 Java 存在或旧 PASS 当所有功能通过；不新增重复审批台账。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W0",
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T03",
+      "children": [
+        "T03.a"
+      ],
+      "prior_pack_baseline_status": "DONE"
+    },
+    {
+      "id": "T04",
+      "group": "G0",
+      "task": "早期检查三活跃目标的可访问性、版本/JDK、许可、普通用户安装、图形和项目目录能力；辨明旧 UNKNOWN 仅约束的具体资源。",
+      "depends_on": [
+        "T01"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U07",
+        "U10"
+      ],
+      "acceptance": "精确到目标与能力的 READY/BLOCKED/NOT_RUN；能选出首个新授权独立项目；不恢复旧 once、Popen、token 或按旧 PID 发信号。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G0.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 预检完成可为 DONE，同时各不可用目标继续 BLOCKED；这是识别环境状态，不代表机器已可运行。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W0",
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T04",
+      "children": [],
+      "prior_pack_baseline_status": "DONE"
+    },
+    {
+      "id": "T10.a",
+      "parent_id": "T10",
+      "priority_wave": "W1",
+      "planning_status": "OPEN_HOLD",
+      "task": "确定严格新输入与历史 ModelRef 恢复的兼容合同，保留服务器持有的真实 legacy lineage。",
+      "depends_on": [
+        "T01.a"
+      ],
+      "acceptance": "新请求布尔 schema 与旧持久值的处理可解释；规范化不能凭键形状自动信任别的项目；不修改旧真实状态求证。",
+      "scope_notes": [
+        "最新原始账本已报告本子项DONE；只继承其已有软件范围，不重置或泛化为原生/新候选全部验收。"
+      ],
+      "record_type": "refinement",
+      "group": "G2",
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T10.a"
+    },
+    {
+      "id": "T10.b",
+      "parent_id": "T10",
+      "priority_wave": "W1",
+      "planning_status": "OPEN_HOLD",
+      "task": "实现无绑定/只有旧键/只有新键/相同项目/冲突项目的项目归属决策，接入真实项目授权。",
+      "depends_on": [
+        "T10.a"
+      ],
+      "acceptance": "合法同项目连续性通过；冲突给指定错误且不改变项目归属；调用者不能通过 project_id 自授权限。",
+      "scope_notes": [
+        "保留已证明的 fake RED，但未来GREEN必须有同legacy同项目正控，不能只接受任意异常。",
+        "最新原始账本已报告本子项DONE；只继承其已有软件范围，不重置或泛化为原生/新候选全部验收。"
+      ],
+      "record_type": "refinement",
+      "group": "G2",
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T10.a"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T10.b"
+    },
+    {
+      "id": "T10.c",
+      "parent_id": "T10",
+      "priority_wave": "W1",
+      "planning_status": "OPEN_HOLD",
+      "task": "把 session/runtime/revision 归属写入设计为事务拥有者明确的一次一致提交，并处理 Worker start 前后失败。",
+      "depends_on": [
+        "T10.b"
+      ],
+      "acceptance": "实际存储方法的事务/回滚/并发写入边界清楚；避免 merge_metadata_fields 自行 BEGIN 与外层事务冲突；失败不留下错误项目归属。",
+      "scope_notes": [
+        "不要求重写整个存储系统；针对当前顺序写入问题作最小公共修复。",
+        "Worker instance/generation在start后取得，不能用启动前检查冒称已证同Worker连续性。",
+        "最新原始账本已报告本子项DONE；只继承其已有软件范围，不重置或泛化为原生/新候选全部验收。"
+      ],
+      "record_type": "refinement",
+      "group": "G2",
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T10.b"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T10.c"
+    },
+    {
+      "id": "T10.d",
+      "parent_id": "T10",
+      "priority_wave": "W1",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "在允许的新独立存储上验证完整项目归属生产路径；两个真实模型和领域/API/Java同一绑定的原生证据留给W2/W4。",
+      "depends_on": [
+        "T10.c"
+      ],
+      "acceptance": "有真实存储/实际生产路径的软件证据，而不只AST摘取或dict fake；当前候选解除软件HOLD的范围明确；真实模型验证不在本子项阻挡T05.a启动。 针对已知 HOLD 的安全修复需独立检查其归属与事务边界；这次范围确认不替代最后 U01–U12 统一验收。",
+      "scope_notes": [
+        "保护旧模型、Worker、SSH、UNKNOWN与所有受拒结果。",
+        "真实双模型与跨路线一致性可随W2/W4完成，不让缺硬件冻结其余软件工作。",
+        "最新原始账本已报告本子项DONE；只继承其已有软件范围，不重置或泛化为原生/新候选全部验收。"
+      ],
+      "record_type": "refinement",
+      "group": "G2",
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T10.c"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T10.d"
+    },
+    {
+      "id": "T30.a",
+      "parent_id": "T30",
+      "priority_wave": "W1",
+      "planning_status": "OPEN_DETACHED",
+      "task": "明确 caller data、外部计算、注册后端观测三种来源，保留外部数学计算用途与非PASS状态。",
+      "depends_on": [],
+      "acceptance": "caller-only 报告不能认证当前模型；external arithmetic 仍可成功；ERROR/BLOCKED/UNSUPPORTED等现有区分保留。",
+      "scope_notes": [
+        "最新原始账本已报告本子项DONE；只继承其已有软件范围，不重置或泛化为原生/新候选全部验收。"
+      ],
+      "record_type": "refinement",
+      "group": "G5",
+      "requirement_groups": [
+        "U09"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T30.a"
+    },
+    {
+      "id": "T30.b",
+      "parent_id": "T30",
+      "priority_wave": "W1",
+      "planning_status": "OPEN_DETACHED",
+      "task": "为 validate.report 接入真实的 project-bound 输出权限和产物目录，移除调用者路径被当授权依据的可能。",
+      "depends_on": [
+        "T30.a",
+        "T10.b"
+      ],
+      "acceptance": "实际 managed route 明确传入可信绑定上下文/能力；报告只能写允许产物根，拒绝时没有越界副作用。",
+      "scope_notes": [
+        "最新公开源码已整合报告来源及项目授权路径；原先没有managed context注入的缺口属于历史，不能在新包继续当成当前事实。",
+        "继承已接受的生产报告publisher软件范围，保留外部数据/真实模型观测边界；原生报告发布仍按适用任务补验。",
+        "最新原始账本已报告本子项DONE；只对实际受后续变更影响的部分补核验，不重置本子项。"
+      ],
+      "record_type": "refinement",
+      "group": "G5",
+      "requirement_groups": [
+        "U09"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T30.b"
+    },
+    {
+      "id": "T30.c",
+      "parent_id": "T30",
+      "priority_wave": "W1",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "承接已经集成的报告来源和项目授权修复，完成剩余三状态分类、可信观测登记与报告发布的生产路径核验。",
+      "depends_on": [
+        "T30.b"
+      ],
+      "acceptance": "不再把T30整体写成detached；已通过且未受影响的软件证据继承。当前候选在真实dispatch下保留外部数据用途并不认证伪造模型观测；原生同解验证仍单独未完成。",
+      "scope_notes": [
+        "先做必要软件合同与有限正负控；真实同解证据接入T27/T28，不为所有未知物理建立规则。"
+      ],
+      "record_type": "refinement",
+      "group": "G5",
+      "requirement_groups": [
+        "U09"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_task": "集成来源修复并验证 execution/numerical/physical 的独立分类、真实观测登记和报告发布。",
+      "prior_pack_acceptance": "生产dispatch与真实classifier下操作成功可与numerical UNVERIFIED并存；仅可信同模型同解观测可进入相应认证。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T30.c"
+    },
+    {
+      "id": "T10",
+      "group": "G2",
+      "task": "完成 attach/create/load/adopt/copy/save/close/rebind 的模型身份传递，保持 session/epoch/revision 一致并保护其他用户模型。",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "acceptance": "两模型场景中的目标回读与非目标保持；领域、通用 API、Java 操作指向同一绑定模型。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W1",
+      "baseline_status": "BLOCKED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01",
+        "T02"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T10",
+      "children": [
+        "T10.a",
+        "T10.b",
+        "T10.c",
+        "T10.d"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "scope_notes": [
+        "T10.a–d软件工作已DONE；T10父项原生尝试UNKNOWN_FROZEN，仍BLOCKED且implementation_done=false，原值不改。",
+        "本包的依赖修正只允许独立软件工作继续，不授权重试、清理或接管旧资源，也不宣称T10已完成。",
+        "最终必须有当前匹配授权与对应原生身份/非目标保持证据；无需为了项目形式收口而强行清理历史未知资源。"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T30",
+      "group": "G5",
+      "task": "分开 execution、numerical、physical 三状态，支持任务配置 profile、已注册后端观测与明确外部数据模式。",
+      "depends_on": [
+        "T27",
+        "T28"
+      ],
+      "requirement_groups": [
+        "U09"
+      ],
+      "acceptance": "伪造 caller 数值不能认证当前模型；未知物理规则为 NOT_COVERED，不影响合法原始求值，也不默认为物理通过。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W1",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T27",
+        "T28"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T30",
+      "children": [
+        "T30.a",
+        "T30.b",
+        "T30.c"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T05.a",
+      "parent_id": "T05",
+      "priority_wave": "W2",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "在当前需要的稳定候选上完成正常安装入口的有意义正向调用；分开软件启动修复与被冻住的旧尝试。",
+      "depends_on": [
+        "T01.a",
+        "T10.d",
+        "T41"
+      ],
+      "acceptance": "旧Mac离线pip/import通过、旧daemon失败和R22离线记录按各自范围继承。未经匹配授权不重复UNKNOWN动作；当前实际MCP正向调用和自有生命周期才关闭本项。",
+      "scope_notes": [
+        "工具数量依实际安装动态发现；新记录出现113/114，不能复用旧112常量作产品通过。",
+        "优先正常产品启动路径；不要继续为一次调用叠加只服务测试的supervisor或身份审批层。",
+        "T10原UNKNOWN及后来一次性例外请求的原范围保留；请求是否获得后续授权必须查当前可用记录，不从新会话目标推断。"
+      ],
+      "record_type": "refinement",
+      "group": "G1",
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a",
+        "T10.d"
+      ],
+      "prior_pack_task": "在当前稳定候选的正常安装入口，完成一个正向 tools/call，并验证自有控制进程生命周期。",
+      "prior_pack_acceptance": "实际安装包完成有意义的正向调用，记录完整退出/存活与所有权；initialize/list及attach-only拒绝不替代它。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T05.a"
+    },
+    {
+      "id": "T07.b",
+      "parent_id": "T07",
+      "priority_wave": "W2",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "在当前稳定安装候选与一个合法可用活跃目标，通过公开 MCP 运行新项目 Java、建立新模型并实际求解，再提取同一解的数值、单位、索引和图像。",
+      "depends_on": [
+        "T05.a",
+        "T07.a",
+        "T10.d"
+      ],
+      "acceptance": "新源码/模型/Worker/解/候选身份与真实数值图像对应；不修改核心或任务 allowlist，不用旧 T06 成功替代当前候选求解；不接触两个旧 UNKNOWN 或重放被拒尝试。",
+      "scope_notes": [],
+      "record_type": "refinement",
+      "group": "G1",
+      "requirement_groups": [
+        "U06"
+      ],
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T05.a",
+        "T07.a",
+        "T10.d"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T07.b"
+    },
+    {
+      "id": "T08.a",
+      "parent_id": "T08",
+      "priority_wave": "W2",
+      "planning_status": "PARTIAL_INHERIT",
+      "task": "继承已集成的原子发布软件修复，只处理当前候选仍存在且影响保存的缺口。",
+      "depends_on": [
+        "T01.a"
+      ],
+      "acceptance": "确定安全保存/覆盖/失败边界，已通过且无影响软件证据复用；不反复验证报告投影细节。",
+      "scope_notes": [],
+      "record_type": "refinement",
+      "group": "G1",
+      "requirement_groups": [
+        "U09"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T08.a"
+    },
+    {
+      "id": "T08.b",
+      "parent_id": "T08",
+      "priority_wave": "W2",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "保存真实模型/解/依赖，在新目录和新Worker同版本读取存储解，再关闭第一条纵向链。",
+      "depends_on": [
+        "T07.b",
+        "T08.a"
+      ],
+      "acceptance": "保存前后数值/单位/解索引可对应；没有重算后冒称reopen；T09仅在此链真实闭合后更新。",
+      "scope_notes": [],
+      "record_type": "refinement",
+      "group": "G1",
+      "requirement_groups": [
+        "U09"
+      ],
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T07.b",
+        "T08.a"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T08.b"
+    },
+    {
+      "id": "T05",
+      "group": "G1",
+      "task": "构建并在新目录用普通安装入口启动候选 MCP，确认源码目录之外的发现、schema、版本与限制说明。",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "acceptance": "来自实际安装包的公共 MCP 请求与响应；不借旧测试 driver 才能完成正常使用。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 首先 build/install/discover；有准备好的活跃平台立即执行正常入口闭环。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01",
+        "T02"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T05",
+      "children": [
+        "T05.a"
+      ],
+      "prior_pack_baseline_status": "DONE"
+    },
+    {
+      "id": "T06",
+      "group": "G1",
+      "task": "由 Agent 在新项目编写新 Java，通过安装后的 MCP 编译并在明确绑定的模型内建立一个小型可求解模型。",
+      "depends_on": [
+        "T04",
+        "T05"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U04",
+        "U05"
+      ],
+      "acceptance": "新源码字节身份、ModelRef/build、编译诊断、实际求解与写后回读；无需改服务端/Worker/任务允许名单。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "DONE",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T04",
+        "T05"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T06",
+      "children": [],
+      "prior_pack_baseline_status": "DONE"
+    },
+    {
+      "id": "T07",
+      "group": "G1",
+      "task": "从同一解取得真实数值、单位/解索引与真实图像，经 MCP 对外返回。",
+      "depends_on": [
+        "T06"
+      ],
+      "requirement_groups": [
+        "U06"
+      ],
+      "acceptance": "非硬编码的数值、图像与模型 revision/solution 对应；图像可由 Host 经 MCP/资源读取。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T06"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T07",
+      "children": [
+        "T07.a",
+        "T07.b"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T08",
+      "group": "G1",
+      "task": "保存模型及项目依赖，换新目录、新 Worker，在同版本重新打开并读取存储解。",
+      "depends_on": [
+        "T06",
+        "T07"
+      ],
+      "requirement_groups": [
+        "U09"
+      ],
+      "acceptance": "真实保存与新 Worker 重新读出结果，路径可迁移；不能重算后冒充存储解回读。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T06",
+        "T07"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T08",
+      "children": [
+        "T08.a",
+        "T08.b"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T09",
+      "group": "G1",
+      "task": "T05–T08 遇到直接阻断时就在原任务修复；T09 汇总首条闭环的可复现正常用户路径和已验证范围，完成后继续下一任务。",
+      "depends_on": [
+        "T05",
+        "T06",
+        "T07",
+        "T08"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U04",
+        "U06",
+        "U09",
+        "U12"
+      ],
+      "acceptance": "本组 scoped evidence 完整；明确不等于 U01–U12 或跨平台全部通过；完成后立即转下一任务。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G1.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T05",
+        "T06",
+        "T07",
+        "T08"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T09",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a",
+        "T05.a",
+        "T07.b",
+        "T08.b"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T17",
+      "group": "G3",
+      "task": "验证项目中新 Java 经公开 MCP 完成编译、执行及绑定模型回读；已审 snapshot v2 按当前集成影响继承。",
+      "depends_on": [
+        "T02",
+        "T05",
+        "T10.d"
+      ],
+      "requirement_groups": [
+        "U04"
+      ],
+      "acceptance": "新项目源码无需核心增白名单/重打安装包；源码字节、Worker/模型身份和收据一致；不重复旧软件审查。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 软件前置改用已完成的T10.d；T10父项的冻结原生尝试不阻止独立实现，但本项真实模型/原生验收仍须独立证据与当前授权。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T02",
+        "T05",
+        "T10"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T17",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "previous_pack_depends_on": [
+        "T02",
+        "T05",
+        "T10"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T18",
+      "group": "G3",
+      "task": "完成新 Java 的编译错误、运行错误、部分修改与超时/UNKNOWN 的可诊断返回，并保留可恢复模型状态。",
+      "depends_on": [
+        "T17"
+      ],
+      "requirement_groups": [
+        "U04",
+        "U07",
+        "U09"
+      ],
+      "acceptance": "失败证据可定位真实问题；编译成功不冒称执行成功；部分修改与完全未执行分开。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T17"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T18",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T41",
+      "group": "G8",
+      "task": "统一普通启动/配置/doctor 的入口，集中 OS/arch/JDK/build 差异，移除正常使用对旧 activity/用户名/仓库 driver 的依赖。",
+      "depends_on": [
+        "T15"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "acceptance": "用户从新目录按公开步骤可启动；诊断有真实可操作原因；缺 GUI/文档不隐式禁用 API 核心。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 历史 T05 证据仍在 original_depends_on；当前普通入口须能先独立完善，再让 T05.a 验证新候选，避免父子隐式循环。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W2",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T05",
+        "T15"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T41",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T19.a",
+      "parent_id": "T19",
+      "priority_wave": "W1",
+      "planning_status": "OPEN_PARTIAL",
+      "task": "收敛项目批量授权、文件根、预算和setter/Java路径的已发现缺口。",
+      "depends_on": [
+        "T10.b",
+        "T01.a"
+      ],
+      "acceptance": "合法项目批量调用不中途反复人工审批；实际输入根/授权不可由body伪造；已有发现的路径问题有通用解法或明确阻塞。",
+      "scope_notes": [
+        "保留r4受拒验证范围；不规定必须采用某一个未受理isolated机制。",
+        "trusted Java 不是OS sandbox，不以新增无限主机隔离研究代替冻结U08义务。"
+      ],
+      "record_type": "refinement",
+      "group": "G3",
+      "requirement_groups": [
+        "U04",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T19.a"
+    },
+    {
+      "id": "T20.a",
+      "parent_id": "T20",
+      "priority_wave": "W3",
+      "planning_status": "OPEN_PARTIAL",
+      "task": "合并当前合法可用 ProjectRootBinding/文件读取修复，处理实际FD、关闭异常与相对路径语义缺口。",
+      "depends_on": [
+        "T19.a"
+      ],
+      "acceptance": "当前代码有一致错误/资源管理语义与有限回归；模型参数/函数任务能继续使用合法数据。",
+      "scope_notes": [
+        "不再对被拒T20 live guard做身份比较；缺源码/授权应保持BLOCKED，不复制历史命令。"
+      ],
+      "record_type": "refinement",
+      "group": "G4",
+      "requirement_groups": [
+        "U05"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T20.a"
+    },
+    {
+      "id": "T21.a",
+      "parent_id": "T21",
+      "priority_wave": "W3",
+      "planning_status": "OPEN_PARTIAL",
+      "task": "核对现有几何/坐标/Pair和列表路径修复是否进入当前规范候选，并补实际生产路线读回。",
+      "depends_on": [
+        "T14",
+        "T17",
+        "T20.a"
+      ],
+      "acceptance": "框架/源目标/选择语义明确；已受限fake证据按范围继承，未受审Pair不冒称已接受。",
+      "scope_notes": [
+        "不得重放被拒source-identity guarded batch；无权限项精确隔离，其余目录动作继续。"
+      ],
+      "record_type": "refinement",
+      "group": "G4",
+      "requirement_groups": [
+        "U02",
+        "U05"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T21.a"
+    },
+    {
+      "id": "T31.a",
+      "parent_id": "T31",
+      "priority_wave": "W3",
+      "planning_status": "OPEN_PARTIAL",
+      "task": "把已实现的去重/队列片段接到真实持久存储和生产调度，验证一次提交、重复请求与重启协调。",
+      "depends_on": [
+        "T10.d",
+        "T19.a"
+      ],
+      "acceptance": "有限代表性正控与已发现故障窗口得到真实持久状态；不通过新idempotency key掩盖不确定旧操作。",
+      "scope_notes": [
+        "无需新增所有SQLite/OS故障排列组合；保护原受拒脚本与历史UNKNOWN。"
+      ],
+      "record_type": "refinement",
+      "group": "G6",
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T31.a"
+    },
+    {
+      "id": "T35.a",
+      "parent_id": "T35",
+      "priority_wave": "W3",
+      "planning_status": "OPEN_PARTIAL",
+      "task": "承接已集成的有界事件writer、项目隔离reader、分页和Python3.10 fallback，处理当前组合仍未关闭的真实缺口。",
+      "depends_on": [
+        "T31.a"
+      ],
+      "acceptance": "不重做已独立接受的同一片段或把历史298条引用当新增通过数；明确实际Python3.10、SQLite内部内存、完整MCP帧、超长solver解析等仍未证范围。",
+      "scope_notes": [
+        "当前T35已为RUNNING；有界事件/结果读写与fallback已经有范围内整合证据，逐项对照真实剩余缺口。",
+        "不要将文件SQLite/fake、内存SDK或tracemalloc当完整MCP帧、SQLite C/RSS、Windows或native通过。"
+      ],
+      "record_type": "refinement",
+      "group": "G6",
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_task": "归并现有bounded reader/writer、compaction、provenance与终态投影片段，标明当前规范组合。",
+      "prior_pack_acceptance": "当前生产组合有一致语义；超过普通日志长度仍有有界读取与可信终态；不是只增加事件常量。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T35.a"
+    },
+    {
+      "id": "T35.b",
+      "parent_id": "T35",
+      "priority_wave": "W3",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "对当前组合补真实文件存储/项目授权/公开读取的必要边界与日志故障分类证据。",
+      "depends_on": [
+        "T35.a"
+      ],
+      "acceptance": "job.log、solver.log、job.result的项目范围及终态一致；明确内存/磁盘策略实际验证范围。",
+      "scope_notes": [
+        "不将Python tracemalloc microprobe升级为全进程RSS或OS稳定性证明；不强制为本轮增加新日志平台。"
+      ],
+      "record_type": "refinement",
+      "group": "G6",
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "preparation_scope_before_integration_dependencies": "以已存在生产代码和新的file-SQLite/synthetic样本核对有界读取与错误分类；只填实际测到范围，不声称native。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T35.b"
+    },
+    {
+      "id": "T11",
+      "group": "G2",
+      "task": "完成真实模型树的深层/局部发现与稳定对象寻址，覆盖多 component、改名及嵌套 WorkPlane/feature。",
+      "depends_on": [
+        "T10.d"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U03"
+      ],
+      "acceptance": "变换名称/层级后仍可定位所需对象；不固定 comp1/geom1 或把 label 当稳定身份。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 软件前置改用已完成的T10.d；T10父项的冻结原生尝试不阻止独立实现，但本项真实模型/原生验收仍须独立证据与当前授权。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T10"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T11",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "previous_pack_depends_on": [
+        "T10"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T12",
+      "group": "G2",
+      "task": "补齐 typed 属性读写及允许值，保持 bool/int/double/string、空与单元素数组、矩阵、表达式和单位的区别。",
+      "depends_on": [
+        "T11"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U03",
+        "U08"
+      ],
+      "acceptance": "对实际支持类型的往返证据；拒绝或准确描述不支持转换，不静默压平成字符串/标量。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T11"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T12",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T13",
+      "group": "G2",
+      "task": "承接已进入当前源码的普通/嵌套对象删除、同意声明和返回 UNKNOWN 修复；补剩余对象族及真实非目标保持证据，解决具体发现的兼容缺口。",
+      "depends_on": [
+        "T10.d",
+        "T11",
+        "T12"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U08"
+      ],
+      "acceptance": "目标创建/复制/授权删除及回读可完成，非目标保留范围有实证；明确 UNSCANNED 外部引用风险。区分缺方法与方法内部 AttributeError，采用实际兼容合同，不能机械改异常捕获后宣布完成。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 普通/嵌套删除路线已经存在；不从零重写，不重放已拒绝的组合 fallback/cursor/身份验证。 软件前置改用已完成的T10.d；T10父项的冻结原生尝试不阻止独立实现，但本项真实模型/原生验收仍须独立证据与当前授权。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T10",
+        "T11",
+        "T12"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T13",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "previous_pack_depends_on": [
+        "T10",
+        "T11",
+        "T12"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T14",
+      "group": "G2",
+      "task": "完成 named/explicit/all/inherited/spatial 等适用选择路线，区分实体、对象与 selection 属性，并检查几何重建后选区。",
+      "depends_on": [
+        "T11",
+        "T12"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U05"
+      ],
+      "acceptance": "多组件、不同实体维数与改名后的选择读回；不猜边界编号或几何维数。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G2.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T11",
+        "T12"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T14",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T15",
+      "group": "G3",
+      "task": "公开真实 receiver、方法签名、属性、类型、允许值与运行时版本；按服务端策略区分读写 effect。",
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "requirement_groups": [
+        "U03",
+        "U08"
+      ],
+      "acceptance": "6.3/6.4 当前 build 能力证据；调用者 declared_effect 不能自行取得只读权限；未知能力准确报告。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "actual_6.3_and_6.4_API_or_SDK_metadata"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01",
+        "T02"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T15",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T16",
+      "group": "G3",
+      "task": "打通目标版本的本地官方帮助/示例/错误检索，与自省结果互相指向；为无 wrapper 动作提供实际可用回退路线。",
+      "depends_on": [
+        "T15"
+      ],
+      "requirement_groups": [
+        "U03"
+      ],
+      "acceptance": "Agent 能找到一个不熟悉的合法 API 并解释参数来源；缺文档/权限如实说明，不捏造内部 feature。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "actual_6.3_and_6.4_API_or_SDK_metadata"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T15"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T16",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T19",
+      "group": "G3",
+      "task": "将一次项目级授权、文件/计算预算、失效条件与模型绑定统一到领域、通用 API、Java 路线。",
+      "depends_on": [
+        "T10.d",
+        "T15",
+        "T17"
+      ],
+      "requirement_groups": [
+        "U04",
+        "U08"
+      ],
+      "acceptance": "授权范围内批量 setter 可持续执行；扩大权限与错误资源被拒绝；trusted Java 的实际主机权限边界如实说明。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G3.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 软件前置改用已完成的T10.d；T10父项的冻结原生尝试不阻止独立实现，但本项真实模型/原生验收仍须独立证据与当前授权。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T10",
+        "T15",
+        "T17"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T19",
+      "children": [
+        "T19.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "previous_pack_depends_on": [
+        "T10",
+        "T15",
+        "T17"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T20",
+      "group": "G4",
+      "task": "补齐参数/变量/函数、表达式验证、描述/单位、插值数据与作用域的通用操作。",
+      "depends_on": [
+        "T12",
+        "T16",
+        "T17"
+      ],
+      "requirement_groups": [
+        "U05"
+      ],
+      "acceptance": "任意合理名称和不同 component 下操作/回读/求值成功；不把原样本变量写死到核心。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T12",
+        "T16",
+        "T17"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T20",
+      "children": [
+        "T20.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T21",
+      "group": "G4",
+      "task": "补齐几何/CAD、坐标系、配对、耦合算子的目录路线，按许可探测 1D/2D/轴对称/3D 与嵌套几何。",
+      "depends_on": [
+        "T11",
+        "T14",
+        "T16",
+        "T17"
+      ],
+      "requirement_groups": [
+        "U02",
+        "U05"
+      ],
+      "acceptance": "所需动作有实际路径；源/目标、实体维数、变换与许可边界可读回；只改指定对象。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T11",
+        "T14",
+        "T16",
+        "T17"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T21",
+      "children": [
+        "T21.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T22",
+      "group": "G4",
+      "task": "补齐材料/属性组、函数/张量与物理/feature/subfeature/多物理/PDE 路线，支持初值、边界条件与选择。",
+      "depends_on": [
+        "T14",
+        "T20",
+        "T21"
+      ],
+      "requirement_groups": [
+        "U05"
+      ],
+      "acceptance": "至少一条非旧任务限定的完整建模路径；变量名和合法 feature 由真实接口决定。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T14",
+        "T20",
+        "T21"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T22",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T23",
+      "group": "G4",
+      "task": "补齐网格、Study、Solver 的深层配置和执行，保持已有 solver，支持目录承诺的时间/频率/特征值与解复用路线。",
+      "depends_on": [
+        "T21",
+        "T22"
+      ],
+      "requirement_groups": [
+        "U05",
+        "U07"
+      ],
+      "acceptance": "实际网格/求解状态、警告和解身份；初始化成功、有解、计算失败区分；选择/维数不硬编码。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T21",
+        "T22"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T23",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T24",
+      "group": "G4",
+      "task": "完成可配置扫描/DOE/优化路线的参数、指标、预算、缓存、重试和停止；缓存按真实输入/模型/版本失效。",
+      "depends_on": [
+        "T20",
+        "T23"
+      ],
+      "requirement_groups": [
+        "U05",
+        "U07"
+      ],
+      "acceptance": "小型多 case 真实执行与预算停止；未许可原生优化不冒称已许可，可明确使用约定外部算法路线。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T20",
+        "T23"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T24",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T25",
+      "group": "G4",
+      "task": "完成通用阶段状态传递：source solution/dataset、实际时间/参数索引、变量/坐标映射、插值与误差记录。",
+      "depends_on": [
+        "T23",
+        "T24"
+      ],
+      "requirement_groups": [
+        "U05",
+        "U09"
+      ],
+      "acceptance": "一个非固定胶水任务的两阶段状态传递与回读；不通过固定温度/公式替代引擎状态。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G4.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T23",
+        "T24"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T25",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T26",
+      "group": "G5",
+      "task": "补齐 dataset、切点/线/面/join、表格/probe 的建立与读取，保留真实数据集和解引用。",
+      "depends_on": [
+        "T11",
+        "T23"
+      ],
+      "requirement_groups": [
+        "U06",
+        "U08"
+      ],
+      "acceptance": "相关目录动作有可执行路径，求值不误删用户原 numerical/table 节点。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T11",
+        "T23"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T26",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T27",
+      "group": "G5",
+      "task": "保持多表达式、复数、数组/矩阵、outer/inner、实际时间/频率/参数、坐标和单位元数据完整。",
+      "depends_on": [
+        "T26"
+      ],
+      "requirement_groups": [
+        "U06"
+      ],
+      "acceptance": "非旧表达式名与复场、多解轴的真实返回；不能猜第一项、只取实部或默默改单位。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T26"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T27",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T28",
+      "group": "G5",
+      "task": "完成积分、平均、极值等测度语义及默认单位回读，覆盖实际实体维数与轴对称权重。",
+      "depends_on": [
+        "T14",
+        "T26",
+        "T27"
+      ],
+      "requirement_groups": [
+        "U06",
+        "U09"
+      ],
+      "acceptance": "小型解析参照和必要负控；不把节点平均当面积/体积平均，不重复径向权重。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T14",
+        "T26",
+        "T27"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T28",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T29",
+      "group": "G5",
+      "task": "完成图组、view/camera 及目录中的导出路线，图像/资源经 MCP 取得并关联同一存储解。",
+      "depends_on": [
+        "T26",
+        "T27"
+      ],
+      "requirement_groups": [
+        "U06"
+      ],
+      "acceptance": "真实引擎图像、数据与 revision/solution/参数一致；text-only Host 有明确资源/数据替代。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G5.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T26",
+        "T27"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T29",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T31",
+      "group": "G6",
+      "task": "统一持久 job、operation/idempotency、model revision/checkpoint 关系，重复请求不重复执行。",
+      "depends_on": [
+        "T10.d",
+        "T19"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "acceptance": "重复提交/查询有同一已记录作业；无第二次模型写入；状态来源唯一。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 软件前置改用已完成的T10.d；T10父项的冻结原生尝试不阻止独立实现，但本项真实模型/原生验收仍须独立证据与当前授权。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T10",
+        "T19"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T31",
+      "children": [
+        "T31.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "previous_pack_depends_on": [
+        "T10",
+        "T19"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T32",
+      "group": "G6",
+      "task": "将同 Server 引擎访问串行化，分离控制面状态查询与真实模型调用，长任务期间保持可响应。",
+      "depends_on": [
+        "T31"
+      ],
+      "requirement_groups": [
+        "U07"
+      ],
+      "acceptance": "长任务期间查询/日志可响应，冲突引擎调用排队；不以伪只读绕开锁。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T31"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T32",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T33",
+      "group": "G6",
+      "task": "完成 Host 失联、控制重启、超时、Worker 异常后的恢复/协调，按资源隔离 UNKNOWN。",
+      "depends_on": [
+        "T31",
+        "T32"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U09"
+      ],
+      "acceptance": "查询原 job 不重放；无关新资源可继续；未知不被自动改写为成功/取消。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T31",
+        "T32"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T33",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T34",
+      "group": "G6",
+      "task": "明确 cancel requested、已证实停止、无法取消的语义，停止与清理限于有真实所有权的资源。",
+      "depends_on": [
+        "T32",
+        "T33"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "acceptance": "支持路径上的真停止证据；共享实例和其他版本/用户模型保留；不按陈旧 PID 清理。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T32",
+        "T33"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T34",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T35",
+      "group": "G6",
+      "task": "完成有界日志/分页/轮转与终态保留，将 trace/logger 故障和引擎故障分开。",
+      "depends_on": [
+        "T31"
+      ],
+      "requirement_groups": [
+        "U07",
+        "U08"
+      ],
+      "acceptance": "超过普通日志长度后内存有界、可读主要证据且终态可记录；不靠持续提高常量宣布解决。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G6.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。最新账本已为RUNNING；有界writer、reader和fallback已有范围内整合证据，继续处理实际未证边界，不能将引用数量计为通过数。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T31"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T35",
+      "children": [
+        "T35.a",
+        "T35.b"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T36",
+      "group": "G7",
+      "task": "对模型/依赖/报告/代码入口统一项目根、私有路径、链接、typed 边界与授权检查。",
+      "depends_on": [
+        "T19"
+      ],
+      "requirement_groups": [
+        "U08"
+      ],
+      "acceptance": "各实际入口受同一边界约束；直接越界与非目标数据修改被拒绝，正常授权路径可用。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T19"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T36",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T37",
+      "group": "G7",
+      "task": "完成安全保存/覆盖策略/原子产物发布；失败、部分写入和空间不足不能损坏现有正式数据。",
+      "depends_on": [
+        "T36"
+      ],
+      "requirement_groups": [
+        "U08",
+        "U09"
+      ],
+      "acceptance": "代表性失败留下可解释状态且旧数据仍可读；覆盖仅在项目策略允许时发生。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T36"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T37",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "preparation_scope_before_integration_dependencies": "在新隔离软件环境中分析并修复已发现overwrite/rollback和发布根绑定问题；不访问真实旧产物或冻结资源。最终整合仍遵守T36/T19依赖。",
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T38",
+      "group": "G7",
+      "task": "打包可迁移项目清单：模型、项目代码、依赖/数据、参数/假设、原始数值、图像、日志和来源。",
+      "depends_on": [
+        "T27",
+        "T29",
+        "T37"
+      ],
+      "requirement_groups": [
+        "U09",
+        "U12"
+      ],
+      "acceptance": "清单引用真实存在的文件及准确 hash/版本/身份；不分发 COMSOL 商业库、许可证或秘密。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T27",
+        "T29",
+        "T37"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T38",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "preparation_scope_before_integration_dependencies": "静态梳理package root→scratch→Worker输出→依赖读取→发布→登记的实际路径，准备最小通用修复；真实Worker和发布验收仍依赖对应权限与实现。",
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T39",
+      "group": "G7",
+      "task": "在新目录、新 Worker、同版本重开项目/存储解，检查外部依赖解析与结果语义。",
+      "depends_on": [
+        "T38",
+        "T33"
+      ],
+      "requirement_groups": [
+        "U09"
+      ],
+      "acceptance": "已验证路径之外的适用恢复证据；不要求已跳过机器，不承诺 6.4→6.3 无损降版。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T38",
+        "T33"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T39",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T40",
+      "group": "G7",
+      "task": "完成 checkpoint/diff/recovery 的真实语义及失败后继续操作，说明不能回滚的外部文件/GUI 副作用。",
+      "depends_on": [
+        "T31",
+        "T37",
+        "T39"
+      ],
+      "requirement_groups": [
+        "U08",
+        "U09"
+      ],
+      "acceptance": "受影响对象可正确恢复/报告部分恢复；不能把有限 checkpoint 称作全局 ACID。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G7.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "one_or_more_applicable_active_native_targets_as_required_by_scope"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W3",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T31",
+        "T37",
+        "T39"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T40",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T42.a",
+      "parent_id": "T42",
+      "priority_wave": "W4",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "从当前需要的稳定候选构建并核对三架构发行物，继承R22及更早构件的准确历史范围。",
+      "depends_on": [
+        "T01.a",
+        "T10.d",
+        "T30.c",
+        "T41"
+      ],
+      "acceptance": "R22基于03e249d，当前固定源是7cc3183；旧离线包不能自动资格覆盖当前源。仅按实际源码差异与下一验证需求重建，不为文档变化机械重打全矩阵。",
+      "scope_notes": [
+        "有早期W2临时构件时不因此认定最终发行完成；避免每个文档/测试补丁重打全部矩阵。"
+      ],
+      "record_type": "refinement",
+      "group": "G8",
+      "requirement_groups": [
+        "U10",
+        "U12"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_task": "稳定候选后统一构建三架构发行物，并核对依赖文件及应纳入但未跟踪的源码。",
+      "prior_pack_acceptance": "源码到wheel/bundle身份一致，必要模块完整；可从新目录安装；旧434fd502等provisional材料保留原范围。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T42.a"
+    },
+    {
+      "id": "T43.a",
+      "parent_id": "T43",
+      "priority_wave": "W4",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "承接Windows离线安装与文件版本证据，修复公开入口剩余问题；冻结的win63元数据尝试保持隔离。",
+      "depends_on": [
+        "T42.a"
+      ],
+      "acceptance": "独立软件诊断可继续，但不能轮询/终止/清理旧SSH owner，不能换到win64 lane重放同一未知动作。正常公开MCP及各目标原生结果尚未建立；缺明确授权时只阻塞相关实际尝试。",
+      "scope_notes": [
+        "SSH访问曾由用户提供，但这不解除原win63 UNKNOWN和具体拒绝；本地SSH句柄不证明远端daemon所有权。",
+        "Windows版本各自保留target_check，允许独立软件准备；不能以换版本lane重放被冻结的具体动作。"
+      ],
+      "record_type": "refinement",
+      "group": "G8",
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T42.a"
+      ],
+      "prior_pack_task": "补齐 Windows 正常安装入口的生产路线、配置和可复制操作说明，为两个版本分别开展实际安装/正向调用做好准备。",
+      "prior_pack_acceptance": "生产入口的软件接入和所需构件齐备；Windows 6.3 和 6.4 的真实安装/正向调用分别记录在 T43 对应 target_check。该子项的 IMPLEMENTED 或 DONE 不替代两个 target_check，也不要求先等两个目标全部可用。",
+      "preparation_scope_before_integration_dependencies": "只做已知Windows公开入口/诊断缺口的软件修复与静态对照，不运行或替换旧冻结SSH/MCP owner。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T43.a"
+    },
+    {
+      "id": "T44.a",
+      "parent_id": "T44",
+      "priority_wave": "W4",
+      "planning_status": "WAIT_DEPENDENCIES",
+      "task": "归并并准备活跃目标的离线、升级回退、schema 迁移和卸载保护路线；各目标独立执行适用生命周期检查。",
+      "depends_on": [
+        "T42.a"
+      ],
+      "acceptance": "软件准备完成可为 IMPLEMENTED；各目标实际结果分别进入 T44 target_checks，全部适用目标完成才把此子项记 DONE。Mac 准备和实际检查无需等待 Windows。",
+      "scope_notes": [
+        "已跳过Intel原生硬件不恢复为门槛；三架构包责任保留。",
+        "测试不得指向受保护旧模型；已拒清理/卸载不能借新工作包重试。"
+      ],
+      "record_type": "refinement",
+      "group": "G8",
+      "requirement_groups": [
+        "U10"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T44.a"
+    },
+    {
+      "id": "T46.a",
+      "parent_id": "T46",
+      "priority_wave": "W4",
+      "planning_status": "WAIT_NATIVE_TARGET",
+      "task": "Windows x64 COMSOL6.3完整适用核心链。",
+      "depends_on": [
+        "T42.a",
+        "T23",
+        "T30.c",
+        "T33",
+        "T39",
+        "T45",
+        "T43.a"
+      ],
+      "acceptance": "当前候选公开MCP：修改/求解/数值图像/保存重开及适用生命周期证据；真实build与限制明确。",
+      "scope_notes": [],
+      "record_type": "refinement",
+      "group": "G8",
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10"
+      ],
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a",
+        "T42.a"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.3"
+      ],
+      "target_checks": [
+        "windows-x64-6.3"
+      ],
+      "records_target_check": "T46/windows-x64-6.3",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T46.a"
+    },
+    {
+      "id": "T46.b",
+      "parent_id": "T46",
+      "priority_wave": "W4",
+      "planning_status": "WAIT_NATIVE_TARGET",
+      "task": "Windows x64 COMSOL6.4完整适用核心链。",
+      "depends_on": [
+        "T42.a",
+        "T23",
+        "T30.c",
+        "T33",
+        "T39",
+        "T45",
+        "T43.a"
+      ],
+      "acceptance": "与6.3分开记录真实build/许可与执行证据；不能用一个环境的通过填另一行。",
+      "scope_notes": [],
+      "record_type": "refinement",
+      "group": "G8",
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10"
+      ],
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a",
+        "T42.a"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.4"
+      ],
+      "target_checks": [
+        "windows-x64-6.4"
+      ],
+      "records_target_check": "T46/windows-x64-6.4",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T46.b"
+    },
+    {
+      "id": "T46.c",
+      "parent_id": "T46",
+      "priority_wave": "W4",
+      "planning_status": "WAIT_NATIVE_TARGET",
+      "task": "macOS ARM64 COMSOL6.4完整适用核心链。",
+      "depends_on": [
+        "T42.a",
+        "T23",
+        "T30.c",
+        "T33",
+        "T39",
+        "T45"
+      ],
+      "acceptance": "继承W2无影响证据并补适用缺口；未做部分保持NOT_RUN/BLOCKED，不机械重跑整链。",
+      "scope_notes": [],
+      "record_type": "refinement",
+      "group": "G8",
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10"
+      ],
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a",
+        "T42.a"
+      ],
+      "target_checks": [
+        "macos-arm64-6.4"
+      ],
+      "records_target_check": "T46/macos-arm64-6.4",
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T46.c"
+    },
+    {
+      "id": "T42",
+      "group": "G8",
+      "task": "从同一规范候选构建 Windows x64、Mac ARM64、Mac Intel 的包、lock/wheelhouse、哈希/版本清单与离线预检。",
+      "depends_on": [
+        "T41"
+      ],
+      "requirement_groups": [
+        "U10",
+        "U12"
+      ],
+      "acceptance": "三架构软件构件完整、来源一致，离线模式不隐式下载；不把构件生成当所有机器原生通过。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W4",
+      "baseline_status": "IMPLEMENTED",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T41"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T42",
+      "children": [
+        "T42.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "IMPLEMENTED"
+    },
+    {
+      "id": "T43",
+      "group": "G8",
+      "task": "走 Windows 普通用户安装/启动路线，验证两个 COMSOL 版本发现与公共 MCP；修复所需普通路径阻断。",
+      "depends_on": [
+        "T04",
+        "T41",
+        "T42"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U10"
+      ],
+      "acceptance": "当前候选的正常 install + public MCP 证据；历史 0.1.10 安装与未知 0.1.16 transfer 不抵作当前通过；旧 UNKNOWN 资源保持隔离。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W4",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T04",
+        "T41",
+        "T42"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T43",
+      "children": [
+        "T43.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T44",
+      "group": "G8",
+      "task": "验证活跃目标上的离线安装、升级/回退、schema migration、卸载的数据保护；继承未受影响的 Mac 已接受软件证据。",
+      "depends_on": [
+        "T42"
+      ],
+      "requirement_groups": [
+        "U10"
+      ],
+      "acceptance": "当前候选适用生命周期记录；外部模型数据保留；不将 synthetic 数据检查升格为真实原生求解验收。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 各目标独立记进度，可先做可用目标；某目标阻塞不挡其他目标。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4",
+        "macos-arm64-6.4"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W4",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T42"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T44",
+      "children": [
+        "T44.a"
+      ],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T45",
+      "group": "G8",
+      "task": "完成声明支持范围内的 Desktop 绑定/显示/读取/必要迁移及权限错误，保持 API 工作流可用。",
+      "depends_on": [
+        "T10.d",
+        "T41",
+        "T04"
+      ],
+      "requirement_groups": [
+        "U10"
+      ],
+      "acceptance": "实际共享绑定或明确保存迁移证据；不宣称任意 standalone Desktop 内存可被无条件接管。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 各目标独立记进度，可先做可用目标；某目标阻塞不挡其他目标。 软件前置改用已完成的T10.d；T10父项的冻结原生尝试不阻止独立实现，但本项真实模型/原生验收仍须独立证据与当前授权。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4",
+        "macos-arm64-6.4"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W4",
+      "baseline_status": "RUNNING",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T10",
+        "T41",
+        "T04"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T45",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a"
+      ],
+      "previous_pack_depends_on": [
+        "T10",
+        "T41",
+        "T04"
+      ],
+      "prior_pack_baseline_status": "RUNNING"
+    },
+    {
+      "id": "T46",
+      "group": "G8",
+      "task": "在 Win x64 6.3、Win x64 6.4、Mac ARM64 6.4 分别执行适用核心链及受影响回归，记录真实 build/构件/解。",
+      "depends_on": [
+        "T23",
+        "T30",
+        "T33",
+        "T39",
+        "T42",
+        "T45"
+      ],
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10"
+      ],
+      "acceptance": "三个活跃 native 行各有真实运行范围；组验收与单条成功分开；required 行 BLOCKED 时保持未完成。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G8.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 各目标独立记进度，可先做可用目标；某目标阻塞不挡其他目标。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "target_checks": [
+        "windows-x64-6.3",
+        "windows-x64-6.4",
+        "macos-arm64-6.4"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W4",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T23",
+        "T30",
+        "T33",
+        "T39",
+        "T42",
+        "T45"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T46",
+      "children": [
+        "T46.a",
+        "T46.b",
+        "T46.c"
+      ],
+      "finished_dependencies": [
+        "T01.a",
+        "T46.a",
+        "T46.b",
+        "T46.c"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T50.a",
+      "parent_id": "T50",
+      "priority_wave": "W5",
+      "planning_status": "WAIT_FINAL_CANDIDATE",
+      "task": "独立Reviewer按冻结合同统一验收，检查当前候选的原始证据可取性、scope与实际来源。",
+      "depends_on": [
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45",
+        "T46"
+      ],
+      "acceptance": "独立 Reviewer 对全 12 组逐项作有范围的接受/拒绝判定，核对当前候选的两族×两 Windows 版本和全部适用目标证据。完成报告可记本审查步骤 DONE，即使 verdict=NEEDS_FIX；只有 T51 复审批准后才可能整体通过。",
+      "scope_notes": [
+        "旧大量局部SCOPED ACCEPT不能代替最终独立审查；Reviewer不可新增科学终点/平台/无限安全测试门槛。",
+        "仅公开摘要且原始证据已丢失的结论标清范围；不得伪造原始日志。"
+      ],
+      "record_type": "refinement",
+      "group": "G9",
+      "requirement_groups": [
+        "U12"
+      ],
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "父项是原始合同；本项细化当前缺口，不新增 U01–U12 之外的发布门槛。完成后继续可执行任务，不自动关闭父项或整体。",
+      "finished_dependencies": [
+        "T01.a",
+        "T46.a",
+        "T46.b",
+        "T46.c",
+        "T49"
+      ],
+      "attempt_dependencies": [
+        "T48"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.3",
+        "T43/windows-x64-6.4",
+        "T44/windows-x64-6.3",
+        "T44/windows-x64-6.4",
+        "T44/macos-arm64-6.4",
+        "T45/windows-x64-6.3",
+        "T45/windows-x64-6.4",
+        "T45/macos-arm64-6.4",
+        "T46/windows-x64-6.3",
+        "T46/windows-x64-6.4",
+        "T46/macos-arm64-6.4"
+      ],
+      "prior_pack_baseline_status": null,
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T50.a"
+    },
+    {
+      "id": "T47",
+      "group": "G9",
+      "task": "冻结生产代码/构件候选，由独立 Reviewer 选定两类小型、有限预算的未预设任务。",
+      "depends_on": [
+        "T03",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45"
+      ],
+      "requirement_groups": [
+        "U11"
+      ],
+      "acceptance": "至少一类为旧案例之外接口或通用方程，至少一类从陌生已有模型开始；事先定义输出与负控；两类总数保持有限。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 候选冻结前生产实现、T43 两个 Windows 正常安装行及 T46 两个 Windows 核心原生行完成；不等待 Mac 原生或全部生命周期/Desktop 验收，后者仍是最终全局验收义务。之后改代码则按影响重冻/补验。 生产代码先冻结，Reviewer 再选两族；只由两 Windows 版本的四项实际安装/核心链 check 开启迁移测试，不等待 Mac 行完成。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.3",
+        "T43/windows-x64-6.4",
+        "T46/windows-x64-6.3",
+        "T46/windows-x64-6.4"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W5",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T03",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T47",
+      "children": [],
+      "finished_dependencies": [
+        "T01.a",
+        "T03.a",
+        "T09",
+        "T42.a"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T48",
+      "group": "G9",
+      "task": "仅用已安装 MCP、实际文档、项目数据/Java，在 Windows 6.3 和 6.4 分别执行两类任务与负控。",
+      "depends_on": [
+        "T47"
+      ],
+      "requirement_groups": [
+        "U11"
+      ],
+      "acceptance": "两个 Windows 版本 × 两个任务族，共四个组合的真实操作/结果；不改服务端、Worker、allowlist 或安装文件；不能用两个铜块改参数冒充两族。",
+      "can_implement_without_native": false,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 真正执行后才能置 execution_complete=true；失败保留 RUNNING/BLOCKED 和原始结果，可进入 T49，不伪写 DONE。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W5",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T47"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T48",
+      "children": [],
+      "finished_dependencies": [
+        "T47"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T49",
+      "group": "G9",
+      "task": "若迁移发现核心缺陷，主 Agent 修通用语义并冻结新候选；Reviewer 对受影响范围及同难度等价变体复测。",
+      "depends_on": [
+        "T47"
+      ],
+      "requirement_groups": [
+        "U11",
+        "U12"
+      ],
+      "acceptance": "T48 无核心缺陷时，引用四组合真实通过证据记 NOT_APPLICABLE；有缺陷时作通用修复，冻结新候选，由 Reviewer 对受影响组合和同难度等价变体复测。DONE 须覆盖最终候选的两族×两版本四组合通过；旧候选无影响证据可有理由继承。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 T48 有实际成功/失败结果并记 execution_complete=true 后即可进入；失败时 T48 保持未验收，不要求先通过才能修复。若 T48 无缺陷，记录 NOT_APPLICABLE + NO_FIX_NEEDED；不人为制造新测试阶段。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "attempt_dependencies": [
+        "T48"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W5",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T47"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T49",
+      "children": [],
+      "finished_dependencies": [
+        "T47"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T50",
+      "group": "G9",
+      "task": "独立 Reviewer 审查 U01–U12 覆盖、实际调用证据、来源/构件、平台与原测试子断言，独立运行关键负控。",
+      "depends_on": [
+        "T03",
+        "T46"
+      ],
+      "requirement_groups": [
+        "U12"
+      ],
+      "acceptance": "有真实独立审查报告与明确接受/拒绝理由；不可仅复述主 Agent 总结；新非阻断建议进 BACKLOG。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W5",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T03",
+        "T46",
+        "T48",
+        "T49"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T50",
+      "children": [
+        "T50.a"
+      ],
+      "finished_dependencies": [
+        "T01.a",
+        "T49",
+        "T50.a"
+      ],
+      "attempt_dependencies": [
+        "T48"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.3",
+        "T43/windows-x64-6.4",
+        "T44/windows-x64-6.3",
+        "T44/windows-x64-6.4",
+        "T44/macos-arm64-6.4",
+        "T45/windows-x64-6.3",
+        "T45/windows-x64-6.4",
+        "T45/macos-arm64-6.4",
+        "T46/windows-x64-6.3",
+        "T46/windows-x64-6.4",
+        "T46/macos-arm64-6.4"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T51",
+      "group": "G9",
+      "task": "主 Agent 修复本轮 required 缺口与阻断问题，由 Reviewer 复审受影响部分；保留已通过无影响证据。",
+      "depends_on": [],
+      "requirement_groups": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10",
+        "U11",
+        "U12"
+      ],
+      "acceptance": "主 Agent 修复统一审查中阻断冻结合同的发现；独立 Reviewer 对受影响部分复查并给出明确最终批准。无阻断也须记录独立结论。步骤 DONE 不由主 Agent 代签 Reviewer；未满足 required 不得以降级/删测试/扩大 skip 关闭。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 若 T50 无阻断缺陷，记录 DONE + NO_BLOCKING_FINDINGS；不得代写 Reviewer 通过。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W5",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T50"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T51",
+      "children": [],
+      "finished_dependencies": [
+        "T50"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    },
+    {
+      "id": "T52",
+      "group": "G9",
+      "task": "生成最终安装/恢复交付与简洁下一步说明，锁定实际批准候选，汇总全部 required 与残余外部阻塞/可选专项。",
+      "depends_on": [],
+      "requirement_groups": [
+        "U12"
+      ],
+      "acceptance": "仅全部 required 及活跃目标满足且独立批准时标 UNIVERSAL_CORE_VERIFIED_SCOPED；否则标 WAITING_EXTERNAL 并给出最小解阻条件，绝不称全部完成。",
+      "can_implement_without_native": true,
+      "evidence_bundle": "docs/universal_mcp_execution/evidence/full/G9.json",
+      "note": "先继承已有适用实现/证据，只补真实缺口；本条是执行步骤，不是新增发布门槛。 全部 required 真满足才关闭成功；阻塞交付可先做，但不能把整体状态标为完成。 最终检查还须核验 Reviewer 的 ACCEPT 及证据所指实际候选，导航工具不计算产品通过。若仅外部阻塞残留，可提前生成阻塞交接，但不将 T52/整体标成成功。创建交付文件不包含未经要求的远端发布。",
+      "validation_resources": [
+        "see_task_acceptance"
+      ],
+      "record_type": "original_parent",
+      "priority_wave": "W5",
+      "baseline_status": "TODO",
+      "baseline_scope": "Latest public task ledger observation, not proof of this new session environment or current full-product acceptance.",
+      "original_depends_on": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45",
+        "T46",
+        "T47",
+        "T48",
+        "T49",
+        "T50",
+        "T51"
+      ],
+      "progress_source": "references/CURRENT_20261123.json#/tasks/T52",
+      "children": [],
+      "finished_dependencies": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T23",
+        "T24",
+        "T25",
+        "T26",
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T34",
+        "T35",
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45",
+        "T46",
+        "T47",
+        "T49",
+        "T50",
+        "T51",
+        "T01.a",
+        "T03.a",
+        "T10.a",
+        "T10.b",
+        "T10.c",
+        "T10.d",
+        "T30.a",
+        "T30.b",
+        "T30.c",
+        "T05.a",
+        "T07.a",
+        "T07.b",
+        "T08.a",
+        "T08.b",
+        "T19.a",
+        "T20.a",
+        "T21.a",
+        "T31.a",
+        "T35.a",
+        "T35.b",
+        "T42.a",
+        "T43.a",
+        "T44.a",
+        "T46.a",
+        "T46.b",
+        "T46.c",
+        "T50.a"
+      ],
+      "attempt_dependencies": [
+        "T48"
+      ],
+      "validation_check_dependencies": [
+        "T43/windows-x64-6.3",
+        "T43/windows-x64-6.4",
+        "T44/windows-x64-6.3",
+        "T44/windows-x64-6.4",
+        "T44/macos-arm64-6.4",
+        "T45/windows-x64-6.3",
+        "T45/windows-x64-6.4",
+        "T45/macos-arm64-6.4",
+        "T46/windows-x64-6.3",
+        "T46/windows-x64-6.4",
+        "T46/macos-arm64-6.4"
+      ],
+      "prior_pack_baseline_status": "TODO"
+    }
+  ]
+}

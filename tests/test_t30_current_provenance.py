@@ -79,6 +79,18 @@ def test_registered_observation_requires_matching_project_model_and_solution(tmp
         assert accepted["observation_origin"] == "REGISTERED_W17"
         assert accepted["model_validated"] is True
 
+        # A requested range must not be silently skipped just because its
+        # bounds are malformed: these are real, registered model samples.
+        invalid_range = validate(criteria={"range": [0.0]})
+        assert invalid_range["checks"]["range"] is False
+        assert invalid_range["numerical_verification_status"] != "PASS"
+        assert invalid_range["model_validated"] is False
+
+        outside_range = validate(criteria={"range": [0.0, 299.0]})
+        assert outside_range["checks"]["range"] is False
+        assert outside_range["numerical_verification_status"] == "FAIL"
+        assert outside_range["model_validated"] is False
+
         wrong_project = validate(project_id="project-b")
         assert wrong_project["scope"] == "PROJECT_IDENTITY_MISMATCH"
         assert wrong_project["model_validated"] is False
