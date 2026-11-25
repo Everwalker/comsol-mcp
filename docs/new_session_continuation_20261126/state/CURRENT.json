@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "检查 T37 现有原子保存暂存路径的实际竞态与可复用目录绑定，继续等待本地 Qwen 的启动入口和报告隔离结论。",
+  "next_action": "继续分析 T37 暂存文件验证与发布之间的换名竞态；等待本地 Qwen 返回启动入口和报告隔离分析。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -395,11 +395,13 @@
       "evidence_refs": [
         "references/CURRENT_20261123.json#/tasks/T37",
         "comsol_mcp/_artifact_store.py",
-        "tests/test_t37_scoped_migration.py"
+        "tests/test_t37_scoped_migration.py",
+        "comsol_mcp/_atomic_save.py",
+        "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Overwrite error truthfulness improved; race, rollback, and native/target acceptance remain open."
+      "session_scope_note": "Observed symlink candidate refused; rename race, overwrite/rollback and native acceptance remain open."
     },
     "T38": {
       "status": "RUNNING",
@@ -680,10 +682,13 @@
       "implementation_done": true,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T08.a"
+        "references/CURRENT_20261123.json#/tasks/T08.a",
+        "comsol_mcp/_atomic_save.py",
+        "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Observed symlink candidate refused; rename race, overwrite/rollback and native acceptance remain open."
     },
     "T08.b": {
       "status": "TODO",
@@ -1065,6 +1070,19 @@
       "verification_command": ".venv/bin/python -m pytest -q tests/test_mcp_gateway.py::test_stdio_job_readers_use_file_store_and_project_scope tests/test_t35_bounded_status_wait_20261123.py::test_oversized_status_and_wait_skip_result_decode_and_result_is_chunked tests/test_t35_bounded_status_wait_20261123.py::test_other_inspect_granted_project_cannot_probe_or_read_a_job",
       "verification_result": "3 passed in 0.87s; event/result byte pagination and digest, solver log, terminal status, cross-project denial and invalid field",
       "remaining": "No separate control process or authenticated RPC in this test; no native engine, true process RSS bound, Python 3.10 target, or complete T35 acceptance established."
+    },
+    {
+      "id": "20261126-T08-staging-symlink",
+      "scope": "T08.a / T37 scoped synthetic-file correction on macOS",
+      "base_commit": "edc2d861b71941cb2023219c45d74faf262a3e90",
+      "finding": "A callback-provided symlink to a valid external MPH was accepted and published as a verified checkpoint.",
+      "changes": [
+        "comsol_mcp/_atomic_save.py: require the observed callback candidate to be a regular file before ZIP verification",
+        "tests/test_atomic_save.py: external-symlink negative control and unchanged external file"
+      ],
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_atomic_save.py tests/test_t08_atomic_publish_outcomes_parent_20261109.py tests/test_t08_atomic_publish_candidate_controls_20261109.py tests/test_t08_parent_observation_f1_20261109.py tests/test_t08_publication_remediation_independent_20261109.py",
+      "verification_result": "43 passed in 0.37s; local synthetic files, no COMSOL",
+      "remaining": "A same-UID rename/symlink swap between lstat, verification, and publish remains possible; overwrite rollback and native/Windows acceptance remain open. This check does not establish race-free containment."
     }
   ]
 }

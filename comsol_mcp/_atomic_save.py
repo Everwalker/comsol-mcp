@@ -321,6 +321,8 @@ def atomic_save(
     try:
         if _observed_presence(temporary_path) is False:
             raise ValueError("save callback did not create its requested candidate file")
+        if not stat.S_ISREG(temporary_path.lstat().st_mode):
+            raise ValueError("save callback candidate is not a regular file")
         _validate_mph_zip(temporary_path)
         _fsync_file(temporary_path)
         size = temporary_path.stat().st_size

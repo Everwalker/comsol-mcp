@@ -40,6 +40,23 @@ def test_valid_mph_zip_may_contain_an_empty_optional_member(tmp_path: Path):
     assert result["checkpoint"]["verified"] is True
 
 
+def test_callback_symlink_is_not_published_as_a_verified_checkpoint(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    external = tmp_path / "external.mph"
+    write_mph(external, b"external data")
+    original = external.read_bytes()
+    destination = project / "model.mph"
+
+    with pytest.raises(AtomicSaveError) as raised:
+        atomic_save(destination, lambda temp: temp.symlink_to(external), project, overwrite=False)
+
+    assert raised.value.stage == "verification"
+    assert raised.value.publication_status == "not_attempted"
+    assert not destination.exists()
+    assert external.read_bytes() == original
+
+
 def test_callback_failure_preserves_existing_checkpoint_and_keeps_partial_evidence(tmp_path: Path):
     destination = tmp_path / "model.mph"
     write_mph(destination, b"old")
