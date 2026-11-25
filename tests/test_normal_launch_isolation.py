@@ -8,7 +8,7 @@ import types
 
 import pytest
 
-import test_full_project_release as existing_release_tests
+from tests import test_full_project_release as existing_release_tests
 
 release = existing_release_tests.release
 

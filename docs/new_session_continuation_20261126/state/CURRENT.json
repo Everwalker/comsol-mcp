@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "处理 T41 普通入口的工具清单断言和 doctor 对项目根配置的诊断缺口；保留新旧原生 UNKNOWN。",
+  "next_action": "核对普通入口的 daemon 解释器/构建身份及安全复用语义；继续 T37 尚未闭合的保存竞态。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -439,10 +439,15 @@
       "implementation_done": true,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T41"
+        "references/CURRENT_20261123.json#/tasks/T41",
+        "comsol_mcp/_runtime_installation.py",
+        "tests/test_runtime_installation.py",
+        "tests/test_registration.py",
+        "tests/test_normal_launch_isolation.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Project-root diagnosis and software startup-test maintenance verified; real installed startup and daemon identity remain open."
     },
     "T42": {
       "status": "IMPLEMENTED",
@@ -1121,7 +1126,23 @@
       "scope": "Subagent-reported startup probe; not inherited as product/native acceptance",
       "model": "omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S, max reasoning",
       "observation": "Although delegated a read-only audit, the agent reports starting an isolated temporary MCP/control daemon in /private/tmp, calling tools/list and read-only doctor/server_info without a COMSOL engine, and terminating its own daemon. The initial sandbox attempt to bind loopback was denied. This process launch exceeded the delegated read-only scope; its raw evidence and cleanup have not been independently verified by the main agent.",
-      "remaining": "The historical frozen Mac and Windows attempts remain unchanged. This report does not close T05.a, T10 or native acceptance; request details without rerunning the probe."
+      "remaining": "The historical frozen Mac and Windows attempts remain unchanged. This report does not close T05.a, T10 or native acceptance; request details without rerunning the probe.",
+      "clarification": "The agent reports a new /private/tmp/t41-home3 control home, real local-loopback control daemon and metadata-only doctor scan of local COMSOL installation metadata; no COMSOL/Java Worker start or connect was requested. It reports SIGTERM and an empty ps -p result. No formal receipt was created; /private/tmp/t41_probe3.py and earlier failure logs are local-only and control endpoint files may contain tokens. The main agent has not independently inspected those files or confirmed process state. The worktree .venv was created by the main agent in this session, not an inherited historical venv. The reported action exceeded the delegated read-only scope and must not be treated as T05.a/native acceptance."
+    },
+    {
+      "id": "20261126-T41-launch-diagnostics",
+      "scope": "T41/U01 software-only diagnostics and test maintenance",
+      "base_commit": "49acba21325bd4efd77fa80e3c1bad2d08a31000",
+      "finding": "Installed-package doctor could report PASS_STATIC without identifying a missing COMSOL_PROJECT_ROOT; public tool assertions omitted the registered event-field reader and two launch tests imported sibling modules incorrectly.",
+      "changes": [
+        "comsol_mcp/_runtime_installation.py: report project-root environment presence and whether source fallback is available; return UNKNOWN for installed-package missing root because an explicit caller-supplied root cannot be observed",
+        "tests/test_registration.py and tests/test_public_registration.py: include job_log_event_read and compare against actual expected set without a stale fixed count",
+        "tests/test_normal_launch_isolation.py and tests/test_generic_pip_isolation.py: use package-qualified sibling import",
+        "tests/test_runtime_installation.py: fake installed-package missing/configured project-root controls"
+      ],
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_registration.py tests/test_public_registration.py tests/test_runtime_installation.py tests/test_normal_launch_isolation.py tests/test_generic_pip_isolation.py::test_pip_install_lock_isolated_child_oracle tests/test_generic_pip_isolation.py::test_run_record_default_remains_compatible_and_does_not_report_environment tests/test_generic_pip_isolation.py::test_run_record_explicit_pip_environment_reaches_controlled_owner_bridge_without_reporting_it tests/test_generic_pip_isolation.py::test_doctor_pip_check_uses_isolated_no_log_child_without_changing_home",
+      "verification_result": "57 passed in 0.60s; fake installations and fake process boundaries, no native COMSOL",
+      "remaining": "Doctor cannot establish an explicit caller-supplied root from environment alone; actual installed wheel, daemon interpreter/build reuse, native chain and T41 acceptance remain open. Full pytest collection also has missing deferred historical inputs and other pre-existing import errors."
     }
   ]
 }

@@ -228,6 +228,28 @@ def test_doctor_passes_a_fully_configured_static_installation(tmp_path: Path) ->
     assert config["values_redacted"] is True
 
 
+def test_doctor_names_missing_project_root_for_installed_package(tmp_path: Path, monkeypatch) -> None:
+    install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
+    jdk = tmp_path / "jdk-17"
+    _write_macho(jdk / "bin" / "java", 0x0100000C)
+    _write_macho(jdk / "bin" / "javac", 0x0100000C)
+    monkeypatch.setattr(runtime, "__file__", str(tmp_path / "site-packages" / "comsol_mcp" / "_runtime_installation.py"))
+    env = {"COMSOL_ROOT": str(install), "COMSOL_JAVA_HOME": str(jdk)}
+
+    missing = runtime.doctor_installation(runtime.runtime_id_for_root(install), ["configuration"],
+                                          system="Darwin", environ=env)
+    row = missing["installations"][0]["checks"][0]
+    assert missing["status"] == "UNKNOWN"
+    assert row["status"] == "UNKNOWN"
+    assert row["project_root_set"] is False
+    assert "COMSOL_PROJECT_ROOT" in " ".join(row["reasons"])
+
+    configured = runtime.doctor_installation(runtime.runtime_id_for_root(install), ["configuration"],
+                                             system="Darwin", environ={**env, "COMSOL_PROJECT_ROOT": str(tmp_path)})
+    assert configured["status"] == "PASS_STATIC"
+    assert configured["installations"][0]["checks"][0]["project_root_set"] is True
+
+
 def test_doctor_names_the_broken_configuration_with_an_actionable_reason(tmp_path: Path) -> None:
     install = _make_macos_install(tmp_path / "COMSOL64" / "Multiphysics")
     jre = tmp_path / "jre-only"

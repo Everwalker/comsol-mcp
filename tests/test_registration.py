@@ -57,6 +57,7 @@ EXPECTED_TOOLS = [
     "model_adopt",
     "job_status",
     "job_log",
+    "job_log_event_read",
     "job_result",
     "job_result_read",
     "job_reconcile",

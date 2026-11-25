@@ -7,7 +7,7 @@ from mcp.server import Server
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from comsol_mcp.mcp_server import build_mcp_protocol_server
-from test_registration import EXPECTED_TOOLS
+from tests.test_registration import EXPECTED_TOOLS
 
 
 class ActualPublicRegistration(unittest.IsolatedAsyncioTestCase):
@@ -18,7 +18,7 @@ class ActualPublicRegistration(unittest.IsolatedAsyncioTestCase):
             tools = {tool.name: tool for tool in (await client.list_tools()).tools}
 
         self.assertEqual(set(tools), set(EXPECTED_TOOLS))
-        self.assertEqual(len(tools), 113)
+        self.assertEqual(len(tools), len(EXPECTED_TOOLS))
         for public_name in ("plot.render", "plot_render"):
             schema = tools[public_name].inputSchema
             self.assertEqual(set(schema["properties"]), {"execution", "options", "path", "solution"})

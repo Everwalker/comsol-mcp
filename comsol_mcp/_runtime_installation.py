@@ -481,7 +481,8 @@ def _configuration_check(env: Mapping[str, str], target: str) -> dict[str, Any]:
     RUNTIME_CONFIGURATION_REQUIRED unless COMSOL_ROOT and COMSOL_JAVA_HOME
     (or JAVA_HOME) are set; a half-configured environment is therefore
     INVALID and names the missing variable, while a wholly unset environment
-    stays NOT_CONFIGURED.
+    stays NOT_CONFIGURED. An installed package also needs COMSOL_PROJECT_ROOT
+    for the ordinary launcher unless its caller supplies an explicit root.
     """
     configured_root = env.get("COMSOL_ROOT")
     configured_java = env.get("COMSOL_JAVA_HOME")
@@ -489,9 +490,15 @@ def _configuration_check(env: Mapping[str, str], target: str) -> dict[str, Any]:
     if not configured_java:
         configured_java = env.get("JAVA_HOME")
         java_variable = "JAVA_HOME"
+    configured_project = env.get("COMSOL_PROJECT_ROOT")
+    fallback = Path(__file__).resolve().parents[1]
+    project_fallback_available = not any(part in fallback.parts for part in ("site-packages", "dist-packages"))
     if not configured_root and not configured_java:
-        return {"name": "configuration", "status": "NOT_CONFIGURED", "comsol_root_set": False, "java_home_set": False, "values_redacted": True}
+        return {"name": "configuration", "status": "NOT_CONFIGURED", "comsol_root_set": False,
+                "java_home_set": False, "project_root_set": bool(configured_project),
+                "project_root_fallback_available": project_fallback_available, "values_redacted": True}
     reasons: list[str] = []
+    project_root_unverified = not configured_project and not project_fallback_available
     exe_name = "java" if target == "macos" else "java.exe"
     compiler_name = "javac" if target == "macos" else "javac.exe"
     if not configured_root:
@@ -539,14 +546,18 @@ def _configuration_check(env: Mapping[str, str], target: str) -> dict[str, Any]:
             reasons.append(java_variable + " is set but its bin/" + compiler_name + " is missing or not executable; a runtime-only JRE cannot compile project Java, point it at a full JDK root directory")
     row = {
         "name": "configuration",
-        "status": "INVALID" if reasons else "PASS",
+        "status": "INVALID" if reasons else "UNKNOWN" if project_root_unverified else "PASS",
         "comsol_root_set": bool(configured_root),
         "comsol_root_resolves": root_resolves,
         "comsol_root_is_installation": root_is_installation,
         "java_home_set": bool(configured_java),
         "configured_java": java_observation,
+        "project_root_set": bool(configured_project),
+        "project_root_fallback_available": project_fallback_available,
         "values_redacted": True,
     }
+    if project_root_unverified:
+        reasons.append("COMSOL_PROJECT_ROOT is not set; the ordinary installed launcher needs it unless an explicit project_root is supplied")
     if reasons:
         row["reasons"] = reasons
     return row
