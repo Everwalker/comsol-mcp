@@ -12,6 +12,113 @@ from mcp.server.fastmcp import FastMCP
 from comsol_mcp._mcp_gateway import GatewayRegistry, mcp_result
 
 
+def test_stdio_job_readers_use_file_store_and_project_scope(tmp_path):
+    """Real stdio frames and SQLite; the control connection is in-process and synthetic."""
+    import base64
+    import hashlib
+    import textwrap
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    child = textwrap.dedent("""
+        import json, os
+        from pathlib import Path
+        from comsol_mcp._control_daemon import ControlDaemon
+        from comsol_mcp import _control_client
+
+        root = Path(os.environ['T35_FIXTURE_ROOT'])
+        projects = root / 'projects'
+        projects.mkdir()
+        daemon = ControlDaemon(root / 'control', project_root=projects, registry={})
+        def project(label):
+            reply = daemon.dispatch({'operation': 'project.create', 'arguments': {
+                'label': label, 'workspace': label,
+                'policy': {'permissions': ['inspect', 'project_write']}},
+                'execution': {'request_id': label, 'idempotency_key': label}})
+            assert reply['success'], reply
+            return reply['data']['project']['project_id']
+        owner, other = project('owner'), project('other')
+        job, reused = daemon.store.begin(request_id='fixture-request', idempotency_key='fixture-key',
+            request_hash='fixture-hash', operation='synthetic.fixture',
+            metadata={'project_id': owner, 'execution': {'project_id': owner}})
+        assert not reused
+        daemon.store.add_event(job['job_id'], 'FIXTURE', {'message': 'synthetic-event-界'})
+        event = daemon.store.db.execute("SELECT id,metadata FROM job_events WHERE job_id=? AND event='FIXTURE'",
+                                        (job['job_id'],)).fetchone()
+        result = {'success': True, 'payload': 'synthetic-result'}
+        assert daemon.store.finish(job['operation_id'], status='SUCCEEDED', result=result)[0]
+        (root / 'fixture.json').write_text(json.dumps({'owner': owner, 'other': other,
+            'job': job['job_id'], 'event': event[0], 'metadata': event[1], 'result': result}))
+        def dispatch(operation, arguments, execution):
+            return daemon.dispatch({'operation': operation, 'arguments': arguments, 'execution': execution})
+        _control_client.dispatch = dispatch
+        from comsol_mcp.mcp_server import main
+        try:
+            main()
+        finally:
+            daemon.close()
+    """)
+
+    async def exercise():
+        params = StdioServerParameters(command=sys.executable, args=["-c", child], env={
+            "PYTHONPATH": str(Path(__file__).resolve().parents[1]),
+            "COMSOL_SERVER_MCP_HOME": str(tmp_path / "mcp-home"),
+            "COMSOL_MCP_TOOL_PROFILE": "full", "T35_FIXTURE_ROOT": str(tmp_path),
+        })
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                fixture = json.loads((tmp_path / "fixture.json").read_text())
+                owner = {"project_id": fixture["owner"]}
+                event_args = {"job_id": fixture["job"], "event_id": fixture["event"],
+                              "field": "metadata", "limit": 8, "execution": owner}
+                first = await session.call_tool("job_log_event_read", arguments=event_args)
+                assert first.isError is False, first
+                page = first.structuredContent["data"]
+                second = await session.call_tool("job_log_event_read", arguments={
+                    **event_args, "offset": page["next_offset"], "field_sha256": page["sha256"], "limit": 1024})
+                assert second.isError is False, second
+                raw = base64.b64decode(page["chunk_base64"]) + base64.b64decode(second.structuredContent["data"]["chunk_base64"])
+                assert raw == fixture["metadata"].encode()
+                assert hashlib.sha256(raw).hexdigest() == page["sha256"]
+                assert page["trusted_terminal_status"] == "SUCCEEDED"
+
+                chunks, offset, digest = [], 0, None
+                while True:
+                    args = {"job_id": fixture["job"], "offset": offset, "limit": 8, "execution": owner}
+                    if digest is not None:
+                        args["result_sha256"] = digest
+                    reply = await session.call_tool("job_result_read", arguments=args)
+                    assert reply.isError is False, reply
+                    data = reply.structuredContent["data"]
+                    digest = data["result_sha256"]
+                    chunks.append(base64.b64decode(data["chunk_base64"]))
+                    offset = data["next_offset"]
+                    if data["complete"]:
+                        break
+                result_raw = b"".join(chunks)
+                assert hashlib.sha256(result_raw).hexdigest() == digest
+                assert json.loads(result_raw) == fixture["result"]
+
+                log = await session.call_tool("operation_call", arguments={
+                    "operation_id": "solver.log_read", "arguments": {
+                        "project_id": fixture["owner"], "job_id": fixture["job"], "limit": 10},
+                    "execution": owner})
+                assert log.isError is False, log
+                assert log.structuredContent["data"]["job_status"] == "SUCCEEDED"
+                assert any(row["event"] == "FIXTURE" for row in log.structuredContent["data"]["events"])
+
+                foreign = await session.call_tool("job_log_event_read", arguments={
+                    **event_args, "execution": {"project_id": fixture["other"]}})
+                assert foreign.isError is True
+                assert foreign.structuredContent["error"]["code"] == "NODE_NOT_FOUND"
+                assert "synthetic-event" not in str(foreign.structuredContent)
+                invalid = await session.call_tool("job_log_event_read", arguments={**event_args, "field": "private_column"})
+                assert invalid.isError is True
+
+    asyncio.run(exercise())
+
+
 def test_business_failure_has_outer_error_and_preserves_partial_evidence():
     payload = {"success": False, "data": {"applied": ["a"], "not_executed": ["c"]}, "error": "b failed"}
     result = mcp_result(json.dumps(payload))

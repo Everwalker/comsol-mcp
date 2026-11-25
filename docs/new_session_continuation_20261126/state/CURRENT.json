@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "等待本地 Qwen 对启动入口与报告隔离的独立分析；并继续 T37 覆盖竞态和其他可执行软件缺口，不改变旧 UNKNOWN。",
+  "next_action": "检查 T37 现有原子保存暂存路径的实际竞态与可复用目录绑定，继续等待本地 Qwen 的启动入口和报告隔离结论。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -750,10 +750,12 @@
       "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T35.b"
+        "references/CURRENT_20261123.json#/tasks/T35.b",
+        "tests/test_mcp_gateway.py::test_stdio_job_readers_use_file_store_and_project_scope"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Actual MCP stdio plus file SQLite and in-process real daemon covered with synthetic jobs; RPC, native, process RSS and full acceptance remain open."
     },
     "T42.a": {
       "status": "RUNNING",
@@ -1052,6 +1054,17 @@
       "verification_command": ".venv/bin/python -m pytest -q tests/test_t26_dataset_reference.py tests/test_t26_component_free_eval.py tests/test_t26_w18_unknown_binding.py tests/test_t27_result_metadata.py",
       "verification_result": "23 passed in 0.47s",
       "remaining": "Real models, stored solutions and target platform behavior remain unverified."
+    },
+    {
+      "id": "20261126-T35-stdio-sqlite",
+      "scope": "T35.b / U07-U08 software-only transport/store integration",
+      "base_commit": "8131ca6ee40a2172015d65510898c36517c32ea9",
+      "changes": [
+        "tests/test_mcp_gateway.py: actual MCP stdio child with file-backed SQLite and real ControlDaemon dispatch, using synthetic projects/jobs; control-client boundary wired in-process"
+      ],
+      "verification_command": ".venv/bin/python -m pytest -q tests/test_mcp_gateway.py::test_stdio_job_readers_use_file_store_and_project_scope tests/test_t35_bounded_status_wait_20261123.py::test_oversized_status_and_wait_skip_result_decode_and_result_is_chunked tests/test_t35_bounded_status_wait_20261123.py::test_other_inspect_granted_project_cannot_probe_or_read_a_job",
+      "verification_result": "3 passed in 0.87s; event/result byte pagination and digest, solver log, terminal status, cross-project denial and invalid field",
+      "remaining": "No separate control process or authenticated RPC in this test; no native engine, true process RSS bound, Python 3.10 target, or complete T35 acceptance established."
     }
   ]
 }
