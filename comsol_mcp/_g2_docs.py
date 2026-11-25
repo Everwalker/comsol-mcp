@@ -46,8 +46,9 @@ def infer_version(value: str, fallback: str | None = None) -> str:
     return str(fallback or "unknown")
 
 
-def _clean_text(path: Path) -> str:
-    raw = path.read_bytes()
+def _clean_text(path: Path, raw: bytes | None = None) -> str:
+    if raw is None:
+        raw = path.read_bytes()
     if b"\x00" in raw[:4096]:
         return ""
     text = raw.decode("utf-8", errors="replace")
@@ -76,6 +77,11 @@ def _chunks(text: str, *, max_chars: int = 6000) -> Iterable[tuple[int, str]]:
         size += len(paragraph) + 2
     if buffer:
         yield offset, "\n\n".join(buffer)
+
+
+def _like_contains(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,11 +190,13 @@ class OfflineDocsIndex:
                 # A source can contain a version marker that is more specific
                 # than the runtime alias.  Never merge 6.3 and 6.4 rows.
                 file_version = infer_version(str(path), selected_version)
-                text = _clean_text(path)
+                raw = path.read_bytes()
+                text = _clean_text(path, raw)
                 if not text:
                     skipped.append({"source": str(path), "reason": "empty_or_binary"})
                     continue
-                source_hash, content_hash = _sha256(path), hashlib.sha256(text.encode("utf-8")).hexdigest()
+                source_hash = hashlib.sha256(raw).hexdigest()
+                content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
                 title = next((line.strip("# ") for line in text.splitlines() if line.strip()), path.name)
                 self.db.execute("DELETE FROM documents WHERE source=? AND version=?", (str(path), file_version))
                 for offset, chunk in _chunks(text):
@@ -235,8 +243,8 @@ class OfflineDocsIndex:
             if not isinstance(node_type, str):
                 raise ExecutionContractError("INVALID_REQUEST", "node_type must be a string")
             if node_type.strip():
-                needle = f"%{node_type.strip().lower()}%"
-                where.append("(lower(title) LIKE ? OR lower(content) LIKE ?)"); params.extend([needle, needle])
+                needle = _like_contains(node_type.strip().lower())
+                where.append("(lower(title) LIKE ? ESCAPE '\\' OR lower(content) LIKE ? ESCAPE '\\')"); params.extend([needle, needle])
         available = self.db.execute(f"SELECT COUNT(*) FROM documents WHERE {' AND '.join(where)}", params).fetchone()[0]
         if not available:
             return {"status": "UNAVAILABLE", "version": version, "results": [], "query": query}
@@ -248,14 +256,17 @@ class OfflineDocsIndex:
         # unrelated page that merely contained one common word, falsely
         # presenting a missing explanation as a successful help lookup.
         # Relevance still ranks title matches above content matches.
-        terms = [term for term in re.findall(r"[\w.:-]+", query.lower()) if term]
+        # Compatibility: query terms now retain literal '%' and '\\', so searches
+        # that previously dropped them can return fewer, more precise matches.
+        # Whitespace and other punctuation remain separators.
+        terms = [term for term in re.findall(r"[\w.:%\\-]+", query.lower()) if term]
         effective_terms = terms or [query.lower()]
-        score_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? THEN 4 ELSE 0 END)", "(CASE WHEN lower(content) LIKE ? THEN 1 ELSE 0 END)"] * len(effective_terms))
-        coverage_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? OR lower(content) LIKE ? THEN 1 ELSE 0 END)"] * len(effective_terms))
+        score_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? ESCAPE '\\' THEN 4 ELSE 0 END)", "(CASE WHEN lower(content) LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END)"] * len(effective_terms))
+        coverage_sql = " + ".join(["(CASE WHEN lower(title) LIKE ? ESCAPE '\\' OR lower(content) LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END)"] * len(effective_terms))
         score_params: list[Any] = []
         coverage_params: list[Any] = []
         for term in effective_terms:
-            like = f"%{term}%"
+            like = _like_contains(term)
             score_params.extend([like, like])
             coverage_params.extend([like, like])
         sql = f"WITH ranked AS (SELECT *, ({score_sql}) AS relevance, ({coverage_sql}) AS coverage FROM documents WHERE {' AND '.join(where)}) " \
