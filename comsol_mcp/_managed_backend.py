@@ -1495,7 +1495,18 @@ class ManagedBackend:
         ref = metadata.get("execution", {}).get("model_ref")
         if isinstance(ref, Mapping):
             self._bind_model_project(ref, project_id)
-        self.persist()
+        try:
+            self.persist()
+        except ExecutionContractError as exc:
+            if exc.code != "PROJECT_IDENTITY_MISMATCH":
+                raise
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "Worker model adoption succeeded but its identity snapshot could not be persisted",
+                safe_retry=False,
+                details={"cause": exc.as_dict(), "safe_retry": False},
+                stage="post_dispatch",
+            ) from exc
         return {"success": True, "data": {"model_tag": tag}, **metadata}
 
     def invoke(self, operation, arguments, execution, operation_id, event_callback):
@@ -1822,7 +1833,22 @@ class ManagedBackend:
                     self._bind_model_project(ref_mapping, execution.get("project_id"))
                 result["execution"] = bound["execution"]
                 result["data"]["model_tag"] = tag
-            self.persist()
+            if (not ref and (actual in selections or starter) and result.get("success") is True
+                    and self.worker is not None):
+                try:
+                    self.persist()
+                except ExecutionContractError as exc:
+                    if exc.code != "PROJECT_IDENTITY_MISMATCH":
+                        raise
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "Worker model selection succeeded but its identity snapshot could not be persisted",
+                        safe_retry=False,
+                        details={"cause": exc.as_dict(), "safe_retry": False},
+                        stage="post_dispatch",
+                    ) from exc
+            else:
+                self.persist()
             if result.get("success") and actual in {"save_model", "save_main_model_snapshot", "commit_current_main_model"}:
                 self._artifacts(result, actual)
             return result

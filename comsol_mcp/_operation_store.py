@@ -5346,6 +5346,105 @@ class OperationStore:
                     (key, json.dumps(metadata, sort_keys=True)),
                 )
 
+    def _reject_cross_session_project_model_conflicts(
+        self, state: dict[str, Any], project_bindings: dict[str, str | None],
+    ) -> None:
+        """Reject a known foreign non-retired tag on the same observed peer.
+
+        Session ModelRefs intentionally include Worker/session epochs, so two
+        backends attached to one endpoint have different revision keys.  The
+        existing session snapshots retain the observed peer and live tag map;
+        consult those rows while the caller's SQLite write transaction is
+        held, before publishing a second project attribution.
+        """
+        from ._execution_contract import ExecutionContractError
+
+        def unverifiable_lineage() -> None:
+            raise ExecutionContractError(
+                "PROJECT_IDENTITY_MISMATCH",
+                "same-endpoint model lineage is not verifiable",
+            ) from None
+
+        identity = state.get("worker_identity")
+        peer = identity.get("observed_peer") if isinstance(identity, dict) else None
+        if not isinstance(peer, dict):
+            if isinstance(identity, dict) and "server_ownership" in identity:
+                raise ExecutionContractError(
+                    "PROJECT_IDENTITY_MISMATCH",
+                    "session runtime has no observed endpoint identity",
+                )
+            return
+        address, port = peer.get("address"), peer.get("port")
+        if (not isinstance(address, str) or not address
+                or type(port) is not int or not 1 <= port <= 65535):
+            raise ExecutionContractError(
+                "PROJECT_IDENTITY_MISMATCH",
+                "observed endpoint identity is malformed",
+            )
+
+        bound_tags: dict[str, str] = {}
+        for tag, model in state.get("models", {}).items():
+            if not isinstance(model, dict) or model.get("retired") is True:
+                continue
+            ref = model.get("ref")
+            if not isinstance(ref, dict):
+                continue
+            key = json.dumps(ref, sort_keys=True, separators=(",", ":"))
+            project_id = project_bindings.get(key)
+            if isinstance(project_id, str) and project_id:
+                bound_tags[tag] = project_id
+        if not bound_tags:
+            return
+
+        rows = self.db.execute(
+            "SELECT json_extract(metadata,'$.models') AS models "
+            "FROM sessions WHERE "
+            "CASE WHEN json_valid(metadata) THEN "
+            "json_extract(metadata,'$.worker_identity.observed_peer.address') END=? "
+            "AND CASE WHEN json_valid(metadata) THEN "
+            "json_extract(metadata,'$.worker_identity.observed_peer.port') END=?",
+            (address, port),
+        ).fetchall()
+        for row in rows:
+            raw_models = row["models"]
+            if not isinstance(raw_models, str):
+                unverifiable_lineage()
+            try:
+                other_models = json.loads(raw_models)
+            except (TypeError, ValueError):
+                unverifiable_lineage()
+            if not isinstance(other_models, dict):
+                unverifiable_lineage()
+            for tag, project_id in bound_tags.items():
+                other = other_models.get(tag)
+                if not isinstance(other, dict) or other.get("retired") is True:
+                    continue
+                other_ref = other.get("ref")
+                if not isinstance(other_ref, dict):
+                    unverifiable_lineage()
+                other_key = json.dumps(other_ref, sort_keys=True, separators=(",", ":"))
+                revision_row = self.db.execute(
+                    "SELECT metadata FROM revisions WHERE model_key=?", (other_key,),
+                ).fetchone()
+                if revision_row is None:
+                    continue
+                try:
+                    revision = json.loads(revision_row["metadata"])
+                except (TypeError, ValueError):
+                    unverifiable_lineage()
+                if not isinstance(revision, dict) or revision.get("model_ref") != other_ref:
+                    unverifiable_lineage()
+                other_project = revision.get("project_id")
+                if other_project is not None and (
+                    not isinstance(other_project, str) or not other_project
+                ):
+                    unverifiable_lineage()
+                if isinstance(other_project, str) and other_project != project_id:
+                    raise ExecutionContractError(
+                        "PROJECT_IDENTITY_MISMATCH",
+                        "same-endpoint model tag is durably bound to another project",
+                    )
+
     def persist_runtime_snapshot(self, state: dict[str, Any], project_bindings: dict[str, str | None],
                                  legacy_lineage: dict[str, dict[str, Any]], project_authorizer: Any) -> None:
         """Publish a ledger snapshot and its revision records in one transaction."""
@@ -5408,6 +5507,7 @@ class OperationStore:
                                 raise ExecutionContractError("PERMISSION_DENIED", "legacy project authority is unavailable")
                             project_authorizer(project, "project_write")
                         legacy_projects[new_key] = project
+                self._reject_cross_session_project_model_conflicts(state, project_bindings)
                 for table, column, key in (("sessions", "session_id", session_id),
                                            ("runtimes", "runtime_id", runtime_id)):
                     row = self.db.execute(f"SELECT metadata FROM {table} WHERE {column}=?", (key,)).fetchone()
