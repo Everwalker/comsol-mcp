@@ -618,10 +618,19 @@ def _controlled_alternative(row: Mapping[str, Any]) -> dict[str, Any]:
 def _method_wire(row: Mapping[str, Any], descriptor: Mapping[str, Any]) -> dict[str, Any]:
     cap = _capability_for_row(row)
     if cap is not None and supports_release(descriptor["runtime_version"]):
+        # Publish callability with the same evidence the invoke gate requires
+        # (prepare_invoke -> supports): the exact signature row and its owning
+        # interface in the observed receiver metadata.  A reviewed signature
+        # whose owner interface is absent (for example an inherited declaring
+        # interface lost to interface-list truncation) stays REVIEWED but is
+        # not callable, and api.describe must not claim otherwise.
+        callable_on_actual_receiver = supports(
+            descriptor, row["interface"], row["method"], tuple(row["parameters"]), row["returns"],
+        )
         return {
             "interface": row["interface"], "method": row["method"],
             "parameters": list(row["parameters"]), "returns": row["returns"],
-            "policy_status": "REVIEWED", "invoke_allowed": True, "effect": cap.effect,
+            "policy_status": "REVIEWED", "invoke_allowed": callable_on_actual_receiver, "effect": cap.effect,
             "permission": permission_for_effect(legacy_effect(cap.effect)),
             "supported_releases": sorted(SUPPORTED_RELEASES),
             "argument_contract": cap.argument_contract(), "return_contract": _return_contract(cap),

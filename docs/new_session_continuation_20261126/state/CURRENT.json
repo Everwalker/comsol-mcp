@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "由本地 Qwen 核对其余三个 export 和 managed-model 测试失败。",
+  "next_action": "等待本地 Qwen 查明三个 export 和 managed-model 测试失败。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -177,7 +177,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Qwen synthetic effect/version controls passed; one describe-versus-invoke interface-evidence inconsistency is being fixed. Actual 6.3/6.4 receiver evidence remains open."
+      "session_scope_note": "Synthetic effect/version controls passed and describe callability now agrees with receiver interface evidence; actual 6.3/6.4 native receiver and full acceptance remain open."
     },
     "T16": {
       "status": "IMPLEMENTED",
@@ -1750,6 +1750,17 @@
       ],
       "verification": "Qwen reports 3/3 former failing cases and 15/15 in the full delivery test file passed on CPython 3.14.7. Main agent reviewed the test-only diff and ran the 3 previously failing cases on CPython 3.10.20: 3 passed. Fake Worker and task-owned temporary filesystem only.",
       "remaining": "The three previously reported export/managed-model failures remain uninvestigated. Native function inventory, actual COMSOL rebuild, earlier package root windows and full T38/U12 acceptance remain open."
+    },
+    {
+      "id": "20261126-T15-qwen-describe-invoke-consistency",
+      "scope": "T15 / U03 local Qwen max synthetic API capability description consistency",
+      "base_commit": "7db46586c8e4e0d987938a92a054bd6c0602551e",
+      "finding": "For a synthetic descriptor whose reviewed signature was present but owner interface absent, api.describe reported invoke_allowed=true while prepare_invoke refused API_UNSUPPORTED. No native COMSOL occurrence was observed.",
+      "changes": [
+        "comsol_mcp/_g2_public_api.py: compute the describe callability flag using the existing exact supports predicate; keep the reviewed policy and permission unchanged. tests/test_t15_describe_invoke_contract_synthetic.py covers missing/present interface, unreviewed signatures and the published output schema."
+      ],
+      "verification": "Qwen reports 255 synthetic tests passed on CPython 3.14.7, including the 5 new controls and existing API/D2 controls. Main agent reviewed the diff and ran the 5 new controls on CPython 3.10.20: 5 passed. No COMSOL or real Worker was contacted.",
+      "remaining": "A false callability claim was corrected; this does not broaden invocation or establish native receiver behavior. Actual 6.3/6.4 build-specific API metadata, real public MCP flow and full T15 acceptance remain open."
     }
   ]
 }
