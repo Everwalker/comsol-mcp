@@ -12041,6 +12041,10 @@ class ControlDaemon:
             return self._error("EXECUTION_STATE_UNKNOWN", "job reconciliation event snapshot is incomplete", safe_retry=False)
         event_count = snapshot["expected_event_count"]
         last_event_id = snapshot["snapshot_last_id"] or None
+        # The completed fold above already carries the canonical digest of
+        # this frozen prefix; carry it to the write-back so an in-place edit
+        # of an existing event (identical count/max) is still detected.
+        events_sha256 = snapshot["events_sha256"]
         # A fully observed request set can be reconciled from durable event
         # evidence alone. This path does not consult any Worker and also
         # applies to project-bound records without a durable Worker binding.
@@ -12061,7 +12065,8 @@ class ControlDaemon:
         }
         if submitted_ids and submitted_ids.issubset(observed_ids):
             return self._reconcile(job, events=events, project_id=project_id,
-                                   event_count=event_count, last_event_id=last_event_id)
+                                   event_count=event_count, last_event_id=last_event_id,
+                                   events_sha256=events_sha256)
         try:
             context = self._resolve_job_runtime_context(job, execution)
         except ExecutionContractError as exc:
@@ -12076,7 +12081,8 @@ class ControlDaemon:
                 scope = use_session_context(context) if context is not None else nullcontext()
                 with scope:
                     return self._reconcile(job, events=events, project_id=project_id,
-                                           event_count=event_count, last_event_id=last_event_id)
+                                           event_count=event_count, last_event_id=last_event_id,
+                                           events_sha256=events_sha256)
         except ExecutionContractError as exc:
             return self._exception(exc)
         except Exception as exc:
@@ -14429,7 +14435,8 @@ class ControlDaemon:
             },
         }
 
-    def _reconcile(self, job, *, events, project_id, event_count, last_event_id):
+    def _reconcile(self, job, *, events, project_id, event_count, last_event_id,
+                   events_sha256):
         # Query existing Java request ids only. Never submit the lost callback.
         ids = list(dict.fromkeys(event["metadata"].get("request_id") for event in events if event["event"] == "worker_request" and event["metadata"].get("phase") == "submitted"))
         completed = {event["metadata"]["request_id"]: event["metadata"]["status"] for event in events
@@ -14463,6 +14470,7 @@ class ControlDaemon:
             {"reconciliation": observed, "reconciled_quiescent": quiescent,
              "replay_performed": False, "callback_completion_unknown": True},
             event_count=event_count, last_event_id=last_event_id,
+            events_sha256=events_sha256,
             max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
         )
         if outcome == "NOT_FOUND":

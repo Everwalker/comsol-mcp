@@ -254,6 +254,45 @@ def test_reconcile_refuses_drift_after_snapshot(daemon_projects, monkeypatch, ch
     assert "reconciled_quiescent" not in current["metadata"]
 
 
+def test_reconcile_refuses_in_place_event_edit_after_snapshot(daemon_projects, monkeypatch) -> None:
+    """An in-place rewrite of a committed worker_request observation keeps
+    COUNT(*)/MAX(id) identical, so the append-only count/max guard cannot
+    see it; reconciliation must still refuse via the frozen prefix digest."""
+    daemon, project_a, _project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, "reconcile-inplace-event-edit")
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "UNKNOWN")
+    for phase, status in (("submitted", None), ("observed", "SUCCEEDED")):
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": "synthetic-old-request", "phase": phase, "status": status,
+        })
+    original = daemon.store.update_reconciliation_scoped
+
+    def edit_before_write(*args, **kwargs):
+        # Rewrite the durable completion observation in place (observed
+        # SUCCEEDED becomes RUNNING); no append and no delete, so the
+        # event count and last event id are unchanged.
+        daemon.store.db.execute(
+            "UPDATE job_events SET metadata=? WHERE job_id=? AND id=("
+            "SELECT MAX(id) FROM job_events WHERE job_id=?)",
+            (json.dumps({
+                "request_id": "synthetic-old-request", "phase": "observed",
+                "status": "RUNNING",
+            }), job_id, job_id),
+        )
+        daemon.store.db.commit()
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(daemon.store, "update_reconciliation_scoped", edit_before_write)
+    response = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert response["success"] is False
+    assert response["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+    assert response["error"]["safe_retry"] is False
+    current = daemon.store.job(job_id)
+    assert current["status"] == "UNKNOWN"
+    assert "reconciled_quiescent" not in current["metadata"]
+
+
 def test_status_and_terminal_wait_preserve_small_result_shape(daemon_projects) -> None:
     daemon, project_a, _project_b, _database_path = daemon_projects
     record = _begin_job(daemon, project_a, "small")

@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "等待本地 Qwen 完成 T35.b 事件原位变更修复并验收其证据。",
+  "next_action": "由本地 Qwen 分类既有 cancel/job.log 失败并处理已证实的独立缺口。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -814,7 +814,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Synthetic project-scoped reconciliation, conditional writeback and streamed projected event evidence tested; SQLite/RSS, result projection, in-place event changes, real RPC/native and full acceptance remain open."
+      "session_scope_note": "Synthetic project-scoped reconcile now detects appended and in-place event changes; 9 broader cancel/job.log cases were reported RED. SQLite/RSS, real RPC/native and full acceptance remain open."
     },
     "T42.a": {
       "status": "RUNNING",
@@ -1606,6 +1606,19 @@
       "finding": "Qwen reports no reproduced ProjectRootBinding FD/close/relative-component defect within its assigned source scope. It reports 96 relevant synthetic tests passed plus 6 additional project-boundary/fake-Windows tests, and a broader T20 run of 231 passed / 15 failed; these figures are agent-reported and were not rerun by the main agent. Its listed failure categories total 14, so the exact breakdown remains unverified.",
       "decision": "Retain the current fixed-source project boundary and verified-digest-before-refresh behavior; do not restore the historical guard. Main-agent source inspection confirms the POSIX walker can attempt to open a root when no binding is supplied, so the report must not be read as proof that every such call requires a pre-supplied binding. Qwen was asked to investigate the exact failures and fix only demonstrated stale test fixtures/assertions while retaining positive and negative controls.",
       "remaining": "Tests use synthetic projects/workers; legitimate data through actual COMSOL, native OS targets, production authorization and T20.a acceptance remain open. Some reported failures may indicate real production issues until individually assessed."
+    },
+    {
+      "id": "20261126-T35-reconcile-inplace-event-digest",
+      "scope": "T35.b / U08 local Qwen max implementation of synthetic event-prefix consistency",
+      "base_commit": "54856c90fbb0b36ad59736f85bc81b4cece17bfa",
+      "finding": "Qwen reproduced an in-place change of a committed worker_request observation between read and write: event count and max ID stayed unchanged, and the previous code still marked the UNKNOWN job reconciled_quiescent.",
+      "changes": [
+        "comsol_mcp/_control_daemon.py: pass the complete project-bound event-prefix digest from the initial snapshot to conditional writeback.",
+        "comsol_mcp/_operation_store.py: under the existing BEGIN IMMEDIATE transaction, re-fold the exact prefix and refuse writeback if the fold is incomplete or its digest differs.",
+        "tests/test_t35_bounded_status_wait_20261123.py: synthetic in-place event rewrite must leave the job UNKNOWN and must not commit reconciled_quiescent."
+      ],
+      "verification": "Qwen reports 14/14 focused tests passed in its Python 3.14 environment; main agent ran 9 relevant reconcile tests on CPython 3.10.20, all passed. Qwen reports a broader run of 114 passed and 9 failed, and reports those same 9 failed with the two source files temporarily restored to HEAD; exact IDs and causality have not been independently confirmed. Qwen restored its changes afterwards; main agent inspected the current diff. This temporary replacement was a shared-workspace action and is not evidence about concurrent agents.",
+      "remaining": "The 9 reported cancel/job.log RED cases are not accepted or resolved. Re-folding scans the prefix twice and holds a SQLite write transaction during the second scan; no load benchmark or whole-process RSS bound exists. Digest consistency is not principal authorization or proof of an unmodified historic record. Python 3.10 SQLite fallback, real RPC, native targets and full T35 remain open."
     }
   ]
 }

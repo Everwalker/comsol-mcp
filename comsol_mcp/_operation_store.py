@@ -2575,9 +2575,32 @@ class OperationStore:
     def update_reconciliation_scoped(
         self, observed_job: dict[str, Any], project_id: str, status: str,
         metadata: dict[str, Any], *, event_count: int, last_event_id: int | None,
-        max_inline_result_bytes: int,
+        events_sha256: str | None, max_inline_result_bytes: int,
     ) -> tuple[str, dict[str, Any] | None]:
-        """Write a reconciliation only if its project and observations still match."""
+        """Write a reconciliation only if its project, observations, and frozen
+        event prefix still match inside one BEGIN IMMEDIATE transaction.
+
+        The append guard (COUNT/MAX over job_events) cannot see an in-place
+        rewrite of an existing event row, so the write transaction also
+        re-folds exactly the caller's frozen prefix through
+        ``fold_job_event_prefix`` and requires its canonical events digest to
+        equal the caller-supplied digest captured by the reading fold over
+        the same prefix. An incomplete fold, a missing or non-string digest,
+        or any digest/count/last-id mismatch returns ``CHANGED`` with no
+        write; reconciliation must never commit against a mutated prefix and
+        never replay a Worker from partial evidence.
+
+        Boundaries: the digest is a content identity inside this database,
+        not provenance, native-process, or permission proof - an actor able
+        both to rewrite event rows and to forge the caller-supplied digest
+        string defeats it. The re-fold is one extra O(prefix) read pass under
+        the store RLock while BEGIN IMMEDIATE holds the SQLite write lock, so
+        the write-lock window scales with the frozen prefix size. The visitor
+        retains no event rows, but SQLite and Python allocation are not bounded
+        by that fact. The same JOB_EVENT_MAX_ROW_BYTES row admission as the
+        reading fold applies, and an over-limit row fails the fold incomplete
+        (``CHANGED``).
+        """
         job_id = observed_job["job_id"]
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
@@ -2610,6 +2633,22 @@ class OperationStore:
                         or job_metadata.get("runtime_binding") != original_metadata.get("runtime_binding")
                         or job_metadata.get("execution") != original_metadata.get("execution")
                         or tuple(event_state) != (event_count, last_event_id)):
+                    self.db.execute("ROLLBACK")
+                    return "CHANGED", None
+                # Count/max only detect appended or deleted rows. Re-fold the
+                # exact frozen prefix inside this same write transaction so
+                # an in-place edit of an existing worker_request row
+                # (identical count and last id) still forces CHANGED.
+                refold = self.fold_job_event_prefix(
+                    job_id, snapshot_count=event_count,
+                    snapshot_last_id=last_event_id or 0,
+                    max_row_bytes=JOB_EVENT_MAX_ROW_BYTES,
+                    visitor=lambda _event: None,
+                    _join_read_snapshot=True,
+                )
+                if (not refold["complete"]
+                        or not isinstance(events_sha256, str)
+                        or refold["events_sha256"] != events_sha256):
                     self.db.execute("ROLLBACK")
                     return "CHANGED", None
                 merged = {**job_metadata, **metadata}
