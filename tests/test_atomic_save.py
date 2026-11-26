@@ -203,6 +203,33 @@ def test_no_clobber_publish_refuses_a_destination_created_after_preflight(tmp_pa
         assert archive.read("model/model.mphbin") == b"racing writer"
 
 
+@pytest.mark.parametrize("change", ["replace", "in_place"])
+def test_overwrite_refuses_destination_changed_during_save(tmp_path: Path, change):
+    destination = tmp_path / "model.mph"
+    write_mph(destination, b"old")
+    replacement = b"new content written concurrently"
+
+    def racing_save(candidate):
+        write_mph(candidate, b"candidate")
+        if change == "replace":
+            other = tmp_path / "other.mph"
+            write_mph(other, replacement)
+            os.replace(other, destination)
+        else:
+            write_mph(destination, replacement)
+
+    with pytest.raises(AtomicSaveError) as raised:
+        atomic_save(destination, racing_save, tmp_path, overwrite=True)
+    assert raised.value.stage == "verification"
+    assert raised.value.publication_status == "not_attempted"
+    assert raised.value.original_preservation == "unverified"
+    assert raised.value.temporary_retained is True
+    with zipfile.ZipFile(destination) as archive:
+        assert archive.read("model/model.mphbin") == replacement
+    with zipfile.ZipFile(raised.value.temporary_path) as archive:
+        assert archive.read("model/model.mphbin") == b"candidate"
+
+
 def test_symlink_parent_escape_is_rejected_before_callback(tmp_path: Path):
     outside = tmp_path.parent / "outside-dir"
     outside.mkdir(exist_ok=True)

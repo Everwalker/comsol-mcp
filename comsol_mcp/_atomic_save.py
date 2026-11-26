@@ -231,16 +231,26 @@ def atomic_save(
     overwrite makes no claim about what (if anything) occupied the name at
     that instant. If preflight did not observe an existing destination, even
     an overwrite-enabled request uses no-clobber publication, so a later
-    creator is not replaced. A destination observed at preflight can still
-    be changed by an external writer before replacement; other external
-    activity remains outside the proving power of these observations.
+    creator is not replaced. For an existing destination, identity, size and
+    modification time are checked again before replacement. An external
+    writer can still change it after that check; other external activity
+    remains outside the proving power of these observations.
     """
     destination_path = canonical_project_path(project_root, destination)
     parent = destination_path.parent
     # Resolving the parent separately catches a symlink inserted into an
     # otherwise relative destination path before any candidate is created.
     canonical_project_path(project_root, parent)
-    existed = _observed_presence(destination_path)
+    try:
+        initial_destination = destination_path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        initial_destination = None
+        existed = False
+    except (OSError, ValueError):
+        initial_destination = None
+        existed = None
+    else:
+        existed = True
     replace_existing = overwrite and existed is True
     if existed is True and not overwrite:
         raise AtomicSaveError(
@@ -350,6 +360,19 @@ def atomic_save(
             publication_status="not_attempted",
             original_preservation=_preflight_preservation(existed),
         ) from exc
+
+    if replace_existing:
+        try:
+            current_destination = destination_path.lstat()
+            if _candidate_identity(current_destination) != _candidate_identity(initial_destination):
+                raise ValueError("destination changed after preflight")
+        except (OSError, ValueError) as exc:
+            raise AtomicSaveError(
+                f"Destination could not be confirmed unchanged before publication: {exc}",
+                stage="verification", destination=destination_path, temporary_path=temporary_path,
+                original_preserved=False, partial=True, publication_status="not_attempted",
+                original_preservation="unverified",
+            ) from exc
 
     publication_status = "not_attempted"
     try:

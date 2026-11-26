@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "分析已存在目标的覆盖竞态和失败恢复，先核对可复用的受管保存交换实现与 Java Worker 调用合同。",
+  "next_action": "核对已存在目标在最后检查后仍可能变化的覆盖窗口，并评估受管交换与恢复方案能否适配 Windows 和 Java Worker。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -410,11 +410,12 @@
         "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint",
         "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified",
         "tests/test_t08_publication_remediation_independent_20261109.py",
-        "tests/test_java_worker.py"
+        "tests/test_java_worker.py",
+        "tests/test_atomic_save.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "New-destination race narrowed with no-clobber publication, including fake Java Worker facade; pre-existing destination races, rollback and native/Windows acceptance remain open."
+      "session_scope_note": "New-target no-clobber and an existing-target pre-publication change check passed synthetic controls; the final check-to-replace race, rollback, native and Windows acceptance remain open."
     },
     "T38": {
       "status": "RUNNING",
@@ -710,11 +711,12 @@
         "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint",
         "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified",
         "tests/test_t08_publication_remediation_independent_20261109.py",
-        "tests/test_java_worker.py"
+        "tests/test_java_worker.py",
+        "tests/test_atomic_save.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "New-destination race narrowed with no-clobber publication, including fake Java Worker facade; pre-existing destination races, rollback and native/Windows acceptance remain open."
+      "session_scope_note": "New-target no-clobber and an existing-target pre-publication change check passed synthetic controls; the final check-to-replace race, rollback, native and Windows acceptance remain open."
     },
     "T08.b": {
       "status": "TODO",
@@ -1436,6 +1438,21 @@
         "Only task-created local synthetic files and fake Java callbacks were used; no real model, COMSOL, Windows or native filesystem behavior was tested."
       ],
       "remaining": "A destination observed as present at preflight can still change before os.replace and be overwritten; artifact-store overwrite and atomic-save candidate substitution races, old-byte rollback and crash recovery remain unresolved. A failing link is conservatively reported with publication status UNKNOWN. T37 remains RUNNING and native/final acceptance remains open."
+    },
+    {
+      "id": "20261126-T37-existing-destination-change-check",
+      "scope": "T08.a/T37 / U08-U09 scoped local-file correction; no native COMSOL",
+      "base_commit": "0ca2222a418101ba8c3cdf8ef2040d60d23d69a5",
+      "finding": "An overwrite-enabled save could silently replace an existing target that another writer had replaced or modified during the save callback.",
+      "changes": [
+        "comsol_mcp/_atomic_save.py: capture destination stat in one preflight observation and compare device, inode, size and mtime immediately before replacing an initially existing target; on mismatch/refused observation, retain candidate and refuse before publication",
+        "tests/test_atomic_save.py: synthetic concurrent inode replacement and in-place content change preserve both the other writer and the candidate"
+      ],
+      "verification": [
+        "CPython 3.14.7: 49 passed across tests/test_atomic_save.py, four focused T08 publication files and three RemoteModel.save tests.",
+        "CPython 3.10.20: 30 passed across tests/test_atomic_save.py, tests/test_t08_publication_remediation_independent_20261109.py and two RemoteModel.save tests."
+      ],
+      "remaining": "This is detection before publication, not compare-and-swap. A change after the check or an in-place modification preserving observed identity/size/mtime may still be clobbered. Existing-target rollback, crash recovery, artifact-store overwrite, Windows and native acceptance remain open; T37 stays RUNNING."
     }
   ]
 }
