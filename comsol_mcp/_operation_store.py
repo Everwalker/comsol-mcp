@@ -2118,9 +2118,13 @@ class OperationStore:
         with self.lock:
             if not self.db.in_transaction:
                 raise ValueError("job_event_field_page_bounded requires an active project read snapshot")
+            blobopen = getattr(self.db, "blobopen", None)
+            # CAST can materialize an entire legacy TEXT field inside SQLite.
+            # With blobopen the exact byte size is available from the handle.
+            byte_length = "NULL" if callable(blobopen) else "length(CAST(e." + field + " AS BLOB))"
             rows = self.db.execute(
                 "SELECT e.rowid AS event_rowid,typeof(e." + field + ") AS storage_type,"
-                "length(CAST(e." + field + " AS BLOB)) AS byte_length,"
+                + byte_length + " AS byte_length,"
                 "j.status AS job_status,o.status AS operation_status "
                 "FROM job_events e JOIN jobs j ON j.job_id=e.job_id "
                 "JOIN operations o ON o.operation_id=j.operation_id "
@@ -2133,16 +2137,28 @@ class OperationStore:
                 raise RuntimeError("exact job event cardinality is not one")
             row = rows[0]
             storage_type = row["storage_type"]
-            size = 0 if storage_type == "null" else row["byte_length"]
-            if type(size) is not int or size < 0:
-                raise RuntimeError("stored event field byte length is unavailable")
-            encoding_row = self.db.execute("PRAGMA encoding").fetchone()
-            database_encoding = encoding_row[0] if encoding_row else None
             if storage_type not in {"null", "text", "blob"}:
                 raise JobEventFieldReadError(
                     "EVENT_STORAGE_UNSUPPORTED",
                     "the stored event field is neither SQL NULL, TEXT, nor BLOB",
                 )
+            if storage_type == "null":
+                size = 0
+            elif callable(blobopen):
+                try:
+                    with blobopen("job_events", field, row["event_rowid"], readonly=True) as blob:
+                        size = len(blob)
+                except sqlite3.OperationalError as exc:
+                    raise JobEventFieldReadError(
+                        "EVENT_RAW_READ_UNSUPPORTED",
+                        "SQLite cannot expose this stored event field through read-only blobopen",
+                    ) from exc
+            else:
+                size = row["byte_length"]
+            if type(size) is not int or size < 0:
+                raise RuntimeError("stored event field byte length is unavailable")
+            encoding_row = self.db.execute("PRAGMA encoding").fetchone()
+            database_encoding = encoding_row[0] if encoding_row else None
             if storage_type == "text" and size > 0 and database_encoding != "UTF-8":
                 raise JobEventFieldReadError(
                     "EVENT_ENCODING_UNSUPPORTED",
@@ -2152,7 +2168,6 @@ class OperationStore:
             digest = hashlib.sha256()
             page = bytearray()
             if storage_type != "null" and size:
-                blobopen = getattr(self.db, "blobopen", None)
                 def consume(piece: bytes, position: int) -> None:
                     digest.update(piece)
                     start = max(0, offset - position)

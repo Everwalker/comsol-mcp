@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from pathlib import Path
 from uuid import uuid4
 
 from mcp.server.fastmcp import FastMCP
@@ -14,9 +13,6 @@ from comsol_mcp._operation_store import (
     JOB_EVENT_FIELD_READ_MAX_BASE64_BYTES,
     JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES,
 )
-
-
-TASK_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _create_project(daemon: ControlDaemon, label: str) -> dict:
@@ -42,8 +38,8 @@ def _call(daemon: ControlDaemon, project_id: str, operation: str, arguments: dic
     })
 
 
-def test_public_project_scoped_event_field_chunk_read(monkeypatch):
-    run_root = TASK_ROOT / "test-data" / ("run-" + uuid4().hex)
+def test_public_project_scoped_event_field_chunk_read(monkeypatch, tmp_path):
+    run_root = tmp_path
     test_db_dir = run_root / "control"
     project_root = run_root / "projects"
     test_db_dir.mkdir(parents=True)
