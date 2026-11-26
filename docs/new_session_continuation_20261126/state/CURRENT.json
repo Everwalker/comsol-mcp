@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "由本地 Qwen 修正并验证剩余四个取消状态漂移测试夹具。",
+  "next_action": "验收本地 Qwen 对 T20 目录描述符测试的补充证据。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -1653,6 +1653,17 @@
       ],
       "verification": "Qwen reports 23/23 targeted cases including the prior 9 and T35.b controls, plus 46/46 in four scope files and 46/46 across six related harness files on CPython 3.14.7. Main agent reviewed the diff and did not independently rerun these sets. All are synthetic file-backed tests, not real OS process control or native COMSOL.",
       "remaining": "Four additional cases in tests/test_t35_cancel_drift_response_contract_20261113.py reportedly fail because another old wrapper lacks project_id forwarding; they were outside the subagent write scope and remain RED. Some old test docstrings still describe formerly RED behavior. Real RPC/native, authenticated principal, SQLite/RSS and full T35 acceptance remain open."
+    },
+    {
+      "id": "20261126-T35-qwen-cancel-drift-fixture",
+      "scope": "T35.b / U08 local Qwen max synthetic cancellation state-drift tests",
+      "base_commit": "04c38bd14d3c06fbc1f7ab7302116720d4694908",
+      "finding": "Four previously reported cancellation drift tests used a wrapper that did not accept or forward the now-required scoped project arguments; the current store already rejects inconsistent job/operation states transactionally.",
+      "changes": [
+        "tests/test_t35_cancel_drift_response_contract_20261113.py forwards scoped binding kwargs to the real cancel_queued; all drift and positive outcome assertions remain."
+      ],
+      "verification": "Qwen reports 4/4 parameterized cases and 24/24 related cancellation controls passed on CPython 3.14.7. Main agent inspected the test-only diff; results were not rerun independently. No production process was signaled.",
+      "remaining": "This resolves the four fixture failures reported in the previous entry, not other unrun tests or production acceptance. Cross-platform, separate RPC and native cancellation remain open."
     }
   ]
 }

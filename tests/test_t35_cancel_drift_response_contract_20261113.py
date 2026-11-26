@@ -55,8 +55,11 @@ def test_queued_cancel_pair_refusal_or_success(route: str, drift: bool) -> None:
         calls = []
         cancel_queued = store.cancel_queued
 
-        def observe_cancel(job_id: str, reason: str = 'cancelled by user'):
-            result = cancel_queued(job_id, reason=reason)
+        def observe_cancel(job_id: str, reason: str = 'cancelled by user',
+                           **scoped_binding):
+            # Forward the strict scoped binding kwargs unchanged so the
+            # real write transaction keeps its own re-checks.
+            result = cancel_queued(job_id, reason=reason, **scoped_binding)
             calls.append((job_id, result[0], result[1]))
             return result
 
