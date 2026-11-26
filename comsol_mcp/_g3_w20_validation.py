@@ -1356,7 +1356,7 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
     if registered:
         from ._convergence_store import resolve_cases
         try:
-            records = resolve_cases(worker,cases)
+            records = resolve_cases(worker,cases,model_tag=model_tag)
             cases = [dict(record,level=i+1) for i,record in enumerate(records)]
         except ExecutionContractError as exc:
             _raise_worker_unknown(exc)

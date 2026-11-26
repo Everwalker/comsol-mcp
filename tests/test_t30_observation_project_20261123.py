@@ -157,6 +157,20 @@ def test_convergence_resolution_inherits_only_outer_project_context(
                 })
             assert valid["numerical_verification_status"] == "PASS"
 
+            # A shared session/server does not make another model or a new
+            # generation of the same tag the source of these observations.
+            for current_ref, requested_tag in (
+                (model_ref, "other-model"),
+                ({**model_ref, "model_tag": "other-model"}, "other-model"),
+                ({**model_ref, "generation": 2}, "model"),
+            ):
+                with observation_context(store, current_ref, 0, producer["operation_id"], project_id=context_project):
+                    cross_model = validate_convergence(worker, requested_tag, {
+                        "cases": refs, "criteria": {"absolute_error_max": 0.1},
+                    })
+                assert cross_model["numerical_verification_status"] != "PASS"
+                assert cross_model["model_validated"] is False
+
             coarsening_refs = []
             for index, ref in enumerate(refs):
                 case = dict(store.get_metadata("artifacts", ref["convergence_id"]))

@@ -293,7 +293,7 @@ def test_registered_observation_requires_matching_project_model_and_solution(tmp
 
         monkeypatch.delattr(worker, "client", raising=False)
 
-        def unresponsive(*_args):
+        def unresponsive(*_args, **_kwargs):
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "synthetic Worker timeout", safe_retry=False)
 
         monkeypatch.setattr(_convergence_store, "register_case", unresponsive)

@@ -6,7 +6,7 @@ import uuid
 
 from ._g2_engine import _call
 from ._g3_common import bound_model, tag_list
-from ._execution_contract import PreWriteRefusal
+from ._execution_contract import PreWriteRefusal, model_ref_from_mapping
 from ._observation_store import current_context, verify_producer, observation_context, resolve_observation
 
 
@@ -70,8 +70,12 @@ def register_case(worker, tag, observation_ref, oracle, oracle_results):
     return {'convergence_id':payload['convergence_id'],'sha256':payload['sha256']}
 
 
-def resolve_cases(worker, refs):
+def resolve_cases(worker, refs, *, model_tag=None):
     ctx=current_context();records=[];seen=set()
+    require(isinstance(ctx.get('model_ref'),dict),'Current model identity is required')
+    current_model=model_ref_from_mapping(ctx['model_ref'])
+    require(model_tag is None or model_tag==current_model.model_tag,
+            'Requested model differs from the current model identity')
     require(len(refs)>=3,'At least three registered refinement cases required')
     for ref in refs:
         require(isinstance(ref,dict) and set(ref)=={'convergence_id','sha256'},'Only registered references accepted; caller error/settings overrides refused')
@@ -81,8 +85,9 @@ def resolve_cases(worker, refs):
         require(record and record.get('kind')=='w20_convergence','Unregistered convergence case')
         require(record['sha256']==ref['sha256']==digest({k:v for k,v in record.items() if k!='sha256'}),'Convergence record hash mismatch')
         verify_producer(ctx,record['producer'])
-        for key in ('server_instance_id','session_id'):
-            require(record['model_ref'].get(key)==ctx['model_ref'].get(key),'Cross-runtime refinement case refused')
+        require(isinstance(record.get('model_ref'),dict),'Refinement model identity is required')
+        require(model_ref_from_mapping(record['model_ref'])==current_model,
+                'Cross-model or cross-runtime refinement case refused')
         with observation_context(ctx['store'],record['model_ref'],record['revision'],ctx['producer'],
                                 project_id=ctx.get('project_id')):
             resolve_observation(worker,record['model_ref']['model_tag'],record['observation_ref'],allow_historical=True)

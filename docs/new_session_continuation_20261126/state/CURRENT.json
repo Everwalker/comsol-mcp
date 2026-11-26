@@ -672,7 +672,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Synthetic range, convergence, UNKNOWN propagation, dataset-list classification and current dataset-to-recorded-solution binding checks tested; native same-solution, physical validation and full acceptance remain open."
+      "session_scope_note": "Synthetic range, convergence thresholds, UNKNOWN propagation, dataset binding and full convergence model identity checks tested; native same-solution, physical validation and full acceptance remain open."
     },
     "T05.a": {
       "status": "RUNNING",
@@ -1619,6 +1619,19 @@
       ],
       "verification": "Qwen reports 14/14 focused tests passed in its Python 3.14 environment; main agent ran 9 relevant reconcile tests on CPython 3.10.20, all passed. Qwen reports a broader run of 114 passed and 9 failed, and reports those same 9 failed with the two source files temporarily restored to HEAD; exact IDs and causality have not been independently confirmed. Qwen restored its changes afterwards; main agent inspected the current diff. This temporary replacement was a shared-workspace action and is not evidence about concurrent agents.",
       "remaining": "The 9 reported cancel/job.log RED cases are not accepted or resolved. Re-folding scans the prefix twice and holds a SQLite write transaction during the second scan; no load benchmark or whole-process RSS bound exists. Digest consistency is not principal authorization or proof of an unmodified historic record. Python 3.10 SQLite fallback, real RPC, native targets and full T35 remain open."
+    },
+    {
+      "id": "20261126-T30-convergence-model-identity",
+      "scope": "T30.c / U09 synthetic registered convergence model identity",
+      "base_commit": "edd96e619b76be89ee0a4d54b23cb2d11df27f67",
+      "finding": "A registered refinement set for one model was reported numerical PASS and model_validated=true even when validate.convergence was called with another model tag in the same session; the old resolver checked only session and server identity.",
+      "changes": [
+        "comsol_mcp/_convergence_store.py and _g3_w20_validation.py: require the requested model tag and each registered case to match the current validated ModelRef, including generation; historical revisions of the same model remain permitted.",
+        "tests/test_t30_observation_project_20261123.py: reject a mismatched requested tag, another model in the same session and a replacement generation while retaining a same-model positive control.",
+        "tests/test_w21_closure.py: supply valid synthetic model identity and a real-shape dataset-binding fixture; the old no-client fixture had failed since the dataset-binding change in 2b27866. Update the UNKNOWN-propagation stub for the resolver keyword."
+      ],
+      "verification": "The mismatched-model control returned PASS before the change. CPython 3.14.7 and 3.10.20: 8 relevant provenance/convergence tests passed each, and 2 W21 fixture controls passed each. All records, models and database contents were synthetic.",
+      "remaining": "Cross-model refinement is now conservatively refused without evidence binding those models; native behavior, historical sampling provenance, independent validation and physical convergence remain open. T30.c remains RUNNING."
     }
   ]
 }

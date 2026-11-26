@@ -22,7 +22,9 @@ def sample():
 
 
 def test_registered_observation_cannot_be_replaced_or_forged(tmp_path):
-    worker=SimpleNamespace(project_root=tmp_path)
+    from tests.test_dataset_binding import _model
+    worker=SimpleNamespace(project_root=tmp_path,
+                           client=lambda: SimpleNamespace(model=lambda _tag: _model()))
     store=OperationStore(tmp_path/'operations.sqlite')
     with observation_context(store, {'model_tag':'m1','generation':1},3,'real-w17-job', project_id='test-project'):
         ref=register_observation(worker,'m1',sample())
@@ -135,7 +137,7 @@ def test_convergence_caller_arrays_never_certify_native():
 def test_convergence_references_must_have_distinct_native_settings(tmp_path,monkeypatch):
     from comsol_mcp import _convergence_store as convergence
     store=OperationStore(tmp_path/'convergence.sqlite')
-    model_ref={'model_tag':'m','server_instance_id':'server','session_id':'session'}
+    model_ref={'model_tag':'m','server_instance_id':'server','session_id':'session','generation':1}
     monkeypatch.setattr(convergence,'resolve_observation',lambda *a,**kw: ({},{}))
     refs=[]
     with observation_context(store,model_ref,1,'review-call'):
