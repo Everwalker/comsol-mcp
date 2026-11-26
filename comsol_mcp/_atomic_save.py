@@ -229,8 +229,11 @@ def atomic_save(
     cleanup steps may fail; a returned no-clobber link additionally proves
     the destination name was absent at that instant, while a returned
     overwrite makes no claim about what (if anything) occupied the name at
-    that instant.  Concurrent external writers are outside the proving
-    power of every statement above.
+    that instant. If preflight did not observe an existing destination, even
+    an overwrite-enabled request uses no-clobber publication, so a later
+    creator is not replaced. A destination observed at preflight can still
+    be changed by an external writer before replacement; other external
+    activity remains outside the proving power of these observations.
     """
     destination_path = canonical_project_path(project_root, destination)
     parent = destination_path.parent
@@ -238,6 +241,7 @@ def atomic_save(
     # otherwise relative destination path before any candidate is created.
     canonical_project_path(project_root, parent)
     existed = _observed_presence(destination_path)
+    replace_existing = overwrite and existed is True
     if existed is True and not overwrite:
         raise AtomicSaveError(
             "Destination already exists and overwrite is disabled.",
@@ -350,7 +354,7 @@ def atomic_save(
     publication_status = "not_attempted"
     try:
         publication_status = "attempted"
-        if overwrite:
+        if replace_existing:
             os.replace(temporary_path, destination_path)
         else:
             # A same-directory hard link is an atomic no-clobber publication.
@@ -360,7 +364,7 @@ def atomic_save(
         published = destination_path.lstat()
         if not stat.S_ISREG(published.st_mode) or _candidate_identity(published) != _candidate_identity(verified):
             raise ValueError("published checkpoint differs from the verified candidate")
-        if not overwrite:
+        if not replace_existing:
             temporary_path.unlink()
         durable_parent = _fsync_parent(destination_path)
     except Exception as exc:
@@ -374,7 +378,7 @@ def atomic_save(
             # The syscall returned, so the candidate is at the destination;
             # only a later durability/cleanup step failed.
             status = "published"
-            if overwrite:
+            if replace_existing:
                 # os.replace returned; it clobbers whatever occupied the
                 # destination at the publish instant, but neither the
                 # preflight snapshot nor the return value proves anything
@@ -405,6 +409,6 @@ def atomic_save(
         "path": str(destination_path),
         "size": size,
         "sha256": digest,
-        "checkpoint": {**artifact, "publish_mode": "atomic_replace" if overwrite else "atomic_no_clobber", "parent_fsync": durable_parent},
+        "checkpoint": {**artifact, "publish_mode": "atomic_replace" if replace_existing else "atomic_no_clobber", "parent_fsync": durable_parent},
         "artifact": artifact,
     }

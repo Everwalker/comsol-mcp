@@ -624,6 +624,25 @@ def test_remote_model_save_never_uses_empty_path_as_in_place_bypass(tmp_path):
     assert destination.is_file()
 
 
+def test_remote_model_overwrite_does_not_clobber_new_concurrent_file(tmp_path, monkeypatch):
+    destination = tmp_path / "current.mph"
+    model = _SaveModel(tmp_path, destination)
+    raw_save = model._raw_save
+
+    def racing_save(path, **kwargs):
+        with zipfile.ZipFile(destination, "w") as archive:
+            archive.writestr("model.txt", "other writer")
+        raw_save(path, **kwargs)
+
+    monkeypatch.setattr(model, "_raw_save", racing_save)
+    with pytest.raises(_atomic_save.AtomicSaveError) as raised:
+        model.save(str(destination), overwrite=True)
+    assert raised.value.publication_status == "unknown"
+    assert raised.value.temporary_retained is True
+    with zipfile.ZipFile(destination) as archive:
+        assert archive.read("model.txt") == b"other writer"
+
+
 def test_remote_model_save_rejects_paths_outside_configured_project_root(tmp_path):
     model = _SaveModel(tmp_path, tmp_path / "current.mph")
     with pytest.raises(Exception):

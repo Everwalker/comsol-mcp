@@ -170,34 +170,23 @@ def test_overwrite_publish_return_prior_state_unverified(tmp_path, monkeypatch):
     assert _read_mph(target) == b"new synthetic checkpoint"
 
 
-def test_overwrite_concurrent_creator_prior_state_unverified(tmp_path, monkeypatch):
-    """Reviewer R4 fault model: destination created during the save window.
-
-    The publisher's preflight saw no destination; an external writer landed
-    one; os.replace clobbered it; a later step failed.  The label must not
-    claim 'candidate_created'.
-    """
+def test_overwrite_does_not_clobber_destination_created_during_save(tmp_path):
+    """A new writer after an absent preflight is preserved, even with overwrite enabled."""
     target = tmp_path / "project.mph"
-    reached = []
 
     def racing_callback(candidate: Path) -> None:
-        _write_mph(target, b"external racing writer")  # external writer lands
+        _write_mph(target, b"external racing writer")
         _write_mph(candidate, b"new synthetic checkpoint")
 
-    def fail_after_replace(path):
-        assert path == target and _read_mph(target) == b"new synthetic checkpoint"
-        reached.append(True)
-        raise OSError("synthetic directory close failure after replace")
-
-    with monkeypatch.context() as patch:
-        patch.setattr(atomic, "_fsync_parent", fail_after_replace)
-        with pytest.raises(atomic.AtomicSaveError) as caught:
-            atomic.atomic_save(target, racing_callback, tmp_path, overwrite=True)
+    with pytest.raises(atomic.AtomicSaveError) as caught:
+        atomic.atomic_save(target, racing_callback, tmp_path, overwrite=True)
     error = caught.value
-    assert reached == [True]
-    assert error.publication_status == "published", error.as_dict()
-    assert error.original_preservation == "replace_published_prior_state_unverified", error.as_dict()
+    assert error.publication_status == "unknown", error.as_dict()
+    assert error.original_preservation == "unverified", error.as_dict()
     assert error.original_preserved is False, error.as_dict()
+    assert error.temporary_retained is True, error.as_dict()
+    assert _read_mph(target) == b"external racing writer"
+    assert _read_mph(error.temporary_path) == b"new synthetic checkpoint"
 
 
 def test_no_clobber_link_return_proves_only_publish_instant_absence(tmp_path, monkeypatch):

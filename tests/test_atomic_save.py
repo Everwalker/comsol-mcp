@@ -38,6 +38,7 @@ def test_valid_mph_zip_may_contain_an_empty_optional_member(tmp_path: Path):
             archive.writestr("optional-empty-member", b"")
     result = atomic_save(destination, callback, tmp_path)
     assert result["checkpoint"]["verified"] is True
+    assert result["checkpoint"]["publish_mode"] == "atomic_no_clobber"
 
 
 def test_callback_symlink_is_not_published_as_a_verified_checkpoint(tmp_path: Path):

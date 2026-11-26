@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对 Java Worker 的 atomic_save 覆盖调用，评估如何保留并发写者和旧字节；仅使用新的隔离文件测试。",
+  "next_action": "分析已存在目标的覆盖竞态和失败恢复，先核对可复用的受管保存交换实现与 Java Worker 调用合同。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -408,11 +408,13 @@
         "tests/test_t37_scoped_migration.py",
         "comsol_mcp/_atomic_save.py",
         "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint",
-        "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified"
+        "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified",
+        "tests/test_t08_publication_remediation_independent_20261109.py",
+        "tests/test_java_worker.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Detects an observed staging swap after publication and avoids false verified success; it does not prevent the write or establish race-free rollback/native acceptance."
+      "session_scope_note": "New-destination race narrowed with no-clobber publication, including fake Java Worker facade; pre-existing destination races, rollback and native/Windows acceptance remain open."
     },
     "T38": {
       "status": "RUNNING",
@@ -706,11 +708,13 @@
         "references/CURRENT_20261123.json#/tasks/T08.a",
         "comsol_mcp/_atomic_save.py",
         "tests/test_atomic_save.py::test_callback_symlink_is_not_published_as_a_verified_checkpoint",
-        "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified"
+        "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified",
+        "tests/test_t08_publication_remediation_independent_20261109.py",
+        "tests/test_java_worker.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Detects an observed staging swap after publication and avoids false verified success; it does not prevent the write or establish race-free rollback/native acceptance."
+      "session_scope_note": "New-destination race narrowed with no-clobber publication, including fake Java Worker facade; pre-existing destination races, rollback and native/Windows acceptance remain open."
     },
     "T08.b": {
       "status": "TODO",
@@ -1415,6 +1419,23 @@
         "Every process-identity query and termination in the positive/negative force-stop cases used fake process identity and monkeypatched termination; no old job, native Worker, COMSOL or real process was touched."
       ],
       "remaining": "The project/permission recheck and OS process termination are not one atomic operation; the post-check-to-signal and permission-revocation windows remain. No authenticated-principal, OS process-tree or native cancellation evidence is claimed. T34/T36 remain RUNNING, and all old UNKNOWN resources remain frozen."
+    },
+    {
+      "id": "20261126-T37-new-destination-no-clobber",
+      "scope": "T08.a/T37 / U08-U09 synthetic local-file and Java Worker facade correction; no native COMSOL",
+      "base_commit": "7106c0592fd6842ff02e4c767388b95de96de65c",
+      "finding": "When overwrite was enabled and no destination existed at preflight, an external writer could create the destination during the callback and then lose its file to unconditional os.replace.",
+      "changes": [
+        "comsol_mcp/_atomic_save.py: use the existing same-directory no-clobber link when preflight did not positively observe a destination, even if overwrite is enabled; use replace only when one was observed",
+        "tests/test_t08_publication_remediation_independent_20261109.py and tests/test_java_worker.py: preserve a concurrent creator and the candidate for direct and RemoteModel.save paths",
+        "tests/test_atomic_save.py: confirm a new overwrite-enabled save reports its actual no-clobber publish mode"
+      ],
+      "verification": [
+        "CPython 3.14.7: 47 passed across tests/test_atomic_save.py, four focused T08 publication files, and three RemoteModel.save tests.",
+        "CPython 3.10.20: 28 passed across tests/test_atomic_save.py, tests/test_t08_publication_remediation_independent_20261109.py and two RemoteModel.save tests.",
+        "Only task-created local synthetic files and fake Java callbacks were used; no real model, COMSOL, Windows or native filesystem behavior was tested."
+      ],
+      "remaining": "A destination observed as present at preflight can still change before os.replace and be overwritten; artifact-store overwrite and atomic-save candidate substitution races, old-byte rollback and crash recovery remain unresolved. A failing link is conservatively reported with publication status UNKNOWN. T37 remains RUNNING and native/final acceptance remains open."
     }
   ]
 }
