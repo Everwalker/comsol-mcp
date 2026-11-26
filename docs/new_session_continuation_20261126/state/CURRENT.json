@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对 T31.a 当前持久调度和重启协调中尚未覆盖的实际失败窗口；仅使用新建隔离数据。",
+  "next_action": "核对 T30.c 可信观测和报告生产路径的剩余实际缺口，继承已完成的 T30.a/b。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -768,11 +768,12 @@
         "comsol_mcp/_control_daemon.py",
         "comsol_mcp/_operation_store.py",
         "tests/test_control_daemon.py",
-        "tests/test_t35_bounded_status_wait_20261123.py"
+        "tests/test_t35_bounded_status_wait_20261123.py",
+        "tests/test_t31a_persistent_dispatch.py::test_queued_dispatch_reopens_reconciling_without_resubmission"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Scoped synthetic callback/restart test retained ordinary UNKNOWN and reused the original durable result without a second callback; real crash, Worker and native behavior remain open."
+      "session_scope_note": "Synthetic file-backed completed, UNKNOWN and queued/reopen cases avoid repeat dispatch; real crash, separate RPC, Worker and native behavior remain open."
     },
     "T35.a": {
       "status": "RUNNING",
@@ -1487,6 +1488,16 @@
       "scope": "Read-only analysis by local omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S at max reasoning; no source changes or execution",
       "finding": "The current standard-library Python 3.10 path has no exposed blobopen; previously recorded local RSS samples show the existing SQLite CAST/substr fallback grows with legacy field size. The subagent suggested chunked storage for future writes, while retaining legacy reads.",
       "remaining": "The proposed schema/chunking and any migration are unimplemented and not evidence that legacy single-field reads or full result creation have bounded memory. Subagent claims about third-party package and Windows SQLite internals were not independently verified. Python 3.10 support and old data access remain intact; T35 stays RUNNING."
+    },
+    {
+      "id": "20261126-T31-daemon-queued-reopen",
+      "scope": "T31.a / U07 synthetic daemon-object and file-backed SQLite verification; no native Worker or process crash",
+      "base_commit": "8ad1f66de70a39ffc36f7eb68e518a11e27f94a4",
+      "changes": [
+        "tests/test_t31a_persistent_dispatch.py: admit one request into a deliberately nonexecuting fake scheduler, close the owned ControlDaemon, construct a fresh ControlDaemon over the same new SQLite file, and observe the same key without a new scheduler submission or new rows"
+      ],
+      "verification": "CPython 3.14.7 and CPython 3.10.20: 3 passed each for the new queued/reopen test, existing completed-result duplicate/restart control, and scoped synthetic UNKNOWN restart control.",
+      "remaining": "The scheduler was stubbed and no callback ran in the new case. The daemon objects ran sequentially in one process and closed normally; this is not an OS crash, separate control RPC, real scheduler/Worker, native COMSOL or end-to-end acceptance. T31.a remains RUNNING and old UNKNOWN resources were not used."
     }
   ]
 }

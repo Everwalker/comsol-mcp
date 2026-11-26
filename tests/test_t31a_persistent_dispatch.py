@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import Future
 import shutil
 import sqlite3
 import tempfile
@@ -466,6 +467,48 @@ def test_file_backed_dispatch_is_single_submission_across_duplicate_and_restart(
         for daemon in reversed(daemons):
             daemon.close()
         shutil.rmtree(home, ignore_errors=True)
+
+
+def test_queued_dispatch_reopens_reconciling_without_resubmission(tmp_path):
+    home = tmp_path / "queued-restart"
+    home.mkdir()
+    (home / "workspace").mkdir()
+    token = uuid4().hex
+    fake_worker = _FakeWorker()
+    registry = {"set_parameters": fake_worker}
+    service = _service(home, token)
+    request = _request(service, token)
+    request["execution"]["rpc_timeout_s"] = 0
+    daemon = ControlDaemon(home, service=service, registry=registry)
+    _install_fake_worker(daemon, fake_worker)
+    submissions = []
+    daemon.session_scheduler.submit = lambda *args, **kwargs: submissions.append(True) or Future()
+    try:
+        first = daemon.dispatch(request)
+        job_id = first["execution"]["job_id"]
+        assert first["data"]["status"] == "QUEUED"
+        assert submissions == [True]
+        assert fake_worker.calls == []
+    finally:
+        daemon.close()
+
+    restarted_service = _service(home, token)
+    assert _request(restarted_service, token)["execution"]["model_ref"] == request["execution"]["model_ref"]
+    restarted = ControlDaemon(home, service=restarted_service, registry=registry)
+    _install_fake_worker(restarted, fake_worker)
+    restart_submissions = _spy_submit(restarted.session_scheduler)
+    try:
+        replay = restarted.dispatch(request)
+        assert replay["execution"]["job_id"] == job_id
+        assert replay["execution"]["operation_id"] == first["execution"]["operation_id"]
+        assert replay["data"]["status"] == "RECONCILING"
+        assert restarted.store.job(job_id)["status"] == "RECONCILING"
+        assert restart_submissions == []
+        assert fake_worker.calls == []
+        assert restarted.store.db.execute("SELECT COUNT(*) FROM operations").fetchone()[0] == 1
+        assert restarted.store.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 1
+    finally:
+        restarted.close()
 
 
 def test_known_scheduler_identity_conflict_is_persisted_and_not_requeued():
