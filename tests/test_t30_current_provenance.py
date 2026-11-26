@@ -14,14 +14,46 @@ from comsol_mcp._operation_store import OperationStore
 class SyntheticWorker:
     def __init__(self, project_root: Path):
         self.project_root = project_root
+        self.dataset_solution = "sol-a"
+        self.dataset_error = None
+        self.probe_calls = []
 
     def client(self):
         return self
 
     def model(self, _tag):
+        worker = self
+
+        class Tagged:
+            def __init__(self, entries):
+                self.entries = entries
+
+            def tags(self):
+                return list(self.entries)
+
+            def get(self, tag):
+                return self.entries[tag]
+
+        class Dataset:
+            def getType(self):
+                return "Solution"
+
+            def properties(self):
+                return ["solution", "comp", "geom"] if worker.dataset_solution else ["comp", "geom"]
+
+            def getString(self, name):
+                worker.probe_calls.append(name)
+                if name == "solution" and worker.dataset_error is not None:
+                    raise worker.dataset_error
+                return {"solution": worker.dataset_solution, "comp": "comp-a", "geom": "geom-a"}[name]
+
         class Datasets:
             def tags(self):
                 return ["dataset-a"]
+
+            def get(self, tag):
+                assert tag == "dataset-a"
+                return Dataset()
 
         class Results:
             def dataset(self):
@@ -30,6 +62,17 @@ class SyntheticWorker:
         class Model:
             def result(self):
                 return Results()
+
+            def sol(self):
+                return Tagged({"sol-a": object(), "sol-b": object()})
+
+            def modelNode(self):
+                worker.probe_calls.append("modelNode")
+                return Tagged({"comp-a": object()})
+
+            def component(self, tag):
+                assert tag == "comp-a"
+                return type("Component", (), {"geom": lambda self: Tagged({"geom-a": object()})})()
 
         return Model()
 
@@ -96,6 +139,34 @@ def test_registered_observation_requires_matching_project_model_and_solution(tmp
         assert accepted["scope"] == "MODEL_VALIDATED"
         assert accepted["observation_origin"] == "REGISTERED_W17"
         assert accepted["model_validated"] is True
+        assert accepted["checks"]["dataset_binding"] is True
+
+        # The old solution still exists and its identity is unchanged, but the
+        # dataset now points at another solution. Its tag alone proves nothing.
+        worker.dataset_solution = "sol-b"
+        rebound = validate()
+        assert rebound["numerical_verification_status"] == "UNVERIFIED"
+        assert rebound["model_validated"] is False
+
+        worker.dataset_solution = None
+        unreadable_binding = validate()
+        assert unreadable_binding["numerical_verification_status"] == "UNVERIFIED"
+        assert unreadable_binding["model_validated"] is False
+        worker.dataset_solution = "sol-a"
+
+        from comsol_mcp._execution_contract import ExecutionContractError
+        for unknown_error in (
+            ExecutionContractError("ENGINE_CALL_FAILED", "synthetic unknown",
+                                   details={"execution_state_unknown": True}),
+            ExecutionContractError("ENGINE_UNRESPONSIVE", "synthetic timeout", safe_retry=False),
+        ):
+            worker.dataset_error = unknown_error
+            worker.probe_calls.clear()
+            with pytest.raises(ExecutionContractError) as binding_unknown:
+                validate()
+            assert binding_unknown.value.code == "EXECUTION_STATE_UNKNOWN"
+            assert worker.probe_calls == ["solution"]
+        worker.dataset_error = None
 
         # A requested range must not be silently skipped just because its
         # bounds are malformed: these are real, registered model samples.
@@ -140,8 +211,6 @@ def test_registered_observation_requires_matching_project_model_and_solution(tmp
         assert caller_override["scope"] == "OBSERVATION_OVERRIDE_REFUSED"
         assert caller_override["model_validated"] is False
         assert caller_override["numerical_verification_status"] != "PASS"
-
-        from comsol_mcp._execution_contract import ExecutionContractError
 
         def unknown_solution(*_args):
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "synthetic Worker state unknown")

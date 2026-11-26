@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对现有 dataset 绑定解析器能否安全用于验证已登记观测仍指向原解。",
+  "next_action": "检查 job.reconcile 是否为决策读取全部历史事件，并核对可行的项目隔离有界读取。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -671,7 +671,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Synthetic registered range, convergence, Worker UNKNOWN and dataset existence classification corrected; current dataset-to-solution binding and native acceptance remain open."
+      "session_scope_note": "Synthetic range, convergence, UNKNOWN propagation, dataset-list classification and current dataset-to-recorded-solution binding checks tested; native same-solution, physical validation and full acceptance remain open."
     },
     "T05.a": {
       "status": "RUNNING",
@@ -1537,6 +1537,19 @@
       "documentation": "COMSOL 6.4 Results interface, doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/Results.html, chunk 23038, SHA-256 226a0204f2f949dd9d42fd9f0baa8672501eeb11c7fff369428df63598fb557f; DatasetFeatureList, doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/DatasetFeatureList.html, chunk 22806, SHA-256 eb42370db60b809599083a0b5cbbaec3cc688aadb2cd2b4323cf3cfe6aee131f. The 6.4 references distinguish dataset list from result features; 6.3/native behavior is not established.",
       "verification": "CPython 3.14.7 and CPython 3.10.20: 19 passed each across three T30 provenance/project files and two dataset controls; 14 selected solution/convergence tests also passed in each version. Synthetic models/SQLite only.",
       "remaining": "Dataset tag existence alone does not prove that it still points to the recorded solution; native same-solution binding, COMSOL 6.3/6.4 behavior and physical validation remain open. T30.c stays RUNNING."
+    },
+    {
+      "id": "20261126-T30-observation-dataset-binding",
+      "scope": "T30.c / U09 current registered-observation dataset-to-solution binding; synthetic models only",
+      "base_commit": "d488f9003664fca9f0f8a05eb1c8fd497800bbb2",
+      "finding": "With the original solution identity unchanged, a synthetic dataset rebound from sol-a to sol-b still produced numerical PASS and model_validated=true before the change.",
+      "changes": [
+        "comsol_mcp/_g3_w20_validation.py: require the existing read-only dataset graph resolver to establish a complete binding to the recorded solution before accepting a registered observation; an incomplete or different binding is INCOMPLETE/UNVERIFIED.",
+        "comsol_mcp/_dataset_binding.py and comsol_mcp/_g3_results.py: propagate unsafe ENGINE_UNRESPONSIVE as unknown instead of continuing further dataset probes.",
+        "tests/test_t30_current_provenance.py: exercise matching, rebound and unreadable bindings and ensure explicit UNKNOWN/unsafe timeouts stop further probes."
+      ],
+      "verification": "Before change the rebound control failed because numerical status was PASS. CPython 3.14.7 and 3.10.20: 13 passed each for observation binding and dataset resolver; 18 passed each for project, caller-provenance and dataset regression controls. Synthetic model and temporary file-backed SQLite only.",
+      "remaining": "The existing resolver also requires component and geometry evidence; inability to establish them conservatively produces UNVERIFIED. COMSOL 6.3/6.4 runtime compatibility, atomicity against concurrent rebinding, original sampling provenance, physical validation and T30.c/native acceptance remain open."
     }
   ]
 }

@@ -1135,7 +1135,9 @@ def _resolve_dataset_binding(
             _fence_native_receiver(model), dataset_tag, requested_solution=requested_solution
         )
     except Exception as exc:
-        if _worker_failure_unknown(exc):
+        if (_worker_failure_unknown(exc)
+                or (getattr(exc, "code", None) == "ENGINE_UNRESPONSIVE"
+                    and not getattr(exc, "safe_retry", False))):
             if getattr(exc, "code", None) == "EXECUTION_STATE_UNKNOWN":
                 raise
             raise ExecutionContractError(

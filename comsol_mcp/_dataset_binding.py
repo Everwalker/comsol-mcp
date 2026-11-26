@@ -18,6 +18,12 @@ _DERIVED_TYPES = frozenset({
 })
 
 
+def _unknown_worker_failure(exc: Exception) -> bool:
+    return (_worker_failure_unknown(exc)
+            or (getattr(exc, "code", None) == "ENGINE_UNRESPONSIVE"
+                and not getattr(exc, "safe_retry", False)))
+
+
 def _err(code: str, message: str, path: str | None = None) -> dict[str, Any]:
     row: dict[str, Any] = {"code": str(code), "message": str(message)[:500]}
     if path:
@@ -33,7 +39,7 @@ def _call(node: Any, method: str, *args: Any) -> tuple[bool, Any, dict[str, Any]
     try:
         fn = getattr(node, method)
     except Exception as exc:  # noqa: BLE001 - read boundary
-        if _worker_failure_unknown(exc):
+        if _unknown_worker_failure(exc):
             raise
         return False, None, _err("API_UNSUPPORTED", f"{method} accessor is unavailable: {type(exc).__name__}: {exc}")
     if not callable(fn):
@@ -41,7 +47,7 @@ def _call(node: Any, method: str, *args: Any) -> tuple[bool, Any, dict[str, Any]
     try:
         return True, fn(*args), None
     except Exception as exc:  # noqa: BLE001 - retain the native read failure
-        if _worker_failure_unknown(exc):
+        if _unknown_worker_failure(exc):
             raise
         code = getattr(exc, "code", None)
         if not isinstance(code, str) or not code:

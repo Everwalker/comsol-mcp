@@ -1094,6 +1094,28 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
                 "message": "The registered observation's dataset could not be verified",
             }
 
+        if scope == "MODEL_VALIDATED":
+            from ._g3_results import _resolve_dataset_binding
+            binding = _resolve_dataset_binding(model, dataset_name, requested_solution=record["solution"])
+            if (not isinstance(binding, Mapping) or binding.get("binding_complete") is not True
+                    or binding.get("solution") != record["solution"]):
+                checks["dataset_binding"] = STATUS_UNVERIFIED
+                return {
+                    "status": STATUS_INCOMPLETE,
+                    "execution_status": STATUS_PASS,
+                    "numerical_verification_status": STATUS_UNVERIFIED,
+                    "physical_validation_status": STATUS_UNVERIFIED,
+                    "observation_origin": observation_origin,
+                    "scope": "REGISTERED_OBSERVATION_UNVERIFIED",
+                    "model_validated": False,
+                    "solution": solution,
+                    "checks": checks,
+                    "metrics": {},
+                    "oracle_results": {},
+                    "message": "The registered observation's dataset binding to its solution could not be verified",
+                }
+            checks["dataset_binding"] = True
+
     values = criteria.get("values", [])
     if values and isinstance(values, Sequence):
         is_finite = finite_check(values)
