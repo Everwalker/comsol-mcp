@@ -2261,11 +2261,13 @@ class OperationStore:
         with self.lock:
             if not self.db.in_transaction:
                 raise ValueError("job_result_metadata requires an active project read snapshot")
+            blobopen = getattr(self.db, "blobopen", None)
+            byte_length = "NULL" if callable(blobopen) else "length(CAST(o.result AS BLOB))"
             rows = self.db.execute(
                 "SELECT j.job_id,j.operation_id,j.status AS job_status,"
                 "o.operation,o.status AS operation_status,o.rowid AS result_rowid,"
                 "typeof(o.result) AS result_type,"
-                "length(CAST(o.result AS BLOB)) AS result_size_bytes "
+                + byte_length + " AS result_size_bytes "
                 "FROM jobs j LEFT JOIN operations o ON o.operation_id=j.operation_id "
                 "WHERE j.job_id=?",
                 (job_id,),
@@ -2276,6 +2278,21 @@ class OperationStore:
                 raise RuntimeError("exact job result metadata cardinality is not one")
             row = rows[0]
             result = {key: row[key] for key in row.keys()}
+            if callable(blobopen) and result["result_type"] in {"text", "blob"}:
+                try:
+                    with blobopen("operations", "result", result["result_rowid"], readonly=True) as blob:
+                        result["result_size_bytes"] = len(blob)
+                except sqlite3.OperationalError as exc:
+                    raise JobResultReadError(
+                        "RESULT_RAW_READ_UNSUPPORTED",
+                        "SQLite cannot expose the stored result through read-only blobopen",
+                    ) from exc
+            elif callable(blobopen) and result["result_type"] != "null":
+                scalar = self.db.execute(
+                    "SELECT length(CAST(result AS BLOB)) FROM operations WHERE rowid=?",
+                    (result["result_rowid"],),
+                ).fetchone()
+                result["result_size_bytes"] = scalar[0] if scalar else None
             encoding_row = self.db.execute("PRAGMA encoding").fetchone()
             result["database_encoding"] = encoding_row[0] if encoding_row else None
             return result

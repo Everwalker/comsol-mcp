@@ -26,6 +26,41 @@ def _catalog_entry(operation_id: str) -> dict:
     return next(row for row in catalog["operations"] if row["operation_id"] == operation_id)
 
 
+def test_result_pages_remain_correct_without_blobopen(daemon_projects):
+    daemon, project_id, _, _ = daemon_projects
+    record = _begin_job(daemon, project_id, "no-blobopen")
+    result = {"success": True, "payload": "界" * 20}
+    assert daemon.store.finish(record["operation_id"], status="SUCCEEDED", result=result)[0]
+    real = daemon.store.db
+
+    class WithoutBlobOpen:
+        def __getattr__(self, name):
+            if name == "blobopen":
+                raise AttributeError(name)
+            return getattr(real, name)
+
+    daemon.store.db = WithoutBlobOpen()
+    try:
+        chunks, offset, digest = [], 0, None
+        while True:
+            arguments = {"offset": offset, "limit": 7}
+            if digest is not None:
+                arguments["result_sha256"] = digest
+            reply = _call_job(daemon, "job.result.read", record["job_id"], project_id, **arguments)
+            assert reply["success"] is True, reply
+            page = reply["data"]
+            digest = page["result_sha256"]
+            chunks.append(base64.b64decode(page["chunk_base64"], validate=True))
+            offset = page["next_offset"]
+            if page["complete"]:
+                break
+    finally:
+        daemon.store.db = real
+    raw = b"".join(chunks)
+    assert hashlib.sha256(raw).hexdigest() == digest
+    assert json.loads(raw) == result
+
+
 def test_small_job_result_keeps_object_and_solver_success_semantics(daemon_projects):
     daemon, project_id, _, _ = daemon_projects
     for status, result, expected_success in (
