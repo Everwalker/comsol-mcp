@@ -145,7 +145,8 @@ def _install_pre_cancel_binding_flip(
     """
     spy_cancel_queued = store.cancel_queued
 
-    def flipping_cancel_queued(cancel_job_id: str, reason: str = "cancelled by user") -> Any:
+    def flipping_cancel_queued(cancel_job_id: str, reason: str = "cancelled by user",
+                               **kwargs: Any) -> Any:
         if cancel_job_id == job_id and flips.get("armed") is True:
             real_update_job(cancel_job_id, "QUEUED", {"execution": {"project_id": PROJECT_B}})
             row = real_job_read(cancel_job_id)
@@ -165,7 +166,9 @@ def _install_pre_cancel_binding_flip(
                 str(flips["job_project_after_flip"]), str(flips["operation_project_after_flip"]),
             ))
         flips["cancel_called"] = True
-        outcome = spy_cancel_queued(cancel_job_id, reason=reason)
+        # Forward the strict binding kwargs (project_id/enforce_project_
+        # binding) so the real write transaction keeps its own re-check.
+        outcome = spy_cancel_queued(cancel_job_id, reason=reason, **kwargs)
         flips["cancel_result"] = (outcome[0], outcome[1])
         return outcome
 

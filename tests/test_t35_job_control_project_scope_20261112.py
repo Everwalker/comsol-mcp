@@ -210,8 +210,11 @@ class _InertDispatchReceiver:
     def _control_read(self, operation: str, arguments: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
         return ControlDaemon._control_read(self, operation, arguments, **kwargs)  # type: ignore[arg-type]
 
-    def _cancel_job(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        return ControlDaemon._cancel_job(self, arguments)  # type: ignore[arg-type]
+    def _cancel_job(self, arguments: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        # The current ordinary-cancel contract routes the authorized outer
+        # project through ``scoped_project_id``; forward it unchanged so the
+        # real scoped binding check and strict cancel_queued write run as-is.
+        return ControlDaemon._cancel_job(self, arguments, **kwargs)  # type: ignore[arg-type]
 
     @staticmethod
     def _error(code: str, message: str, **details: Any) -> dict[str, Any]:
@@ -250,9 +253,12 @@ def _install_store_spies(store: OperationStore, timeline: list[tuple[str, ...]])
         timeline.append(("events", job_id))
         return real_events(job_id, offset=offset, limit=limit)
 
-    def spy_cancel_queued(job_id: str, reason: str = "cancelled by user") -> Any:
+    def spy_cancel_queued(job_id: str, reason: str = "cancelled by user",
+                          **kwargs: Any) -> Any:
+        # The strict route passes project_id/enforce_project_binding; the
+        # spy records and forwards them without weakening the write.
         timeline.append(("cancel_queued", job_id))
-        return real_cancel_queued(job_id, reason=reason)
+        return real_cancel_queued(job_id, reason=reason, **kwargs)
 
     def spy_add_event(job_id: str, event: str, metadata: dict[str, Any] | None = None) -> Any:
         timeline.append(("add_event", job_id, event))

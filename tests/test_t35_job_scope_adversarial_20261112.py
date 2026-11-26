@@ -297,9 +297,13 @@ def test_t35ja_top_level_project_id_only_job_log_authorized_bound_project_readab
         assert [event["metadata"]["marker"] for event in response["data"]["events"]] == list(events)
         assert authority.calls == [(PROJECT_A, "inspect")]
         assert timeline[0] == ("authority", PROJECT_A, "inspect")
-        assert (timeline.count(("job_row", job_id))) >= 1
+        # The current bounded log route reads the job row through the
+        # project-bound ``job_log_read_snapshot`` binding (spy "binding")
+        # rather than the unbound ``store.job`` spy; the binding snapshot
+        # is the durable job/operation row read that must precede the page.
+        assert (timeline.count(("binding", job_id))) >= 1
         assert [entry for entry in timeline if entry[0] == "events"] == [("events", job_id)]
-        assert timeline.index(("job_row", job_id)) < timeline.index(("events", job_id))
+        assert timeline.index(("binding", job_id)) < timeline.index(("events", job_id))
     finally:
         store.close()
 

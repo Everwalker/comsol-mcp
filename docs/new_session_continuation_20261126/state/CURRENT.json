@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "由本地 Qwen 分类既有 cancel/job.log 失败并处理已证实的独立缺口。",
+  "next_action": "由本地 Qwen 修正并验证剩余四个取消状态漂移测试夹具。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -1642,6 +1642,17 @@
       "source_sha256": "226a0204f2f949dd9d42fd9f0baa8672501eeb11c7fff369428df63598fb557f",
       "verification": "In a task-owned temporary SQLite index, the real 6.4 source indexed into 2 chunks; search dataset and get section dataset returned SUCCEEDED with the source hash matching the actual file. A missing section returned NOT_FOUND and an unindexed 6.3 query returned UNAVAILABLE. Temporary index removed; no official documentation content was copied to the repository or published.",
       "remaining": "This is a single 6.4 document and in-process source-index test, not installed/public MCP transport, a full SDK capability check, native engine evidence, actual 6.3 documentation coverage or complete T16 acceptance. The 6.3 UNAVAILABLE result describes only the temporary one-file index."
+    },
+    {
+      "id": "20261126-T35-qwen-stale-cancel-log-fixtures",
+      "scope": "T35.b / U08 local Qwen max synthetic cancellation and log test-fixture reconciliation",
+      "base_commit": "07c03632bc8b3fbbee7cbc67d35559bad7c3bc99",
+      "finding": "Qwen identified the previous 9 reported RED tests as 8 stale cancellation wrapper signatures that failed to forward project-scope arguments, plus one job.log assertion against an old unscoped reader call. The existing implementation uses the outer host_control grant and a project-bound read/write path.",
+      "changes": [
+        "Three tests/test_t35_job_*.py fixtures now forward scoped cancellation kwargs to the real methods and check that the bound log snapshot precedes the event page. Production code was not changed."
+      ],
+      "verification": "Qwen reports 23/23 targeted cases including the prior 9 and T35.b controls, plus 46/46 in four scope files and 46/46 across six related harness files on CPython 3.14.7. Main agent reviewed the diff and did not independently rerun these sets. All are synthetic file-backed tests, not real OS process control or native COMSOL.",
+      "remaining": "Four additional cases in tests/test_t35_cancel_drift_response_contract_20261113.py reportedly fail because another old wrapper lacks project_id forwarding; they were outside the subagent write scope and remain RED. Some old test docstrings still describe formerly RED behavior. Real RPC/native, authenticated principal, SQLite/RSS and full T35 acceptance remain open."
     }
   ]
 }
