@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "检查现有结果元数据 blobopen 探测能否用于 status/wait/reconcile 的同事务结果大小读取。",
+  "next_action": "等待本地 Qwen 完成 T20.a 独立实现与 T32 核对，审阅其证据并推进可执行缺口。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -1576,6 +1576,17 @@
       ],
       "verification": "CPython 3.14.7 and CPython 3.10.20: 13 passed each for reconciliation, status and wait controls with file-backed SQLite; small-result shapes, project isolation, event/binding drift, >1000-event pending request, oversized Worker evidence and malformed event controls included. Synthetic jobs only.",
       "remaining": "Existing job_for_status_wait still probes size via length(CAST(result AS BLOB)), which may materialize the complete result inside SQLite; Python 3.10 has no blobopen. Project/job metadata, Worker status replies and full MCP frame/RSS remain independently unbounded or unverified; no real Worker, Windows or native acceptance is inferred."
+    },
+    {
+      "id": "20261126-T35-status-wait-result-size-probe",
+      "scope": "T35.a/b / U08 status, wait and reconcile result-size probe in isolated file-backed SQLite",
+      "base_commit": "16809230d9acc54e82670f9af63926e954980733",
+      "finding": "The shared status/wait projection used length(CAST(result AS BLOB)) even on Python versions that provide incremental blobopen; the existing result-metadata reader already provides the latter within an active snapshot.",
+      "changes": [
+        "comsol_mcp/_operation_store.py: reuse the existing result-metadata size probe in the same transaction for status/wait/reconcile; small-result projection and existing fallback remain."
+      ],
+      "verification": "CPython 3.14.7: 14 relevant status/wait/reconcile and no-blobopen paging tests passed. CPython 3.10.20: 3 selected small-result and oversized-reconcile cases passed. macOS ARM, Python 3.14 isolated child ru_maxrss samples for 4 MiB and 32 MiB stored results: before deltas 4,292,608 and 33,669,120 bytes; after 65,536 and 49,152 bytes. Each child sampled once; the operation result was omitted and byte count retained.",
+      "remaining": "Those measurements are limited samples of this one local projection and are not a process-wide bound or native/Windows acceptance. Python 3.10 still uses SQLite length(CAST(...)); legacy single-field RSS may grow with field size. Project/job metadata, Worker status replies, complete MCP frame, in-place event changes and full T35 remain open."
     }
   ]
 }

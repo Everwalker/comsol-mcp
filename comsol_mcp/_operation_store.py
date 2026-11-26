@@ -2471,9 +2471,9 @@ class OperationStore:
         results use the existing ``_job`` projection unchanged. For a result
         above the inline budget, this returns the job row plus an explicit
         ``job.result.read`` retrieval hint, without selecting or JSON-decoding
-        ``operations.result`` in Python. SQLite may still need to scan or
-        temporarily convert the stored TEXT for ``length(CAST(... AS BLOB))``;
-        this is not a whole-process memory bound.
+        ``operations.result`` in Python. The shared result metadata reader uses
+        blobopen for the size when available; its SQLite length(CAST(...))
+        fallback may materialize the value. This is not a process RSS bound.
         """
         if type(max_inline_result_bytes) is not int or max_inline_result_bytes < 0:
             raise ValueError("max_inline_result_bytes must be a non-negative integer")
@@ -2482,29 +2482,16 @@ class OperationStore:
             if started_transaction:
                 self.db.execute("BEGIN")
             try:
-                row = self.db.execute(
-                    "SELECT j.*,o.operation AS _status_wait_operation,"
-                    "length(CAST(o.result AS BLOB)) AS _status_wait_result_bytes "
-                    "FROM jobs j LEFT JOIN operations o ON o.operation_id=j.operation_id "
-                    "WHERE j.job_id=?",
-                    (job_id,),
-                ).fetchone()
+                row = self.db.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
                 if row is None:
                     value = None
                 else:
-                    result_bytes = row["_status_wait_result_bytes"]
+                    result_metadata = self.job_result_metadata(job_id)
+                    result_bytes = result_metadata["result_size_bytes"]
                     if result_bytes is None or result_bytes <= max_inline_result_bytes:
-                        job_row = self.db.execute(
-                            "SELECT * FROM jobs WHERE job_id=?", (job_id,),
-                        ).fetchone()
-                        value = self._job(job_row) if job_row else None
+                        value = self._job(row)
                     else:
-                        value = {
-                            key: row[key] for key in row.keys()
-                            if key not in {
-                                "_status_wait_operation", "_status_wait_result_bytes",
-                            }
-                        }
+                        value = dict(row)
                         value["metadata"] = json.loads(value["metadata"] or "{}")
                         value["effective_timeouts"] = json.loads(
                             value.get("effective_timeouts") or "{}"
@@ -2512,7 +2499,7 @@ class OperationStore:
                         # The public status schema defines operation as a name;
                         # the legacy _job projection additionally nests the full
                         # operation/result record for inline-sized results.
-                        value["operation"] = row["_status_wait_operation"]
+                        value["operation"] = result_metadata["operation"]
                         value["result_omitted"] = True
                         value["result_size_bytes"] = int(result_bytes)
                         value["result_available_via"] = "job.result.read"
