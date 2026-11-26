@@ -47,6 +47,16 @@ class _Model:
             return {"saved": True, "live_path_preserved": True}
         raise AssertionError(f"unexpected typed Worker method: {method}")
 
+    def func(self, *args):
+        if args:
+            raise AssertionError(f"unexpected model.func({args!r}) without an inventory tag")
+        return _EMPTY_ENTITY_LIST
+
+    def component(self, *args):
+        if args:
+            raise AssertionError(f"unexpected model.component({args!r}) without an inventory tag")
+        return _EMPTY_ENTITY_LIST
+
     def getFileResourceInventory(self):
         return list(self.file_resources)
 
@@ -83,6 +93,16 @@ class _Worker:
 
     def getComsolVersion(self):
         return "COMSOL Multiphysics 6.4 (开发版本: 293)"
+
+
+class _EmptyEntityList:
+    """Empty ModelEntityList surface for the pre-dispatch external-function inventory gate."""
+
+    def tags(self):
+        return []
+
+
+_EMPTY_ENTITY_LIST = _EmptyEntityList()
 
 
 def _runtime_fixture(path: Path) -> Path:
