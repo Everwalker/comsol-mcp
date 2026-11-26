@@ -2637,6 +2637,61 @@ class OperationStore:
                     self.db.execute("ROLLBACK")
                 raise
 
+    def record_force_stop_scoped(
+        self, observed_job: dict[str, Any], project_id: str, status: str,
+        metadata: dict[str, Any], *, result: dict[str, Any] | None = None,
+        event: dict[str, Any] | None = None,
+    ) -> bool:
+        """Record a force-stop result only against the same project and job state."""
+        job_id = observed_job["job_id"]
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.*, o.metadata AS operation_metadata, o.status AS operation_status "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return False
+                try:
+                    job_metadata = json.loads(row["metadata"] or "{}")
+                    operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                    self.db.execute("ROLLBACK")
+                    return False
+                original_metadata = observed_job["metadata"]
+                if (consistent_project_id(job_metadata, operation_metadata) != project_id
+                        or row["operation_id"] != observed_job["operation_id"]
+                        or row["status"] != observed_job["status"]
+                        or row["status"] in TERMINAL
+                        or row["operation_status"] != row["status"]
+                        or job_metadata.get("runtime_binding") != original_metadata.get("runtime_binding")
+                        or job_metadata.get("execution") != original_metadata.get("execution")):
+                    self.db.execute("ROLLBACK")
+                    return False
+                merged = {**job_metadata, **metadata}
+                self.db.execute(
+                    "UPDATE jobs SET status=?,metadata=?,finished_at="
+                    "CASE WHEN ? IN ('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST') "
+                    "THEN COALESCE(finished_at,CURRENT_TIMESTAMP) ELSE finished_at END WHERE job_id=?",
+                    (status, _dumps_canonical(merged), status, job_id),
+                )
+                self.db.execute(
+                    "UPDATE operations SET status=?,result=COALESCE(?,result),finished_at="
+                    "(SELECT finished_at FROM jobs WHERE job_id=?) WHERE operation_id=?",
+                    (status, _dumps_canonical(result) if result is not None else None, job_id, row["operation_id"]),
+                )
+                if event is not None:
+                    self._insert_job_event(job_id, "CANCELLED", _dumps_canonical(event))
+                self.db.execute("COMMIT")
+                return True
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def transition_status(
         self,
         job_id: str,

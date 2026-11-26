@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对 job.cancel 强制停止入口的项目授权和任务归属；只在新建的隔离模拟数据上验证已发现的缺口。",
+  "next_action": "核对 Java Worker 的 atomic_save 覆盖调用，评估如何保留并发写者和旧字节；仅使用新的隔离文件测试。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -363,10 +363,15 @@
       "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T34"
+        "references/CURRENT_20261123.json#/tasks/T34",
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_g3_6_defects_d01_d06.py",
+        "tests/test_control_daemon_sessions.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Synthetic project-scoped force-stop admission and conditional result recording tested; real termination, remaining race and native acceptance stay open."
     },
     "T35": {
       "status": "RUNNING",
@@ -383,10 +388,15 @@
       "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T36"
+        "references/CURRENT_20261123.json#/tasks/T36",
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_g3_6_defects_d01_d06.py",
+        "tests/test_control_daemon_sessions.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Synthetic project-scoped force-stop admission and conditional result recording tested; real termination, remaining race and native acceptance stay open."
     },
     "T37": {
       "status": "RUNNING",
@@ -1386,6 +1396,25 @@
       "finding": "Checkpoint publication uses no-clobber, but explicit overwrite in _atomic_save and artifact publication still has an observed check-to-replace race; the POSIX managed-model exchange has no equivalent durable publication journal verified in this analysis.",
       "correction": "The subagent reported that checkpoint was the sole production caller of atomic_save. Main-agent source inspection also found comsol_mcp/_java_worker.py passing its overwrite argument to atomic_save, so the overwrite path cannot be dismissed as test-only.",
       "remaining": "Do not claim atomic rollback or crash recovery. POSIX and Windows have different publication semantics; the proposed journal/exchange designs need source-level validation and focused tests before implementation. Existing historical UNKNOWN and retained resources remain untouched."
+    },
+    {
+      "id": "20261126-T34-force-stop-project-authorization",
+      "scope": "T34/T36 / U07-U08 synthetic control-plane and file SQLite correction; no real process was signaled",
+      "base_commit": "87d41770220d4d20242472ae791cd2d92c0162cd",
+      "finding": "A new synthetic registered-owned-server case without project host_control reached the fake termination routine before the correction; canonical and legacy force-stop also read a job without prior durable project-scope verification.",
+      "changes": [
+        "comsol_mcp/_control_daemon.py: require outer project identity and host_control, check project/job binding before reading, and recheck project, runtime binding and status immediately before fencing and termination",
+        "comsol_mcp/_operation_store.py: record termination result, job/operation state and CANCELLED event in one transaction only if project binding, runtime identity and observed nonterminal status still match; otherwise report UNKNOWN",
+        "tests/test_g3_6_defects_d01_d06.py: missing or foreign project, insufficient project grant, binding changes before/during fake termination, concurrent terminal result, process identity and positive controls",
+        "tests/test_control_daemon_sessions.py: align relevant synthetic session/reconcile tests and fixtures with explicit project grants and current backend call contract"
+      ],
+      "verification": [
+        "CPython 3.14.7 and CPython 3.10.20: 14 passed, 13 deselected in tests/test_g3_6_defects_d01_d06.py -k force_stop.",
+        "CPython 3.14.7 and CPython 3.10.20: 2 passed for test_unbound_job_worker_access_fails_closed_and_force_stop_uses_bound_backend and test_control_reconcile_and_force_stop_do_not_wait_behind_busy_backend_invoke.",
+        "CPython 3.14.7: tests/test_g3_6_defects_d07_d09.py::test_dual_runtime_isolation_and_cross_rejection passed.",
+        "Every process-identity query and termination in the positive/negative force-stop cases used fake process identity and monkeypatched termination; no old job, native Worker, COMSOL or real process was touched."
+      ],
+      "remaining": "The project/permission recheck and OS process termination are not one atomic operation; the post-check-to-signal and permission-revocation windows remain. No authenticated-principal, OS process-tree or native cancellation evidence is claimed. T34/T36 remain RUNNING, and all old UNKNOWN resources remain frozen."
     }
   ]
 }

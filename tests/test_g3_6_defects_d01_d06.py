@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from types import SimpleNamespace
+from unittest.mock import patch
 import pytest
 
 from comsol_mcp import _g2_isolation as isolation
@@ -136,10 +137,22 @@ def test_cancel_job_reconciling_status_preserved(tmp_path):
 
 
 def test_cancel_job_force_stop_validation_precedes_state_change(tmp_path):
-    daemon = ControlDaemon(tmp_path)
+    root = tmp_path / "projects"
+    root.mkdir()
+    with patch.dict("os.environ", {"COMSOL_MCP_HOST_CONTROL": "1"}):
+        daemon = ControlDaemon(tmp_path / "control", project_root=root)
     store = daemon.store
     try:
-        rec, _ = store.begin(request_id="r3", idempotency_key="k3", request_hash="h3", operation="run_study")
+        created = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "force-stop-validation", "workspace": "force-stop-validation",
+                          "policy": {"permissions": ["inspect", "host_control"]}},
+            "execution": {"request_id": "create", "idempotency_key": "create"},
+        })
+        assert created["success"] is True, created
+        project_id = created["data"]["project"]["project_id"]
+        rec, _ = store.begin(request_id="r3", idempotency_key="k3", request_hash="h3", operation="run_study",
+                             metadata={"execution": {"project_id": project_id}})
         job_id = rec["job_id"]
         assert store.job(job_id)["status"] == "QUEUED"
 
@@ -147,6 +160,7 @@ def test_cancel_job_force_stop_validation_precedes_state_change(tmp_path):
         bad_fs_res = daemon.dispatch({
             "operation": "job_cancel",
             "arguments": {"job_id": job_id, "force_stop": "yes"},
+            "execution": {"project_id": project_id},
         })
         assert bad_fs_res["success"] is False
         assert bad_fs_res["error"]["code"] == "INVALID_REQUEST"
@@ -157,6 +171,7 @@ def test_cancel_job_force_stop_validation_precedes_state_change(tmp_path):
         bad_scope_res = daemon.dispatch({
             "operation": "job_cancel",
             "arguments": {"job_id": job_id, "force_stop": True, "server_scope": {"authorized": False}},
+            "execution": {"project_id": project_id},
         })
         assert bad_scope_res["success"] is False
         assert bad_scope_res["error"]["code"] == "UNAUTHORIZED_FORCE_STOP"
@@ -246,20 +261,13 @@ def test_operation_store_transition_status_cas(tmp_path):
 # ===========================================================================
 
 def test_scoped_force_stop_rejects_unbound_job_before_selecting_backend(tmp_path):
-    mock_service = type("ManagedService", (), {
-        "is_shared": False,
-        "server_pid": 99998,
-        "lease": {"lease_id": "lease-authorized-123"},
-        "ledger": SessionLedger("s_mock", "srv_mock"),
-    })()
-
-    daemon = ControlDaemon(tmp_path, service=mock_service)
+    daemon, _service, _process, _owned_job, project = _registered_force_stop_fixture(tmp_path)
     try:
         rec, _ = daemon.store.begin(request_id="rf1", idempotency_key="kf1", request_hash="hf1", operation="run_study")
         job_id = rec["job_id"]
         daemon.store.update_job(job_id, "RUNNING")
 
-        # Force-stop with incorrect lease_id -> rejected
+        # An authorized project cannot select a job with no project binding.
         res_bad_lease = daemon.dispatch({
             "operation": "job_cancel",
             "arguments": {
@@ -271,21 +279,16 @@ def test_scoped_force_stop_rejects_unbound_job_before_selecting_backend(tmp_path
                     "pid": 99998,
                 },
             },
+            "execution": {"project_id": project},
         })
         assert res_bad_lease["success"] is False
-        assert res_bad_lease["error"]["code"] == "WORKER_BINDING_UNKNOWN"
+        assert res_bad_lease["error"]["code"] == "NODE_NOT_FOUND"
     finally:
         daemon.close()
 
 
 def test_scoped_force_stop_unbound_job_does_not_terminate_default_process(monkeypatch, tmp_path):
-    mock_service = type("ManagedService", (), {
-        "is_shared": False,
-        "server_pid": 99997,
-        "ledger": SessionLedger("s_mock", "srv_mock"),
-    })()
-
-    daemon = ControlDaemon(tmp_path, service=mock_service)
+    daemon, _service, _process, _owned_job, project = _registered_force_stop_fixture(tmp_path)
     try:
         rec, _ = daemon.store.begin(request_id="rf2", idempotency_key="kf2", request_hash="hf2", operation="run_study")
         job_id = rec["job_id"]
@@ -304,16 +307,18 @@ def test_scoped_force_stop_unbound_job_does_not_terminate_default_process(monkey
                 "force_stop": True,
                 "server_scope": {"authorized": True, "pid": 99997, "process_start_epoch_ms": 1000},
             },
+            "execution": {"project_id": project},
         })
         assert res["success"] is False
-        assert res["error"]["code"] == "WORKER_BINDING_UNKNOWN"
+        assert res["error"]["code"] == "NODE_NOT_FOUND"
         assert terminated == []
         assert daemon.store.job(job_id)["status"] == "RUNNING"
     finally:
         daemon.close()
 
 
-def _registered_force_stop_fixture(tmp_path, *, lease_id="lease-authorized-123", process_start_epoch_ms=1000):
+def _registered_force_stop_fixture(tmp_path, *, lease_id="lease-authorized-123", process_start_epoch_ms=1000,
+                                   grant_host_control=True):
     project_root = tmp_path / "projects"
     project_root.mkdir()
     socket = CanonicalSocket("127.0.0.1", 24567)
@@ -329,7 +334,8 @@ def _registered_force_stop_fixture(tmp_path, *, lease_id="lease-authorized-123",
         "is_shared": False,
         "server_pid": pid,
         "lease": {"lease_id": lease_id},
-        "ledger": SessionLedger("force-stop-session", "force-stop-server"),
+        "ledger": SessionLedger("force-stop-session", "force-stop-server",
+                                permissions={"inspect", "project_write", "compute", "host_control"}),
     })()
     worker = SimpleNamespace()
     backend = SimpleNamespace(
@@ -339,11 +345,13 @@ def _registered_force_stop_fixture(tmp_path, *, lease_id="lease-authorized-123",
                          "endpoint": "127.0.0.1:24567"},
         host_permission_ceiling={"inspect", "project_write", "compute", "host_control"},
     )
-    daemon = ControlDaemon(tmp_path / "control", project_root=project_root, service=service, worker=worker)
+    with patch.dict("os.environ", {"COMSOL_MCP_HOST_CONTROL": "1"}):
+        daemon = ControlDaemon(tmp_path / "control", project_root=project_root, service=service, worker=worker)
     project_response = daemon.dispatch({
         "operation": "project.create",
         "arguments": {"label": "force-stop-project", "workspace": "force-stop-project",
-                      "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+                      "policy": {"permissions": ["inspect", "project_write", "compute"]
+                                 + (["host_control"] if grant_host_control else [])}},
         "execution": {"request_id": "force-stop-project-create",
                       "idempotency_key": "force-stop-project-create"},
     })
@@ -387,6 +395,155 @@ def _registered_force_stop_fixture(tmp_path, *, lease_id="lease-authorized-123",
     assert reused is False
     daemon.store.update_job(job["job_id"], "RUNNING")
     return daemon, service, process, job["job_id"], project
+
+
+def test_force_stop_requires_project_host_control(tmp_path, monkeypatch):
+    daemon, _service, process, job_id, project = _registered_force_stop_fixture(tmp_path, grant_host_control=False)
+    terminated = []
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", lambda _pid: {
+        "alive": True, "start_epoch_ms": 1000,
+    })
+    monkeypatch.setattr("comsol_mcp._control_daemon.terminate_process_tree",
+                        lambda pid, timeout_s=5.0: terminated.append(pid) or True)
+    try:
+        result = daemon.dispatch({
+            "operation": "job.cancel",
+            "arguments": {"job_id": job_id, "force_stop": True,
+                          "server_scope": {"authorized": True, "lease_id": "lease-authorized-123",
+                                           "pid": process.pid, "process_start_epoch_ms": 1000}},
+            "execution": {"project_id": project, "session_id": "force-stop-session"},
+        })
+        assert result["success"] is False, result
+        assert result["error"]["code"] == "PERMISSION_DENIED"
+        assert terminated == []
+        assert daemon.store.job(job_id)["status"] == "RUNNING"
+    finally:
+        daemon.close()
+
+
+def test_force_stop_refuses_missing_or_foreign_project_before_process_probe(tmp_path, monkeypatch):
+    daemon, _service, process, job_id, _project = _registered_force_stop_fixture(tmp_path)
+    calls = []
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", lambda pid: calls.append(pid))
+    monkeypatch.setattr("comsol_mcp._control_daemon.terminate_process_tree", lambda *a, **k: calls.append("stop"))
+    try:
+        created = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "other", "workspace": "other",
+                          "policy": {"permissions": ["inspect", "host_control"]}},
+            "execution": {"request_id": "other", "idempotency_key": "other"},
+        })
+        assert created["success"] is True, created
+        other_project = created["data"]["project"]["project_id"]
+        arguments = {"job_id": job_id, "force_stop": True,
+                     "server_scope": {"authorized": True, "lease_id": "lease-authorized-123",
+                                      "pid": process.pid, "process_start_epoch_ms": 1000}}
+        for operation in ("job.cancel", "job_cancel"):
+            for execution, code in (({}, "PROJECT_IDENTITY_REQUIRED"),
+                                    ({"project_id": other_project}, "NODE_NOT_FOUND")):
+                response = daemon.dispatch({"operation": operation, "arguments": arguments, "execution": execution})
+                assert response["success"] is False, response
+                assert response["error"]["code"] == code
+        assert calls == []
+        assert daemon.store.job(job_id)["status"] == "RUNNING"
+    finally:
+        daemon.close()
+
+
+def test_force_stop_refuses_binding_change_before_termination(tmp_path, monkeypatch):
+    daemon, _service, process, job_id, project = _registered_force_stop_fixture(tmp_path)
+    calls = []
+
+    def change_binding(_pid):
+        foreign = json.dumps({"project_id": "other", "execution": {"project_id": "other"}})
+        daemon.store.db.execute("UPDATE jobs SET metadata=? WHERE job_id=?", (foreign, job_id))
+        daemon.store.db.execute("UPDATE operations SET metadata=? WHERE operation_id=(SELECT operation_id FROM jobs WHERE job_id=?)",
+                                (foreign, job_id))
+        daemon.store.db.commit()
+        return {"alive": True, "start_epoch_ms": 1000}
+
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", change_binding)
+    monkeypatch.setattr("comsol_mcp._control_daemon.terminate_process_tree", lambda *a, **k: calls.append("stop"))
+    try:
+        response = daemon.dispatch({
+            "operation": "job.cancel",
+            "arguments": {"job_id": job_id, "force_stop": True,
+                          "server_scope": {"authorized": True, "lease_id": "lease-authorized-123",
+                                           "pid": process.pid, "process_start_epoch_ms": 1000}},
+            "execution": {"project_id": project, "session_id": "force-stop-session"},
+        })
+        assert response["success"] is False
+        assert response["error"]["code"] == "NODE_NOT_FOUND"
+        assert calls == []
+        assert daemon.store.job(job_id)["status"] == "RUNNING"
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("stopped", [True, False])
+def test_force_stop_does_not_record_result_after_binding_change(tmp_path, monkeypatch, stopped):
+    daemon, _service, process, job_id, project = _registered_force_stop_fixture(tmp_path)
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", lambda _pid: {
+        "alive": True, "start_epoch_ms": 1000,
+    })
+
+    def change_during_stop(_pid, timeout_s=5.0):
+        foreign = json.dumps({"project_id": "other", "execution": {"project_id": "other"}})
+        daemon.store.db.execute("UPDATE jobs SET metadata=? WHERE job_id=?", (foreign, job_id))
+        daemon.store.db.execute("UPDATE operations SET metadata=? WHERE operation_id=(SELECT operation_id FROM jobs WHERE job_id=?)",
+                                (foreign, job_id))
+        daemon.store.db.commit()
+        return stopped
+
+    monkeypatch.setattr("comsol_mcp._control_daemon.terminate_process_tree", change_during_stop)
+    try:
+        response = daemon.dispatch({
+            "operation": "job.cancel",
+            "arguments": {"job_id": job_id, "force_stop": True,
+                          "server_scope": {"authorized": True, "lease_id": "lease-authorized-123",
+                                           "pid": process.pid, "process_start_epoch_ms": 1000}},
+            "execution": {"project_id": project, "session_id": "force-stop-session"},
+        })
+        assert response["success"] is False
+        assert response["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert response["error"]["safe_retry"] is False
+        current = daemon.store.job(job_id)
+        assert current["status"] == "RUNNING"
+        assert current["operation"]["status"] == "RUNNING"
+        assert not any(event["event"] == "CANCELLED" for event in daemon.store.events(job_id))
+    finally:
+        daemon.close()
+
+
+def test_force_stop_does_not_overwrite_concurrent_terminal_result(tmp_path, monkeypatch):
+    daemon, _service, process, job_id, project = _registered_force_stop_fixture(tmp_path)
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", lambda _pid: {
+        "alive": True, "start_epoch_ms": 1000,
+    })
+    original = {"success": True, "data": {"source": "concurrent-completion"}}
+
+    def finish_during_stop(_pid, timeout_s=5.0):
+        operation_id = daemon.store.job(job_id)["operation_id"]
+        assert daemon.store.finish(operation_id, status="SUCCEEDED", result=original) == (True, "SUCCEEDED")
+        return True
+
+    monkeypatch.setattr("comsol_mcp._control_daemon.terminate_process_tree", finish_during_stop)
+    try:
+        response = daemon.dispatch({
+            "operation": "job.cancel",
+            "arguments": {"job_id": job_id, "force_stop": True,
+                          "server_scope": {"authorized": True, "lease_id": "lease-authorized-123",
+                                           "pid": process.pid, "process_start_epoch_ms": 1000}},
+            "execution": {"project_id": project, "session_id": "force-stop-session"},
+        })
+        assert response["success"] is False
+        assert response["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        current = daemon.store.job(job_id)
+        assert current["status"] == "SUCCEEDED"
+        assert current["result"] == original
+        assert not any(event["event"] == "CANCELLED" for event in daemon.store.events(job_id))
+    finally:
+        daemon.close()
 
 
 def test_scoped_force_stop_rejects_wrong_registered_backend_lease(tmp_path, monkeypatch):

@@ -40,13 +40,13 @@ def _daemon(tmp_path: Path, *, registry=None) -> ControlDaemon:
     )
 
 
-def _create_project(daemon: ControlDaemon, label: str) -> dict:
+def _create_project(daemon: ControlDaemon, label: str, *, permissions=None) -> dict:
     response = daemon.dispatch({
         "operation": "project.create",
         "arguments": {
             "label": label,
             "workspace": label,
-            "policy": {"permissions": ["inspect", "project_write", "compute"]},
+            "policy": {"permissions": permissions if permissions is not None else ["inspect", "project_write", "compute"]},
         },
         "execution": {"request_id": f"create-{label}", "idempotency_key": f"create-{label}"},
     })
@@ -4470,9 +4470,10 @@ def _request(project_id: str, session_id: str, key: str):
     }
 
 
-def _engine_daemon(tmp_path: Path):
+def _engine_daemon(tmp_path: Path, *, host_control=False):
     daemon = _daemon(tmp_path, registry={"test_session_engine_action": lambda _args: None})
-    project = _create_project(daemon, "session-engine")
+    permissions = ["inspect", "project_write", "compute"] + (["host_control"] if host_control else [])
+    project = _create_project(daemon, "session-engine", permissions=permissions)
     return daemon, project["project_id"]
 
 
@@ -4493,7 +4494,7 @@ class _InvocationBackend:
         self.invoke_hook = None
         self.calls = []
 
-    def project_root_scope(self, _root):
+    def project_root_scope(self, _root, *, project_id=None):
         return nullcontext()
 
     def model_project_binding(self, _model_ref):
@@ -4761,13 +4762,19 @@ def test_unbound_job_worker_access_fails_closed_and_force_stop_uses_bound_backen
             self.calls.append(identifier)
             return {"request_id": identifier, "status": "RUNNING"}
 
-    daemon, project_id = _engine_daemon(tmp_path)
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    daemon, project_id = _engine_daemon(tmp_path, host_control=True)
     default_worker = Worker()
-    default_service = SimpleNamespace(is_shared=False, server_pid=6500, ledger=SimpleNamespace(session_id="default-session"))
+    granted = {"inspect", "project_write", "compute", "host_control"}
+    default_service = SimpleNamespace(is_shared=False, server_pid=6500,
+                                      ledger=SimpleNamespace(session_id="default-session", permissions=granted))
     daemon._default_backend = _InvocationBackend("default", worker=default_worker, service=default_service)
+    daemon._default_backend.host_permission_ceiling.add("host_control")
     target_worker = Worker()
-    shared_service = SimpleNamespace(is_shared=True, server_pid=6501, ledger=SimpleNamespace(session_id="target-session"))
+    shared_service = SimpleNamespace(is_shared=True, server_pid=6501,
+                                     ledger=SimpleNamespace(session_id="target-session", permissions=granted))
     target_backend = _InvocationBackend("target", worker=target_worker, service=shared_service)
+    target_backend.host_permission_ceiling.add("host_control")
     context = _runtime_context(project_id, "target-session", pid=6501, port=3001,
                                worker=target_worker, backend=target_backend)
     daemon.session_registry.register(context)
@@ -4785,10 +4792,11 @@ def test_unbound_job_worker_access_fails_closed_and_force_stop_uses_bound_backen
         })
         daemon.store.update_job(unbound["job_id"], "UNKNOWN")
         refused = daemon.dispatch({
-            "operation": "job.reconcile", "arguments": {"job_id": unbound["job_id"]}, "execution": {},
+            "operation": "job.reconcile", "arguments": {"job_id": unbound["job_id"]},
+            "execution": {"project_id": project_id},
         })
         assert refused["success"] is False
-        assert refused["error"]["code"] == "WORKER_BINDING_UNKNOWN"
+        assert refused["error"]["code"] == "NODE_NOT_FOUND"
         assert default_worker.calls == [] and target_worker.calls == []
 
         binding = {
@@ -4808,7 +4816,7 @@ def test_unbound_job_worker_access_fails_closed_and_force_stop_uses_bound_backen
             "operation": "job.cancel",
             "arguments": {"job_id": active["job_id"], "force_stop": True,
                           "server_scope": {"authorized": True, "pid": 6500}},
-            "execution": {},
+            "execution": {"project_id": project_id, "session_id": context.session_id},
         })
         assert force_result["success"] is False
         assert force_result["error"]["code"] == "CANNOT_TERMINATE_SHARED_SERVER"
@@ -4818,7 +4826,8 @@ def test_unbound_job_worker_access_fails_closed_and_force_stop_uses_bound_backen
 
 
 def test_control_reconcile_and_force_stop_do_not_wait_behind_busy_backend_invoke(tmp_path, monkeypatch):
-    daemon, project_id = _engine_daemon(tmp_path)
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    daemon, project_id = _engine_daemon(tmp_path, host_control=True)
     entered = threading.Event()
     release = threading.Event()
 
@@ -4834,13 +4843,16 @@ def test_control_reconcile_and_force_stop_do_not_wait_behind_busy_backend_invoke
     service = SimpleNamespace(
         is_shared=False,
         server_pid=6601,
-        ledger=SimpleNamespace(permissions={"inspect", "project_write", "compute"}, session_id="session-control"),
+        ledger=SimpleNamespace(permissions={"inspect", "project_write", "compute", "host_control"}, session_id="session-control"),
     )
     backend = _InvocationBackend("session-control", worker=worker, service=service)
+    backend.host_permission_ceiling.add("host_control")
     context = _runtime_context(project_id, "session-control", pid=6601, port=3101,
                                worker=worker, backend=backend)
     daemon.session_registry.register(context)
     daemon._default_backend = _InvocationBackend("default")
+    daemon._default_backend.host_permission_ceiling.add("host_control")
+    daemon._default_backend.service.ledger.permissions.add("host_control")
     monkeypatch.setitem(
         __import__("comsol_mcp._g2_registry", fromlist=["LEGACY_TOOL_EFFECTS"]).LEGACY_TOOL_EFFECTS,
         "test_session_engine_action", "inspect",
@@ -4856,7 +4868,7 @@ def test_control_reconcile_and_force_stop_do_not_wait_behind_busy_backend_invoke
     try:
         with ThreadPoolExecutor(max_workers=1) as caller:
             engine_call = caller.submit(daemon.dispatch, _request(project_id, context.session_id, "busy-control"))
-            assert entered.wait(timeout=2)
+            assert entered.wait(timeout=2), (engine_call.result() if engine_call.done() else "callback not entered")
             running_job = None
             deadline = time.monotonic() + 2
             while time.monotonic() < deadline:
@@ -4886,7 +4898,8 @@ def test_control_reconcile_and_force_stop_do_not_wait_behind_busy_backend_invoke
             daemon.store.update_job(control_job["job_id"], "UNKNOWN")
             started = time.monotonic()
             reconciled = daemon.dispatch({
-                "operation": "job.reconcile", "arguments": {"job_id": control_job["job_id"]}, "execution": {},
+                "operation": "job.reconcile", "arguments": {"job_id": control_job["job_id"]},
+                "execution": {"project_id": project_id, "session_id": context.session_id},
             })
             assert time.monotonic() - started < 0.5
             assert reconciled["success"] is True
@@ -4898,7 +4911,7 @@ def test_control_reconcile_and_force_stop_do_not_wait_behind_busy_backend_invoke
                 "arguments": {"job_id": job_id, "force_stop": True,
                               "server_scope": {"authorized": True, "pid": 6601,
                                                "process_start_epoch_ms": 123456}},
-                "execution": {},
+                "execution": {"project_id": project_id, "session_id": context.session_id},
             })
             assert time.monotonic() - started < 0.5
             assert stopped["success"] is True

@@ -12074,11 +12074,17 @@ class ControlDaemon:
                 data={"job_id": arguments.get("job_id"), "cancel_accepted": False,
                       "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
             )
+        project_id = execution.get("project_id")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "force-stop requires outer execution.project_id")
+        self.project_authority.authorize_operation(project_id, "host_control")
         job_id = arguments.get("job_id")
-        job = self.store.job(job_id) if isinstance(job_id, str) else None
+        if not isinstance(job_id, str) or not job_id:
+            return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
+        with self.store.project_job_read_snapshot(job_id, project_id) as bound:
+            job = self.store.job(job_id) if bound else None
         if not job:
-            return self._error("NODE_NOT_FOUND" if isinstance(job_id, str) else "INVALID_REQUEST",
-                               "job not found" if isinstance(job_id, str) else "job_id must be a non-empty string")
+            return self._error("NODE_NOT_FOUND", "job not found")
         try:
             context = self._resolve_job_runtime_context(job, execution)
         except ExecutionContractError as exc:
@@ -12091,7 +12097,7 @@ class ControlDaemon:
                         "force-stop requires a registered session with exact owned-process evidence",
                     )
                 with use_session_context(context):
-                    return self._cancel_job(dict(arguments))
+                    return self._cancel_job(dict(arguments), scoped_project_id=project_id)
         except ExecutionContractError as exc:
             return self._exception(exc)
         except Exception as exc:
@@ -14166,7 +14172,8 @@ class ControlDaemon:
 
         if force_stop:
             server_scope = arguments.get("server_scope")
-            return self._scoped_force_stop(job, reason=reason, server_scope=server_scope)
+            return self._scoped_force_stop(job, reason=reason, server_scope=server_scope,
+                                           scoped_project_id=scoped_project_id)
 
         if scoped_project_id is not None:
             # Scoped ordinary (non-force-stop) cancel: one atomic store-side
@@ -14224,7 +14231,8 @@ class ControlDaemon:
             },
         }
 
-    def _scoped_force_stop(self, job: dict[str, Any], *, reason: str, server_scope: Any) -> dict[str, Any]:
+    def _scoped_force_stop(self, job: dict[str, Any], *, reason: str, server_scope: Any,
+                           scoped_project_id: str | None) -> dict[str, Any]:
         job_id = job["job_id"]
         if not isinstance(server_scope, dict):
             return self._error(
@@ -14304,6 +14312,18 @@ class ControlDaemon:
                 data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
             )
 
+        if not isinstance(scoped_project_id, str) or not scoped_project_id:
+            return self._error("PROJECT_IDENTITY_REQUIRED", "force-stop requires outer execution.project_id")
+        self.project_authority.authorize_operation(scoped_project_id, "host_control")
+        with self.store.project_job_read_snapshot(job_id, scoped_project_id) as bound:
+            current = self.store.job(job_id) if bound else None
+        if not current:
+            return self._error("NODE_NOT_FOUND", "job not found")
+        if (current["operation_id"] != job["operation_id"] or current["status"] != job["status"]
+                or current["metadata"].get("runtime_binding") != job["metadata"].get("runtime_binding")
+                or current["metadata"].get("execution") != job["metadata"].get("execution")):
+            return self._error("EXECUTION_STATE_UNKNOWN", "job changed before force-stop", safe_retry=False)
+
         try:
             self.session_scheduler.fence_owned_server_lane(context)
         except Exception as exc:
@@ -14318,12 +14338,14 @@ class ControlDaemon:
         # D04: Replace raw os.kill(pid, 9) with platform terminate_process_tree and wait for exit
         stopped = terminate_process_tree(managed_pid, timeout_s=5.0)
         if not stopped:
-            self.store.update_job(job_id, "UNKNOWN", {
+            recorded = self.store.record_force_stop_scoped(job, scoped_project_id, "UNKNOWN", {
                 "cancel_requested": True,
                 "engine_stopped": False,
                 "mode": "TERMINATION_UNCONFIRMED",
                 "reason": reason,
             })
+            if not recorded:
+                return self._error("EXECUTION_STATE_UNKNOWN", "force-stop was attempted but its job state could not be recorded", safe_retry=False)
             return self._error(
                 "TERMINATION_FAILED",
                 f"process {managed_pid} could not be confirmed dead within timeout; retaining UNKNOWN status",
@@ -14356,17 +14378,14 @@ class ControlDaemon:
             },
             "execution": {"job_id": job_id, "operation_id": job.get("operation_id")},
         }
-        self.store.update_job(
-            job_id,
-            "CANCELLED",
+        recorded = self.store.record_force_stop_scoped(
+            job, scoped_project_id, "CANCELLED",
             {"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason},
             result=cancel_result,
+            event={"engine_stopped": True, "mode": "SCOPED_PROCESS_TERMINATION", "reason": reason},
         )
-        self.store.add_event(job_id, "CANCELLED", {
-            "engine_stopped": True,
-            "mode": "SCOPED_PROCESS_TERMINATION",
-            "reason": reason,
-        })
+        if not recorded:
+            return self._error("EXECUTION_STATE_UNKNOWN", "force-stop was attempted but its job state could not be recorded", safe_retry=False)
         return {
             "success": True,
             "data": {
