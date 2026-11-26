@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对已存在目标在最后检查后仍可能变化的覆盖窗口，并评估受管交换与恢复方案能否适配 Windows 和 Java Worker。",
+  "next_action": "核对普通启动路径复用 daemon 时的源码身份信息，寻找不关闭或替换未知进程的可验证诊断方式。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -411,11 +411,12 @@
         "tests/test_atomic_save.py::test_candidate_swapped_before_publish_is_not_reported_verified",
         "tests/test_t08_publication_remediation_independent_20261109.py",
         "tests/test_java_worker.py",
-        "tests/test_atomic_save.py"
+        "tests/test_atomic_save.py",
+        "tests/test_g3_artifact_hardening.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "New-target no-clobber and an existing-target pre-publication change check passed synthetic controls; the final check-to-replace race, rollback, native and Windows acceptance remain open."
+      "session_scope_note": "Synthetic save/export checks narrow long-window races; overwrite after the final check, recovery, Windows and native acceptance remain open."
     },
     "T38": {
       "status": "RUNNING",
@@ -1453,6 +1454,21 @@
         "CPython 3.10.20: 30 passed across tests/test_atomic_save.py, tests/test_t08_publication_remediation_independent_20261109.py and two RemoteModel.save tests."
       ],
       "remaining": "This is detection before publication, not compare-and-swap. A change after the check or an in-place modification preserving observed identity/size/mtime may still be clobbered. Existing-target rollback, crash recovery, artifact-store overwrite, Windows and native acceptance remain open; T37 stays RUNNING."
+    },
+    {
+      "id": "20261126-T37-field-export-destination-check",
+      "scope": "T37 / U08-U09 field data export synthetic local-file correction; no COMSOL/native or Windows target proof",
+      "base_commit": "427a6dc602f1ad4c647569577d4e7abed5692415",
+      "finding": "An overwrite-enabled field export could replace a destination created or modified while the new data was being serialized.",
+      "changes": [
+        "comsol_mcp/_artifact_store.py: capture existing target identity before serialization; use no-clobber link when no target was observed; reject a changed initially existing target before replace",
+        "tests/test_g3_artifact_hardening.py: synthetic creator and in-place writer during serialization are preserved"
+      ],
+      "verification": [
+        "CPython 3.14.7 and 3.10.20: 16 passed for tests/test_t37_scoped_migration.py and five selected field-export controls, including both new race cases.",
+        "The existing test_current_overwrite_check_to_replace_race_is_reproducible_and_unresolved still passes: a writer after the final check can still be overwritten. All tests used fresh local synthetic files."
+      ],
+      "remaining": "No atomic compare-and-swap is established. Same-identity metadata-preserving edits, replacement after the final check, reliable old-byte rollback, Windows target behavior and native acceptance remain open; T37 stays RUNNING."
     }
   ]
 }

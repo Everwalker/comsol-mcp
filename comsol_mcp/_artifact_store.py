@@ -2248,6 +2248,15 @@ class ArtifactStore:
         target_path = self.resolve_safe_path(dest, allow_overwrite=allow_overwrite)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         _assert_no_symlink_components(target_path.parent, field="destination parent")
+        initial_target = None
+        if allow_overwrite:
+            try:
+                initial_target = target_path.lstat()
+            except FileNotFoundError:
+                pass
+            except OSError as exc:
+                raise _contract_error("ACCESS_VIOLATION", "export destination could not be observed") from exc
+        replace_existing = allow_overwrite and initial_target is not None
 
         values = eval_result["values"]
         tmp_path: Path | None = None
@@ -2289,7 +2298,17 @@ class ArtifactStore:
                 )
             _assert_no_symlink_components(authorized_target.parent, field="destination parent")
 
-            if allow_overwrite:
+            if replace_existing:
+                try:
+                    current_target = authorized_target.lstat()
+                    if _file_identity(current_target) != _file_identity(initial_target):
+                        raise ValueError("destination changed after preflight")
+                except (OSError, ValueError) as exc:
+                    raise _contract_error(
+                        "DESTINATION_CHANGED",
+                        "export destination could not be confirmed unchanged before publication",
+                        stage="post_dispatch",
+                    ) from exc
                 # Explicit overwrite is the only path that may replace an
                 # existing regular file.  The immediate authorization check
                 # above prevents a newly appeared symlink or directory from

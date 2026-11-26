@@ -333,3 +333,24 @@ def test_export_no_clobber_publish_preserves_target_created_after_preflight(
     assert target.read_text(encoding="utf-8") == "racer-owned\n"
     assert calls == 1
     assert not list(tmp_path.glob(f".{target.name}.tmp.*.partial"))
+
+
+@pytest.mark.parametrize("existed", [False, True])
+def test_overwrite_export_preserves_target_changed_during_serialization(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, existed: bool,
+) -> None:
+    target = tmp_path / "race.json"
+    if existed:
+        target.write_text("old", encoding="utf-8")
+    original_hash = artifact_store_module._stream_file_hash
+
+    def race_after_hash(path):
+        result = original_hash(path)
+        target.write_text("racer-owned content", encoding="utf-8")
+        return result
+
+    monkeypatch.setattr(artifact_store_module, "_stream_file_hash", race_after_hash)
+    with pytest.raises(ExecutionContractError) as excinfo:
+        ArtifactStore(tmp_path).export_field_data(str(target), _ok([3.0]), allow_overwrite=True)
+    assert excinfo.value.code == ("DESTINATION_CHANGED" if existed else "DESTINATION_EXISTS")
+    assert target.read_text(encoding="utf-8") == "racer-owned content"
