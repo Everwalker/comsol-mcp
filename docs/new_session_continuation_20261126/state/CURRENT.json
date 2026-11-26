@@ -186,7 +186,8 @@
         "references/CURRENT_20261123.json#/tasks/T16"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Actual 6.4 Results.html indexed/searched/read in a temporary in-process index with matching source hash; public MCP path, 6.3 and full T16 remain open."
     },
     "T17": {
       "status": "IMPLEMENTED",
@@ -1632,6 +1633,15 @@
       ],
       "verification": "The mismatched-model control returned PASS before the change. CPython 3.14.7 and 3.10.20: 8 relevant provenance/convergence tests passed each, and 2 W21 fixture controls passed each. All records, models and database contents were synthetic.",
       "remaining": "Cross-model refinement is now conservatively refused without evidence binding those models; native behavior, historical sampling provenance, independent validation and physical convergence remain open. T30.c remains RUNNING."
+    },
+    {
+      "id": "20261126-T16-official-64-one-file-index",
+      "scope": "T16 / U03 actual local COMSOL 6.4 official documentation, isolated in-process OfflineDocsIndex",
+      "base_commit": "23197ea6670d2c4e391257be0af7a7b59eab3133",
+      "source": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/Results.html",
+      "source_sha256": "226a0204f2f949dd9d42fd9f0baa8672501eeb11c7fff369428df63598fb557f",
+      "verification": "In a task-owned temporary SQLite index, the real 6.4 source indexed into 2 chunks; search dataset and get section dataset returned SUCCEEDED with the source hash matching the actual file. A missing section returned NOT_FOUND and an unindexed 6.3 query returned UNAVAILABLE. Temporary index removed; no official documentation content was copied to the repository or published.",
+      "remaining": "This is a single 6.4 document and in-process source-index test, not installed/public MCP transport, a full SDK capability check, native engine evidence, actual 6.3 documentation coverage or complete T16 acceptance. The 6.3 UNAVAILABLE result describes only the temporary one-file index."
     }
   ]
 }
