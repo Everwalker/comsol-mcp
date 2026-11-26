@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对 T30.c 可信观测和报告生产路径的剩余实际缺口，继承已完成的 T30.a/b。",
+  "next_action": "核对 T30.c 已登记观测的解身份与错误传播，继续保留真实求解和报告验收未完成。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -666,11 +666,12 @@
         "tests/test_g3_7_w20_validation.py",
         "tests/test_t30_current_dispatch.py",
         "tests/test_t30_daemon_report_20261123.py",
-        "tests/test_t30_managed_report_20261123.py"
+        "tests/test_t30_managed_report_20261123.py",
+        "tests/test_t30_observation_project_20261123.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Downstream production dispatch/project publication passed with synthetic isolation proof; native isolation and same-solution evidence remain open."
+      "session_scope_note": "Synthetic registered range and convergence controls corrected; native same-solution proof, physical validation and full T30.c acceptance remain open."
     },
     "T05.a": {
       "status": "RUNNING",
@@ -1498,6 +1499,19 @@
       ],
       "verification": "CPython 3.14.7 and CPython 3.10.20: 3 passed each for the new queued/reopen test, existing completed-result duplicate/restart control, and scoped synthetic UNKNOWN restart control.",
       "remaining": "The scheduler was stubbed and no callback ran in the new case. The daemon objects ran sequentially in one process and closed normally; this is not an OS crash, separate control RPC, real scheduler/Worker, native COMSOL or end-to-end acceptance. T31.a remains RUNNING and old UNKNOWN resources were not used."
+    },
+    {
+      "id": "20261126-T30-convergence-criteria",
+      "scope": "T30.c / U09 synthetic registered-observation and convergence validation correction; no native COMSOL",
+      "base_commit": "ece4c5a7af471985cc379d11f1a8adb99505edba",
+      "finding": "A synthetic registered refinement with threshold string nan returned numerical PASS and model_validated=true; a coarsening-only sequence with falling errors could also be called converged.",
+      "changes": [
+        "comsol_mcp/_g3_w20_validation.py: reject nonnumeric, nonfinite, boolean or negative error thresholds; reject a sequence in which mesh size, time step and tolerance never decrease",
+        "comsol_mcp/_g3_w20_validation.py: do not state an error target was verified when no target was supplied",
+        "tests/test_t30_observation_project_20261123.py and tests/test_g3_7_w20_validation.py: synthetic registered invalid-threshold/coarsening cases and normal refinement control"
+      ],
+      "verification": "CPython 3.14.7 and CPython 3.10.20: 12 passed each across registered observation, provenance, convergence study and dispatch controls; temporary SQLite and fake observations only.",
+      "remaining": "The checks do not prove general mesh/time convergence or isolate mixed parameter changes; finite descending errors alone are not native or physical validation. T30.c remains RUNNING; real same-solution/native evidence and independent final review are open."
     }
   ]
 }

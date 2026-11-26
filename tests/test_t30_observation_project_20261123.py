@@ -144,5 +144,35 @@ def test_convergence_resolution_inherits_only_outer_project_context(
         if expected_scope == "REGISTERED_NATIVE_REFINEMENT":
             assert result["cases_count"] == 3
             assert all(case["observation_ref"] == observation_ref for case in result["registered_cases"])
+            for threshold in ("nan", "inf", "not-a-number", True):
+                with observation_context(store, model_ref, 0, producer["operation_id"], project_id=context_project):
+                    invalid = validate_convergence(worker, "model", {
+                        "cases": refs, "criteria": {"absolute_error_max": threshold},
+                    })
+                assert invalid["numerical_verification_status"] == "FAIL", (threshold, invalid)
+                assert invalid["model_validated"] is False
+            with observation_context(store, model_ref, 0, producer["operation_id"], project_id=context_project):
+                valid = validate_convergence(worker, "model", {
+                    "cases": refs, "criteria": {"absolute_error_max": 0.1},
+                })
+            assert valid["numerical_verification_status"] == "PASS"
+
+            coarsening_refs = []
+            for index, ref in enumerate(refs):
+                case = dict(store.get_metadata("artifacts", ref["convergence_id"]))
+                case["convergence_id"] = f"coarsening-{index}"
+                case["mesh_size_metric"] = 0.1 * (index + 1)
+                case["max_element_volume"] = case["mesh_size_metric"] ** 3
+                case["tolerance"] = 1e-3
+                case.pop("sha256")
+                case["sha256"] = convergence.digest(case)
+                store.persist_artifact(case["convergence_id"], case)
+                coarsening_refs.append({"convergence_id": case["convergence_id"], "sha256": case["sha256"]})
+            with observation_context(store, model_ref, 0, producer["operation_id"], project_id=context_project):
+                coarsening = validate_convergence(worker, "model", {
+                    "cases": coarsening_refs, "criteria": {"absolute_error_max": 0.1},
+                })
+            assert coarsening["numerical_verification_status"] == "FAIL"
+            assert coarsening["model_validated"] is False
     finally:
         store.close()

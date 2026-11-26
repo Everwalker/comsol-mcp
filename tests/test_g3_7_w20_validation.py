@@ -210,6 +210,7 @@ class TestConvergenceStudy:
         result = study.analyze_trend()
         assert result["status"] == STATUS_PASS
         assert result["trend"] == "monotonic"
+        assert "target verified" not in result["message"]
 
     def test_non_monotonic_convergence(self):
         study = ConvergenceStudy()
@@ -219,6 +220,15 @@ class TestConvergenceStudy:
         result = study.analyze_trend()
         assert result["status"] == STATUS_FAIL
         assert result["trend"] == "fluctuating"
+
+    def test_decreasing_error_does_not_turn_coarsening_into_refinement(self):
+        study = ConvergenceStudy(criteria={"absolute_error_max": 0.1})
+        study.add_step(ConvergenceStep(1, 0.01, 1e-3, 0.01, 0.5, {}))
+        study.add_step(ConvergenceStep(2, 0.02, 1e-3, 0.01, 0.2, {}))
+        study.add_step(ConvergenceStep(3, 0.04, 1e-3, 0.01, 0.01, {}))
+        result = study.analyze_trend()
+        assert result["status"] == STATUS_FAIL
+        assert result["trend"] == "not_refined"
 
     def test_insufficient_steps(self):
         study = ConvergenceStudy()

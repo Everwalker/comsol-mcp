@@ -303,11 +303,12 @@ class ConvergenceStudy:
         if len(self.steps) < 3:
             return {"status": STATUS_UNVERIFIED, "message": "At least 3 steps required"}
 
-        # Check if mesh metrics actually vary
-        mesh_sizes = [s.mesh_size_metric for s in self.steps]
+        # The request order defines coarse-to-fine levels for registered cases.
+        sorted_steps = sorted(self.steps, key=lambda s: s.level)
+        mesh_sizes = [s.mesh_size_metric for s in sorted_steps]
         if len(set(mesh_sizes)) < len(self.steps):
-            time_steps = [s.time_step for s in self.steps]
-            tolerances = [s.tolerance for s in self.steps]
+            time_steps = [s.time_step for s in sorted_steps]
+            tolerances = [s.tolerance for s in sorted_steps]
             if len(set(time_steps)) < len(self.steps) and len(set(tolerances)) < len(self.steps):
                 return {
                     "status": STATUS_FAIL,
@@ -316,8 +317,17 @@ class ConvergenceStudy:
                     "message": "Convergence parameters (mesh size, time step, tolerance) must strictly vary across levels",
                 }
 
-        # Sort by level
-        sorted_steps = sorted(self.steps, key=lambda s: s.level)
+        refinement_axes = ([s.mesh_size_metric for s in sorted_steps],
+                           [s.time_step for s in sorted_steps],
+                           [s.tolerance for s in sorted_steps])
+        if all(all(axis[i] >= axis[i - 1] for i in range(1, len(axis))) for axis in refinement_axes):
+            return {
+                "status": STATUS_FAIL,
+                "trend": "not_refined",
+                "errors": [s.error for s in sorted_steps],
+                "message": "No mesh size, time step or tolerance decreases across levels",
+            }
+
         errors = [s.error for s in sorted_steps]
 
         if any(not math.isfinite(e) for e in errors):
@@ -340,13 +350,18 @@ class ConvergenceStudy:
         finest_error = errors[-1]
         target_met = True
         if max_allowed is not None:
-            max_allowed_val = float(max_allowed)
-            if max_allowed_val < 0:
+            try:
+                if isinstance(max_allowed, bool):
+                    raise ValueError("boolean is not an error threshold")
+                max_allowed_val = float(max_allowed)
+                if not math.isfinite(max_allowed_val) or max_allowed_val < 0:
+                    raise ValueError("threshold must be finite and non-negative")
+            except (TypeError, ValueError, OverflowError):
                 return {
                     "status": STATUS_FAIL,
                     "trend": "invalid_criteria",
                     "errors": errors,
-                    "message": f"Negative error threshold {max_allowed} is invalid",
+                    "message": "Error threshold must be a finite, non-negative number",
                 }
             if finest_error > max_allowed_val:
                 target_met = False
@@ -367,7 +382,8 @@ class ConvergenceStudy:
             "trend": "monotonic" if monotonic else "fluctuating",
             "errors": errors,
             "finest_error": finest_error,
-            "message": "Convergence trend analyzed and target verified" if status == STATUS_PASS else "Convergence criteria not satisfied",
+            "message": ("Convergence trend analyzed" if max_allowed is None else "Convergence trend analyzed and target verified")
+                       if status == STATUS_PASS else "Convergence criteria not satisfied",
         }
 
 
