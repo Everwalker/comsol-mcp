@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对普通启动路径复用 daemon 时的源码身份信息，寻找不关闭或替换未知进程的可验证诊断方式。",
+  "next_action": "核对 T31.a 当前持久调度和重启协调中尚未覆盖的实际失败窗口；仅使用新建隔离数据。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -416,7 +416,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Synthetic save/export checks narrow long-window races; overwrite after the final check, recovery, Windows and native acceptance remain open."
+      "session_scope_note": "Synthetic save/export race narrowing and ambiguous link/replace failure reporting tested; final overwrite race, recovery, Windows and native acceptance remain open."
     },
     "T38": {
       "status": "RUNNING",
@@ -1469,6 +1469,24 @@
         "The existing test_current_overwrite_check_to_replace_race_is_reproducible_and_unresolved still passes: a writer after the final check can still be overwritten. All tests used fresh local synthetic files."
       ],
       "remaining": "No atomic compare-and-swap is established. Same-identity metadata-preserving edits, replacement after the final check, reliable old-byte rollback, Windows target behavior and native acceptance remain open; T37 stays RUNNING."
+    },
+    {
+      "id": "20261126-T37-no-clobber-publication-unknown",
+      "scope": "T37 / U08-U09 synthetic local-file failure classification, no native COMSOL",
+      "base_commit": "4393f6a38f35a269c658dacd15f632ebf319b80a",
+      "finding": "A non-FileExistsError from the no-clobber link was labeled PUBLISH_FAILED and the staging name was deleted even when a synthetic fault occurred after the link had already published.",
+      "changes": [
+        "comsol_mcp/_artifact_store.py: a non-FileExistsError OSError after link dispatch reports ARTIFACT_PUBLISH_UNKNOWN, safe_retry=false and the retained staging path",
+        "tests/test_t37_scoped_migration.py: synthetic lost acknowledgment after link and no-effect link failure both retain staging and report UNKNOWN"
+      ],
+      "verification": "CPython 3.14.7 and CPython 3.10.20: 18 passed each for tests/test_t37_scoped_migration.py and five selected field-export controls; synthetic files only.",
+      "remaining": "FileExistsError retains its existing DESTINATION_EXISTS contract. This change does not prove non-clobber publication on every target filesystem or fix overwrite races, rollback, Windows or native acceptance; T37 remains RUNNING."
+    },
+    {
+      "id": "20261126-T35-local-qwen-310-analysis",
+      "scope": "Read-only analysis by local omlx/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S at max reasoning; no source changes or execution",
+      "finding": "The current standard-library Python 3.10 path has no exposed blobopen; previously recorded local RSS samples show the existing SQLite CAST/substr fallback grows with legacy field size. The subagent suggested chunked storage for future writes, while retaining legacy reads.",
+      "remaining": "The proposed schema/chunking and any migration are unimplemented and not evidence that legacy single-field reads or full result creation have bounded memory. Subagent claims about third-party package and Windows SQLite internals were not independently verified. Python 3.10 support and old data access remain intact; T35 stays RUNNING."
     }
   ]
 }

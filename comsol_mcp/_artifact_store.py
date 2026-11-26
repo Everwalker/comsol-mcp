@@ -2342,10 +2342,18 @@ class ArtifactStore:
                         stage="post_dispatch",
                     ) from exc
                 except OSError as exc:
+                    # As with replace, an error observed after dispatch does
+                    # not prove that publication had no effect. Retain the
+                    # staging name for inspection and prohibit blind retry.
+                    staging_path = tmp_path.relative_to(self.project_root).as_posix()
+                    tmp_path = None
                     raise _contract_error(
-                        "PUBLISH_FAILED",
-                        f"Atomic no-clobber publish failed for {authorized_target}: {exc}",
+                        "ARTIFACT_PUBLISH_UNKNOWN",
+                        "no-clobber publication could not be confirmed",
                         stage="post_dispatch",
+                        details={"destination": authorized_target.relative_to(self.project_root).as_posix(),
+                                 "staging_path": staging_path, "final_state": "UNKNOWN",
+                                 "sha256": sha256, "safe_retry": False},
                     ) from exc
                 try:
                     tmp_path.unlink()

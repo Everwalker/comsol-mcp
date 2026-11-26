@@ -395,6 +395,42 @@ class ScopedArtifactMigrationTests(unittest.TestCase):
             stage = root / error.exception.details["staging_path"]
             self.assertTrue(stage.is_file())
 
+    def test_no_clobber_exception_after_publication_reports_unknown(self) -> None:
+        with self._tmpdir() as temp:
+            root = Path(temp)
+            target = root / "no-clobber-lost-ack.json"
+            real_link = os.link
+
+            def publish_then_fail(source, destination):
+                real_link(source, destination)
+                raise OSError("synthetic failure after link")
+
+            with mock.patch.object(artifact_store.os, "link", side_effect=publish_then_fail):
+                with self.assertRaises(ExecutionContractError) as error:
+                    ArtifactStore(root).export_field_data(
+                        target.name, {"values": [10], "status": {"ok": True}}, allow_overwrite=True,
+                    )
+            self.assertEqual(error.exception.code, "ARTIFACT_PUBLISH_UNKNOWN")
+            self.assertEqual(error.exception.stage, "post_dispatch")
+            self.assertFalse(error.exception.safe_retry)
+            stage = root / error.exception.details["staging_path"]
+            self.assertTrue(stage.is_file())
+            self.assertEqual(stage.read_bytes(), target.read_bytes())
+
+    def test_no_clobber_exception_preserves_uncommitted_staging_bytes(self) -> None:
+        with self._tmpdir() as temp:
+            root = Path(temp)
+            target = root / "unconfirmed-link.json"
+            with mock.patch.object(artifact_store.os, "link", side_effect=OSError("synthetic interruption")):
+                with self.assertRaises(ExecutionContractError) as error:
+                    ArtifactStore(root).export_field_data(
+                        target.name, {"values": [10], "status": {"ok": True}},
+                    )
+            self.assertEqual(error.exception.code, "ARTIFACT_PUBLISH_UNKNOWN")
+            self.assertFalse(error.exception.safe_retry)
+            self.assertFalse(target.exists())
+            self.assertTrue((root / error.exception.details["staging_path"]).is_file())
+
     def test_no_clobber_restore_primitive_preserves_concurrent_target_and_backup(self) -> None:
         with self._tmpdir() as temp:
             root = Path(temp)
