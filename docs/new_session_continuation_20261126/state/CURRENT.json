@@ -749,7 +749,8 @@
         "references/CURRENT_20261123.json#/tasks/T20.a"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Local Qwen reports isolated root/FD/close controls passed and 15 broader T20 test failures; exact failure breakdown, valid current project route and native behavior remain open."
     },
     "T21.a": {
       "status": "TODO",
@@ -1597,6 +1598,14 @@
       "decision": "Do not silently switch to a different default root: it could bypass still-held legacy locks. A safe compatible migration and cross-daemon/native evidence remain open; historical UNKNOWN resources were not inspected or altered.",
       "verification": "Local Qwen source review only, with main-agent review of the default path, Worker launch argument, legacy lock and inherited synthetic evidence. The proposed same-process environment-monkeypatch test would need care because tempfile.gettempdir() caches its result; no new test was run.",
       "remaining": "Different users, endpoint aliases, old-owner compatibility, permissions, Windows and actual native behavior remain unverified. T32 remains RUNNING."
+    },
+    {
+      "id": "20261126-T20-qwen-project-root-audit",
+      "scope": "T20.a / U05 local Qwen max isolated software audit, no native engine",
+      "base_commit": "040cf47c8f6d77f79db7278543945f7430e07ca8",
+      "finding": "Qwen reports no reproduced ProjectRootBinding FD/close/relative-component defect within its assigned source scope. It reports 96 relevant synthetic tests passed plus 6 additional project-boundary/fake-Windows tests, and a broader T20 run of 231 passed / 15 failed; these figures are agent-reported and were not rerun by the main agent. Its listed failure categories total 14, so the exact breakdown remains unverified.",
+      "decision": "Retain the current fixed-source project boundary and verified-digest-before-refresh behavior; do not restore the historical guard. Main-agent source inspection confirms the POSIX walker can attempt to open a root when no binding is supplied, so the report must not be read as proof that every such call requires a pre-supplied binding. Qwen was asked to investigate the exact failures and fix only demonstrated stale test fixtures/assertions while retaining positive and negative controls.",
+      "remaining": "Tests use synthetic projects/workers; legitimate data through actual COMSOL, native OS targets, production authorization and T20.a acceptance remain open. Some reported failures may indicate real production issues until individually assessed."
     }
   ]
 }
