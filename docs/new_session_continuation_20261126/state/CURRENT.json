@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "检查 job.reconcile 读取或返回作业时是否仍完整解码超大结果，并评估复用现有分页结果投影。",
+  "next_action": "检查现有结果元数据 blobopen 探测能否用于 status/wait/reconcile 的同事务结果大小读取。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -1563,6 +1563,19 @@
       ],
       "verification": "CPython 3.14.7 and CPython 3.10.20: 8 reconcile-related tests passed in each version, including project isolation, snapshot append/binding drift and >1000-event pending request; one incomplete-snapshot test passed in each version. All jobs and Worker observations are synthetic; no COMSOL or old UNKNOWN resource was contacted.",
       "remaining": "This bounds only the retained serialized Worker evidence and stops collecting all event rows; it is not a process RSS bound. Existing fold still reads each event and may materialize SQLite length(CAST(...)) internally, especially on Python 3.10; a legacy row exceeding the admission limit or malformed unrelated event now conservatively refuses reconciliation. Job/result metadata reads and reply size remain separate; in-place event changes after snapshot still evade count/max; real separate-RPC, Windows, native and full T35 acceptance remain open."
+    },
+    {
+      "id": "20261126-T35-reconcile-result-projection",
+      "scope": "T35.b / U08 synthetic job.reconcile stored-result projection",
+      "base_commit": "fc35dba4634b2f65b0b7be93a6c6a3b6be8fbf3d",
+      "finding": "Both initial job.reconcile reads and the post-update job projection used _job(), which fully loaded and duplicated a stored result even when it was oversized; a test prohibiting that decoder failed for UNKNOWN and SUCCEEDED jobs before this change.",
+      "changes": [
+        "comsol_mcp/_control_daemon.py: use the existing status/wait inline limit and result-page hint when reading the project-bound reconciliation job.",
+        "comsol_mcp/_operation_store.py: use the same projection inside the conditional reconciliation write transaction rather than decoding the entire stored result after updating.",
+        "tests/test_t35_bounded_status_wait_20261123.py: 1 MiB synthetic UNKNOWN and SUCCEEDED results retain their stored contents while reconciliation omits inline payloads."
+      ],
+      "verification": "CPython 3.14.7 and CPython 3.10.20: 13 passed each for reconciliation, status and wait controls with file-backed SQLite; small-result shapes, project isolation, event/binding drift, >1000-event pending request, oversized Worker evidence and malformed event controls included. Synthetic jobs only.",
+      "remaining": "Existing job_for_status_wait still probes size via length(CAST(result AS BLOB)), which may materialize the complete result inside SQLite; Python 3.10 has no blobopen. Project/job metadata, Worker status replies and full MCP frame/RSS remain independently unbounded or unverified; no real Worker, Windows or native acceptance is inferred."
     }
   ]
 }

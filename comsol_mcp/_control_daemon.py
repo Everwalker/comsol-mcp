@@ -12022,7 +12022,9 @@ class ControlDaemon:
 
         try:
             with self.store.project_job_read_snapshot(job_id, project_id) as bound:
-                job = self.store.job(job_id) if bound else None
+                job = self.store.job_for_status_wait(
+                    job_id, max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
+                ) if bound else None
                 if job and job.get("status") in {"UNKNOWN", "RECONCILING"}:
                     snapshot = self.store.fold_job_event_prefix(
                         job_id, snapshot_count=None, snapshot_last_id=None,
@@ -14461,6 +14463,7 @@ class ControlDaemon:
             {"reconciliation": observed, "reconciled_quiescent": quiescent,
              "replay_performed": False, "callback_completion_unknown": True},
             event_count=event_count, last_event_id=last_event_id,
+            max_inline_result_bytes=_JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES,
         )
         if outcome == "NOT_FOUND":
             return self._error("NODE_NOT_FOUND", "job not found")

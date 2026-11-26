@@ -2588,6 +2588,7 @@ class OperationStore:
     def update_reconciliation_scoped(
         self, observed_job: dict[str, Any], project_id: str, status: str,
         metadata: dict[str, Any], *, event_count: int, last_event_id: int | None,
+        max_inline_result_bytes: int,
     ) -> tuple[str, dict[str, Any] | None]:
         """Write a reconciliation only if its project and observations still match."""
         job_id = observed_job["job_id"]
@@ -2629,7 +2630,7 @@ class OperationStore:
                                 (status, _dumps_canonical(merged), job_id))
                 self.db.execute("UPDATE operations SET status=? WHERE operation_id=?",
                                 (status, row["operation_id"]))
-                updated = self.job(job_id)
+                updated = self.job_for_status_wait(job_id, max_inline_result_bytes=max_inline_result_bytes)
                 self.db.execute("COMMIT")
                 return "UPDATED", updated
             except BaseException:

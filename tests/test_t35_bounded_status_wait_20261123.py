@@ -189,6 +189,34 @@ def test_reconcile_refuses_incomplete_event_snapshot(daemon_projects) -> None:
     assert "reconciled_quiescent" not in daemon.store.job(job_id)["metadata"]
 
 
+@pytest.mark.parametrize("status", ["UNKNOWN", "SUCCEEDED"])
+def test_reconcile_omits_oversized_result_without_decoding(daemon_projects, monkeypatch, status) -> None:
+    daemon, project_a, _project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, f"reconcile-large-result-{status}")
+    job_id = record["job_id"]
+    stored = {"success": True, "payload": "x" * (1024 * 1024)}
+    accepted, actual_status = daemon.store.finish(record["operation_id"], status=status, result=stored)
+    assert accepted and actual_status == status
+    if status == "UNKNOWN":
+        for phase, worker_status in (("submitted", None), ("observed", "SUCCEEDED")):
+            daemon.store.add_event(job_id, "worker_request", {
+                "request_id": "old-request", "phase": phase, "status": worker_status,
+            })
+
+    def no_full_result_decode(*_args, **_kwargs):
+        raise AssertionError("reconcile decoded an oversized result")
+
+    with monkeypatch.context() as scoped_patch:
+        scoped_patch.setattr(daemon.store, "_job", no_full_result_decode)
+        result = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert result["success"] is True, result
+    assert result["data"]["status"] == status
+    assert result["data"]["result_omitted"] is True
+    assert result["data"]["result_available_via"] == "job.result.read"
+    assert result["data"]["result_size_bytes"] > _JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES
+    assert "payload" not in json.dumps(result)
+
+
 @pytest.mark.parametrize("change", ["binding", "event"])
 def test_reconcile_refuses_drift_after_snapshot(daemon_projects, monkeypatch, change) -> None:
     daemon, project_a, project_b, _database_path = daemon_projects
