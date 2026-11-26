@@ -13,6 +13,7 @@ import platform
 import plistlib
 import re
 import struct
+import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import quote, unquote
@@ -493,10 +494,14 @@ def _configuration_check(env: Mapping[str, str], target: str) -> dict[str, Any]:
     configured_project = env.get("COMSOL_PROJECT_ROOT")
     fallback = Path(__file__).resolve().parents[1]
     project_fallback_available = not any(part in fallback.parts for part in ("site-packages", "dist-packages"))
+    python_runtime = {"scope": "DOCTOR_PROCESS_ONLY", "executable": sys.executable,
+                      "prefix": sys.prefix, "base_prefix": sys.base_prefix,
+                      "venv_active": sys.prefix != sys.base_prefix}
     if not configured_root and not configured_java:
         return {"name": "configuration", "status": "NOT_CONFIGURED", "comsol_root_set": False,
                 "java_home_set": False, "project_root_set": bool(configured_project),
-                "project_root_fallback_available": project_fallback_available, "values_redacted": True}
+                "project_root_fallback_available": project_fallback_available,
+                "python_runtime": python_runtime, "values_redacted": True}
     reasons: list[str] = []
     project_root_unverified = not configured_project and not project_fallback_available
     exe_name = "java" if target == "macos" else "java.exe"
@@ -554,6 +559,7 @@ def _configuration_check(env: Mapping[str, str], target: str) -> dict[str, Any]:
         "configured_java": java_observation,
         "project_root_set": bool(configured_project),
         "project_root_fallback_available": project_fallback_available,
+        "python_runtime": python_runtime,
         "values_redacted": True,
     }
     if project_root_unverified:

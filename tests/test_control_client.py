@@ -103,6 +103,23 @@ def test_control_pid_reuse_is_not_treated_as_the_published_daemon(monkeypatch):
     assert client._alive(1234, expected_start_epoch_ms=201) is False
 
 
+def test_spawn_control_uses_lexical_virtualenv_interpreter(monkeypatch, tmp_path):
+    base = tmp_path / "base-python"
+    base.touch()
+    executable = tmp_path / "venv" / "python"
+    executable.parent.mkdir()
+    executable.symlink_to(base)
+    calls = []
+    monkeypatch.setattr(client.sys, "executable", str(executable))
+    monkeypatch.setattr(client, "_is_windows", lambda: False)
+    monkeypatch.setattr(client.subprocess, "Popen", lambda command, **kwargs: calls.append((command, kwargs)))
+
+    client._spawn_control_daemon(tmp_path, object())
+
+    assert calls[0][0][0] == str(executable)
+    assert calls[0][0][0] != str(executable.resolve())
+
+
 def test_healthy_existing_windows_control_is_attached_without_spawn(monkeypatch, tmp_path):
     endpoint = {"pid": 1234, "port": 4321, "token": "secret"}
     monkeypatch.setattr(client, "control_home", lambda: tmp_path)

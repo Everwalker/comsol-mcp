@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import plistlib
 import struct
+import sys
 from pathlib import Path
 
 import pytest
@@ -226,6 +227,9 @@ def test_doctor_passes_a_fully_configured_static_installation(tmp_path: Path) ->
     assert config["comsol_root_resolves"] is True
     assert config["configured_java"] == {"java_executable": True, "javac_executable": True, "version": "17.0.12"}
     assert config["values_redacted"] is True
+    assert config["python_runtime"]["executable"] == sys.executable
+    assert config["python_runtime"]["venv_active"] == (sys.prefix != sys.base_prefix)
+    assert config["python_runtime"]["scope"] == "DOCTOR_PROCESS_ONLY"
 
 
 def test_doctor_names_missing_project_root_for_installed_package(tmp_path: Path, monkeypatch) -> None:
