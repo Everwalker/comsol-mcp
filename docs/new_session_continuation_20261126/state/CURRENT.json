@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "等待并审阅本地 Qwen 对 T38 打包路径的静态梳理。",
+  "next_action": "等待本地 Qwen 完成单次打包调用中项目根替换的隔离复现。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -428,7 +428,8 @@
         "references/CURRENT_20261123.json#/tasks/T38"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Qwen traced the current package chain; admitted root binding is not directly consumed by model delivery. Single-dispatch swap remains to be reproduced; scratch, dependency, publication and registration continuity remain open."
     },
     "T39": {
       "status": "TODO",
@@ -815,7 +816,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Synthetic project-scoped reconcile now detects appended and in-place event changes; 9 broader cancel/job.log cases were reported RED. SQLite/RSS, real RPC/native and full acceptance remain open."
+      "session_scope_note": "Synthetic project-scoped reconciliation detects appended and in-place event changes. The 9 reported cancellation/log failures and 4 drift cases were traced to stale fixtures and reported passing after updates; unrun tests, SQLite/RSS, real RPC/native and full acceptance remain open."
     },
     "T42.a": {
       "status": "RUNNING",
@@ -1676,6 +1677,15 @@
       ],
       "verification": "Qwen reports 149/149 tests in the six affected files plus newer T19/T19a/T36 controls, followed by 42/42 affected guard tests after strengthening the shim, on CPython 3.14.7. Main agent reviewed the diff and ran the descriptor-walk test on CPython 3.10.20: 1 passed. Synthetic fake Workers and temporary files only.",
       "remaining": "The broader T20 suite was not rerun after these changes. Project-root open instrumentation is covered separately by the existing fixture suite, not by this shim. The check-to-engine-use race, native COMSOL behavior, Windows and full T20.a acceptance remain open."
+    },
+    {
+      "id": "20261126-T38-qwen-package-root-static-audit",
+      "scope": "T38 / U09 U12 local Qwen max read-only preparation; no package or native execution",
+      "base_commit": "1bcc8f963ca68c9643a78868f1c0592b4b36f97a",
+      "finding": "Qwen traced the managed model.package path from ProjectAuthority.bind_project_workspace through managed context to scratch creation, dependency reads, no-clobber publication and artifact registration. The admitted ProjectRootBinding is present in managed context, while _g3_model_delivery.py uses project-root path resolution instead of that binding. Existing T38 historical evidence already identified root-continuity gaps.",
+      "main_review": "Main agent confirmed the managed context carries the binding, package() resolves the name and the file publisher does not forward an expected project identity, while its lower-level publisher can check one. Replacing a project name before a separate dispatch is not by itself established as an authorization violation: persistent project-directory identity semantics are not proven. A swap after admission within one dispatch is a distinct, untested scenario.",
+      "next_work": "Qwen is preparing an isolated fake-Worker single-dispatch reproduction and, if supported, a narrowly scoped publication identity check under the T37 preparation allowance. Earlier scratch/dependency access and later registration must remain open until separately bound and validated.",
+      "remaining": "No real Worker, COMSOL, Windows or old UNKNOWN resource was accessed. Static inference is not a reproduced exploit; full T38/T37 and native acceptance remain open."
     }
   ]
 }
