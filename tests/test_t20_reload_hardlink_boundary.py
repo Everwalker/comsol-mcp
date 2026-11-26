@@ -51,13 +51,24 @@ def test_reload_control_digest_never_reads_cross_project_hardlink(tmp_path, monk
         monkeypatch.setattr(os, "read", tracked_read)
         negative = _call(daemon, "function.data_reload", {"path": path},
                          _envelope(project, positive["execution"], "hardlink"))
-        digest = (negative.get("data") or {}).get("sha256") or {}
+        # Current contract: the multiple-link alias fails the single-link
+        # rule, so the control-side digest cannot be verified and the reload is
+        # refused before any refresh is dispatched (pinned by
+        # tests/test_t36_project_boundary_20261123.py). The hardlink boundary
+        # still holds on both sides: the control process never reads the other
+        # project's inode, and no digest for it is published.
+        assert negative["success"] is False, negative
+        assert negative["data"]["refused"] is True
+        assert negative["data"]["witness"]["mutation_issued"] is False
+        assert negative["error"]["details"]["digest_status"] == "not_reported_path_component_refused"
         assert observed_reads == [], f"control process read the other project's inode: {observed_reads}"
+        digest = (negative.get("data") or {}).get("sha256") or {}
         assert digest.get("value") is None, negative
         assert digest.get("status") != "verified", negative
-        # The fake refresh only records a call. Actual engine file access is a
-        # separate unresolved boundary and is not claimed to be prevented.
-        assert interp.refreshes == 2
+        # No refresh is dispatched for an unverifiable digest. Actual engine
+        # file access remains a separate unresolved boundary and is not
+        # claimed to be prevented.
+        assert interp.refreshes == 1
     finally:
         daemon.close()
 

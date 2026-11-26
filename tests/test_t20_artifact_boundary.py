@@ -446,18 +446,22 @@ def test_function_definition_filename_is_refused_on_create_and_update(tmp_path, 
         assert create_wrapped["data"]["witness"]["mutation_issued"] is False
         assert "interpEvil" not in model.collections["func"].items
 
-        # data_reload on a node whose model state carries a non-bound filename is a
-        # model-state read (the write routes above are closed); pin that refresh
-        # does not create a new public writer of the property.
+        # data_reload on a node whose model state carries a non-bound filename
+        # is now refused before the engine refresh: the control process cannot
+        # prove the digest inside the project boundary, so the whole reload is
+        # refused with the withheld digest status recorded (current contract,
+        # pinned by tests/test_t36_project_boundary_20261123.py). The write
+        # routes above remain the only public writers of the property.
         interp.values["filename"] = str(outside)
         reload_result = _call(daemon, "function.data_reload", {"path": _node_path(("func", "interpA"))},
                               _envelope(project, exe, "gate-reload"))
-        assert reload_result["success"], reload_result
-        assert interp.refreshes == 1
-        # residual risk pinned honestly: the engine refreshed a file outside the
-        # project (model content); the control-side digest of that path is withheld
-        # instead of published, and the digest value itself must not appear.
-        assert reload_result["data"]["sha256"]["status"] == "not_reported_outside_project_boundary"
+        assert not reload_result["success"], reload_result
+        assert _error_code(reload_result) == "ACCESS_VIOLATION"
+        assert reload_result["data"]["refused"] is True
+        assert reload_result["data"]["witness"]["mutation_issued"] is False
+        assert reload_result["error"]["details"]["digest_status"] == "not_reported_outside_project_boundary"
+        assert interp.refreshes == 0
+        # the withheld digest must not leak the outside file's content hash
         assert hashlib.sha256(outside.read_bytes()).hexdigest() not in json.dumps(reload_result)
     finally:
         daemon.close()

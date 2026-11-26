@@ -25,10 +25,11 @@ Positive controls are pinned too: ``linear``/``f1``-class plain text, unit
 expressions, and an in-project absolute that folds ``..`` under a *proven
 plain existing directory* keep applying, verbatim and unrewritten.
 
-Explicitly NOT claimed: this is a lexical/no-follow-lstat shape screen, not a
-file sandbox, not a physical-permission boundary, and not a proof that every
-project-internal path is allowed.  The compatibility cost of that conservatism
-is pinned below (``<root>/..`` and ``/outside/../<root>/x`` are refused; any
+Explicitly NOT claimed: this partial path-shape screen, including its POSIX
+descriptor-relative metadata walk, is a file sandbox, a physical-permission
+boundary, or a proof that every project-internal path is allowed. The
+compatibility cost of that conservatism is pinned below (``<root>/..`` and
+``/outside/../<root>/x`` are refused; any
 value starting with a single letter plus ``:`` — including ambiguous text such
 as ``a:b`` — is refused on every host).  The bare relative ``f1`` semantics
 stay open and are not re-decided here; the Windows/UNC assertions below drive
@@ -37,6 +38,7 @@ the lexical nt code path on a POSIX host and are not native Windows evidence.
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -154,16 +156,21 @@ def test_absolute_dotdot_at_root_boundary_and_sibling_prefix_refused(tmp_path, m
 
 @pytest.mark.parametrize("value", [r"C:secret.dat", r"D:dir\secret.dat", "C:", r"C:..\secret.dat"])
 def test_windows_drive_relative_values_refused_before_setter(tmp_path, monkeypatch, value):
+    # ``filename`` on a known file-backed type is refused earlier by the
+    # T19.a known-file gate (pinned by
+    # tests/test_t19a_import_filename_semantics_20261123.py), so this pin of
+    # the drive-relative shape screen uses the non-known-file ``source``
+    # property, which reaches the same screen unchanged.
     daemon, project, _root, _model, node, execution = _make_project(tmp_path, "fix-drive-rel", monkeypatch)
     try:
         monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
                             lambda: {"synthetic_owned_server": True})
-        result = _call(daemon, "node.property_set", _property_body("filename", value),
+        result = _call(daemon, "node.property_set", _property_body("source", value),
                        _envelope(project, execution, f"fix-drive-rel-{value}"))
         _refusal_shape(result)
         assert result["error"]["details"]["findings"][0]["shape"] == SHAPE_DRIVE_RELATIVE
         assert result["error"]["details"]["findings"][0]["reason"] == "drive_relative_undecidable"
-        assert node.values.get("filename") is None
+        assert node.values.get("source") is None
     finally:
         daemon.close()
 
@@ -203,21 +210,78 @@ def test_single_letter_colon_text_is_refused_as_documented_cost(tmp_path, monkey
 
 
 class _OsProbeShim:
-    """Stand-in for the guard's ``os``: records lstat probes, fails on anything
-    else, so the screen's no-open / no-resolve / no-stat claim is testable."""
+    """Stand-in for the guard's ``os`` under the descriptor-pinned contract.
+
+    ``open`` and ``stat`` are tracking wrappers that delegate to the real os
+    functions.  The shim-local ``supports_dir_fd`` set includes the wrappers,
+    so the guard's own capability check (an identity comparison of
+    ``os.open``/``os.stat`` against ``os.supports_dir_fd``) stays satisfied
+    through them.  Each wrapper fails the test at call time when the guard
+    stats or opens a bare path name, opens without ``O_NOFOLLOW``, opens a
+    non-directory or a writeable target, stats with symlink following
+    enabled, or traverses through a base descriptor that is not an open
+    directory.  Every guard metadata access is therefore actively verified
+    to be descriptor-pinned, no-follow and read-only, and no file content is
+    ever opened.  Fd-level calls (``dup``/``fstat``/``close``) and lexical
+    helpers pass through.  The approved root's binding open (the walk's
+    self-open path) runs inside ``_project_root`` with its own ``os`` and is
+    outside this shim; that binding path is pinned by the project-root
+    binding tests.
+    """
 
     def __init__(self, name: str):
-        self.probes: list[str] = []
+        self.probes: list[dict] = []
         self.name = name
         self.path = os.path
         self.sep = os.sep
+        self.open = self._tracked_open
+        self.stat = self._tracked_stat
+        self.supports_dir_fd = set(os.supports_dir_fd) | {self.open, self.stat}
+
+    def _discipline(self, kind: str, path, kwargs: dict, flags: int | None) -> None:
+        if "dir_fd" not in kwargs:
+            raise AssertionError(
+                f"guard {kind}() ran on bare path name {os.fspath(path)!r}; "
+                "the contract only allows descriptor-relative access")
+        component = os.fspath(path)
+        if os.path.isabs(component) or os.sep in component or component in {".", ".."}:
+            raise AssertionError(
+                f"guard {kind}() traversed the non-component path {component!r}")
+        if flags is not None:
+            if not flags & getattr(os, "O_NOFOLLOW", 0):
+                raise AssertionError(f"guard {kind}() opened {component!r} without O_NOFOLLOW")
+            if not flags & getattr(os, "O_DIRECTORY", 0):
+                raise AssertionError(
+                    f"guard {kind}() opened the non-directory target {component!r}; "
+                    "adjudication never opens file content")
+            if flags & (os.O_WRONLY | os.O_RDWR | getattr(os, "O_CREAT", 0)
+                        | getattr(os, "O_TRUNC", 0) | getattr(os, "O_APPEND", 0)):
+                raise AssertionError(f"guard {kind}() requested write access to {component!r}")
+        elif kwargs.get("follow_symlinks") is not False:
+            raise AssertionError(
+                f"guard {kind}() probed {component!r} with symlink following enabled")
+        if not stat.S_ISDIR(os.fstat(kwargs["dir_fd"]).st_mode):
+            raise AssertionError(
+                f"guard {kind}() traversed through base descriptor {kwargs['dir_fd']} "
+                "that is not an open directory")
+        self.probes.append({"op": kind, "component": component, "dir_fd": kwargs["dir_fd"]})
+
+    def _tracked_open(self, path, *args, **kwargs):
+        self._discipline("open", path, kwargs,
+                         args[0] if args else kwargs.get("flags", 0))
+        return os.open(path, *args, **kwargs)
+
+    def _tracked_stat(self, path, *args, **kwargs):
+        self._discipline("stat", path, kwargs, None)
+        return os.stat(path, *args, **kwargs)
 
     def lstat(self, path, *args, **kwargs):
-        self.probes.append(os.fspath(path))
+        self.probes.append({"op": "lstat", "component": os.fspath(path),
+                            "dir_fd": kwargs.get("dir_fd")})
         return os.lstat(path, *args, **kwargs)
 
     def __getattr__(self, item):
-        raise AssertionError(f"guard touched os.{item}; only no-follow lstat probes are allowed")
+        return getattr(os, item)
 
 
 def _fixture_root(tmp_path: Path) -> Path:
@@ -278,12 +342,16 @@ def test_walk_refuses_symlink_hop_and_root_escape_but_keeps_plain_folds(tmp_path
     assert adjudicate(str(root / "inputs" / ".." / "inputs" / "fresh.dat")) == (True, "inside_project_boundary")
     assert adjudicate(str(root / "inputs" / "." / "a.dat")) == (True, "inside_project_boundary")
 
-    # probe discipline: every probe is inside the root, contains no "..", and
-    # the screen opened / read / resolved / stat'ed nothing (the shim raises).
+    # probe discipline: every guard metadata access recorded above happened
+    # through an open directory descriptor (checked inside the wrappers at
+    # call time), no-follow (O_NOFOLLOW component opens, follow_symlinks=False
+    # stats), read-only, and on single component names; file content was
+    # never opened; bare-name stat/open would fail the wrappers, and any lstat
+    # is rejected by the assertion below.
     assert shim.probes
-    for probe in shim.probes:
-        assert probe == str(root) or probe.startswith(str(root) + os.sep), probe
-        assert ".." not in probe.split(os.sep), probe
+    assert all(p["op"] in {"stat", "open"} and p["dir_fd"] is not None
+               and p["component"] and os.sep not in p["component"]
+               and p["component"] not in {".", ".."} for p in shim.probes)
 
 
 @pytest.mark.parametrize("value,reason", [

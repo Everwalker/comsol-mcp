@@ -336,12 +336,17 @@ def test_relative_traversal_refused_even_if_lexically_in_project(tmp_path, monke
     try:
         monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
                             lambda: {"synthetic_owned_server": True})
+        # ``Interpolation.filename`` relative values are now refused earlier by
+        # the T19.a known-file gate (pinned by
+        # tests/test_t19a_import_filename_semantics_20261123.py); this pin of
+        # the shape screen therefore uses the non-known-file ``source``
+        # property, which reaches the same traversal refusal unchanged.
         result = _call(daemon, "node.property_set",
-                       _props("filename", "inputs/../inputs/x.dat"),
+                       _props("source", "inputs/../inputs/x.dat"),
                        _envelope(project, exe, "pg-dotdot-1"))
         _refusal_shape(result)
         assert result["error"]["details"]["findings"][0]["reason"] == "relative_traversal_undecidable"
-        assert interp.values.get("filename") is None
+        assert interp.values.get("source") is None
     finally:
         daemon.close()
 
@@ -426,20 +431,29 @@ def test_matrix_entry_string_leaves_screened_in_arrays(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_bare_relative_name_stays_undecided_documented_open(tmp_path, monkeypatch):
-    """The screen does NOT decide bare relative names (that is the open
-    file/non-file classification problem).  This test pins today's documented
-    behavior — a plain ``f1`` value still reaches the fake setter — so the
-    partial scope stays visible; the parent bare-relative boundary test
-    intentionally stays RED and this is NOT a safety claim."""
+def test_bare_relative_name_open_scope_and_known_file_gate(tmp_path, monkeypatch):
+    """Documented open scope for generic string properties stays visible: the
+    screen does NOT decide bare relative names (the file/non-file
+    classification problem), so a plain ``f1`` on a non-known-file property
+    still reaches the fake setter.  For the finite known file-backed pairs
+    (Interpolation.filename) the T19.a gate now refuses any relative value
+    before the screen and setter, closing the old documented-open case there
+    (the gate itself is pinned by tests/test_t19a_import_filename_semantics_20261123.py)."""
     daemon, project, root, _model, interp, exe = _make_project(tmp_path, "pg-open", monkeypatch)
     try:
         monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
                             lambda: {"synthetic_owned_server": True})
-        result = _call(daemon, "node.property_set", _props("filename", "f1"),
-                       _envelope(project, exe, "pg-open-1"))
-        assert result["success"], result   # undecided: guard silent, setter reached
-        assert interp.values["filename"] == "f1"
+        gated = _call(daemon, "node.property_set", _props("filename", "f1"),
+                      _envelope(project, exe, "pg-open-gated"))
+        _refusal_shape(gated)
+        assert gated["error"]["details"]["mitigation"] == "t19a-known-file-semantics"
+        assert interp.values.get("filename") is None
+
+        # ordered after the refusal so the revision is still the envelope's
+        kept = _call(daemon, "node.property_set", _props("argunit", "f1"),
+                     _envelope(project, exe, "pg-open-kept"))
+        assert kept["success"], kept       # undecided for generic properties
+        assert interp.values["argunit"] == "f1"
     finally:
         daemon.close()
 
@@ -449,7 +463,7 @@ def test_bare_relative_name_stays_undecided_documented_open(tmp_path, monkeypatc
 # ---------------------------------------------------------------------------
 
 
-def test_pure_classifier_and_adjudicator_semantics():
+def test_pure_classifier_and_adjudicator_semantics(tmp_path):
     assert classify_string_leaf("linear") is None
     assert classify_string_leaf("m/s^-1") is None
     assert classify_string_leaf("f1") is None
@@ -457,16 +471,22 @@ def test_pure_classifier_and_adjudicator_semantics():
     assert classify_string_leaf("../x") == SHAPE_DOTDOT_TRAVERSAL
     assert classify_string_leaf("a/../b") == SHAPE_DOTDOT_TRAVERSAL
     assert classify_string_leaf("/x/y") == SHAPE_POSIX_ABSOLUTE
-    root = str(Path("/approved/project").resolve())
+    # A POSIX-absolute adjudication walks components under a pinned no-follow
+    # binding; when the caller passes none the walk self-opens the approved
+    # root (the production route pins the binding itself), so the fixture
+    # root must be a real openable directory.
+    root = str(Path(tmp_path, "approved", "project").resolve())
+    os.makedirs(os.path.join(root, "inputs"), exist_ok=True)
     inside = os.path.join(root, "inputs", "data.dat")
     allowed, reason = adjudicate_path_leaf(inside, SHAPE_POSIX_ABSOLUTE,
                                            project_root=root, engine_host_proven=True)
-    assert allowed and reason == "inside_project_boundary"
     # missing components stop the scan: a not-yet-existing write target is
-    # still adjudicated from its plain existing prefix (here: nothing exists).
-    allowed, _ = adjudicate_path_leaf(inside, SHAPE_POSIX_ABSOLUTE,
-                                      project_root=root, engine_host_proven=False)
-    assert not allowed  # host unproven → fail closed
+    # still adjudicated from its plain existing prefix (here: the components
+    # down to ``inputs`` exist, the file itself does not).
+    assert allowed and reason == "inside_project_boundary"
+    allowed, reason = adjudicate_path_leaf(inside, SHAPE_POSIX_ABSOLUTE,
+                                           project_root=root, engine_host_proven=False)
+    assert not allowed and reason == "adjudication_unavailable"  # host unproven → fail closed
     allowed, reason = adjudicate_path_leaf("/other/project/x.dat", SHAPE_POSIX_ABSOLUTE,
                                            project_root=root, engine_host_proven=True)
     assert not allowed and reason == "outside_project_boundary"

@@ -25,8 +25,12 @@ def _setup(monkeypatch):
         for item in props
     })
 
-    def fake_call(target, method, name, *args):
+    def fake_call(target, method, name=None, *args):
         calls.append((method, name))
+        if method == 'getType':
+            # The resolved fake node's structural type for the T19.a
+            # known-file gate; read-only, never a mutation.
+            return 'Interpolation'
         if method == 'set':
             node[name] = args[0]['data']
             return None
@@ -53,8 +57,17 @@ def test_uri_is_refused_before_any_setter_even_after_a_valid_value(monkeypatch):
     with pytest.raises(PreWriteRefusal) as failure:
         _g2_engine.property_set(object(), 'synthetic-model', {'segments': []}, props, path_guard=screen)
     assert failure.value.code == 'ACCESS_VIOLATION'
-    assert len(checks) == 2
-    assert calls == [] and node == {}
+    # Current contract: the adapter first reads the resolved node's real type
+    # via getType() and the T19.a known-file gate refuses an Interpolation
+    # filename whose shape is not an absolute path (pinned by
+    # tests/test_t19a_import_filename_semantics_20261123.py), so the refusal
+    # happens before the path-shape screen runs; the URI screen refusal itself
+    # stays pinned in tests/test_t20_property_uri_screen_20261113.py. The
+    # adapter ordering invariant is unchanged: no set() dispatch ever happened
+    # even though a legal value led the list.
+    assert failure.value.details['mitigation'] == 't19a-known-file-semantics'
+    assert checks == []
+    assert all(method != 'set' for method, _ in calls) and node == {}
 
 
 def test_plain_value_reaches_fake_setter_and_is_read_back(monkeypatch):

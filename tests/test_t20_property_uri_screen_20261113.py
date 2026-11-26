@@ -25,6 +25,11 @@ def _screen(monkeypatch):
     receiver = SimpleNamespace(
         project_authorizer=lambda project, permission: {'workspace': '/synthetic/project'},
         _project_root_context=ContextVar('synthetic_property_uri_root', default=None),
+        # The managed screen consults the backend's pinned project-root
+        # binding; None is the deliberate no-pin negative control (the walk
+        # would then self-open the authorized workspace root, and URI shapes
+        # are refused before any binding is consulted).
+        project_root_binding=None,
         endpoint_key='127.0.0.1:2036',
     )
     return ManagedBackend._g2_property_path_screen(cast(ManagedBackend, receiver), 'synthetic-project')
