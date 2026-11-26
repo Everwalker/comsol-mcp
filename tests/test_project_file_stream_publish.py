@@ -93,6 +93,46 @@ class ProjectFileStreamPublish(unittest.TestCase):
         self.assertEqual(caught.exception.code, "ACCESS_VIOLATION")
         self.assertEqual(list(self.destination_dir.iterdir()), [])
 
+    @unittest.skipIf(os.name == "nt", "POSIX stat identity fixture; Windows identity equivalence is not exercised here")
+    def test_stream_publish_refuses_replaced_project_root_when_identity_pinned(self):
+        payload = b"identity-pinned publication payload"
+        before = self.root.stat()
+        retired = self.root.with_name(self.root.name + "-retired")
+        os.rename(self.root, retired)
+        self.root.mkdir()
+        (self.root / "exports").mkdir()
+        stage = self.root / "stage"
+        stage.mkdir()
+        source = stage / "model.partial"
+        source.write_bytes(payload)
+
+        with self.assertRaises(ExecutionContractError) as caught:
+            publish_project_file_no_clobber(
+                self.root, "exports/model.mph", source,
+                expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+                expected_project_identity=(before.st_dev, before.st_ino),
+            )
+
+        self.assertEqual(caught.exception.code, "PROJECT_WORKSPACE_IDENTITY_MISMATCH")
+        self.assertEqual(list((self.root / "exports").iterdir()), [])
+        self.assertEqual(list((retired / "exports").iterdir()), [])
+
+    @unittest.skipIf(os.name == "nt", "POSIX stat identity fixture; Windows identity equivalence is not exercised here")
+    def test_stream_publish_accepts_matching_pinned_project_root_identity(self):
+        source = self.source_dir / "model.partial"
+        payload = b"matching admitted root payload"
+        source.write_bytes(payload)
+        identity = self.root.stat()
+
+        receipt = publish_project_file_no_clobber(
+            self.root, "exports/model.mph", source,
+            expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+            expected_project_identity=(identity.st_dev, identity.st_ino),
+        )
+
+        self.assertEqual((self.destination_dir / "model.mph").read_bytes(), payload)
+        self.assertEqual(receipt["sha256"], hashlib.sha256(payload).hexdigest())
+
     def _private_stage(self, payload):
         from comsol_mcp._host_scoped_provider import verify_private_path_security
 
@@ -131,9 +171,10 @@ class ProjectFileStreamPublish(unittest.TestCase):
         destination = self.destination_dir / "raced.mph"
         original = artifact_store._publish_project_chunks_no_clobber
 
-        def race_after_path_admission(root, relative, chunks, *, expected_sha256, expected_size):
+        def race_after_path_admission(root, relative, chunks, *, expected_sha256, expected_size, **publisher_kwargs):
             destination.write_bytes(b"foreign winner")
-            return original(root, relative, chunks, expected_sha256=expected_sha256, expected_size=expected_size)
+            return original(root, relative, chunks, expected_sha256=expected_sha256, expected_size=expected_size,
+                            **publisher_kwargs)
 
         artifact_store._publish_project_chunks_no_clobber = race_after_path_admission
         try:
@@ -157,7 +198,7 @@ class ProjectFileStreamPublish(unittest.TestCase):
         destination = self.destination_dir / "source-race.mph"
         original = artifact_store._publish_project_chunks_no_clobber
 
-        def replace_after_first_chunk(root, relative, chunks, *, expected_sha256, expected_size):
+        def replace_after_first_chunk(root, relative, chunks, *, expected_sha256, expected_size, **publisher_kwargs):
             iterator = iter(chunks)
 
             def raced_chunks():
@@ -170,7 +211,7 @@ class ProjectFileStreamPublish(unittest.TestCase):
                 yield from iterator
 
             return original(root, relative, raced_chunks(), expected_sha256=expected_sha256,
-                            expected_size=expected_size)
+                            expected_size=expected_size, **publisher_kwargs)
 
         artifact_store._publish_project_chunks_no_clobber = replace_after_first_chunk
         try:

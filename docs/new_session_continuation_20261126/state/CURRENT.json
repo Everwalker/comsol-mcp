@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "等待本地 Qwen 完成单次打包调用中项目根替换的隔离复现。",
+  "next_action": "核对本地 Qwen 给出的打包基线失败清单和无绑定入口可达性。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -429,7 +429,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Qwen traced the current package chain; admitted root binding is not directly consumed by model delivery. Single-dispatch swap remains to be reproduced; scratch, dependency, publication and registration continuity remain open."
+      "session_scope_note": "A synthetic same-dispatch root replacement is now rejected at final publication when the managed binding is present; earlier/later stages and missing-binding behavior remain open."
     },
     "T39": {
       "status": "TODO",
@@ -1706,6 +1706,19 @@
       ],
       "verification": "Qwen reports 48 control-client/attach-only and 29 privacy tests passed on CPython 3.14.7. Main agent reviewed the diff and ran the 3 new controls on CPython 3.10.20: 3 passed. Endpoints, process identities, requests and spawning were substituted; no actual process or network was used.",
       "remaining": "This only avoids a contender after a negative health response when _alive reports the published owner live. It does not establish loaded-code identity, prove PID/birth in every platform failure mode, test an actual daemon or resolve native/SCM acceptance."
+    },
+    {
+      "id": "20261126-T37-T38-qwen-package-publish-root",
+      "scope": "T37 preparation / T38 model.package final publication root check with synthetic fake Worker",
+      "base_commit": "4aebe7f02ef3bd5ebd413461be84412c6476f642",
+      "finding": "Qwen reproduced one dispatch where a project directory was renamed and replaced after its ProjectRootBinding opened; the prior code published a model package in the replacement directory. This was a task-owned synthetic project and fake Worker, not a real COMSOL model.",
+      "changes": [
+        "comsol_mcp/_artifact_store.py: optionally pass the expected project identity through file publication to the existing POSIX and Windows lower-level publisher checks.",
+        "comsol_mcp/_g3_model_delivery.py: pass the managed context binding identity to the final model.package publication; contexts without a binding retain prior behavior.",
+        "tests/test_g3_model_delivery.py and tests/test_project_file_stream_publish.py: synthetic root-swap refusal and matching-root positive controls."
+      ],
+      "verification": "Qwen reports the root swap published into the replacement before the change. On CPython 3.14.7 it reports 24 passed / 3 failed for delivery, publisher and Windows-fake tests versus 21 passed / 3 failed for an isolated HEAD baseline; and 36 passed / 3 failed for export/managed-model tests with the same reported baseline failures. Exact failure IDs and causes are being requested and were not independently confirmed. Main agent ran the 3 new root controls on CPython 3.10.20: 3 passed. The POSIX fixture is real temporary filesystem plus fake Worker; Windows lower-level checks are fake-only.",
+      "remaining": "Only the final publisher root identity is checked. Earlier dependency reads, scratch creation, Worker path-based write, failure receipts and post-publication registration remain path-based and can race; contexts lacking a usable binding still take the old unpinned path. Actual Windows forwarding, real Worker/native operation, existing failed tests, full T37/T38 and cross-dispatch semantics remain open."
     }
   ]
 }

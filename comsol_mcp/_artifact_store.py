@@ -533,6 +533,7 @@ def publish_project_file_no_clobber(
     owned_source_root: str | Path | None = None,
     expected_source_identity: Mapping[str, Any] | None = None,
     expected_source_root_identity: Mapping[str, Any] | None = None,
+    expected_project_identity: tuple[int, ...] | None = None,
 ) -> dict[str, Any]:
     """Pin a backend-owned file and stream-publish it atomically.
 
@@ -543,6 +544,12 @@ def publish_project_file_no_clobber(
     installed host-scoped ownership/ACL verifier before and after the stream.
     Source bytes are consumed once and verified against the supplied digest
     and size before the destination name is committed.
+
+    ``expected_project_identity`` optionally pins the admitted project root
+    directory identity: (device, inode) on POSIX, and the same value space as
+    ProjectRootBinding.identity on Windows. When supplied, publication is
+    refused before any destination bytes are created if the publish-time
+    project root no longer names that directory object.
     """
     store = ArtifactStore(project_root)
     if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
@@ -620,7 +627,8 @@ def publish_project_file_no_clobber(
             from ._windows_parameter_publish import publish_chunks
             try:
                 return publish_chunks(project_root, destination_relative_path, windows_chunks(),
-                                      expected_sha256=expected_sha256, expected_size=expected_size)
+                                      expected_sha256=expected_sha256, expected_size=expected_size,
+                                      expected_project_identity=expected_project_identity)
             except PublishError as exc:
                 raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
         except PublishError as exc:
@@ -655,6 +663,7 @@ def publish_project_file_no_clobber(
     return _publish_project_chunks_no_clobber(
         store.project_root, destination_relative_path, source_chunks(),
         expected_sha256=expected_sha256, expected_size=expected_size,
+        expected_project_identity=expected_project_identity,
     )
 
 

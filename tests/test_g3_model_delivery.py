@@ -10,6 +10,7 @@ from contextlib import nullcontext
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import zipfile
 
@@ -788,3 +789,49 @@ def test_runtime_release_normalizes_localized_and_english_build_strings(tmp_path
     assert delivery._parse_version_declaration("COMSOL 6.4 (开发版本: 293)") == ((6, 4, 0), 293)
     with pytest.raises(Exception):
         delivery._parse_version_declaration("COMSOL 6.4")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory-swap fixture; Windows identity equivalence is not exercised here")
+def test_package_refuses_project_root_replaced_mid_dispatch(tmp_path, monkeypatch):
+    """After the dispatch-entry ProjectRootBinding opens, a same-user directory
+    replacement of the admitted root must not receive the published package.
+
+    This is the software-boundary reproduction for the T38 admitted-root gap:
+    the swap happens strictly inside one dispatch, after the entry binding is
+    opened and before publication. The fake Worker keeps this off any native
+    engine.
+    """
+    daemon, _worker, _service, project, workspace, ref, _install_root = _environment(tmp_path)
+    monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: {"test_stub": True})
+    monkeypatch.setattr(delivery, "_dependencies_report", lambda _worker, _tag, context, *, verify_hashes: {
+        "operation": "model.dependencies", "status": "INCOMPLETE", "verify_hashes": verify_hashes,
+        "model_ref": context["model_ref"], "source_revision": context["source_revision"],
+        "coverage": {"model_file_resource_api": "PASS_SCOPED", "functions": "PASS_SCOPED",
+                     "geometry_import_features": "PASS_SCOPED", "external_code": "UNVERIFIED",
+                     "external_libraries_services": "UNVERIFIED"},
+        "file_resources": [], "file_references": [], "unresolved_items": [], "inventory_errors": [],
+    })
+    retired = workspace.with_name(workspace.name + "-retired")
+    original_resolve = delivery._resolved_project_dependencies
+
+    def resolve_after_root_replacement(report):
+        os.rename(workspace, retired)
+        workspace.mkdir()
+        (workspace / "packages").mkdir()
+        return original_resolve(report)
+
+    monkeypatch.setattr(delivery, "_resolved_project_dependencies", resolve_after_root_replacement)
+    result = daemon.dispatch({
+        "operation": "model.package",
+        "arguments": {"destination": "packages/model-package.zip"},
+        "execution": _execution(project, ref, request="package-root-swap", key="package-root-swap"),
+    })
+    assert result["success"] is False, result
+    refusal = result["data"]["refusal"]
+    assert refusal["code"] == "PROJECT_WORKSPACE_IDENTITY_MISMATCH", refusal
+    details = refusal.get("details", {})
+    assert details.get("partial_change") is True, details
+    assert details.get("execution_state_unknown") is True, details
+    assert details.get("safe_retry") is False, details
+    assert not (workspace / "packages" / "model-package.zip").exists()
+    assert not (retired / "packages" / "model-package.zip").exists()

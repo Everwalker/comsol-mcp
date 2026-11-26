@@ -719,6 +719,12 @@ def package(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[s
         raise PreWriteRefusal("INVALID_REQUEST", "include_solution must be a boolean")
     root = Path(str(context["project_root"])).resolve(strict=True)
     from ._artifact_store import ArtifactStore, publish_project_file_no_clobber, register_project_artifact
+    # The daemon dispatch entry opens a ProjectRootBinding for the admitted
+    # project root and carries it in the managed context. Keep its identity
+    # so publication refuses a root name that no longer names that directory
+    # object. Contexts without a binding keep the previous behaviour.
+    admitted_root_binding = context.get("project_root_binding")
+    expected_project_identity = getattr(admitted_root_binding, "identity", None)
     store = ArtifactStore(root)
     try:
         dest = store.resolve_safe_path(destination, allow_overwrite=False)
@@ -817,6 +823,7 @@ def package(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[s
         publication_dispatched = True
         receipt = publish_project_file_no_clobber(
             root, relative_dest, zip_path, expected_sha256=package_sha, expected_size=package_size,
+            expected_project_identity=expected_project_identity,
         )
         registration = register_project_artifact(
             root, context["operation_store"], relative_dest,
