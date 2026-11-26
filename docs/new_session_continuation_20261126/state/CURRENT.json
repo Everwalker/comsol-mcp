@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "等待本地 Qwen 查明三个 rebuild 测试失败及 T15 效果判定。",
+  "next_action": "等待本地 Qwen 修正 T15 描述不一致并查明三个 rebuild 失败。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -176,7 +176,8 @@
         "references/CURRENT_20261123.json#/tasks/T15"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Qwen synthetic effect/version controls passed; one describe-versus-invoke interface-evidence inconsistency is being fixed. Actual 6.3/6.4 receiver evidence remains open."
     },
     "T16": {
       "status": "IMPLEMENTED",
@@ -1728,6 +1729,16 @@
       "verification": "These names and baseline/current comparison are Qwen-reported; main agent did not rerun. Qwen reports CPython 3.14.7, pytest 9.2.0 and jsonschema 4.26.0, with a task-owned isolated baseline copy and resolved TMPDIR. The prior claim that all rebuild failures were already documented was not substantiated; this entry records them explicitly.",
       "binding_audit": "Qwen source analysis found the ordinary project-bound daemon execution supplies an open ProjectRootBinding when model.package is dispatched; absence/closed binding in that normal route was not reproduced. A bypass or future direct invoke remains UNKNOWN, and the optional no-binding fallback is untested. This does not close the earlier path-based dependency, scratch, Worker and registration windows.",
       "next_work": "Qwen is examining the three rebuild failures against the current contract using only isolated fake tests; the other three failures remain separately open."
+    },
+    {
+      "id": "20261126-T15-qwen-effect-descriptor-audit",
+      "scope": "T15 / U03 local Qwen max synthetic effect and runtime-version audit",
+      "base_commit": "ba51084a7e5682625fada1965ab5ad2df40ec2bb",
+      "finding": "Qwen reports 7/7 version-policy tests passed and 14 fake-Worker probes found no caller-declared-effect authorization bypass. It also observed that api.describe can label a reviewed method invoke_allowed=true when its owner is absent from descriptor.interfaces, while prepare_invoke refuses the same capability.",
+      "main_review": "Main agent confirmed _method_wire does not use the supports predicate that prepare_invoke uses. Java metadata scans bounded interfaces but records inherited methods by declaring interface, so truncation is a possible route to differing interface and method sets; whether actual COMSOL produces this is UNKNOWN. This is a user-visible synthetic inconsistency, not an observed privilege escalation.",
+      "verification": "Qwen reported CPython 3.14 synthetic tests and an additional temporary fake probe script at /private/tmp/t15_probe/probe_t15_policy.py; main agent did not independently rerun those cases. No COMSOL or native receiver was contacted.",
+      "next_work": "Qwen is correcting the describe flag using the existing exact supports predicate, without changing permission rules or treating reviewed policy as unreviewed.",
+      "remaining": "Actual 6.3/6.4 build-specific receiver metadata and full T15 acceptance remain open; the temporary probe results are not native evidence."
     }
   ]
 }
