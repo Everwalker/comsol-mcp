@@ -5036,24 +5036,22 @@ class OperationStore:
         active transaction exists on this connection and on the same thread
         holding the RLock — in practice inside that owned read snapshot —
         and it never starts, commits or rolls back SQL itself.  The stored
-        result is never fetched whole into Python: SQL returns only scalars
-        (``typeof``/``length``, plus an ``instr(result,char(0))`` NUL probe
-        for TEXT) and bounded ``substr`` slices, which are fed once, in
-        order, as UTF-8 byte chunks to ``project_error_chunks``.  The
-        implementation deliberately avoids ``sqlite3.blobopen`` (a newer
-        API) so it works on the project's ``requires-python >= 3.10``
-        baseline, and never uses ``json_extract`` — SQLite duplicate-key
-        handling is not equivalent to ``json.loads``.
+        result is never fetched whole into Python. Where available, UTF-8
+        TEXT and BLOB values stream through ``blobopen``; the Python 3.10
+        and non-UTF-8 TEXT fallback uses SQL scalar probes and bounded
+        ``substr`` slices. Both feed UTF-8 byte chunks to
+        ``project_error_chunks`` without using ``json_extract`` — SQLite
+        duplicate-key handling is not equivalent to ``json.loads``.
 
         Contract:
         * A missing exact ``operation_id`` raises ``KeyError``.  ``NULL`` or
           an empty TEXT/BLOB result maps to ``None`` exactly like the
           falsy-result branch of ``_op``; an integer/real stored value is an
           unsupported type and fails closed.
-        * SQLite ``length(TEXT)`` and ``substr`` stop at a raw NUL, so TEXT
-          is first probed with ``instr(result,char(0))`` and any raw NUL
-          raises ``ValueError`` instead of silently truncating.
-        * TEXT is sliced from position 1 in SQLite character units (16384
+        * The incremental TEXT stream rejects raw NUL bytes. In the fallback,
+          SQLite ``length(TEXT)`` and ``substr`` stop at a raw NUL, so TEXT
+          is first probed with ``instr(result,char(0))`` and rejected if found.
+        * Fallback TEXT is sliced from position 1 in SQLite character units (16384
           characters per slice, returned as ``str`` and re-encoded with
           strict UTF-8, so unencodable text raises); BLOB is sliced in byte
           units (65536 bytes per slice).  The scan advances by the actually
@@ -5068,7 +5066,7 @@ class OperationStore:
           as "no error".
 
         The bounded slices bound only this method's Python-side residency
-        for the tested boundary.  Repeated SQLite rescans from the value
+        for the tested boundary.  Fallback SQLite rescans from the value
         start, SQLite C allocations, time, RSS and metadata size are not
         guaranteed, and ``length()``/``substr()`` character-unit
         equivalence with Python ``str`` lengths is scoped to what probes
@@ -5087,6 +5085,42 @@ class OperationStore:
                     "project_operation_result_error requires the active read transaction "
                     "owned by solver_log_snapshot"
                 )
+            blobopen = getattr(self.db, "blobopen", None)
+            if callable(blobopen):
+                rows = self.db.execute(
+                    "SELECT rowid,typeof(result) AS result_type FROM operations WHERE operation_id=?",
+                    (operation_id,),
+                ).fetchmany(2)
+                if not rows:
+                    raise KeyError(f"operation {operation_id!r} does not exist")
+                if len(rows) != 1:
+                    raise RuntimeError("exact operation row cardinality is not one")
+                result_type = rows[0]["result_type"]
+                if result_type == "null":
+                    return None
+                if result_type not in ("text", "blob"):
+                    raise ValueError(f"unsupported stored result type {result_type!r}")
+                encoding = self.db.execute("PRAGMA encoding").fetchone()
+                if result_type == "blob" or (encoding and encoding[0] == "UTF-8"):
+                    with blobopen("operations", "result", rows[0]["rowid"], readonly=True) as blob:
+                        size = len(blob)
+                        if size == 0:
+                            return None
+
+                        def incremental_chunks() -> Iterator[bytes]:
+                            remaining = size
+                            while remaining:
+                                piece = blob.read(min(65536, remaining))
+                                if not isinstance(piece, bytes) or not piece:
+                                    raise RuntimeError("incremental stored result scan ended early")
+                                if result_type == "text" and b"\x00" in piece:
+                                    raise ValueError("stored TEXT result contains a raw NUL")
+                                remaining -= len(piece)
+                                yield piece
+                            if blob.read(1):
+                                raise RuntimeError("incremental stored result scan exceeded its length")
+
+                        return project_error_chunks(incremental_chunks(), max_error_bytes=max_error_bytes)
             probe_rows = self.db.execute(
                 "SELECT typeof(result) AS result_type,length(result) AS result_length "
                 "FROM operations WHERE operation_id=?",
