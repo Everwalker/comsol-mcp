@@ -7,6 +7,17 @@ class Adapter:
     def model_snapshot(self, tag): return {"model_tag": tag, "server_instance_id": "server", "fingerprint": "fp", "external_event_counter": 0}
 
 
+def _reconcile_project(daemon):
+    created = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {"label": "reconcile", "workspace": "reconcile",
+                      "policy": {"permissions": ["inspect", "project_write"]}},
+        "execution": {"request_id": "create-reconcile", "idempotency_key": "create-reconcile"},
+    })
+    assert created["success"] is True, created
+    return created["data"]["project"]["project_id"]
+
+
 def test_health_without_worker_and_unknown_operation(tmp_path):
     daemon = ControlDaemon(tmp_path)
     assert daemon.dispatch({"operation": "session_health", "arguments": {}, "execution": {}})["success"]
@@ -44,14 +55,19 @@ def test_reconcile_uses_durable_completion_after_worker_replacement(tmp_path):
         def status(self, identifier):
             pytest.fail("completed old request must not be resubmitted or queried in replacement")
     import pytest
-    daemon = ControlDaemon(tmp_path, worker=Replacement())
+    root = tmp_path / "projects"
+    root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=root, worker=Replacement())
     try:
-        record, _ = daemon.store.begin(request_id="r", idempotency_key="k", request_hash="h", operation="model_load")
+        project_id = _reconcile_project(daemon)
+        record, _ = daemon.store.begin(request_id="r", idempotency_key="k", request_hash="h", operation="model_load",
+                                       metadata={"execution": {"project_id": project_id}})
         job_id = record["job_id"]
         for phase, status in (("submitted", None), ("observed", "SUCCEEDED")):
             daemon.store.add_event(job_id, "worker_request", {"request_id": "old-worker-load", "phase": phase, "status": status})
         daemon.store.update_job(job_id, "UNKNOWN")
-        result = daemon.dispatch({"operation": "job_reconcile", "arguments": {"job_id": job_id}})
+        result = daemon.dispatch({"operation": "job_reconcile", "arguments": {"job_id": job_id},
+                                  "execution": {"project_id": project_id}})
         assert result["data"]["status"] == "UNKNOWN"
         assert result["data"]["metadata"]["reconciled_quiescent"] is True
         assert result["data"]["metadata"]["replay_performed"] is False
@@ -63,15 +79,20 @@ def test_reconcile_never_ignores_pending_request_beyond_first_log_page(tmp_path)
     class Replacement:
         def status(self, identifier): return {"request_id": identifier, "status": "RUNNING"}
     from types import SimpleNamespace
-    daemon = ControlDaemon(tmp_path, worker=Replacement())
+    root = tmp_path / "projects"
+    root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=root, worker=Replacement())
     try:
-        daemon.backend.service = SimpleNamespace(ledger=SimpleNamespace(session_id="legacy-session"))
+        project_id = _reconcile_project(daemon)
+        daemon.backend.service = SimpleNamespace(ledger=SimpleNamespace(
+            session_id="legacy-session", permissions={"inspect", "project_write"},
+        ))
         daemon.backend.worker_identity = {"connection_epoch": 4, "worker_instance_id": "legacy-worker"}
         record, _ = daemon.store.begin(
             request_id="r", idempotency_key="k", request_hash="h", operation="run_study",
             metadata={"operation": "run_study", "arguments": {},
-                      "execution": {"session_id": "legacy-session"},
-                      "runtime_binding": {"kind": "default_backend", "project_id": None,
+                      "execution": {"project_id": project_id, "session_id": "legacy-session"},
+                      "runtime_binding": {"kind": "default_backend", "project_id": project_id,
                                           "session_id": "legacy-session", "worker_epoch": 4,
                                           "worker_instance_id": "legacy-worker"}},
         )
@@ -81,44 +102,66 @@ def test_reconcile_never_ignores_pending_request_beyond_first_log_page(tmp_path)
             if index < 500:
                 daemon.store.add_event(job_id, "worker_request", {"request_id": str(index), "phase": "observed", "status": "SUCCEEDED"})
         daemon.store.update_job(job_id, "UNKNOWN")
-        result = daemon.dispatch({"operation": "job_reconcile", "arguments": {"job_id": job_id}})
+        result = daemon.dispatch({"operation": "job_reconcile", "arguments": {"job_id": job_id},
+                                  "execution": {"project_id": project_id}})
+        assert result["success"] is True, result
         assert result["data"]["status"] == "RECONCILING"
         assert result["data"]["metadata"]["reconciled_quiescent"] is False
     finally:
         daemon.close()
 
 
-def test_callback_exception_persists_unknown_and_restart_reconciles_without_replay(tmp_path):
+def test_callback_exception_persists_unknown_and_restart_reconciles_without_replay(tmp_path, monkeypatch):
     calls = []
-    service = ExecutionService(SessionLedger("s", "server"), Adapter(), project_root=tmp_path)
-    ref = service.bind_model("m")["execution"]["model_ref"]
+    root = tmp_path / "projects"
+    root.mkdir()
+    home = tmp_path / "control"
+    registry = {"set_parameters": lambda _args: None}
+    daemon = ControlDaemon(home, project_root=root, registry=registry)
 
-    def lost_worker_callback(_args):
+    def lost_worker_callback(*_args):
         calls.append("called")
         raise RuntimeError("worker transport disappeared after dispatch")
 
-    daemon = ControlDaemon(tmp_path, service=service, registry={"set_parameters": lost_worker_callback})
-    request = {
-        "operation": "set_parameters",
-        "arguments": {"x": 1},
-        "execution": {"model_ref": ref, "expected_revision": 0, "idempotency_key": "lost", "request_id": "lost"},
-    }
-    result = daemon.dispatch(request)
-    job_id = result["execution"]["job_id"]
-    assert calls == ["called"]
-    assert result["success"] is False
-    assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
-    assert result["error"]["safe_retry"] is False
-    observed = daemon.dispatch({"operation": "job_result", "arguments": {"job_id": job_id}, "execution": {}})
-    assert observed["data"]["status"] == "UNKNOWN"
-    assert observed["data"]["finished_at"] is None
-    daemon.close()
-
-    restarted = ControlDaemon(tmp_path)
+    monkeypatch.setattr(daemon.backend, "invoke", lost_worker_callback)
     try:
-        after_restart = restarted.dispatch({"operation": "job_status", "arguments": {"job_id": job_id}, "execution": {}})
-        assert after_restart["data"]["status"] == "RECONCILING"
-        reconciled = restarted.dispatch({"operation": "job_reconcile", "arguments": {"job_id": job_id}, "execution": {}})
+        created = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "recovery", "workspace": "recovery",
+                          "policy": {"permissions": ["inspect", "project_write"]}},
+            "execution": {"request_id": "create", "idempotency_key": "create"},
+        })
+        assert created["success"] is True, created
+        project_id = created["data"]["project"]["project_id"]
+        request = {
+            "operation": "set_parameters",
+            "arguments": {"x": 1},
+            "execution": {"project_id": project_id, "idempotency_key": "lost", "request_id": "lost"},
+        }
+        result = daemon.dispatch(request)
+        assert "execution" in result, result
+        job_id = result["execution"]["job_id"]
+        assert calls == ["called"]
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["error"]["safe_retry"] is False
+        observed = daemon.dispatch({"operation": "job_status", "arguments": {"job_id": job_id},
+                                    "execution": {"project_id": project_id}})
+        assert observed["data"]["status"] == "UNKNOWN"
+        assert observed["data"]["finished_at"] is None
+    finally:
+        daemon.close()
+
+    restarted = ControlDaemon(home, project_root=root, registry=registry)
+    monkeypatch.setattr(restarted.backend, "invoke", lost_worker_callback)
+    try:
+        after_restart = restarted.dispatch({"operation": "job_status", "arguments": {"job_id": job_id},
+                                            "execution": {"project_id": project_id}})
+        assert after_restart["data"]["status"] == "UNKNOWN"
+        replay = restarted.dispatch(request)
+        assert replay == result
+        reconciled = restarted.dispatch({"operation": "job_reconcile", "arguments": {"job_id": job_id},
+                                         "execution": {"project_id": project_id}})
         assert reconciled["success"] is False
         assert reconciled["error"]["safe_retry"] is False
         assert calls == ["called"]

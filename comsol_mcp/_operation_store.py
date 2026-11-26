@@ -2585,6 +2585,58 @@ class OperationStore:
                 self.db.execute("ROLLBACK")
                 raise
 
+    def update_reconciliation_scoped(
+        self, observed_job: dict[str, Any], project_id: str, status: str,
+        metadata: dict[str, Any], *, event_count: int, last_event_id: int | None,
+    ) -> tuple[str, dict[str, Any] | None]:
+        """Write a reconciliation only if its project and observations still match."""
+        job_id = observed_job["job_id"]
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.*, o.metadata AS operation_metadata, o.status AS operation_status "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return "NOT_FOUND", None
+                try:
+                    job_metadata = json.loads(row["metadata"] or "{}")
+                    operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                except (TypeError, json.JSONDecodeError, UnicodeDecodeError):
+                    self.db.execute("ROLLBACK")
+                    return "NOT_FOUND", None
+                if consistent_project_id(job_metadata, operation_metadata) != project_id:
+                    self.db.execute("ROLLBACK")
+                    return "NOT_FOUND", None
+                original_metadata = observed_job["metadata"]
+                event_state = self.db.execute(
+                    "SELECT COUNT(*), MAX(id) FROM job_events WHERE job_id=?", (job_id,),
+                ).fetchone()
+                if (row["operation_id"] != observed_job["operation_id"]
+                        or row["status"] != observed_job["status"]
+                        or row["status"] not in {"UNKNOWN", "RECONCILING"}
+                        or row["operation_status"] != row["status"]
+                        or job_metadata.get("runtime_binding") != original_metadata.get("runtime_binding")
+                        or job_metadata.get("execution") != original_metadata.get("execution")
+                        or tuple(event_state) != (event_count, last_event_id)):
+                    self.db.execute("ROLLBACK")
+                    return "CHANGED", None
+                merged = {**job_metadata, **metadata}
+                self.db.execute("UPDATE jobs SET status=?, metadata=? WHERE job_id=?",
+                                (status, _dumps_canonical(merged), job_id))
+                self.db.execute("UPDATE operations SET status=? WHERE operation_id=?",
+                                (status, row["operation_id"]))
+                updated = self.job(job_id)
+                self.db.execute("COMMIT")
+                return "UPDATED", updated
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def transition_status(
         self,
         job_id: str,

@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "继续处理 Python 3.10 SQLite 大字段回退的内存限制或明确其可行架构，同时推进 T37 保存竞态和 daemon 身份独立项。",
+  "next_action": "核对 job.cancel 强制停止入口的项目授权和任务归属；只在新建的隔离模拟数据上验证已发现的缺口。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -747,10 +747,15 @@
       "implementation_done": false,
       "execution_complete": false,
       "evidence_refs": [
-        "references/CURRENT_20261123.json#/tasks/T31.a"
+        "references/CURRENT_20261123.json#/tasks/T31.a",
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_control_daemon.py",
+        "tests/test_t35_bounded_status_wait_20261123.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
-      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102"
+      "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
+      "session_scope_note": "Scoped synthetic callback/restart test retained ordinary UNKNOWN and reused the original durable result without a second callback; real crash, Worker and native behavior remain open."
     },
     "T35.a": {
       "status": "RUNNING",
@@ -781,11 +786,14 @@
         "tests/test_t35_result_chunk_read_20261123.py::test_result_pages_remain_correct_without_blobopen",
         "docs/new_session_continuation_20261126/state/CURRENT.json#/session_changes/14",
         "comsol_mcp/_operation_store.py",
-        "tests/test_t35_solver_snapshot_blob_edges_20261113.py"
+        "tests/test_t35_solver_snapshot_blob_edges_20261113.py",
+        "comsol_mcp/_control_daemon.py",
+        "tests/test_control_daemon.py",
+        "tests/test_t35_bounded_status_wait_20261123.py"
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Incremental event/result and solver projection measured locally; Python 3.10 fallback RSS and target acceptance remain open."
+      "session_scope_note": "Project-scoped reconcile and transactional writeback tested in synthetic stores; event in-place mutation, real RPC/native behavior and other T35 gaps remain open."
     },
     "T42.a": {
       "status": "RUNNING",
@@ -1353,6 +1361,31 @@
         }
       ],
       "remaining": "These are limited samples, not a universal RSS bound. Python 3.10/no-blobopen and non-UTF8 TEXT fallback can still materialize large SQLite values; Windows/native acceptance remains open."
+    },
+    {
+      "id": "20261126-T35-project-scoped-reconcile",
+      "scope": "T35.b / U07-U08 control-plane software correction; synthetic file-backed SQLite and fake Worker observations",
+      "base_commit": "22e665279811e0cb8911a8187bf7c6ba4ab51f3d",
+      "finding": "Canonical, nested and legacy job.reconcile routes could read a durable job before checking project authorization or job/operation project binding.",
+      "changes": [
+        "comsol_mcp/_control_daemon.py: require outer project identity and project_write; read the job and events only in a bound project snapshot; re-authorize before writeback",
+        "comsol_mcp/_operation_store.py: reconcile writeback rechecks project binding, matching job/operation status, runtime/execution identity, and event count/last ID in one write transaction",
+        "tests/test_t35_bounded_status_wait_20261123.py: real ProjectAuthority with synthetic projects, scoped UNKNOWN reconciliation, binding drift and appended-event drift",
+        "tests/test_control_daemon.py: align existing reconcile and restart tests with project permissions and preserved ordinary UNKNOWN"
+      ],
+      "verification": [
+        "CPython 3.14.7 and CPython 3.10.20: 13 passed, 15 deselected for reconcile-filtered tests/test_t35_bounded_status_wait_20261123.py, tests/test_t35_job_control_project_scope_20261112.py and tests/test_t35_job_control_extra_admission_20261113.py.",
+        "CPython 3.14.7: 4 passed for three tests/test_control_daemon.py reconcile/restart cases plus tests/test_t31a_persistent_dispatch.py::test_file_backed_dispatch_is_single_submission_across_duplicate_and_restart; CPython 3.10.20: the three control-daemon cases passed.",
+        "Tests used new synthetic records only, in-process daemon objects, fake callbacks/Worker status and temporary file-backed SQLite or in-memory store; no native COMSOL or old UNKNOWN resource was touched."
+      ],
+      "remaining": "Event count and maximum ID detect the tested append/delete drift but do not detect in-place edits of existing event content. Authorization-to-Worker-observation/revocation races, authenticated principal and separate RPC/native behavior are not proven. The existing reconcile path still materializes all job events; Python 3.10 large-field RSS, full T31/T35 acceptance and final independent review remain open. No task status was promoted."
+    },
+    {
+      "id": "20261126-T37-local-qwen-static-analysis",
+      "scope": "T08.a/T37 read-only source analysis by local Qwen3.8 Flash Next at max reasoning; no native or Windows acceptance",
+      "finding": "Checkpoint publication uses no-clobber, but explicit overwrite in _atomic_save and artifact publication still has an observed check-to-replace race; the POSIX managed-model exchange has no equivalent durable publication journal verified in this analysis.",
+      "correction": "The subagent reported that checkpoint was the sole production caller of atomic_save. Main-agent source inspection also found comsol_mcp/_java_worker.py passing its overwrite argument to atomic_save, so the overwrite path cannot be dismissed as test-only.",
+      "remaining": "Do not claim atomic rollback or crash recovery. POSIX and Windows have different publication semantics; the proposed journal/exchange designs need source-level validation and focused tests before implementation. Existing historical UNKNOWN and retained resources remain untouched."
     }
   ]
 }

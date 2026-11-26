@@ -11992,20 +11992,28 @@ class ControlDaemon:
         job_id = arguments.get("job_id") if isinstance(arguments, Mapping) else None
         if not isinstance(job_id, str) or not job_id:
             return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
-        job = self.store.job(job_id)
+        project_id = execution.get("project_id")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "job.reconcile requires outer execution.project_id")
+        self.project_authority.authorize_operation(project_id, "project_write")
+        # Check the two durable project claims before reading any job content;
+        # keep the job and event reads in the same SQLite snapshot.
+        events = []
+        with self.store.project_job_read_snapshot(job_id, project_id) as bound:
+            job = self.store.job(job_id) if bound else None
+            if job and job.get("status") in {"UNKNOWN", "RECONCILING"}:
+                while True:
+                    page = self.store.events(job_id, offset=len(events), limit=1000)
+                    events.extend(page)
+                    if len(page) < 1000:
+                        break
         if not job:
             return self._error("NODE_NOT_FOUND", "job not found")
         if job.get("status") not in {"UNKNOWN", "RECONCILING"}:
             return {"success": True, "data": job}
         # A fully observed request set can be reconciled from durable event
-        # evidence alone.  This path does not consult any Worker and remains
-        # safe even for pre-binding historical records.
-        events = []
-        while True:
-            page = self.store.events(job_id, offset=len(events), limit=1000)
-            events.extend(page)
-            if len(page) < 1000:
-                break
+        # evidence alone. This path does not consult any Worker and also
+        # applies to project-bound records without a durable Worker binding.
         submitted_ids = {
             event.get("metadata", {}).get("request_id")
             for event in events
@@ -12022,7 +12030,7 @@ class ControlDaemon:
             and event.get("metadata", {}).get("status") in {"SUCCEEDED", "FAILED"}
         }
         if submitted_ids and submitted_ids.issubset(observed_ids):
-            return self._reconcile(job)
+            return self._reconcile(job, events=events, project_id=project_id)
         try:
             context = self._resolve_job_runtime_context(job, execution)
         except ExecutionContractError as exc:
@@ -12036,7 +12044,7 @@ class ControlDaemon:
                 from contextlib import nullcontext
                 scope = use_session_context(context) if context is not None else nullcontext()
                 with scope:
-                    return self._reconcile(job)
+                    return self._reconcile(job, events=events, project_id=project_id)
         except ExecutionContractError as exc:
             return self._exception(exc)
         except Exception as exc:
@@ -14370,14 +14378,8 @@ class ControlDaemon:
             },
         }
 
-    def _reconcile(self, job):
+    def _reconcile(self, job, *, events, project_id):
         # Query existing Java request ids only. Never submit the lost callback.
-        events = []
-        while True:
-            page = self.store.events(job["job_id"], offset=len(events), limit=1000)
-            events.extend(page)
-            if len(page) < 1000:
-                break
         ids = list(dict.fromkeys(event["metadata"].get("request_id") for event in events if event["event"] == "worker_request" and event["metadata"].get("phase") == "submitted"))
         completed = {event["metadata"]["request_id"]: event["metadata"]["status"] for event in events
                      if event["event"] == "worker_request" and event["metadata"].get("phase") == "observed"
@@ -14404,9 +14406,18 @@ class ControlDaemon:
         active = any(item.get("status") in {"QUEUED", "RUNNING"} for item in observed)
         quiescent = bool(ids) and len(observed) == len(ids) and all(item.get("status") in {"SUCCEEDED", "FAILED"} for item in observed)
         status = "RECONCILING" if active else "UNKNOWN"
-        self.store.update_job(job["job_id"], status, {"reconciliation": observed, "reconciled_quiescent": quiescent,
-            "replay_performed": False, "callback_completion_unknown": True})
-        return {"success": True, "data": self.store.job(job["job_id"])}
+        self.project_authority.authorize_operation(project_id, "project_write")
+        outcome, updated = self.store.update_reconciliation_scoped(
+            job, project_id, status,
+            {"reconciliation": observed, "reconciled_quiescent": quiescent,
+             "replay_performed": False, "callback_completion_unknown": True},
+            event_count=len(events), last_event_id=events[-1]["id"] if events else None,
+        )
+        if outcome == "NOT_FOUND":
+            return self._error("NODE_NOT_FOUND", "job not found")
+        if outcome != "UPDATED":
+            return self._error("EXECUTION_STATE_UNKNOWN", "job changed during reconciliation", safe_retry=False)
+        return {"success": True, "data": updated}
 
     def _monitor(self):
         health_at = 0.0

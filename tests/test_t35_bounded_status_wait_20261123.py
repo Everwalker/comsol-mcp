@@ -92,6 +92,66 @@ def _call_job(
     })
 
 
+def test_reconcile_requires_matching_project_and_retains_unknown(daemon_projects) -> None:
+    daemon, project_a, project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, "reconcile-scope")
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "UNKNOWN", {"private_marker": "project-a-only"})
+    for phase, status in (("submitted", None), ("observed", "SUCCEEDED")):
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": "synthetic-old-request", "phase": phase, "status": status,
+        })
+
+    denied = _call_job(daemon, "job.reconcile", job_id, project_b)
+    assert denied["success"] is False
+    assert denied["error"]["code"] == "NODE_NOT_FOUND"
+    assert "project-a-only" not in json.dumps(denied)
+    assert daemon.store.job(job_id)["status"] == "UNKNOWN"
+
+    allowed = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert allowed["success"] is True, allowed
+    assert allowed["data"]["status"] == "UNKNOWN"
+    assert allowed["data"]["metadata"]["reconciled_quiescent"] is True
+    assert allowed["data"]["metadata"]["replay_performed"] is False
+
+
+@pytest.mark.parametrize("change", ["binding", "event"])
+def test_reconcile_refuses_drift_after_snapshot(daemon_projects, monkeypatch, change) -> None:
+    daemon, project_a, project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, f"reconcile-drift-{change}")
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "UNKNOWN")
+    for phase, status in (("submitted", None), ("observed", "SUCCEEDED")):
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": "synthetic-old-request", "phase": phase, "status": status,
+        })
+    original = daemon.store.update_reconciliation_scoped
+
+    def change_before_write(*args, **kwargs):
+        if change == "event":
+            daemon.store.add_event(job_id, "worker_request", {
+                "request_id": "synthetic-new-request", "phase": "submitted", "status": None,
+            })
+        else:
+            metadata = json.dumps({"project_id": project_b, "execution": {"project_id": project_b}})
+            daemon.store.db.execute("UPDATE jobs SET metadata=? WHERE job_id=?", (metadata, job_id))
+            daemon.store.db.execute("UPDATE operations SET metadata=? WHERE operation_id=?", (
+                metadata, record["operation_id"],
+            ))
+            daemon.store.db.commit()
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(daemon.store, "update_reconciliation_scoped", change_before_write)
+    response = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert response["success"] is False
+    assert response["error"]["code"] == (
+        "NODE_NOT_FOUND" if change == "binding" else "EXECUTION_STATE_UNKNOWN"
+    )
+    current = daemon.store.job(job_id)
+    assert current["status"] == "UNKNOWN"
+    assert "reconciled_quiescent" not in current["metadata"]
+
+
 def test_status_and_terminal_wait_preserve_small_result_shape(daemon_projects) -> None:
     daemon, project_a, _project_b, _database_path = daemon_projects
     record = _begin_job(daemon, project_a, "small")
