@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对本地 Qwen 给出的打包基线失败清单和无绑定入口可达性。",
+  "next_action": "等待本地 Qwen 查明三个 rebuild 测试失败及 T15 效果判定。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -1719,6 +1719,15 @@
       ],
       "verification": "Qwen reports the root swap published into the replacement before the change. On CPython 3.14.7 it reports 24 passed / 3 failed for delivery, publisher and Windows-fake tests versus 21 passed / 3 failed for an isolated HEAD baseline; and 36 passed / 3 failed for export/managed-model tests with the same reported baseline failures. Exact failure IDs and causes are being requested and were not independently confirmed. Main agent ran the 3 new root controls on CPython 3.10.20: 3 passed. The POSIX fixture is real temporary filesystem plus fake Worker; Windows lower-level checks are fake-only.",
       "remaining": "Only the final publisher root identity is checked. Earlier dependency reads, scratch creation, Worker path-based write, failure receipts and post-publication registration remain path-based and can race; contexts lacking a usable binding still take the old unpinned path. Actual Windows forwarding, real Worker/native operation, existing failed tests, full T37/T38 and cross-dispatch semantics remain open."
+    },
+    {
+      "id": "20261126-T38-qwen-baseline-failures-detail",
+      "scope": "T38 / U09 U12 Qwen follow-up on prior synthetic package regression results",
+      "base_commit": "864b515644e590a0c113e2e0446b8ec997b78b0f",
+      "evidence": "Qwen identified three same-name baseline/current failures: tests/test_g3_model_delivery.py::test_rebuild_recipe_runs_through_control_queue_with_full_preflight_and_idempotency, ::test_rebuild_preflights_version_permission_artifact_scope_and_stale_model_before_steps, and ::test_rebuild_step_failure_is_unknown_nonreplayable_and_marks_first_attempt. Only the last has retained error detail: jsonschema ValidationError requiring data_schema_version; the other two causes are UNKNOWN. Three additional baseline/current failures were reported in test_g3_exports.py::test_report_and_bundle_use_control_daemon_bound_model_context and test_g3_managed_models.py::test_control_daemon_model_routes_and_recipe_use_durable_worker_execution for both False and True; their causes are UNKNOWN.",
+      "verification": "These names and baseline/current comparison are Qwen-reported; main agent did not rerun. Qwen reports CPython 3.14.7, pytest 9.2.0 and jsonschema 4.26.0, with a task-owned isolated baseline copy and resolved TMPDIR. The prior claim that all rebuild failures were already documented was not substantiated; this entry records them explicitly.",
+      "binding_audit": "Qwen source analysis found the ordinary project-bound daemon execution supplies an open ProjectRootBinding when model.package is dispatched; absence/closed binding in that normal route was not reproduced. A bypass or future direct invoke remains UNKNOWN, and the optional no-binding fallback is untested. This does not close the earlier path-based dependency, scratch, Worker and registration windows.",
+      "next_work": "Qwen is examining the three rebuild failures against the current contract using only isolated fake tests; the other three failures remain separately open."
     }
   ]
 }
