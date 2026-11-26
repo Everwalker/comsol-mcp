@@ -51,7 +51,7 @@ from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure
 from ._operation_store import (
     IdempotencyConflict, JobCleanupError, JobResultReadError, JobEventFieldReadError, OperationStore,
     StagePlanStoreConflict, JOB_RESULT_READ_MAX_PAGE_BYTES,
-    JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES,
+    JOB_EVENT_FIELD_READ_MAX_PAGE_BYTES, JOB_EVENT_MAX_ROW_BYTES,
     JOB_LOG_RESPONSE_MAX_BYTES,
     session_recovery_evidence_sha256,
 )
@@ -125,6 +125,9 @@ _JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES = JOB_LOG_RESPONSE_MAX_BYTES
 # threshold use one eighth of that budget, leaving room for metadata/framing.
 # This is per-result guidance, not a status/wait response or RSS guarantee.
 _JOB_STATUS_WAIT_INLINE_RESULT_MAX_BYTES = _JOB_LOG_ADMISSION_MAX_RESPONSE_BYTES // 16
+# Bound retained Worker evidence by the existing job.log response budget.
+# This is not a SQLite-internal or whole-process memory ceiling.
+_JOB_RECONCILIATION_EVIDENCE_MAX_BYTES = JOB_LOG_RESPONSE_MAX_BYTES
 DESKTOP_OPERATIONS = frozenset({
     "desktop.status", "desktop.bind", "desktop.show_model", "desktop.select_node",
     "desktop.capture", "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
@@ -11999,18 +12002,43 @@ class ControlDaemon:
         # Check the two durable project claims before reading any job content;
         # keep the job and event reads in the same SQLite snapshot.
         events = []
-        with self.store.project_job_read_snapshot(job_id, project_id) as bound:
-            job = self.store.job(job_id) if bound else None
-            if job and job.get("status") in {"UNKNOWN", "RECONCILING"}:
-                while True:
-                    page = self.store.events(job_id, offset=len(events), limit=1000)
-                    events.extend(page)
-                    if len(page) < 1000:
-                        break
+        evidence_bytes = 0
+
+        class EvidenceLimitExceeded(Exception):
+            pass
+
+        def retain_worker_event(event):
+            nonlocal evidence_bytes
+            if event["event"] != "worker_request":
+                return
+            metadata = event["metadata"]
+            retained = {"event": "worker_request", "metadata": {
+                key: metadata[key] for key in ("request_id", "phase", "status") if key in metadata
+            }}
+            evidence_bytes += len(json.dumps(retained, ensure_ascii=True, allow_nan=False).encode("ascii"))
+            if evidence_bytes > _JOB_RECONCILIATION_EVIDENCE_MAX_BYTES:
+                raise EvidenceLimitExceeded
+            events.append(retained)
+
+        try:
+            with self.store.project_job_read_snapshot(job_id, project_id) as bound:
+                job = self.store.job(job_id) if bound else None
+                if job and job.get("status") in {"UNKNOWN", "RECONCILING"}:
+                    snapshot = self.store.fold_job_event_prefix(
+                        job_id, snapshot_count=None, snapshot_last_id=None,
+                        max_row_bytes=JOB_EVENT_MAX_ROW_BYTES, visitor=retain_worker_event,
+                        _join_read_snapshot=True,
+                    )
+        except EvidenceLimitExceeded:
+            return self._error("EXECUTION_STATE_UNKNOWN", "job reconciliation evidence exceeds its memory budget", safe_retry=False)
         if not job:
             return self._error("NODE_NOT_FOUND", "job not found")
         if job.get("status") not in {"UNKNOWN", "RECONCILING"}:
             return {"success": True, "data": job}
+        if not snapshot["complete"]:
+            return self._error("EXECUTION_STATE_UNKNOWN", "job reconciliation event snapshot is incomplete", safe_retry=False)
+        event_count = snapshot["expected_event_count"]
+        last_event_id = snapshot["snapshot_last_id"] or None
         # A fully observed request set can be reconciled from durable event
         # evidence alone. This path does not consult any Worker and also
         # applies to project-bound records without a durable Worker binding.
@@ -12030,7 +12058,8 @@ class ControlDaemon:
             and event.get("metadata", {}).get("status") in {"SUCCEEDED", "FAILED"}
         }
         if submitted_ids and submitted_ids.issubset(observed_ids):
-            return self._reconcile(job, events=events, project_id=project_id)
+            return self._reconcile(job, events=events, project_id=project_id,
+                                   event_count=event_count, last_event_id=last_event_id)
         try:
             context = self._resolve_job_runtime_context(job, execution)
         except ExecutionContractError as exc:
@@ -12044,7 +12073,8 @@ class ControlDaemon:
                 from contextlib import nullcontext
                 scope = use_session_context(context) if context is not None else nullcontext()
                 with scope:
-                    return self._reconcile(job, events=events, project_id=project_id)
+                    return self._reconcile(job, events=events, project_id=project_id,
+                                           event_count=event_count, last_event_id=last_event_id)
         except ExecutionContractError as exc:
             return self._exception(exc)
         except Exception as exc:
@@ -14397,7 +14427,7 @@ class ControlDaemon:
             },
         }
 
-    def _reconcile(self, job, *, events, project_id):
+    def _reconcile(self, job, *, events, project_id, event_count, last_event_id):
         # Query existing Java request ids only. Never submit the lost callback.
         ids = list(dict.fromkeys(event["metadata"].get("request_id") for event in events if event["event"] == "worker_request" and event["metadata"].get("phase") == "submitted"))
         completed = {event["metadata"]["request_id"]: event["metadata"]["status"] for event in events
@@ -14430,7 +14460,7 @@ class ControlDaemon:
             job, project_id, status,
             {"reconciliation": observed, "reconciled_quiescent": quiescent,
              "replay_performed": False, "callback_completion_unknown": True},
-            event_count=len(events), last_event_id=events[-1]["id"] if events else None,
+            event_count=event_count, last_event_id=last_event_id,
         )
         if outcome == "NOT_FOUND":
             return self._error("NODE_NOT_FOUND", "job not found")

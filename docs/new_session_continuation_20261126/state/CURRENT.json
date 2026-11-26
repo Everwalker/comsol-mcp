@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "检查 job.reconcile 是否为决策读取全部历史事件，并核对可行的项目隔离有界读取。",
+  "next_action": "检查 job.reconcile 读取或返回作业时是否仍完整解码超大结果，并评估复用现有分页结果投影。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -812,7 +812,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Project-scoped reconcile and transactional writeback tested in synthetic stores; event in-place mutation, real RPC/native behavior and other T35 gaps remain open."
+      "session_scope_note": "Synthetic project-scoped reconciliation, conditional writeback and streamed projected event evidence tested; SQLite/RSS, result projection, in-place event changes, real RPC/native and full acceptance remain open."
     },
     "T42.a": {
       "status": "RUNNING",
@@ -1550,6 +1550,19 @@
       ],
       "verification": "Before change the rebound control failed because numerical status was PASS. CPython 3.14.7 and 3.10.20: 13 passed each for observation binding and dataset resolver; 18 passed each for project, caller-provenance and dataset regression controls. Synthetic model and temporary file-backed SQLite only.",
       "remaining": "The existing resolver also requires component and geometry evidence; inability to establish them conservatively produces UNVERIFIED. COMSOL 6.3/6.4 runtime compatibility, atomicity against concurrent rebinding, original sampling provenance, physical validation and T30.c/native acceptance remain open."
+    },
+    {
+      "id": "20261126-T35-reconcile-streamed-event-evidence",
+      "scope": "T35.b / U08 project-scoped job.reconcile event collection; synthetic jobs and file-backed SQLite",
+      "base_commit": "2b27866800f52339e91cbbac6b2d3b7c71d7562a",
+      "finding": "job.reconcile previously accumulated every event and all their metadata into a Python list before deciding from worker_request events; the original bulk-read control failed before the change.",
+      "changes": [
+        "comsol_mcp/_control_daemon.py: fold the full event prefix in the already project-bound SQLite snapshot; retain only request_id, phase and status from worker_request events and preserve full-prefix count/max for conditional writeback.",
+        "Limit retained serialized worker evidence to the existing 4 MiB job.log budget; over-budget or incomplete/malformed/oversized event snapshots return EXECUTION_STATE_UNKNOWN without a partial reconciliation.",
+        "tests/test_t35_bounded_status_wait_20261123.py: synthetic file-backed project tests for unrelated logs and large unused Worker diagnostics, oversized retained request IDs, corrupt event JSON and preservation of UNKNOWN."
+      ],
+      "verification": "CPython 3.14.7 and CPython 3.10.20: 8 reconcile-related tests passed in each version, including project isolation, snapshot append/binding drift and >1000-event pending request; one incomplete-snapshot test passed in each version. All jobs and Worker observations are synthetic; no COMSOL or old UNKNOWN resource was contacted.",
+      "remaining": "This bounds only the retained serialized Worker evidence and stops collecting all event rows; it is not a process RSS bound. Existing fold still reads each event and may materialize SQLite length(CAST(...)) internally, especially on Python 3.10; a legacy row exceeding the admission limit or malformed unrelated event now conservatively refuses reconciliation. Job/result metadata reads and reply size remain separate; in-place event changes after snapshot still evade count/max; real separate-RPC, Windows, native and full T35 acceptance remain open."
     }
   ]
 }

@@ -115,6 +115,80 @@ def test_reconcile_requires_matching_project_and_retains_unknown(daemon_projects
     assert allowed["data"]["metadata"]["replay_performed"] is False
 
 
+def test_reconcile_streams_logs_without_collecting_unrelated_events(daemon_projects, monkeypatch) -> None:
+    daemon, project_a, _project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, "reconcile-many-logs")
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "UNKNOWN")
+    for _ in range(20):
+        daemon.store.add_event(job_id, "solver_progress", {"message": "x" * 16384})
+    for _ in range(5):
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": "old-request", "phase": "observed", "status": "SUCCEEDED",
+            "diagnostic": "x" * (1024 * 1024),
+        })
+    for phase, status in (("submitted", None), ("observed", "SUCCEEDED")):
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": "old-request", "phase": phase, "status": status,
+        })
+
+    def no_bulk_event_read(*_args, **_kwargs):
+        raise AssertionError("reconciliation must not collect all event pages")
+
+    monkeypatch.setattr(daemon.store, "events", no_bulk_event_read)
+    result = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert result["success"] is True, result
+    assert result["data"]["status"] == "UNKNOWN"
+    assert result["data"]["metadata"]["reconciled_quiescent"] is True
+
+
+def test_reconcile_refuses_oversized_worker_evidence_without_partial_result(daemon_projects) -> None:
+    daemon, project_a, _project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, "reconcile-large-evidence")
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "UNKNOWN")
+    request_ids = [str(index) + "x" * (1024 * 1024) for index in range(5)]
+    for request_id in request_ids:
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": request_id, "phase": "observed", "status": "SUCCEEDED",
+        })
+    for request_id in request_ids:
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": request_id, "phase": "submitted",
+        })
+
+    result = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert result["success"] is False
+    assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+    assert result["error"]["safe_retry"] is False
+    current = daemon.store.job(job_id)
+    assert current["status"] == "UNKNOWN"
+    assert "reconciled_quiescent" not in current["metadata"]
+
+
+def test_reconcile_refuses_incomplete_event_snapshot(daemon_projects) -> None:
+    daemon, project_a, _project_b, _database_path = daemon_projects
+    record = _begin_job(daemon, project_a, "reconcile-corrupt-event")
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "UNKNOWN")
+    for phase, status in (("submitted", None), ("observed", "SUCCEEDED")):
+        daemon.store.add_event(job_id, "worker_request", {
+            "request_id": "old-request", "phase": phase, "status": status,
+        })
+    daemon.store.db.execute(
+        "UPDATE job_events SET metadata=? WHERE job_id=? AND id=(SELECT MAX(id) FROM job_events WHERE job_id=?)",
+        ("{", job_id, job_id),
+    )
+    daemon.store.db.commit()
+
+    result = _call_job(daemon, "job.reconcile", job_id, project_a)
+    assert result["success"] is False
+    assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+    assert result["error"]["safe_retry"] is False
+    assert daemon.store.job(job_id)["status"] == "UNKNOWN"
+    assert "reconciled_quiescent" not in daemon.store.job(job_id)["metadata"]
+
+
 @pytest.mark.parametrize("change", ["binding", "event"])
 def test_reconcile_refuses_drift_after_snapshot(daemon_projects, monkeypatch, change) -> None:
     daemon, project_a, project_b, _database_path = daemon_projects
