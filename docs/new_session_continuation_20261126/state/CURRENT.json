@@ -466,7 +466,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Doctor reports its own interpreter and synthetic spawn uses lexical venv executable. Existing daemon source identity is not established; unsuccessful health response/live-owner protection is under isolated repair."
+      "session_scope_note": "Synthetic startup protects a live owner after negative health response; doctor reports its own interpreter. Existing daemon source identity, real daemon lifecycle and platform acceptance remain open."
     },
     "T42": {
       "status": "IMPLEMENTED",
@@ -1695,6 +1695,17 @@
       "main_review": "Main agent confirmed the healthy-response reuse and exact Windows endpoint field check in source. Spawning with sys.executable is evidence about the requested interpreter/command, not proof of the exact Python modules loaded by the child; hashing files after an old process starts also cannot prove its memory. A self-reported compatibility/build marker can be diagnostic, but is not independent code attestation and would need a defined build/update and migration contract.",
       "next_work": "Separately, a live old daemon whose health returns success=false currently falls through to the auto spawn path; Qwen is testing a minimal fake-only change to preserve the existing no-replacement-on-live-owner policy. This does not solve daemon code identity.",
       "remaining": "No real daemon or process was enumerated, contacted, terminated or restarted by this audit. Loaded-code identity, old/new compatibility policy, SQLite migration and native platform behavior remain UNKNOWN; T41 stays IMPLEMENTED but execution incomplete."
+    },
+    {
+      "id": "20261126-T41-qwen-live-health-failure",
+      "scope": "T41 local Qwen max synthetic auto-control startup liveness handling",
+      "base_commit": "9c9bfa141e112cdf2498fb0005ab4346e8ded6c5",
+      "finding": "When an existing endpoint returned a deterministic success=false health response, auto mode fell through to spawn a contender without checking whether its published pid/birth was still live. A fake-only regression test failed before the change.",
+      "changes": [
+        "comsol_mcp/_control_client.py: route unsuccessful health responses and transport errors through the existing live-owner no-replacement check while preserving ControlPrivacyError. tests/test_control_client.py adds live-failure, dead-endpoint and healthy-reuse controls."
+      ],
+      "verification": "Qwen reports 48 control-client/attach-only and 29 privacy tests passed on CPython 3.14.7. Main agent reviewed the diff and ran the 3 new controls on CPython 3.10.20: 3 passed. Endpoints, process identities, requests and spawning were substituted; no actual process or network was used.",
+      "remaining": "This only avoids a contender after a negative health response when _alive reports the published owner live. It does not establish loaded-code identity, prove PID/birth in every platform failure mode, test an actual daemon or resolve native/SCM acceptance."
     }
   ]
 }

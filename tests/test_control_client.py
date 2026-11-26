@@ -103,6 +103,48 @@ def test_control_pid_reuse_is_not_treated_as_the_published_daemon(monkeypatch):
     assert client._alive(1234, expected_start_epoch_ms=201) is False
 
 
+def test_live_control_with_failed_health_probe_is_not_replaced(monkeypatch, tmp_path):
+    # Deterministic success:false from the health probe must share the same
+    # liveness gate as a transport exception: a still-live published pid/birth
+    # blocks any replacement spawn.
+    monkeypatch.setattr(client, "control_home", lambda: tmp_path)
+    monkeypatch.setattr(client, "_is_windows", lambda: False)
+    monkeypatch.setattr(client, "_read_endpoint", lambda home: {"pid": 1234, "port": 4321, "token": "secret", "process_start_epoch_ms": 202})
+    monkeypatch.setattr(client, "_request", lambda *args: {"success": False})
+    monkeypatch.setattr(client, "_alive", lambda *args: True)
+    monkeypatch.setattr(client.subprocess, "Popen", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("replacement")))
+    with pytest.raises(RuntimeError, match="no replacement"):
+        client.ensure_control()
+
+
+def test_dead_endpoint_with_failed_health_probe_keeps_spawn_route(monkeypatch, tmp_path):
+    monkeypatch.setattr(client, "control_home", lambda: tmp_path)
+    monkeypatch.setattr(client, "_is_windows", lambda: False)
+    endpoint = {"pid": 1234, "port": 4321, "token": "secret", "process_start_epoch_ms": 202}
+    monkeypatch.setattr(client, "_read_endpoint", lambda home: endpoint)
+    probes = []
+    def fake_request(target, payload, timeout):
+        probes.append(payload["operation"])
+        return {"success": False} if len(probes) == 1 else {"success": True}
+    monkeypatch.setattr(client, "_request", fake_request)
+    monkeypatch.setattr(client, "_alive", lambda *args: False)
+    spawns = []
+    monkeypatch.setattr(client.subprocess, "Popen", lambda command, **kwargs: spawns.append(command))
+    assert client.ensure_control() is endpoint
+    assert len(spawns) == 1
+
+
+def test_healthy_existing_auto_control_is_attached_without_spawn(monkeypatch, tmp_path):
+    monkeypatch.setattr(client, "control_home", lambda: tmp_path)
+    monkeypatch.setattr(client, "_is_windows", lambda: False)
+    endpoint = {"pid": 1234, "port": 4321, "token": "secret", "process_start_epoch_ms": 202}
+    monkeypatch.setattr(client, "_read_endpoint", lambda home: endpoint)
+    monkeypatch.setattr(client, "_request", lambda *args: {"success": True})
+    monkeypatch.setattr(client, "_alive", lambda *args: pytest.fail("healthy attachment must not consult liveness"))
+    monkeypatch.setattr(client.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("healthy daemon must be attached"))
+    assert client.ensure_control() is endpoint
+
+
 def test_spawn_control_uses_lexical_virtualenv_interpreter(monkeypatch, tmp_path):
     base = tmp_path / "base-python"
     base.touch()

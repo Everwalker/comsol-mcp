@@ -216,8 +216,14 @@ def _ensure_control() -> dict:
         except ControlPrivacyError:
             raise
         except Exception:
-            if _alive(endpoint.get("pid"), endpoint.get("process_start_epoch_ms")):
-                raise RuntimeError("Existing control process is unresponsive; no replacement started")
+            pass
+        # A deterministic success:false answer and a transport exception share
+        # one liveness gate.  While the published pid/birth still name a live
+        # process, no replacement may start.  Process liveness is not proof of
+        # which code that process loaded; this gate only prevents racing the
+        # existing holder of the singleton lock.
+        if _alive(endpoint.get("pid"), endpoint.get("process_start_epoch_ms")):
+            raise RuntimeError("Existing control process is unresponsive; no replacement started")
     # The daemon acquires the singleton lock before publishing its endpoint.
     # Concurrent transport processes may launch contenders; only one may run.
     log = home / "control.log"
