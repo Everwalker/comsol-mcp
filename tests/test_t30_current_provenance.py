@@ -15,6 +15,24 @@ class SyntheticWorker:
     def __init__(self, project_root: Path):
         self.project_root = project_root
 
+    def client(self):
+        return self
+
+    def model(self, _tag):
+        class Datasets:
+            def tags(self):
+                return ["dataset-a"]
+
+        class Results:
+            def dataset(self):
+                return Datasets()
+
+        class Model:
+            def result(self):
+                return Results()
+
+        return Model()
+
 
 def test_registered_observation_requires_matching_project_model_and_solution(tmp_path, monkeypatch):
     project_root = tmp_path / "project-a"
@@ -158,6 +176,47 @@ def test_registered_observation_requires_matching_project_model_and_solution(tmp
         with pytest.raises(ExecutionContractError) as nested_unknown:
             validate()
         assert nested_unknown.value.code == "EXECUTION_STATE_UNKNOWN"
+        assert calls == ["dataset"]
+
+        class UnavailableDataset(ResultNode):
+            def dataset(self):
+                calls.append("dataset")
+                raise ExecutionContractError("API_UNSUPPORTED", "synthetic missing dataset getter")
+
+            def tags(self):
+                calls.append("result_tags")
+                return ["dataset-a"]  # A plot tag is not a dataset tag.
+
+        class UnavailableModel:
+            def result(self):
+                return UnavailableDataset()
+
+        calls.clear()
+        monkeypatch.setattr(worker, "client", lambda: type("Client", (), {"model": lambda self, _: UnavailableModel()})())
+        unverified = validate()
+        assert unverified["numerical_verification_status"] == "UNVERIFIED"
+        assert unverified["model_validated"] is False
+        assert unverified["checks"]["dataset_exists"] == "UNVERIFIED"
+        assert calls == ["dataset"]
+
+        class EmptyDatasets:
+            def tags(self):
+                return []
+
+        class EmptyDatasetResults(UnavailableDataset):
+            def dataset(self):
+                calls.append("dataset")
+                return EmptyDatasets()
+
+        class EmptyDatasetModel:
+            def result(self):
+                return EmptyDatasetResults()
+
+        calls.clear()
+        monkeypatch.setattr(worker, "client", lambda: type("Client", (), {"model": lambda self, _: EmptyDatasetModel()})())
+        missing = validate()
+        assert missing["checks"]["dataset_exists"] is False
+        assert missing["model_validated"] is False
         assert calls == ["dataset"]
 
         from comsol_mcp import _convergence_store

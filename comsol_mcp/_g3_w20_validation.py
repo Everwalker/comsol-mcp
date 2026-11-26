@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from ._execution_contract import ExecutionContractError
-from ._g2_engine import _call, _worker_failure_unknown
+from ._g2_engine import _actual_tags, _call, _worker_failure_unknown
 
 
 # 1. Three-Layer Status Model (B06)
@@ -1005,6 +1005,8 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
                 raise ExecutionContractError("OBSERVATION_OVERRIDE_REFUSED", "Caller cannot replace registered values")
             if dataset_name and dataset_name != record["dataset"]:
                 raise ExecutionContractError("DATASET_MISMATCH", "Observation dataset differs from requested solution")
+            if not dataset_name:
+                dataset_name = record["dataset"]
             criteria["values"] = numeric_values(sample["values"])
             # Named oracle observations must identify exact registered array
             # entries; their numeric values never come from the caller.
@@ -1047,54 +1049,50 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
 
     passed = True
 
-    model = None
-    try:
-        client = getattr(worker, "client", lambda: worker)()
-        if client is not None:
-            model = _call(client, "model", model_tag)
-    except Exception as exc:
-        _raise_worker_unknown(exc)
-        pass
-
-    if model is not None:
+    if dataset_name:
         try:
+            client = getattr(worker, "client", lambda: worker)()
+            if client is None:
+                raise ValueError("model client is unavailable")
+            model = _call(client, "model", model_tag)
             res_node = _call(model, "result")
-            dsets = []
-            try:
-                dset_container = _call(res_node, "dataset")
-                if dset_container is not None and hasattr(dset_container, "tags"):
-                    dsets = list(_call(dset_container, "tags") or [])
-            except Exception as exc:
-                _raise_worker_unknown(exc)
-                pass
-            if not dsets:
-                try:
-                    if hasattr(res_node, "tags"):
-                        dsets = list(_call(res_node, "tags") or [])
-                except Exception as exc:
-                    _raise_worker_unknown(exc)
-                    pass
-
-            if dataset_name:
-                if dataset_name not in dsets:
-                    return {
-                        "status": STATUS_FAIL,
-                        "execution_status": STATUS_PASS,
-                        "numerical_verification_status": STATUS_FAIL,
-                        "physical_validation_status": STATUS_UNVERIFIED,
-                        "observation_origin": observation_origin,
-                        "scope": scope,
-                        "model_validated": False,
-                        "solution": solution,
-                        "checks": {"dataset_exists": False},
-                        "metrics": {},
-                        "oracle_results": {},
-                        "message": f"Dataset '{dataset_name}' does not exist in model. Available: {dsets}",
-                    }
-                checks["dataset_exists"] = True
+            dsets = _actual_tags(_call(res_node, "dataset"))
         except Exception as exc:
             _raise_worker_unknown(exc)
-            pass
+            checks["dataset_exists"] = STATUS_UNVERIFIED
+        else:
+            if dataset_name not in dsets:
+                return {
+                    "status": STATUS_FAIL,
+                    "execution_status": STATUS_PASS,
+                    "numerical_verification_status": STATUS_FAIL,
+                    "physical_validation_status": STATUS_UNVERIFIED,
+                    "observation_origin": observation_origin,
+                    "scope": scope,
+                    "model_validated": False,
+                    "solution": solution,
+                    "checks": {"dataset_exists": False},
+                    "metrics": {},
+                    "oracle_results": {},
+                    "message": f"Dataset '{dataset_name}' does not exist in model. Available: {dsets}",
+                }
+            checks["dataset_exists"] = True
+
+        if checks["dataset_exists"] == STATUS_UNVERIFIED and scope == "MODEL_VALIDATED":
+            return {
+                "status": STATUS_INCOMPLETE,
+                "execution_status": STATUS_PASS,
+                "numerical_verification_status": STATUS_UNVERIFIED,
+                "physical_validation_status": STATUS_UNVERIFIED,
+                "observation_origin": observation_origin,
+                "scope": "REGISTERED_OBSERVATION_UNVERIFIED",
+                "model_validated": False,
+                "solution": solution,
+                "checks": checks,
+                "metrics": {},
+                "oracle_results": {},
+                "message": "The registered observation's dataset could not be verified",
+            }
 
     values = criteria.get("values", [])
     if values and isinstance(values, Sequence):
