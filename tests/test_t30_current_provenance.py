@@ -122,5 +122,67 @@ def test_registered_observation_requires_matching_project_model_and_solution(tmp
         assert caller_override["scope"] == "OBSERVATION_OVERRIDE_REFUSED"
         assert caller_override["model_validated"] is False
         assert caller_override["numerical_verification_status"] != "PASS"
+
+        from comsol_mcp._execution_contract import ExecutionContractError
+
+        def unknown_solution(*_args):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "synthetic Worker state unknown")
+
+        monkeypatch.setattr(_observation_store, "solution_identity", unknown_solution)
+        with pytest.raises(ExecutionContractError) as unknown:
+            validate()
+        assert unknown.value.code == "EXECUTION_STATE_UNKNOWN"
+
+        monkeypatch.setattr(_observation_store, "solution_identity", lambda *_args: dict(solution_identity))
+        calls = []
+
+        class ResultNode:
+            def dataset(self):
+                calls.append("dataset")
+                raise ExecutionContractError("ENGINE_CALL_FAILED", "synthetic unknown",
+                                             details={"execution_state_unknown": True})
+
+            def tags(self):
+                calls.append("fallback_tags")
+                return []
+
+        class Client:
+            def model(self, _tag):
+                return SimpleModel()
+
+        class SimpleModel:
+            def result(self):
+                return ResultNode()
+
+        monkeypatch.setattr(worker, "client", lambda: Client(), raising=False)
+        with pytest.raises(ExecutionContractError) as nested_unknown:
+            validate()
+        assert nested_unknown.value.code == "EXECUTION_STATE_UNKNOWN"
+        assert calls == ["dataset"]
+
+        from comsol_mcp import _convergence_store
+        from comsol_mcp._g3_w20_validation import create_transient_oracle, validate_convergence
+
+        monkeypatch.delattr(worker, "client", raising=False)
+
+        def unresponsive(*_args):
+            raise ExecutionContractError("ENGINE_UNRESPONSIVE", "synthetic Worker timeout", safe_retry=False)
+
+        monkeypatch.setattr(_convergence_store, "register_case", unresponsive)
+        selectors = {name: [0] for name in create_transient_oracle().required_observations}
+        with observation_context(store, model_ref, 8, "consumer-operation", project_id="project-a"):
+            with pytest.raises(ExecutionContractError) as registration_unknown:
+                dispatch("validate.solution", worker, "model-a", {
+                    "observation_ref": observation_ref,
+                    "solution": {"dataset": "dataset-a"},
+                    "criteria": {"oracle": "transient_diffusion"},
+                    "observation_selectors": selectors,
+                })
+        assert registration_unknown.value.code == "EXECUTION_STATE_UNKNOWN"
+
+        monkeypatch.setattr(_convergence_store, "resolve_cases", unresponsive)
+        with pytest.raises(ExecutionContractError) as convergence_unknown:
+            validate_convergence(worker, "model-a", {"cases": [{"convergence_id": "synthetic"}]})
+        assert convergence_unknown.value.code == "EXECUTION_STATE_UNKNOWN"
     finally:
         store.close()

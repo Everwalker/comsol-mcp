@@ -36,6 +36,18 @@ STATUS_UNSUPPORTED = "UNSUPPORTED"
 STATUS_UNKNOWN = "UNKNOWN"
 
 
+def _raise_worker_unknown(exc: Exception) -> None:
+    if (_worker_failure_unknown(exc)
+            or (getattr(exc, "code", None) == "ENGINE_UNRESPONSIVE"
+                and not getattr(exc, "safe_retry", False))):
+        if isinstance(exc, ExecutionContractError) and exc.code == "EXECUTION_STATE_UNKNOWN":
+            raise exc
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN", "validation probe ended with an unknown Worker state",
+            stage="post_dispatch", details={"execution_state_unknown": True},
+        ) from exc
+
+
 @dataclass
 class ValidationStatus:
     """Three independent status axes for validation."""
@@ -1010,6 +1022,7 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
             observation_origin = "REGISTERED_W17"
             scope = "MODEL_VALIDATED"
         except (ExecutionContractError, ValueError, KeyError, TypeError, IndexError) as exc:
+            _raise_worker_unknown(exc)
             return {"status": STATUS_FAIL, "execution_status": STATUS_PASS,
                     "numerical_verification_status": STATUS_FAIL,
                     "physical_validation_status": STATUS_UNVERIFIED,
@@ -1039,7 +1052,8 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
         client = getattr(worker, "client", lambda: worker)()
         if client is not None:
             model = _call(client, "model", model_tag)
-    except Exception:
+    except Exception as exc:
+        _raise_worker_unknown(exc)
         pass
 
     if model is not None:
@@ -1050,13 +1064,15 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
                 dset_container = _call(res_node, "dataset")
                 if dset_container is not None and hasattr(dset_container, "tags"):
                     dsets = list(_call(dset_container, "tags") or [])
-            except Exception:
+            except Exception as exc:
+                _raise_worker_unknown(exc)
                 pass
             if not dsets:
                 try:
                     if hasattr(res_node, "tags"):
                         dsets = list(_call(res_node, "tags") or [])
-                except Exception:
+                except Exception as exc:
+                    _raise_worker_unknown(exc)
                     pass
 
             if dataset_name:
@@ -1076,7 +1092,8 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
                         "message": f"Dataset '{dataset_name}' does not exist in model. Available: {dsets}",
                     }
                 checks["dataset_exists"] = True
-        except Exception:
+        except Exception as exc:
+            _raise_worker_unknown(exc)
             pass
 
     values = criteria.get("values", [])
@@ -1186,6 +1203,7 @@ def _validate_solution_impl(worker: Any, model_tag: str, arguments: Mapping[str,
         try:
             result['convergence_ref'] = register_case(worker,model_tag,obs_ref,oracle_name,oracle_results)
         except Exception as exc:
+            _raise_worker_unknown(exc)
             result['convergence_record_status'] = 'UNAVAILABLE'
             result['convergence_record_error'] = str(exc)
     return result
@@ -1321,6 +1339,7 @@ def validate_convergence(worker: Any, model_tag: str, arguments: Mapping[str, An
             records = resolve_cases(worker,cases)
             cases = [dict(record,level=i+1) for i,record in enumerate(records)]
         except ExecutionContractError as exc:
+            _raise_worker_unknown(exc)
             return {'status':STATUS_FAIL,'execution_status':STATUS_PASS,
                     'numerical_verification_status':STATUS_FAIL,'physical_validation_status':STATUS_UNVERIFIED,
                     'scope':exc.code,'message':str(exc),'model_validated':False}

@@ -8,7 +8,7 @@
   "candidate_status": "LATEST_PUBLIC_DEVELOPMENT_SOURCE; T10_SOFTWARE_CHILDREN_DONE; T10_NATIVE_UNKNOWN_FROZEN; T30_INTEGRATED_PARTIAL; NATIVE_AND_FINAL_NOT_ACCEPTED",
   "baseline_state_source": "references/CURRENT_20261123.json",
   "baseline_state_scope": "Task statuses and flags reproduced from the fixed latest public ledger. Most evidence references are scoped summaries; raw local evidence and runtime authority are not restored.",
-  "next_action": "核对 T30.c 已登记观测的解身份与错误传播，继续保留真实求解和报告验收未完成。",
+  "next_action": "检查已登记观测的数据集读取在普通探测失败或方法缺失时是否错误宣称数据集不存在。",
   "independent_review": {
     "status": "NOT_RUN",
     "verdict": "NOT_ACCEPTED",
@@ -671,7 +671,7 @@
       ],
       "evidence_scope": "UPSTREAM_REPORTED_TASK_STATUS; follow relevant scoped evidence before relying on behavior. Not a new-session observation.",
       "source_commit": "7cc3183d7c2640132038feba149ac5f7d2f62102",
-      "session_scope_note": "Synthetic registered range and convergence controls corrected; native same-solution proof, physical validation and full T30.c acceptance remain open."
+      "session_scope_note": "Synthetic registered range, convergence and structured UNKNOWN controls corrected; native same-solution and physical validation remain open."
     },
     "T05.a": {
       "status": "RUNNING",
@@ -1512,6 +1512,18 @@
       ],
       "verification": "CPython 3.14.7 and CPython 3.10.20: 12 passed each across registered observation, provenance, convergence study and dispatch controls; temporary SQLite and fake observations only.",
       "remaining": "The checks do not prove general mesh/time convergence or isolate mixed parameter changes; finite descending errors alone are not native or physical validation. T30.c remains RUNNING; real same-solution/native evidence and independent final review are open."
+    },
+    {
+      "id": "20261126-T30-observation-unknown-propagation",
+      "scope": "T30.c / U09 structured Worker UNKNOWN propagation in synthetic validation paths",
+      "base_commit": "7fe906fa0622a48a082e9c9273af9e24ccd59199",
+      "finding": "An explicit synthetic EXECUTION_STATE_UNKNOWN during solution identity read was converted to ordinary validation FAIL; nested dataset probes and convergence recording also caught Worker failures.",
+      "changes": [
+        "comsol_mcp/_g3_w20_validation.py: propagate structured Worker UNKNOWN or unsafe ENGINE_UNRESPONSIVE from observation resolution, model/dataset probes and convergence case registration/resolution",
+        "tests/test_t30_current_provenance.py: verify exact and nested UNKNOWN propagation, no fallback probe after UNKNOWN, and unresponsive convergence record/resolve cases"
+      ],
+      "verification": "CPython 3.14.7 and CPython 3.10.20: 22 passed each across registered observation, project scope, caller provenance, convergence study and dispatch controls; synthetic exceptions and temporary SQLite only.",
+      "remaining": "Normal non-UNKNOWN dataset probe failure/missing-method classification remains to be assessed. Native Worker behavior, same-solution proof, physical validation and full T30.c acceptance remain open; historical UNKNOWN resources were not contacted."
     }
   ]
 }
